@@ -40,6 +40,15 @@ export class HexMap {
     });
   }
 
+  /** Convenience method to draw directly to a canvas element. */
+  drawToCanvas(canvas: HTMLCanvasElement): void {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D context not available');
+    }
+    this.draw(ctx);
+  }
+
   private getFillColor(tile: HexTile): string {
     if (tile.isFogged) {
       return '#000000';
