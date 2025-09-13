@@ -6,6 +6,12 @@ export class GameState {
   resources = 0;
   private lastSaved = Date.now();
 
+  /** Track constructed buildings by type. */
+  private buildings: Record<string, number> = {};
+
+  /** Policies currently applied. */
+  private policies = new Set<string>();
+
   constructor(
     private readonly tickInterval: number,
     private readonly resourcePerTick = 1,
@@ -40,5 +46,35 @@ export class GameState {
     } catch {
       this.lastSaved = Date.now();
     }
+  }
+
+  /** Determine if the player can afford a cost. */
+  canAfford(cost: number): boolean {
+    return this.resources >= cost;
+  }
+
+  /** Spend resources to construct a building of the given type. */
+  construct(building: string, cost: number): boolean {
+    if (!this.canAfford(cost)) {
+      return false;
+    }
+    this.resources -= cost;
+    this.buildings[building] = (this.buildings[building] ?? 0) + 1;
+    return true;
+  }
+
+  /** Spend resources to upgrade a building. */
+  upgrade(building: string, cost: number): boolean {
+    return this.construct(`upgrade:${building}`, cost);
+  }
+
+  /** Spend resources to apply a policy. */
+  applyPolicy(policy: string, cost: number): boolean {
+    if (!this.canAfford(cost)) {
+      return false;
+    }
+    this.resources -= cost;
+    this.policies.add(policy);
+    return true;
   }
 }
