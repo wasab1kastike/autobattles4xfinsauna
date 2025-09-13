@@ -13,4 +13,14 @@ export class HexTile {
   reveal(): void {
     this.isFogged = false;
   }
+
+  /** Place or replace a building on this tile. */
+  placeBuilding(building: BuildingType): void {
+    this.building = building;
+  }
+
+  /** Toggle fog of war state. */
+  setFogged(value: boolean): void {
+    this.isFogged = value;
+  }
 }
