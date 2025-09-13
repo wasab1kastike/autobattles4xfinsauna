@@ -1,8 +1,8 @@
 import './style.css';
 import { GameState, Resource } from './core/GameState.ts';
-import { HexMap } from './hex/HexMap.ts';
+import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
-import { Unit } from './units/Unit.ts';
+import { Unit } from './unit.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 
