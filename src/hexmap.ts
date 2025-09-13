@@ -1,4 +1,4 @@
-import { AxialCoord, axialToPixel } from './hex/HexUtils.ts';
+import { AxialCoord, axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
@@ -30,6 +30,13 @@ export class HexMap {
         cb(this.tiles[r][q], { q, r });
       }
     }
+  }
+
+  /** Retrieve existing neighbor tiles around the given coordinate. */
+  getNeighbors(q: number, r: number): HexTile[] {
+    return axialNeighbors({ q, r })
+      .map((c) => this.getTile(c.q, c.r))
+      .filter((t): t is HexTile => Boolean(t));
   }
 
   /** Draw the map onto a canvas context. */
