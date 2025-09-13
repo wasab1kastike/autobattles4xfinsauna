@@ -30,6 +30,36 @@ body {
   min-height: 100vh;
 }
 
+#game-container {
+  position: relative;
+}
+
+#game-canvas {
+  display: block;
+  border: 1px solid #333;
+}
+
+#ui-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+#resource-bar {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px;
+}
+
+#build-menu {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px;
+}
+
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
