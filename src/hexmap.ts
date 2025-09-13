@@ -1,5 +1,5 @@
-import { AxialCoord, axialToPixel } from './HexUtils.ts';
-import { HexTile } from './HexTile.ts';
+import { AxialCoord, axialToPixel } from './hex/HexUtils.ts';
+import { HexTile } from './hex/HexTile.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
 export class HexMap {

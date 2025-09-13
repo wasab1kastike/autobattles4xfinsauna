@@ -1,5 +1,5 @@
-import { AxialCoord, getNeighbors } from '../hex/HexUtils.ts';
-import { HexMap } from '../hex/HexMap.ts';
+import { AxialCoord, getNeighbors } from './hex/HexUtils.ts';
+import { HexMap } from './hexmap.ts';
 
 export interface UnitStats {
   health: number;
