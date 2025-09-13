@@ -4,6 +4,7 @@ import { HexMap } from './hex/HexMap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit } from './units/Unit.ts';
 import { eventBus } from './events';
+import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -11,6 +12,19 @@ const eventLog = document.getElementById('event-log')!;
 const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement;
 const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement;
 const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
+
+const assetPaths: AssetPaths = {
+  images: {
+    placeholder:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII='
+  },
+  sounds: {
+    // Minimal silent WAV
+    placeholder:
+      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='
+  }
+};
+let assets: LoadedAssets;
 
 const map = new HexMap(10, 10, 32);
 // Reveal all tiles for simplicity
@@ -72,11 +86,6 @@ eventBus.on('policyApplied', ({ policy }) => {
   log(`Policy applied: ${policy}`);
 });
 
-setInterval(() => {
-  state.tick();
-  state.save();
-}, 1000);
-
 buildFarmBtn.addEventListener('click', () => {
   state.construct('farm', 10);
 });
@@ -89,5 +98,14 @@ policyBtn.addEventListener('click', () => {
   state.applyPolicy('eco', 15);
 });
 
-resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
-draw();
+async function start(): Promise<void> {
+  assets = await loadAssets(assetPaths);
+  resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
+  draw();
+  setInterval(() => {
+    state.tick();
+    state.save();
+  }, 1000);
+}
+
+start();
