@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Unit, UnitStats } from './Unit.ts';
+import { Unit, UnitStats } from '../unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 
 function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
