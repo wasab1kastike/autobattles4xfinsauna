@@ -33,20 +33,28 @@ export class HexMap {
   }
 
   /** Draw the map onto a canvas context. */
-  draw(ctx: CanvasRenderingContext2D): void {
+  draw(ctx: CanvasRenderingContext2D, selected?: AxialCoord): void {
     this.forEachTile((tile, coord) => {
       const { x, y } = axialToPixel(coord, this.hexSize);
-      this.drawHex(ctx, x + this.hexSize, y + this.hexSize, this.hexSize, this.getFillColor(tile));
+      const isSelected = selected && coord.q === selected.q && coord.r === selected.r;
+      this.drawHex(
+        ctx,
+        x + this.hexSize,
+        y + this.hexSize,
+        this.hexSize,
+        this.getFillColor(tile),
+        Boolean(isSelected)
+      );
     });
   }
 
   /** Convenience method to draw directly to a canvas element. */
-  drawToCanvas(canvas: HTMLCanvasElement): void {
+  drawToCanvas(canvas: HTMLCanvasElement, selected?: AxialCoord): void {
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Canvas 2D context not available');
     }
-    this.draw(ctx);
+    this.draw(ctx, selected);
   }
 
   private getFillColor(tile: HexTile): string {
@@ -70,7 +78,8 @@ export class HexMap {
     x: number,
     y: number,
     size: number,
-    fill: string
+    fill: string,
+    selected = false
   ): void {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
@@ -85,7 +94,7 @@ export class HexMap {
     }
     ctx.closePath();
     ctx.fillStyle = fill;
-    ctx.strokeStyle = '#000000';
+    ctx.strokeStyle = selected ? '#ff0000' : '#000000';
     ctx.fill();
     ctx.stroke();
   }
