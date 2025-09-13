@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Finsim 4X Autobattler (Web)</title>
+  <style>
+    html, body, canvas { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script type="module">
+    import { Game } from './game.js';
+    const canvas = document.getElementById('game');
+    const game = new Game(canvas);
+    game.start();
+  </script>
+</body>
+</html>
