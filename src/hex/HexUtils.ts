@@ -51,7 +51,8 @@ export function getNeighbor(hex: AxialCoord, direction: number): AxialCoord {
   return { q: hex.q + dir.q, r: hex.r + dir.r };
 }
 
-function hexRound(frac: AxialCoord): AxialCoord {
+/** Round a fractional axial coordinate to the nearest valid hex. */
+export function hexRound(frac: AxialCoord): AxialCoord {
   let x = frac.q;
   let z = frac.r;
   let y = -x - z;
