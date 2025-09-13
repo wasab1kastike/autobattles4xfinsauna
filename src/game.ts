@@ -1,5 +1,6 @@
 import './style.css';
 import { GameState, Resource } from './core/GameState.ts';
+import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit } from './unit.ts';
@@ -32,6 +33,10 @@ map.forEachTile((t) => t.setFogged(false));
 
 const state = new GameState(1000);
 state.load();
+const clock = new GameClock(1000, () => {
+  state.tick();
+  state.save();
+});
 
 const units: Unit[] = [
   new Unit('u1', { q: 2, r: 2 }, 'player', {
@@ -102,10 +107,7 @@ async function start(): Promise<void> {
   assets = await loadAssets(assetPaths);
   resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
   draw();
-  setInterval(() => {
-    state.tick();
-    state.save();
-  }, 1000);
+  clock.start();
 }
 
 start();
