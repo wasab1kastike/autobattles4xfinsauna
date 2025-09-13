@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Unit, UnitStats } from '../unit.ts';
+import { Unit, UnitStats } from './Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
+import { HexMap } from '../hexmap.ts';
 
 function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
   return new Unit(id, coord, 'faction', { ...stats });
@@ -41,7 +42,7 @@ describe('Unit combat', () => {
     expect(defender.stats.health).toBe(10);
   });
 
-  it('emits death event when health reaches zero', () => {
+  it('removes unit from array on death', () => {
     const attacker = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 5,
@@ -54,11 +55,56 @@ describe('Unit combat', () => {
       attackRange: 1,
       movementRange: 1
     });
-    const onDeath = vi.fn();
-    defender.onDeath(onDeath);
+
+    const units = [defender];
+    defender.onDeath(() => {
+      const idx = units.indexOf(defender);
+      if (idx !== -1) units.splice(idx, 1);
+    });
+
     attacker.attack(defender);
     expect(defender.stats.health).toBe(0);
-    expect(onDeath).toHaveBeenCalledTimes(1);
+    expect(units).toHaveLength(0);
+  });
+});
+
+describe('Unit movement', () => {
+  it('moves around impassable terrain', () => {
+    const map = new HexMap(3, 3);
+    map.getTile(1, 0)!.terrain = 'water';
+    const unit = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    unit.moveTowards({ q: 2, r: 0 }, map);
+    expect(unit.coord).toEqual({ q: 0, r: 1 });
+  });
+
+  it('selects the nearest reachable enemy', () => {
+    const map = new HexMap(3, 3);
+    map.getTile(1, 0)!.terrain = 'water';
+    const unit = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const enemy1 = createUnit('b', { q: 2, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const enemy2 = createUnit('c', { q: 0, r: 2 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const target = unit.seekNearestEnemy([enemy1, enemy2], map);
+    expect(target).toBe(enemy2);
   });
 });
 
