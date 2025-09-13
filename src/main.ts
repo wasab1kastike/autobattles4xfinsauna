@@ -1,11 +1,13 @@
 import './style.css';
-import { GameState } from './core/GameState.ts';
+import { GameState, Resource } from './core/GameState.ts';
 import { HexMap } from './hex/HexMap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit } from './units/Unit.ts';
+import { eventBus } from './events';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
+const eventLog = document.getElementById('event-log')!;
 const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement;
 const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement;
 const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
@@ -54,33 +56,38 @@ canvas.addEventListener('click', (e) => {
   draw();
 });
 
-function updateResources(): void {
-  resourceBar.textContent = `Resources: ${state.resources}`;
+function log(msg: string): void {
+  const div = document.createElement('div');
+  div.textContent = msg;
+  eventLog.appendChild(div);
 }
+
+eventBus.on('resourceChanged', ({ resource, total, amount }) => {
+  resourceBar.textContent = `Resources: ${total}`;
+  const sign = amount > 0 ? '+' : '';
+  log(`${resource}: ${sign}${amount}`);
+});
+
+eventBus.on('policyApplied', ({ policy }) => {
+  log(`Policy applied: ${policy}`);
+});
 
 setInterval(() => {
   state.tick();
-  updateResources();
   state.save();
 }, 1000);
 
 buildFarmBtn.addEventListener('click', () => {
-  if (state.construct('farm', 10)) {
-    updateResources();
-  }
+  state.construct('farm', 10);
 });
 
 upgradeFarmBtn.addEventListener('click', () => {
-  if (state.upgrade('farm', 20)) {
-    updateResources();
-  }
+  state.upgrade('farm', 20);
 });
 
 policyBtn.addEventListener('click', () => {
-  if (state.applyPolicy('eco', 15)) {
-    updateResources();
-  }
+  state.applyPolicy('eco', 15);
 });
 
-updateResources();
+resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
 draw();
