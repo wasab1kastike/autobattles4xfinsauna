@@ -51,6 +51,19 @@ body {
   padding: 4px;
 }
 
+#event-log {
+  pointer-events: auto;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px;
+  position: absolute;
+  top: 24px;
+  left: 0;
+  max-height: 100px;
+  width: 200px;
+  overflow-y: auto;
+  font-size: 14px;
+}
+
 #build-menu {
   position: absolute;
   bottom: 0;

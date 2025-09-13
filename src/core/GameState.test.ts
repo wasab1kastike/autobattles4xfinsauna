@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GameState } from './GameState';
+import { GameState, Resource } from './GameState';
+import '../events';
 
 describe('GameState', () => {
   beforeEach(() => {
@@ -23,6 +24,13 @@ describe('GameState', () => {
     const loaded = new GameState(1000);
     loaded.load();
 
-    expect(loaded.resources).toBe(6); // 1 saved + 5 offline ticks
+    expect(loaded.getResource(Resource.GOLD)).toBe(6); // 1 saved + 5 offline ticks
+  });
+
+  it('applies policy modifiers via listeners', () => {
+    const state = new GameState(1000);
+    state.applyPolicy('eco', 0); // free for testing
+    state.tick();
+    expect(state.getResource(Resource.GOLD)).toBe(2); // base 1 + eco policy
   });
 });
