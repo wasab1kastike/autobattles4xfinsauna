@@ -1,6 +1,7 @@
 import { AxialCoord, axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
 import { TerrainId, generateTerrain } from './map/terrain.ts';
+import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
 export class HexMap {
@@ -54,10 +55,20 @@ export class HexMap {
       const rMin = Math.max(-radius, -dq - radius);
       const rMax = Math.min(radius, -dq + radius);
       for (let dr = rMin; dr <= rMax; dr++) {
-        const tile = this.getTile(center.q + dq, center.r + dr);
-        tile?.reveal();
+        const coord = { q: center.q + dq, r: center.r + dr };
+        const tile = this.getTile(coord.q, coord.r);
+        if (tile) {
+          tile.reveal();
+          markRevealed(coord, this.hexSize);
+        }
       }
     }
+
+    const viewport = typeof window !== 'undefined'
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : { width: 0, height: 0 };
+    const frame = autoFrame(viewport);
+    tweenCamera(frame, 300);
   }
 
   /** Draw the map onto a canvas context. */
