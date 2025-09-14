@@ -34,23 +34,17 @@ npm install
 
 ## Deployment
 
-Run the production build to publish the site via GitHub Pages. The build
-outputs directly to the `docs/` directory and automatically adds a
-`.nojekyll` file:
+Pushing to `main` runs a workflow that builds the app and commits the result to
+the `docs/` folder so GitHub Pages serves the game. In the repository settings
+set **Pages → Source** to `main` and `/docs`.
+
+To build locally:
 
 ```bash
 npm run build
 ```
 
-Push the updated `docs/` folder to `main` and configure GitHub Pages to deploy
-from the `docs` directory. The site will then be available at:
-
-https://<your-github-username>.github.io/autobattles4xfinsauna/
-
-The Vite configuration automatically sets the correct base path for the build
-using the repository name. If you fork or rename the repository, update the
-`name` field in `package.json` so the build continues to point to the right base
-path.
+The production files are written to `dist/`.
 
 ## Live Demo
 Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
