@@ -10,7 +10,7 @@ export default defineConfig(({ command }) => ({
   base: command === 'build' ? `/${repoName}/` : '/',
   publicDir: '../public',
   build: {
-    outDir: '../dist',
+    outDir: '../docs',
     emptyOutDir: true,
   },
 }));
