@@ -12,7 +12,6 @@ import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
-import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { play } from './sfx.ts';
@@ -26,14 +25,17 @@ const assetPaths: AssetPaths = {
   images: {
     placeholder:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-    grass:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGNU6lb6z0ABYKJE86gBowaMGjCYDAAAlL8B7iuXN0wAAAAASUVORK5CYII=',
-    water:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGOUm/D/PwMFgIkSzaMGjBowasBgMgAAGD4CzKXqJDYAAAAASUVORK5CYII=',
-    'unit-soldier':
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGPcpKT0n4ECwESJ5lEDRg0YNWAwGQAAM4ACFQNjXqgAAAAASUVORK5CYII=',
-    farm:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGO8tVThPwMFgIkSzaMGjBowasBgMgAA4QYCvtGd17wAAAAASUVORK5CYII='
+    'terrain-plains': '/assets/sprites/plains.svg',
+    'terrain-forest': '/assets/sprites/forest.svg',
+    'terrain-hills': '/assets/sprites/hills.svg',
+    'terrain-lake': '/assets/sprites/lake.svg',
+    'building-farm': '/assets/sprites/farm.svg',
+    'building-barracks': '/assets/sprites/barracks.svg',
+    'building-city': '/assets/sprites/city.svg',
+    'building-mine': '/assets/sprites/mine.svg',
+    'unit-soldier': '/assets/sprites/soldier.svg',
+    'unit-archer': '/assets/sprites/archer.svg',
+    'unit-raider': '/assets/sprites/raider.svg'
   }
 };
 let assets: LoadedAssets;
@@ -96,17 +98,9 @@ function draw(): void {
 function drawUnits(ctx: CanvasRenderingContext2D): void {
   const hexWidth = map.hexSize * Math.sqrt(3);
   const hexHeight = map.hexSize * 2;
-  const size = Math.min(hexWidth, hexHeight);
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
-    const img = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'image'
-    ) as unknown as SVGImageElement;
-    img.setAttribute(
-      'href',
-      `data:image/svg+xml;utf8,${encodeURIComponent(raiderSVG(size))}`
-    );
+    const img = assets.images[`unit-${unit.type}`] ?? assets.images['placeholder'];
     const maxHealth = (unit as any).maxHealth ?? unit.stats.health;
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';

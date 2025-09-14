@@ -1,3 +1,4 @@
-Binary sprite assets are not tracked in this repository.
-The game currently relies on inline base64 placeholders defined in code.
-Add real sprite files here locally if desired (they are ignored by git).
+Sprite image files used by the game.
+
+The repository now tracks placeholder SVGs for terrain, buildings and units.
+Custom art can be dropped into this folder to override them.
