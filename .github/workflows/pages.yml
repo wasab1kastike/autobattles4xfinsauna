@@ -1,28 +1,32 @@
-name: Pages
+name: Pages (docs/)
 
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: write
+    branches: [ main ]
 
 jobs:
-  build:
+  publish-docs:
     runs-on: ubuntu-latest
+    needs: [ verify-pages ]  # <-- hard dependency on CI job
+    if: ${{ needs.verify-pages.result == 'success' }}
     steps:
       - uses: actions/checkout@v4
+        with: { persist-credentials: true }
       - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm ci && npm run build
-      - run: |
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+      - run: npm run build
+
+      - name: Prepare docs folder
+        run: |
           rm -rf docs
-          cp -R dist docs
+          mkdir -p docs
+          cp -R dist/* docs/
           cp dist/index.html docs/404.html
           touch docs/.nojekyll
-      - uses: stefanzweifel/git-auto-commit-action@v5
+
+      - name: Commit docs
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: chore: update docs
+          commit_message: "chore(pages): publish dist → docs"
           file_pattern: docs/*
