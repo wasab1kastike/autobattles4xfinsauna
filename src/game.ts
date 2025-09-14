@@ -19,14 +19,16 @@ import { setupTopbar } from './ui/topbar.ts';
 import { sfx } from './sfx.ts';
 import { serialize, deserialize, type SaveData } from './save.ts';
 import type { Building } from './buildings/Building.ts';
+import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
+import { setupRightPanel } from './ui/rightPanel.tsx';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
-const eventLog = document.getElementById('event-log')!;
-const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement;
-const buildBarracksBtn = document.getElementById('build-barracks') as HTMLButtonElement;
-const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement;
-const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
+const eventLog = document.getElementById('event-log');
+const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement | null;
+const buildBarracksBtn = document.getElementById('build-barracks') as HTMLButtonElement | null;
+const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement | null;
+const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement | null;
 
 const assetPaths: AssetPaths = {
   images: {
@@ -167,6 +169,25 @@ const animator = new Animator(draw);
 const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state);
 
+let log: (msg: string) => void;
+if (document.getElementById('ui-overlay')) {
+  ({ log } = setupRightPanel(state));
+} else if (eventLog) {
+  const MAX_LOG_MESSAGES = 100;
+  log = (msg: string): void => {
+    const div = document.createElement('div');
+    div.textContent = msg;
+    eventLog.appendChild(div);
+    while (eventLog.childElementCount > MAX_LOG_MESSAGES) {
+      eventLog.removeChild(eventLog.firstChild!);
+    }
+  };
+} else {
+  log = () => {};
+}
+
+eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
+
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
   const unit = spawnUnit(state, type, id, coord, 'player');
@@ -217,6 +238,11 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
     }
     ctx.drawImage(img, x, y, hexWidth, hexHeight);
     ctx.filter = 'none';
+    if (isSisuActive() && unit.faction === 'player') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, hexWidth, hexHeight);
+    }
   }
 }
 
@@ -240,17 +266,6 @@ canvas.addEventListener('click', (e) => {
   }
   draw();
 });
-
-const MAX_LOG_MESSAGES = 100;
-
-function log(msg: string): void {
-  const div = document.createElement('div');
-  div.textContent = msg;
-  eventLog.appendChild(div);
-  while (eventLog.childElementCount > MAX_LOG_MESSAGES) {
-    eventLog.removeChild(eventLog.firstChild!);
-  }
-}
 
 const onResourceChanged = ({ resource, total, amount }) => {
   resourceBar.textContent = `Resources: ${total}`;
@@ -279,29 +294,37 @@ window.addEventListener('beforeunload', () => {
   eventBus.off('unitDied', onUnitDied);
 });
 
-buildFarmBtn.addEventListener('click', () => {
-  if (!selected) return;
-  if (state.placeBuilding(new Farm(), selected, map)) {
-    log('Farm constructed');
-    draw();
-  }
-});
+if (buildFarmBtn) {
+  buildFarmBtn.addEventListener('click', () => {
+    if (!selected) return;
+    if (state.placeBuilding(new Farm(), selected, map)) {
+      log('Farm constructed');
+      draw();
+    }
+  });
+}
 
-buildBarracksBtn.addEventListener('click', () => {
-  if (!selected) return;
-  if (state.placeBuilding(new Barracks(), selected, map)) {
-    log('Barracks constructed');
-    draw();
-  }
-});
+if (buildBarracksBtn) {
+  buildBarracksBtn.addEventListener('click', () => {
+    if (!selected) return;
+    if (state.placeBuilding(new Barracks(), selected, map)) {
+      log('Barracks constructed');
+      draw();
+    }
+  });
+}
 
-upgradeFarmBtn.addEventListener('click', () => {
-  state.upgrade('farm', 20);
-});
+if (upgradeFarmBtn) {
+  upgradeFarmBtn.addEventListener('click', () => {
+    state.upgrade('farm', 20);
+  });
+}
 
-policyBtn.addEventListener('click', () => {
-  state.applyPolicy('eco', 15);
-});
+if (policyBtn) {
+  policyBtn.addEventListener('click', () => {
+    state.applyPolicy('eco', 15);
+  });
+}
 
 async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
