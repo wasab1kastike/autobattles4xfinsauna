@@ -4,6 +4,7 @@ import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit, UnitType } from './unit.ts';
+import { raiderSVG } from './ui/sprites.ts';
 import Animator from './render/Animator.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
@@ -93,12 +94,18 @@ function draw(): void {
 }
 
 function drawUnits(ctx: CanvasRenderingContext2D): void {
-  const sprite = assets.images['unit-soldier'];
   const hexWidth = map.hexSize * Math.sqrt(3);
   const hexHeight = map.hexSize * 2;
+  const parser = new DOMParser();
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
-    ctx.drawImage(sprite, x, y, hexWidth, hexHeight);
+    const svg = parser
+      .parseFromString(raiderSVG(1), 'image/svg+xml')
+      .documentElement as unknown as SVGImageElement;
+    const color = unit.healthRatio < 0.5 ? 'hsl(0,0%,60%)' : 'hsl(0,100%,50%)';
+    svg.setAttribute('fill', color);
+    svg.setAttribute('stroke', color);
+    ctx.drawImage(svg, x, y, hexWidth, hexHeight);
   }
 }
 

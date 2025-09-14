@@ -49,6 +49,11 @@ export class Unit {
     this.maxHealth = stats.health;
   }
 
+  /** Ratio of current to maximum health (0-1). */
+  get healthRatio(): number {
+    return this.stats.health / this.maxHealth;
+  }
+
   onDeath(cb: Listener): void {
     (this.listeners.death ??= []).push(cb);
   }
