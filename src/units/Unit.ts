@@ -87,13 +87,21 @@ export class Unit {
     }
   }
 
-  moveTowards(target: AxialCoord, map: HexMap): void {
+  /**
+   * Calculate a path toward the target coordinate without moving immediately.
+   *
+   * The returned path includes the unit's current position as the first
+   * element and at most {@link stats.movementRange} steps beyond it. This
+   * allows an external animator to interpolate movement over multiple
+   * animation frames.
+   */
+  moveTowards(target: AxialCoord, map: HexMap): AxialCoord[] {
     const path = this.findPath(target, map);
     if (path.length < 2) {
-      return;
+      return [];
     }
     const steps = Math.min(this.stats.movementRange, path.length - 1);
-    this.coord = path[steps];
+    return path.slice(0, steps + 1);
   }
 
   findPath(target: AxialCoord, map: HexMap): AxialCoord[] {
