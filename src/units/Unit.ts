@@ -1,5 +1,6 @@
 import { AxialCoord, getNeighbors } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
+import { eventBus } from '../events';
 
 export interface UnitStats {
   health: number;
@@ -62,15 +63,25 @@ export class Unit {
 
   attack(target: Unit): void {
     if (this.distanceTo(target.coord) <= this.stats.attackRange) {
-      target.takeDamage(this.stats.attackDamage);
+      target.takeDamage(this.stats.attackDamage, this);
     }
   }
 
-  takeDamage(amount: number): void {
+  takeDamage(amount: number, attacker?: Unit): void {
     this.stats.health -= amount;
+    eventBus.emit('unitDamaged', {
+      attackerId: attacker?.id,
+      targetId: this.id,
+      amount,
+      remainingHealth: this.stats.health
+    });
     if (this.stats.health <= 0 && this.alive) {
       this.stats.health = 0;
       this.alive = false;
+      eventBus.emit('unitDied', {
+        unitId: this.id,
+        attackerId: attacker?.id
+      });
       this.emitDeath();
     }
   }
