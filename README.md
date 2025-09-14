@@ -45,7 +45,7 @@ the repository, update the `name` field in `package.json` so the build step
 continues to point to the right base path.
 
 ## Live Demo
-Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/index.html?utm_source=chatgpt.com
+Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
 
 ## Running Tests
 
@@ -56,5 +56,6 @@ npm test
 ## Contributing
 
 Contributions are welcome! Fork the repository, create a branch, make your
-changes, and open a pull request.
+changes, and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+guidelines.
 
