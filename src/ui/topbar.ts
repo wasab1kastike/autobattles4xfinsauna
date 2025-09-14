@@ -43,7 +43,8 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   overlay.appendChild(bar);
 
   const saunakunnia = createBadge('Saunakunnia');
-  const sisu = createBadge('Sisu');
+  const sisu = createBadge('SISU🔥');
+  sisu.container.style.display = 'none';
   const gold = createBadge('Gold');
   const time = createBadge('Time');
   time.delta.style.display = 'none';
@@ -60,6 +61,21 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     sfx.play('click');
   });
   bar.appendChild(sisuBtn);
+
+  eventBus.on('sisuPulseStart', ({ remaining }) => {
+    sisuBtn.disabled = true;
+    sisu.container.style.display = 'block';
+    sisu.value.textContent = String(remaining);
+  });
+  eventBus.on('sisuPulseTick', ({ remaining }) => {
+    sisu.value.textContent = String(remaining);
+  });
+  eventBus.on('sisuPulseEnd', () => {
+    sisu.container.style.display = 'none';
+  });
+  eventBus.on('sisuCooldownEnd', () => {
+    sisuBtn.disabled = false;
+  });
 
   gold.value.textContent = String(state.getResource(Resource.GOLD));
 
