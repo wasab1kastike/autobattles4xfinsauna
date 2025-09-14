@@ -12,26 +12,17 @@ export function setupRightPanel(state: GameState): {
   log: (msg: string) => void;
   addEvent: (ev: GameEvent) => void;
 } {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) {
+  const panel = document.getElementById('right-panel');
+  if (!panel) {
     return { log: () => {}, addEvent: () => {} };
   }
-
-  const panel = document.createElement('div');
-  panel.id = 'right-panel';
-  panel.style.position = 'absolute';
-  panel.style.top = '0';
-  panel.style.right = '0';
-  panel.style.width = '240px';
-  panel.style.height = '100%';
   panel.style.display = 'flex';
   panel.style.flexDirection = 'column';
   panel.style.background = 'rgba(0,0,0,0.5)';
   panel.style.color = '#fff';
 
-  overlay.appendChild(panel);
-
   const tabBar = document.createElement('div');
+  tabBar.setAttribute('role', 'tablist');
   tabBar.style.display = 'flex';
   panel.appendChild(tabBar);
 
@@ -52,24 +43,46 @@ export function setupRightPanel(state: GameState): {
     Events: eventsTab,
     Log: logTab
   };
+  for (const el of Object.values(tabs)) {
+    el.setAttribute('role', 'tabpanel');
+    el.setAttribute('aria-selected', 'false');
+  }
+
+  const tabButtons: Record<string, HTMLButtonElement> = {};
+  const order = Object.keys(tabs);
+  let active = order[0];
 
   function show(tab: string): void {
-    for (const [name, el] of Object.entries(tabs)) {
-      el.style.display = name === tab ? 'block' : 'none';
+    for (const name of order) {
+      const selected = name === tab;
+      const el = tabs[name];
+      el.style.display = selected ? 'block' : 'none';
+      el.setAttribute('aria-selected', String(selected));
+      tabButtons[name].setAttribute('aria-selected', String(selected));
+      tabButtons[name].tabIndex = selected ? 0 : -1;
     }
-    for (const btn of tabBar.children) {
-      const b = btn as HTMLButtonElement;
-      b.disabled = b.textContent === tab;
-    }
+    active = tab;
   }
 
-  for (const name of Object.keys(tabs)) {
+  for (const name of order) {
     const btn = document.createElement('button');
     btn.textContent = name;
+    btn.setAttribute('role', 'tab');
     btn.addEventListener('click', () => show(name));
     tabBar.appendChild(btn);
+    tabButtons[name] = btn;
     content.appendChild(tabs[name]);
   }
+
+  tabBar.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    let idx = order.indexOf(active);
+    idx = e.key === 'ArrowLeft' ? (idx - 1 + order.length) % order.length : (idx + 1) % order.length;
+    const name = order[idx];
+    show(name);
+    tabButtons[name].focus();
+  });
 
   // --- Policies ---
   type PolicyDef = {

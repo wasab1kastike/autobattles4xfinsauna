@@ -16,8 +16,9 @@ import { setupTopbar } from './ui/topbar.ts';
 import { play } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
+import { initLayout } from './ui/layout.ts';
 
-const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+const canvas = initLayout();
 const resourceBar = document.getElementById('resource-bar')!;
 
 const assetPaths: AssetPaths = {

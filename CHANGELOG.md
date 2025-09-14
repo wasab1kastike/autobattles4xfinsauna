@@ -5,3 +5,4 @@
 - Add built site to `docs/` for GitHub Pages deployment
 - Output builds directly to `docs/` and remove deprecated `dist` directory
 - Add `.nojekyll` to bypass Jekyll on GitHub Pages
+- Introduce grid-based HUD layout and accessible right panel tabs
