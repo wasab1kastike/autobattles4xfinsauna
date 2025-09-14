@@ -1,5 +1,5 @@
 import { eventBus } from '../events';
-import { sfx } from '../sfx';
+import { play, setMuted } from '../sfx.ts';
 import { GameState, Resource } from '../core/GameState.ts';
 
 type Badge = {
@@ -36,6 +36,11 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
+  overlay.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON') play('click');
+  });
+
   const bar = document.createElement('div');
   bar.id = 'topbar';
   bar.style.display = 'flex';
@@ -58,11 +63,21 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   sisuBtn.textContent = 'SISU';
   sisuBtn.addEventListener('click', () => {
     eventBus.emit('sisuPulse', {});
-    sfx.play('click');
   });
   bar.appendChild(sisuBtn);
 
+  const muteBtn = document.createElement('button');
+  let muted = localStorage.getItem('muted') === 'true';
+  muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    setMuted(muted);
+    muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+  });
+  bar.appendChild(muteBtn);
+
   eventBus.on('sisuPulseStart', ({ remaining }) => {
+    play('sisu');
     sisuBtn.disabled = true;
     sisu.container.style.display = 'block';
     sisu.value.textContent = String(remaining);
@@ -95,7 +110,6 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     setTimeout(() => {
       badge.delta.style.opacity = '0';
     }, 1000);
-    sfx.play('click');
   });
 
   let elapsed = 0;

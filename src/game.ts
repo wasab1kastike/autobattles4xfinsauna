@@ -15,7 +15,6 @@ import { setupSaunaUI } from './ui/sauna.tsx';
 import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
-import { sfx } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
 
@@ -34,11 +33,6 @@ const assetPaths: AssetPaths = {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGPcpKT0n4ECwESJ5lEDRg0YNWAwGQAAM4ACFQNjXqgAAAAASUVORK5CYII=',
     farm:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGO8tVThPwMFgIkSzaMGjBowasBgMgAA4QYCvtGd17wAAAAASUVORK5CYII='
-  },
-  sounds: {
-    // Minimal silent WAV
-    click:
-      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='
   }
 };
 let assets: LoadedAssets;
@@ -176,7 +170,6 @@ window.addEventListener('beforeunload', () => {
 async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
   assets = loaded;
-  Object.entries(assets.sounds).forEach(([name, audio]) => sfx.register(name, audio));
   if (failures.length) {
     console.warn('Failed to load assets', failures);
   }

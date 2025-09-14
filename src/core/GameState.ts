@@ -6,6 +6,7 @@ import { eventBus } from '../events/EventBus';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
+import { play } from '../sfx.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -137,6 +138,7 @@ export class GameState {
 
   private spend(cost: number, res: Resource = Resource.GOLD): boolean {
     if (!this.canAfford(cost, res)) {
+      play('error');
       return false;
     }
     this.resources[res] -= cost;
