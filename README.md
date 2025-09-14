@@ -38,6 +38,9 @@ https://<your-github-username>.github.io/autobattles4xfinsauna/
 
 Replace `<your-github-username>` with your GitHub account name.
 
+## Live Demo
+Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/
+
 ## Running Tests
 
 ```bash
