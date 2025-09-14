@@ -2,6 +2,7 @@
   "name": "autobattles4xfinsauna",
   "private": true,
   "version": "0.0.0",
+  "homepage": "https://wasab1kastike.github.io/autobattles4xfinsauna/",
   "type": "module",
   "scripts": {
     "dev": "vite",
