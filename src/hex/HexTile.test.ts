@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { HexTile } from './HexTile.ts';
 import { HexMap } from '../hexmap.ts';
+import { TerrainId } from '../map/terrain.ts';
 
 describe('HexTile', () => {
   it('tracks terrain, building and fog state', () => {
-    const tile = new HexTile('water', null, true);
-    expect(tile.terrain).toBe('water');
+    const tile = new HexTile(TerrainId.Lake, null, true);
+    expect(tile.terrain).toBe(TerrainId.Lake);
     expect(tile.isFogged).toBe(true);
     tile.reveal();
     expect(tile.isFogged).toBe(false);
