@@ -235,4 +235,9 @@ export class GameState {
     eventBus.emit('policyApplied', { policy, state: this });
     return true;
   }
+
+  /** Check if a policy has been applied. */
+  hasPolicy(policy: string): boolean {
+    return this.policies.has(policy);
+  }
 }

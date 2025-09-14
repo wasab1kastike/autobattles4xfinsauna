@@ -13,11 +13,14 @@ describe('log function', () => {
     `;
 
     const { log } = await import('./game.ts');
-    const eventLog = document.getElementById('event-log')!;
 
     for (let i = 1; i <= 150; i++) {
       log(`msg ${i}`);
     }
+
+    // flush batched logs
+    (log as any).flush();
+    const eventLog = document.getElementById('event-log')!;
 
     expect(eventLog.childElementCount).toBe(100);
     expect(eventLog.firstChild?.textContent).toBe('msg 51');
