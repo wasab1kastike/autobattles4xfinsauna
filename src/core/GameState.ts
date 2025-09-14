@@ -6,6 +6,7 @@ import { eventBus } from '../events/EventBus';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
+import { markRevealed } from '../camera/autoFrame.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -108,8 +109,10 @@ export class GameState {
           this.buildingPlacements.set(key, b);
           const [q, r] = key.split(',').map(Number);
           if (map) {
-            const tile = map.getTile(q, r);
-            tile?.placeBuilding(b.type);
+            const tile = map.ensureTile(q, r);
+            tile.placeBuilding(b.type);
+            tile.reveal();
+            markRevealed({ q, r }, map.hexSize);
           }
           eventBus.emit('buildingPlaced', { building: b, coord: { q, r }, state: this });
         });

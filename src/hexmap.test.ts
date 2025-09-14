@@ -54,4 +54,15 @@ describe('HexMap', () => {
       expect.any(Number)
     );
   });
+
+  it('expands bounds when accessing tiles outside initial area', () => {
+    const map = new HexMap(1, 1);
+    const tile = map.getTile(2, -1);
+    expect(tile).toBeInstanceOf(HexTile);
+    let count = 0;
+    map.forEachTile(() => count++);
+    expect(map.width).toBe(3);
+    expect(map.height).toBe(2);
+    expect(count).toBe(6);
+  });
 });
