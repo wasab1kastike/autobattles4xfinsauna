@@ -31,12 +31,9 @@ npm install
 
 ## Deployment
 
-The site is published to GitHub Pages. After the workflow runs, it will be
-available at:
+The site is published to GitHub Pages and available at:
 
-https://<your-github-username>.github.io/autobattles4xfinsauna/
-
-Replace `<your-github-username>` with your GitHub account name.
+https://wasab1kastike.github.io/autobattles4xfinsauna/
 
 The Vite configuration automatically sets the correct base path for the build
 using the repository name. This ensures asset URLs resolve properly on GitHub
@@ -45,7 +42,7 @@ the repository, update the `name` field in `package.json` so the build step
 continues to point to the right base path.
 
 ## Live Demo
-Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/
+Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
 
 ## Running Tests
 

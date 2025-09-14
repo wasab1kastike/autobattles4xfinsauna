@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:demo": "node scripts/check-demo-link.js"
   },
   "devDependencies": {
     "jsdom": "^27.0.0",
