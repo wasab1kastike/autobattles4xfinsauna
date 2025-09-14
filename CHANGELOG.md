@@ -8,3 +8,7 @@
 - Build outputs to `dist/` and workflow publishes to `docs/`
 - Add workflow to build and publish `docs/` on pushes to `main`
 - Set explicit Vite base path for GitHub Pages
+- Fix Vite base path to always `/autobattles4xfinsauna/`
+- Add `verify-pages` CI workflow to validate Pages builds
+- Publish `dist/` to `docs/` only after verification succeeds
+- Remove legacy Pages deployment workflow
