@@ -6,7 +6,6 @@ import { pixelToAxial, axialToPixel } from './hex/HexUtils.ts';
 import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
-import Animator from './render/Animator.ts';
 import { eventBus } from './events';
 import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
@@ -60,7 +59,6 @@ const clock = new GameClock(1000, () => {
   draw();
 });
 
-const animator = new Animator(draw);
 
 const units: Unit[] = [];
 const sauna = createSauna({
@@ -83,7 +81,6 @@ function spawn(type: UnitType, coord: AxialCoord): void {
 }
 
 state.addResource(Resource.GOLD, 200);
-spawn('soldier', { q: 2, r: 2 });
 
 let selected: AxialCoord | null = null;
 
@@ -120,19 +117,6 @@ canvas.addEventListener('click', (e) => {
   const x = e.clientX - rect.left - map.hexSize;
   const y = e.clientY - rect.top - map.hexSize;
   selected = pixelToAxial(x, y, map.hexSize);
-  const unit = units[0];
-  if (unit) {
-    const occupied = new Set<string>();
-    for (const u of units) {
-      if (u !== unit && !u.isDead()) {
-        occupied.add(`${u.coord.q},${u.coord.r}`);
-      }
-    }
-    const path = unit.moveTowards(selected, map, occupied);
-    if (path.length > 0) {
-      animator.animate(unit, path);
-    }
-  }
   draw();
 });
 
