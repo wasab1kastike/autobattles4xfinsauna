@@ -85,10 +85,10 @@ export class HexMap {
       ctx.save();
       if (tile.isFogged) ctx.globalAlpha *= 0.4;
 
-      this.drawTerrain(ctx, tile.terrain, x + this.hexSize, y + this.hexSize);
+      this.drawTerrain(ctx, images, tile.terrain, x, y);
 
       if (tile.building) {
-        const building = images[tile.building] ?? images['placeholder'];
+        const building = images[`building-${tile.building}`] ?? images['placeholder'];
         ctx.drawImage(building, x, y, hexWidth, hexHeight);
       }
 
@@ -140,41 +140,16 @@ export class HexMap {
 
   private drawTerrain(
     ctx: CanvasRenderingContext2D,
+    images: Record<string, HTMLImageElement>,
     terrain: TerrainId,
     x: number,
     y: number
   ): void {
-    const size = this.hexSize;
-    this.hexPath(ctx, x, y, size);
-    if (terrain === TerrainId.Lake) {
-      ctx.fillStyle = '#3399ff';
-      ctx.fill();
-      return;
-    }
-
-    ctx.fillStyle = '#c2d1a1';
-    ctx.fill();
-    ctx.save();
-    ctx.clip();
-    if (terrain === TerrainId.Forest) {
-      ctx.strokeStyle = '#2e8b57';
-      for (let i = -size; i <= size; i += 4) {
-        ctx.beginPath();
-        ctx.moveTo(x - size, y + i);
-        ctx.lineTo(x + size, y + i);
-        ctx.stroke();
-      }
-    } else if (terrain === TerrainId.Hills) {
-      ctx.fillStyle = '#8b7765';
-      for (let dx = -size; dx <= size; dx += 6) {
-        for (let dy = -size; dy <= size; dy += 6) {
-          ctx.beginPath();
-          ctx.arc(x + dx, y + dy, 1, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
-    ctx.restore();
+    const hexWidth = this.hexSize * Math.sqrt(3);
+    const hexHeight = this.hexSize * 2;
+    const key = `terrain-${TerrainId[terrain].toLowerCase()}`;
+    const img = images[key] ?? images['placeholder'];
+    ctx.drawImage(img, x, y, hexWidth, hexHeight);
   }
 
   private strokeHex(

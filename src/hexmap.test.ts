@@ -41,13 +41,13 @@ describe('HexMap', () => {
     } as unknown as CanvasRenderingContext2D;
     const createImg = () => document.createElement('img') as HTMLImageElement;
     const images = {
-      grass: createImg(),
-      barracks: createImg(),
+      'terrain-plains': createImg(),
+      'building-barracks': createImg(),
       placeholder: createImg(),
     };
     map.draw(ctx, images);
     expect(ctx.drawImage).toHaveBeenCalledWith(
-      images.barracks,
+      images['building-barracks'],
       expect.any(Number),
       expect.any(Number),
       expect.any(Number),
