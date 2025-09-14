@@ -69,11 +69,11 @@ export function serialize(
 
   return {
     version: 1,
-    time: (state as any).time ?? 0,
+    time: state.time,
     revealed,
-    resources: { ...((state as any).resources as Record<Resource, number>) },
+    resources: { ...state.resources },
     buildings,
-    policies: Array.from((state as any).policies ?? []),
+    policies: state.getPolicies(),
     units: unitData,
     sauna: {
       id: 'sauna',

@@ -36,6 +36,16 @@ describe('GameState', () => {
     expect(state.getResource(Resource.GOLD)).toBe(2); // base 1 + eco policy
   });
 
+  it('tracks policies and allows queries and replacement', () => {
+    const state = new GameState(1000);
+    state.applyPolicy('eco', 0);
+    expect(state.hasPolicy('eco')).toBe(true);
+    expect(state.getPolicies()).toContain('eco');
+    state.setPolicies(['temperance']);
+    expect(state.hasPolicy('eco')).toBe(false);
+    expect(state.hasPolicy('temperance')).toBe(true);
+  });
+
   it('constructs and upgrades buildings when affordable', () => {
     const state = new GameState(1000);
     state.addResource(Resource.GOLD, 100);

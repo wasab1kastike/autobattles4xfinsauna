@@ -242,4 +242,16 @@ export class GameState {
     eventBus.emit('policyApplied', { policy, state: this });
     return true;
   }
+
+  hasPolicy(policy: string): boolean {
+    return this.policies.has(policy);
+  }
+
+  getPolicies(): string[] {
+    return Array.from(this.policies);
+  }
+
+  setPolicies(policies: Iterable<string>): void {
+    this.policies = new Set(policies);
+  }
 }

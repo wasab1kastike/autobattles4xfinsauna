@@ -78,11 +78,11 @@ function saveGame(): void {
 }
 
 function applySave(data: SaveData): void {
-  (state as any).resources = { ...data.resources };
-  (state as any).policies = new Set(data.policies ?? []);
+  state.resources = { ...data.resources };
+  state.setPolicies(data.policies ?? []);
   state.time = data.time ?? 0;
   (state as any).passiveGeneration = { ...PASSIVE_GENERATION };
-  for (const policy of (state as any).policies) {
+  for (const policy of state.getPolicies()) {
     eventBus.emit('policyApplied', { policy, state });
   }
 
