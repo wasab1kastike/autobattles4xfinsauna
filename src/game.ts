@@ -13,6 +13,7 @@ import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { Farm, Barracks } from './buildings/index.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
+import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { sfx } from './sfx.ts';
@@ -99,12 +100,25 @@ function draw(): void {
 }
 
 function drawUnits(ctx: CanvasRenderingContext2D): void {
-  const sprite = assets.images['unit-soldier'];
   const hexWidth = map.hexSize * Math.sqrt(3);
   const hexHeight = map.hexSize * 2;
+  const size = Math.min(hexWidth, hexHeight);
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
-    ctx.drawImage(sprite, x, y, hexWidth, hexHeight);
+    const img = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'image'
+    ) as unknown as SVGImageElement;
+    img.setAttribute(
+      'href',
+      `data:image/svg+xml;utf8,${encodeURIComponent(raiderSVG(size))}`
+    );
+    const maxHealth = (unit as any).maxHealth ?? unit.stats.health;
+    if (unit.stats.health / maxHealth < 0.5) {
+      ctx.filter = 'saturate(0)';
+    }
+    ctx.drawImage(img, x, y, hexWidth, hexHeight);
+    ctx.filter = 'none';
   }
 }
 
