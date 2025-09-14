@@ -11,6 +11,8 @@ import { Farm, Barracks } from './buildings/index.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
+import { setupTopbar } from './ui/topbar.ts';
+import { sfx } from './sfx.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -35,7 +37,7 @@ const assetPaths: AssetPaths = {
   },
   sounds: {
     // Minimal silent WAV
-    placeholder:
+    click:
       'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='
   }
 };
@@ -70,6 +72,7 @@ const sauna = createSauna({
 });
 map.revealAround(sauna.pos, 3);
 const updateSaunaUI = setupSaunaUI(sauna);
+const updateTopbar = setupTopbar(state);
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
@@ -188,6 +191,7 @@ policyBtn.addEventListener('click', () => {
 async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
   assets = loaded;
+  Object.entries(assets.sounds).forEach(([name, audio]) => sfx.register(name, audio));
   if (failures.length) {
     console.warn('Failed to load assets', failures);
   }
@@ -198,15 +202,16 @@ async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     clock.tick(delta);
-    sauna.update(delta / 1000, units, (u) => {
-      units.push(u);
-      draw();
-    });
-    updateSaunaUI();
+      sauna.update(delta / 1000, units, (u) => {
+        units.push(u);
+        draw();
+      });
+      updateSaunaUI();
+      updateTopbar(delta);
+      requestAnimationFrame(gameLoop);
+    }
     requestAnimationFrame(gameLoop);
   }
-  requestAnimationFrame(gameLoop);
-}
 
 if (!import.meta.vitest) {
   start();
