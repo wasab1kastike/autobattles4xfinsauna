@@ -8,6 +8,7 @@ export class GameClock {
   private timer: ReturnType<typeof setInterval> | null = null;
   private speed = 1;
   private lastTick = 0;
+  private accumulator = 0;
 
   constructor(private readonly baseInterval: number, private readonly onTick: TickCallback) {}
 
@@ -49,5 +50,17 @@ export class GameClock {
 
   getBaseInterval(): number {
     return this.baseInterval;
+  }
+
+  /**
+   * Advance the clock manually by `deltaMs` time. This can be called from an
+   * animation frame loop to keep ticks in sync with rendering.
+   */
+  tick(deltaMs: number): void {
+    this.accumulator += deltaMs * this.speed;
+    while (this.accumulator >= this.baseInterval) {
+      this.accumulator -= this.baseInterval;
+      this.onTick(this.baseInterval);
+    }
   }
 }
