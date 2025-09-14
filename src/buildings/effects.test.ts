@@ -46,4 +46,18 @@ describe('building effects', () => {
       'player'
     );
   });
+
+  it('removes passive gold when a farm is removed', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.GOLD, 100);
+    const map = new HexMap(3, 3, 1);
+    expect(state.placeBuilding(new Farm(), coordFarm, map)).toBe(true);
+    state.tick();
+    expect(state.getResource(Resource.GOLD)).toBe(52);
+    expect(state.removeBuilding(coordFarm, map)).toBe(true);
+    state.tick();
+    // only base generation after removal
+    expect(state.getResource(Resource.GOLD)).toBe(53);
+    expect(state.getBuildingAt(coordFarm)).toBeUndefined();
+  });
 });

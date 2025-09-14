@@ -198,6 +198,29 @@ export class GameState {
     return this.buildingPlacements.get(coordKey(coord));
   }
 
+  /**
+   * Remove a building at the given coordinate if one exists.
+   * Returns true if a building was removed.
+   */
+  removeBuilding(coord: AxialCoord, map: HexMap): boolean {
+    const key = coordKey(coord);
+    const building = this.buildingPlacements.get(key);
+    if (!building) {
+      return false;
+    }
+    this.buildingPlacements.delete(key);
+    const tile = map.getTile(coord.q, coord.r);
+    tile?.placeBuilding(null);
+    if (this.buildings[building.type] !== undefined) {
+      this.buildings[building.type] -= 1;
+      if (this.buildings[building.type] <= 0) {
+        delete this.buildings[building.type];
+      }
+    }
+    eventBus.emit('buildingRemoved', { building, coord, state: this });
+    return true;
+  }
+
   /** Spend resources to upgrade a building. */
   upgrade(building: string, cost: number, res: Resource = Resource.GOLD): boolean {
     return this.construct(`upgrade:${building}`, cost, res);
