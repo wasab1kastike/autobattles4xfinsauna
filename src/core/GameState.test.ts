@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameState, Resource } from './GameState';
+import { HexMap } from '../hexmap.ts';
+import { Farm } from '../buildings/index.ts';
 import '../events';
 
 describe('GameState', () => {
@@ -60,5 +62,21 @@ describe('GameState', () => {
     expect(state.getResource(Resource.GOLD)).toBe(5);
     expect((state as any).buildings['hut']).toBeUndefined();
     expect((state as any).buildings['upgrade:hut']).toBeUndefined();
+  });
+
+  it('persists building placements across save/load', () => {
+    const map1 = new HexMap(3, 3, 1);
+    const state = new GameState(1000);
+    state.addResource(Resource.GOLD, 100);
+    const coord = { q: 1, r: 1 };
+    expect(state.placeBuilding(new Farm(), coord, map1)).toBe(true);
+    state.save();
+
+    const map2 = new HexMap(3, 3, 1);
+    const loaded = new GameState(1000);
+    loaded.load(map2);
+
+    expect(map2.getTile(coord.q, coord.r)?.building).toBe('farm');
+    expect(loaded.getBuildingAt(coord)?.type).toBe('farm');
   });
 });

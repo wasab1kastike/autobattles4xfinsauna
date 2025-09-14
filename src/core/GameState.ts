@@ -5,10 +5,19 @@
 import { eventBus } from '../events/EventBus';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
-import type { Building } from '../buildings/index.ts';
+import { Farm, Barracks, type Building } from '../buildings/index.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
+}
+
+const BUILDING_FACTORIES: Record<string, () => Building> = {
+  farm: () => new Farm(),
+  barracks: () => new Barracks()
+};
+
+function createBuilding(type: string): Building | undefined {
+  return BUILDING_FACTORIES[type]?.();
 }
 
 /** Available resource types. */
@@ -57,13 +66,22 @@ export class GameState {
 
   save(): void {
     this.lastSaved = Date.now();
+    const placements: Record<string, string> = {};
+    this.buildingPlacements.forEach((b, k) => {
+      placements[k] = b.type;
+    });
     localStorage.setItem(
       this.storageKey,
-      JSON.stringify({ resources: this.resources, lastSaved: this.lastSaved })
+      JSON.stringify({
+        resources: this.resources,
+        lastSaved: this.lastSaved,
+        buildings: this.buildings,
+        buildingPlacements: placements
+      })
     );
   }
 
-  load(): void {
+  load(map?: HexMap): void {
     const raw = localStorage.getItem(this.storageKey);
     if (!raw) {
       this.lastSaved = Date.now();
@@ -73,8 +91,24 @@ export class GameState {
       const data = JSON.parse(raw) as {
         resources?: Record<Resource, number>;
         lastSaved?: number;
+        buildings?: Record<string, number>;
+        buildingPlacements?: Record<string, string>;
       };
       this.resources = { ...this.resources, ...data.resources };
+      this.buildings = { ...data.buildings };
+      this.buildingPlacements.clear();
+      if (data.buildingPlacements) {
+        Object.entries(data.buildingPlacements).forEach(([key, type]) => {
+          const b = createBuilding(type);
+          if (!b) return;
+          this.buildingPlacements.set(key, b);
+          if (map) {
+            const [q, r] = key.split(',').map(Number);
+            const tile = map.getTile(q, r);
+            tile?.placeBuilding(b.type);
+          }
+        });
+      }
       this.lastSaved = data.lastSaved ?? Date.now();
       const elapsed = Date.now() - this.lastSaved;
       const offlineTicks = Math.floor(elapsed / this.tickInterval);

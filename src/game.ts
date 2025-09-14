@@ -43,7 +43,7 @@ const map = new HexMap(10, 10, 32);
 map.forEachTile((t) => t.setFogged(false));
 
 const state = new GameState(1000);
-state.load();
+state.load(map);
 const clock = new GameClock(1000, () => {
   state.tick();
   state.save();
