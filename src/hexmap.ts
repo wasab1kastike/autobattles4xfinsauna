@@ -52,8 +52,8 @@ export class HexMap {
       const terrainKey = tile.terrain === 'water' ? 'water' : 'grass';
       const terrain = images[terrainKey] ?? images['placeholder'];
       ctx.drawImage(terrain, x, y, hexWidth, hexHeight);
-      if (tile.building === 'farm') {
-        const building = images['farm'] ?? images['placeholder'];
+      if (tile.building) {
+        const building = images[tile.building] ?? images['placeholder'];
         ctx.drawImage(building, x, y, hexWidth, hexHeight);
       }
       const isSelected = selected && coord.q === selected.q && coord.r === selected.r;
