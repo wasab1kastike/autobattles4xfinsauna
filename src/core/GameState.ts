@@ -60,6 +60,9 @@ export class GameState {
   /** Policies currently applied. */
   private policies = new Set<string>();
 
+  /** Modifier for work speed during night, affected by policies. */
+  nightWorkSpeedMultiplier = 1;
+
   constructor(
     private readonly tickInterval: number,
     private readonly storageKey = 'gameState'
@@ -234,5 +237,10 @@ export class GameState {
     this.policies.add(policy);
     eventBus.emit('policyApplied', { policy, state: this });
     return true;
+  }
+
+  /** Check if a policy has been applied. */
+  hasPolicy(policy: string): boolean {
+    return this.policies.has(policy);
   }
 }
