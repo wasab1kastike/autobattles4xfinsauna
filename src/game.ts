@@ -6,11 +6,13 @@ import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit } from './unit.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
+import { Farm, Barracks } from './buildings/index.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
 const eventLog = document.getElementById('event-log')!;
 const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement;
+const buildBarracksBtn = document.getElementById('build-barracks') as HTMLButtonElement;
 const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement;
 const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
 
@@ -99,7 +101,19 @@ window.addEventListener('beforeunload', () => {
 });
 
 buildFarmBtn.addEventListener('click', () => {
-  state.construct('farm', 10);
+  if (!selected) return;
+  if (state.placeBuilding(new Farm(), selected, map)) {
+    log('Farm constructed');
+    draw();
+  }
+});
+
+buildBarracksBtn.addEventListener('click', () => {
+  if (!selected) return;
+  if (state.placeBuilding(new Barracks(), selected, map)) {
+    log('Barracks constructed');
+    draw();
+  }
 });
 
 upgradeFarmBtn.addEventListener('click', () => {
