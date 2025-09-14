@@ -188,6 +188,7 @@ export class GameState {
     }
     this.buildingPlacements.set(coordKey(coord), building);
     tile.placeBuilding(building.type);
+    eventBus.emit('buildingPlaced', { building, coord, state: this });
     return true;
   }
 
