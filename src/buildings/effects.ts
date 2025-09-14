@@ -12,6 +12,12 @@ export type BuildingPlacedPayload = {
   state: GameState;
 };
 
+export type BuildingRemovedPayload = {
+  building: Building;
+  coord: AxialCoord;
+  state: GameState;
+};
+
 const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): void => {
   if (building instanceof Farm) {
     state.modifyPassiveGeneration(Resource.GOLD, building.foodPerTick);
@@ -23,5 +29,12 @@ const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): vo
   }
 };
 
+const onBuildingRemoved = ({ building, state }: BuildingRemovedPayload): void => {
+  if (building instanceof Farm) {
+    state.modifyPassiveGeneration(Resource.GOLD, -building.foodPerTick);
+  }
+};
+
 // register listeners for building effects
 eventBus.on<BuildingPlacedPayload>('buildingPlaced', onBuildingPlaced);
+eventBus.on<BuildingRemovedPayload>('buildingRemoved', onBuildingRemoved);
