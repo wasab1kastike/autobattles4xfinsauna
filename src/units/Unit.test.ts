@@ -4,6 +4,10 @@ import type { AxialCoord } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
 
+function coordKey(c: AxialCoord): string {
+  return `${c.q},${c.r}`;
+}
+
 function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
   return new Unit(id, coord, 'faction', { ...stats });
 }
@@ -106,7 +110,7 @@ describe('Unit movement', () => {
       attackRange: 1,
       movementRange: 1
     });
-    const path = unit.moveTowards({ q: 2, r: 0 }, map);
+    const path = unit.moveTowards({ q: 2, r: 0 }, map, new Set());
     expect(path).toEqual([
       { q: 0, r: 0 },
       { q: 0, r: 1 }
@@ -136,8 +140,29 @@ describe('Unit movement', () => {
       attackRange: 1,
       movementRange: 1
     });
-    const target = unit.seekNearestEnemy([enemy1, enemy2], map);
+    const occupied = new Set<string>();
+    const target = unit.seekNearestEnemy([enemy1, enemy2], map, occupied);
     expect(target).toBe(enemy2);
+  });
+
+  it('does not move into occupied tiles', () => {
+    const map = new HexMap(3, 3);
+    const unit = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const blocker = createUnit('b', { q: 1, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const occupied = new Set<string>([coordKey(blocker.coord)]);
+    const path = unit.moveTowards(blocker.coord, map, occupied);
+    expect(path).toEqual([]);
+    expect(unit.coord).toEqual({ q: 0, r: 0 });
   });
 });
 

@@ -95,16 +95,36 @@ export class Unit {
    * allows an external animator to interpolate movement over multiple
    * animation frames.
    */
-  moveTowards(target: AxialCoord, map: HexMap): AxialCoord[] {
-    const path = this.findPath(target, map);
+  moveTowards(
+    target: AxialCoord,
+    map: HexMap,
+    occupied: Set<string>
+  ): AxialCoord[] {
+    const path = this.findPath(target, map, occupied);
     if (path.length < 2) {
       return [];
     }
-    const steps = Math.min(this.stats.movementRange, path.length - 1);
+    // Stop before the first occupied tile in the path
+    let endIndex = 0;
+    for (let i = 1; i < path.length; i++) {
+      const key = coordKey(path[i]);
+      if (occupied.has(key)) {
+        break;
+      }
+      endIndex = i;
+    }
+    if (endIndex === 0) {
+      return [];
+    }
+    const steps = Math.min(this.stats.movementRange, endIndex);
     return path.slice(0, steps + 1);
   }
 
-  findPath(target: AxialCoord, map: HexMap): AxialCoord[] {
+  findPath(
+    target: AxialCoord,
+    map: HexMap,
+    occupied: Set<string>
+  ): AxialCoord[] {
     const start = this.coord;
     const startKey = coordKey(start);
     const targetKey = coordKey(target);
@@ -119,10 +139,10 @@ export class Unit {
         break;
       }
       for (const neighbor of getNeighbors(current)) {
-        if (!this.isPassable(neighbor, map)) {
+        const nKey = coordKey(neighbor);
+        if (nKey !== targetKey && !this.isPassable(neighbor, map, occupied)) {
           continue;
         }
-        const nKey = coordKey(neighbor);
         if (cameFrom.has(nKey)) {
           continue;
         }
@@ -144,7 +164,11 @@ export class Unit {
     return path.reverse();
   }
 
-  seekNearestEnemy(enemies: Unit[], map: HexMap): Unit | null {
+  seekNearestEnemy(
+    enemies: Unit[],
+    map: HexMap,
+    occupied: Set<string>
+  ): Unit | null {
     const enemyMap = new Map<string, Unit>();
     for (const enemy of enemies) {
       enemyMap.set(coordKey(enemy.coord), enemy);
@@ -159,10 +183,14 @@ export class Unit {
         return enemy;
       }
       for (const neighbor of getNeighbors(current)) {
-        if (!this.isPassable(neighbor, map)) {
+        const nKey = coordKey(neighbor);
+        const enemyAtNeighbor = enemyMap.get(nKey);
+        if (enemyAtNeighbor) {
+          return enemyAtNeighbor;
+        }
+        if (!this.isPassable(neighbor, map, occupied)) {
           continue;
         }
-        const nKey = coordKey(neighbor);
         if (visited.has(nKey)) {
           continue;
         }
@@ -173,9 +201,16 @@ export class Unit {
     return null;
   }
 
-  private isPassable(coord: AxialCoord, map: HexMap): boolean {
+  private isPassable(
+    coord: AxialCoord,
+    map: HexMap,
+    occupied?: Set<string>
+  ): boolean {
     const tile = map.getTile(coord.q, coord.r);
     if (!tile) {
+      return false;
+    }
+    if (occupied && occupied.has(coordKey(coord))) {
       return false;
     }
     return tile.terrain !== 'water' && tile.terrain !== 'mountain';
