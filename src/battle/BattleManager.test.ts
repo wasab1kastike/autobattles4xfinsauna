@@ -8,9 +8,10 @@ function createUnit(
   id: string,
   coord: { q: number; r: number },
   faction: string,
-  stats: UnitStats
+  stats: UnitStats,
+  priorityFactions: string[] = []
 ): Unit {
-  return new Unit(id, coord, faction, { ...stats });
+  return new Unit(id, coord, faction, { ...stats }, priorityFactions);
 }
 
 describe('BattleManager', () => {
@@ -54,6 +55,36 @@ describe('BattleManager', () => {
       remainingHealth: 0
     });
     expect(deathEvents[0]).toMatchObject({ unitId: 'b', attackerId: 'a' });
+  });
+
+  it('prioritizes targets based on faction when multiple enemies are in range', () => {
+    const map = new HexMap(5, 5);
+    const attacker = createUnit('a', { q: 0, r: 0 }, 'A', {
+      health: 10,
+      attackDamage: 5,
+      attackRange: 1,
+      movementRange: 0
+    }, ['B']);
+    const defenderB = createUnit('b', { q: 1, r: 0 }, 'B', {
+      health: 5,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+    const defenderC = createUnit('c', { q: 0, r: 1 }, 'C', {
+      health: 5,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+
+    const manager = new BattleManager(map);
+    const units = [attacker, defenderB, defenderC];
+
+    manager.tick(units);
+
+    expect(defenderB.stats.health).toBe(0);
+    expect(defenderC.stats.health).toBe(5);
   });
 });
 
