@@ -39,14 +39,21 @@ const assetPaths: AssetPaths = {
 let assets: LoadedAssets;
 
 const map = new HexMap(10, 10, 32);
-// Reveal all tiles for simplicity
-map.forEachTile((t) => t.setFogged(false));
+// Ensure all tiles start fogged
+map.forEachTile((t) => t.setFogged(true));
 
 const state = new GameState(1000);
 state.load(map);
+const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
   state.save();
+  // Reveal around all friendly units each tick
+  for (const unit of units) {
+    if (!unit.isDead() && unit.faction === 'player') {
+      map.revealAround(unit.coord, VISION_RADIUS);
+    }
+  }
   draw();
 });
 

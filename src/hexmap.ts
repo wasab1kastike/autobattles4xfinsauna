@@ -39,6 +39,24 @@ export class HexMap {
       .filter((t): t is HexTile => Boolean(t));
   }
 
+  /**
+   * Reveal all tiles within the given radius around a central coordinate.
+   *
+   * The hex range iteration is based on axial coordinates. For each offset
+   * within the radius we reveal the tile if it exists on the map. Tiles
+   * outside the radius remain fogged.
+   */
+  revealAround(center: AxialCoord, radius: number): void {
+    for (let dq = -radius; dq <= radius; dq++) {
+      const rMin = Math.max(-radius, -dq - radius);
+      const rMax = Math.min(radius, -dq + radius);
+      for (let dr = rMin; dr <= rMax; dr++) {
+        const tile = this.getTile(center.q + dq, center.r + dr);
+        tile?.reveal();
+      }
+    }
+  }
+
   /** Draw the map onto a canvas context. */
   draw(
     ctx: CanvasRenderingContext2D,
