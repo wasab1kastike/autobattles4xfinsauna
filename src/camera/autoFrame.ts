@@ -1,5 +1,6 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
+import { lerp } from '../lib/tween.ts';
 
 /** Set of revealed hex coordinates serialized as "q,r" strings. */
 const revealedHexes = new Set<string>();
@@ -82,9 +83,9 @@ export function tweenCamera(target: CameraFrame, duration = 300): void {
 
   const step = (now: number) => {
     const t = Math.min((now - startTime) / duration, 1);
-    camera.x = startX + (target.center.x - startX) * t;
-    camera.y = startY + (target.center.y - startY) * t;
-    camera.zoom = startZoom + (target.zoom - startZoom) * t;
+    camera.x = lerp(startX, target.center.x, t);
+    camera.y = lerp(startY, target.center.y, t);
+    camera.zoom = lerp(startZoom, target.zoom, t);
     if (t < 1) {
       if (typeof requestAnimationFrame !== 'undefined') {
         requestAnimationFrame(step);
