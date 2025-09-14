@@ -92,7 +92,13 @@ canvas.addEventListener('click', (e) => {
   selected = pixelToAxial(x, y, map.hexSize);
   const unit = units[0];
   if (unit) {
-    const path = unit.moveTowards(selected, map);
+    const occupied = new Set<string>();
+    for (const u of units) {
+      if (u !== unit && !u.isDead()) {
+        occupied.add(`${u.coord.q},${u.coord.r}`);
+      }
+    }
+    const path = unit.moveTowards(selected, map, occupied);
     if (path.length > 0) {
       animator.animate(unit, path);
     }
