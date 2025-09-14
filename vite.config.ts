@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig({
-  base: "/autobattles4xfinsauna/",
+export default defineConfig(() => ({
+  base: process.env.BASE_PATH ?? '/',
   // plugins: [...]
-});
+}));
