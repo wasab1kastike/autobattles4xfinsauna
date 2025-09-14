@@ -8,6 +8,8 @@ import Animator from './render/Animator.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 import { Farm, Barracks } from './buildings/index.ts';
+import { createSauna } from './sim/sauna.ts';
+import { setupSaunaUI } from './ui/sauna.tsx';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -60,6 +62,11 @@ const clock = new GameClock(1000, () => {
 const animator = new Animator(draw);
 
 const units: Unit[] = [];
+const sauna = createSauna({
+  q: Math.floor(map.width / 2),
+  r: Math.floor(map.height / 2)
+});
+const updateSaunaUI = setupSaunaUI(sauna);
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
@@ -188,6 +195,11 @@ async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     clock.tick(delta);
+    sauna.update(delta / 1000, units, (u) => {
+      units.push(u);
+      draw();
+    });
+    updateSaunaUI();
     requestAnimationFrame(gameLoop);
   }
   requestAnimationFrame(gameLoop);
