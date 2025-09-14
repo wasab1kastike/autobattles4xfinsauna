@@ -1,5 +1,6 @@
 import { AxialCoord, axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
+import { addRevealedHex, autoFrame, tweenCamera, ViewportSize } from './camera/autoFrame.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
 export class HexMap {
@@ -46,14 +47,22 @@ export class HexMap {
    * within the radius we reveal the tile if it exists on the map. Tiles
    * outside the radius remain fogged.
    */
-  revealAround(center: AxialCoord, radius: number): void {
+  revealAround(center: AxialCoord, radius: number, viewport?: ViewportSize): void {
     for (let dq = -radius; dq <= radius; dq++) {
       const rMin = Math.max(-radius, -dq - radius);
       const rMax = Math.min(radius, -dq + radius);
       for (let dr = rMin; dr <= rMax; dr++) {
-        const tile = this.getTile(center.q + dq, center.r + dr);
-        tile?.reveal();
+        const coord = { q: center.q + dq, r: center.r + dr };
+        const tile = this.getTile(coord.q, coord.r);
+        if (tile) {
+          tile.reveal();
+          addRevealedHex(coord);
+        }
       }
+    }
+    if (viewport) {
+      const frame = autoFrame(viewport);
+      tweenCamera(frame, 300);
     }
   }
 

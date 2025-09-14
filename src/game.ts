@@ -53,7 +53,10 @@ const clock = new GameClock(1000, () => {
   // Reveal around all friendly units each tick
   for (const unit of units) {
     if (!unit.isDead() && unit.faction === 'player') {
-      map.revealAround(unit.coord, VISION_RADIUS);
+      map.revealAround(unit.coord, VISION_RADIUS, {
+        width: canvas.width,
+        height: canvas.height,
+      });
     }
   }
   draw();
@@ -189,6 +192,8 @@ async function start(): Promise<void> {
     console.warn('Failed to load assets', failures);
   }
   resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
+  // Initial reveal around the Sauna and auto-frame the camera
+  map.revealAround(sauna.pos, 3, { width: canvas.width, height: canvas.height });
   draw();
   let last = performance.now();
   function gameLoop(now: number) {
