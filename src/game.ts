@@ -16,7 +16,7 @@ import { setupSaunaUI } from './ui/sauna.tsx';
 import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
-import { sfx } from './sfx.ts';
+import { play } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -130,6 +130,7 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
 }
 
 canvas.addEventListener('click', (e) => {
+  play('click');
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left - map.hexSize;
   const y = e.clientY - rect.top - map.hexSize;
@@ -189,6 +190,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 buildFarmBtn.addEventListener('click', () => {
+  play('click');
   if (!selected) return;
   if (state.placeBuilding(new Farm(), selected, map)) {
     log('Farm constructed');
@@ -197,6 +199,7 @@ buildFarmBtn.addEventListener('click', () => {
 });
 
 buildBarracksBtn.addEventListener('click', () => {
+  play('click');
   if (!selected) return;
   if (state.placeBuilding(new Barracks(), selected, map)) {
     log('Barracks constructed');
@@ -205,17 +208,18 @@ buildBarracksBtn.addEventListener('click', () => {
 });
 
 upgradeFarmBtn.addEventListener('click', () => {
+  play('click');
   state.upgrade('farm', 20);
 });
 
 policyBtn.addEventListener('click', () => {
+  play('click');
   state.applyPolicy('eco', 15);
 });
 
 async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
   assets = loaded;
-  Object.entries(assets.sounds).forEach(([name, audio]) => sfx.register(name, audio));
   if (failures.length) {
     console.warn('Failed to load assets', failures);
   }

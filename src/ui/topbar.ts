@@ -1,5 +1,5 @@
 import { eventBus } from '../events';
-import { sfx } from '../sfx';
+import { play, setMuted } from '../sfx';
 import { GameState, Resource } from '../core/GameState.ts';
 
 type Badge = {
@@ -58,9 +58,20 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   sisuBtn.textContent = 'SISU';
   sisuBtn.addEventListener('click', () => {
     eventBus.emit('sisuPulse', {});
-    sfx.play('click');
+    play('click');
   });
   bar.appendChild(sisuBtn);
+
+  const muteBtn = document.createElement('button');
+  let muted = localStorage.getItem('sfx-muted') === 'true';
+  muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+  muteBtn.addEventListener('click', () => {
+    play('click');
+    muted = !muted;
+    setMuted(muted);
+    muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+  });
+  bar.appendChild(muteBtn);
 
   eventBus.on('sisuPulseStart', ({ remaining }) => {
     sisuBtn.disabled = true;
@@ -95,7 +106,7 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     setTimeout(() => {
       badge.delta.style.opacity = '0';
     }, 1000);
-    sfx.play('click');
+    play('click');
   });
 
   let elapsed = 0;

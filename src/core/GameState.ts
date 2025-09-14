@@ -3,6 +3,7 @@
  * Handles saving/loading via localStorage and offline progress.
  */
 import { eventBus } from '../events/EventBus';
+import { play } from '../sfx';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
@@ -134,6 +135,7 @@ export class GameState {
 
   private spend(cost: number, res: Resource = Resource.GOLD): boolean {
     if (!this.canAfford(cost, res)) {
+      play('error');
       return false;
     }
     this.resources[res] -= cost;

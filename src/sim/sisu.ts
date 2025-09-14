@@ -1,6 +1,7 @@
 import type { GameState } from '../core/GameState.ts';
 import type { Unit } from '../units/Unit.ts';
 import { eventBus } from '../events';
+import { play } from '../sfx';
 
 let active = false;
 let onCooldown = false;
@@ -14,6 +15,7 @@ export function activateSisuPulse(state: GameState, units: Unit[]): void {
   if (active || onCooldown) return;
   active = true;
   onCooldown = true;
+  play('sisu');
   let remaining = 10;
   eventBus.emit('sisuPulseStart', { remaining });
 
