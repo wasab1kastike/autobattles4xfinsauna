@@ -1,6 +1,7 @@
-import { AxialCoord, getNeighbors } from '../hex/HexUtils.ts';
+import { AxialCoord, getNeighbors, axialToPixel } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
+import type { Sauna } from '../buildings/Sauna.ts';
 
 export interface UnitStats {
   health: number;
@@ -34,6 +35,8 @@ export class Unit {
   /** Whether the unit is still alive. */
   private alive = true;
   private listeners: { death?: Listener[] } = {};
+  private maxHealth: number;
+  private healMarkerElapsed = 0;
 
   constructor(
     public readonly id: string,
@@ -41,7 +44,9 @@ export class Unit {
     public readonly faction: string,
     public readonly stats: UnitStats,
     public readonly priorityFactions: string[] = []
-  ) {}
+  ) {
+    this.maxHealth = stats.health;
+  }
 
   onDeath(cb: Listener): void {
     (this.listeners.death ??= []).push(cb);
@@ -66,6 +71,45 @@ export class Unit {
     if (this.distanceTo(target.coord) <= this.stats.attackRange) {
       target.takeDamage(this.stats.attackDamage, this);
     }
+  }
+
+  update(dt: number, sauna?: Sauna): void {
+    if (this.isDead() || !sauna) {
+      return;
+    }
+    if (hexDistance(this.coord, sauna.pos) <= sauna.auraRadius) {
+      const before = this.stats.health;
+      this.stats.health = Math.min(
+        this.stats.health + sauna.regenPerSec * dt,
+        this.maxHealth
+      );
+      if (this.stats.health > before) {
+        this.healMarkerElapsed += dt;
+        if (this.healMarkerElapsed >= 1) {
+          this.healMarkerElapsed = 0;
+          this.spawnHealMarker();
+        }
+      }
+    } else {
+      this.healMarkerElapsed = 0;
+    }
+  }
+
+  private spawnHealMarker(): void {
+    if (typeof document === 'undefined') return;
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
+    if (!canvas) return;
+    const { x, y } = axialToPixel(this.coord, 32);
+    const marker = document.createElement('div');
+    marker.textContent = '+';
+    marker.className = 'heal-marker';
+    marker.style.position = 'absolute';
+    const rect = canvas.getBoundingClientRect();
+    marker.style.left = `${rect.left + x}px`;
+    marker.style.top = `${rect.top + y}px`;
+    marker.style.pointerEvents = 'none';
+    document.body.appendChild(marker);
+    setTimeout(() => marker.remove(), 1000);
   }
 
   takeDamage(amount: number, attacker?: Unit): void {
