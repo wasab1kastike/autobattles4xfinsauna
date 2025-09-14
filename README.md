@@ -34,14 +34,12 @@ npm install
 
 ## Deployment
 
-Run the production build and copy the output to the `docs/` directory to
-publish the site via GitHub Pages:
+Run the production build to publish the site via GitHub Pages. The build
+outputs directly to the `docs/` directory and automatically adds a
+`.nojekyll` file:
 
 ```bash
 npm run build
-cp -R dist docs
-cp dist/index.html docs/404.html
-touch docs/.nojekyll
 ```
 
 Push the updated `docs/` folder to `main` and configure GitHub Pages to deploy
