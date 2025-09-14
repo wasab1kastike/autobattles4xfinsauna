@@ -113,10 +113,15 @@ canvas.addEventListener('click', (e) => {
   draw();
 });
 
+const MAX_LOG_MESSAGES = 100;
+
 function log(msg: string): void {
   const div = document.createElement('div');
   div.textContent = msg;
   eventLog.appendChild(div);
+  while (eventLog.childElementCount > MAX_LOG_MESSAGES) {
+    eventLog.removeChild(eventLog.firstChild!);
+  }
 }
 
 const onResourceChanged = ({ resource, total, amount }) => {
@@ -188,4 +193,8 @@ async function start(): Promise<void> {
   requestAnimationFrame(gameLoop);
 }
 
-start();
+if (!import.meta.vitest) {
+  start();
+}
+
+export { log };
