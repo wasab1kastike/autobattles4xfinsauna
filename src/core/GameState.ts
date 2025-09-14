@@ -103,11 +103,12 @@ export class GameState {
           const b = createBuilding(type);
           if (!b) return;
           this.buildingPlacements.set(key, b);
+          const [q, r] = key.split(',').map(Number);
           if (map) {
-            const [q, r] = key.split(',').map(Number);
             const tile = map.getTile(q, r);
             tile?.placeBuilding(b.type);
           }
+          eventBus.emit('buildingPlaced', { building: b, coord: { q, r }, state: this });
         });
       }
       this.lastSaved = data.lastSaved ?? Date.now();
