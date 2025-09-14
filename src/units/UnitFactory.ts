@@ -1,35 +1,3 @@
-import type { AxialCoord } from '../hex/HexUtils.ts';
-import { GameState, Resource } from '../core/GameState.ts';
-import { Unit } from './Unit.ts';
-import { Soldier, SOLDIER_COST } from './Soldier.ts';
-import { Archer, ARCHER_COST } from './Archer.ts';
-
-export type UnitType = 'soldier' | 'archer';
-
-const UNIT_COST: Record<UnitType, number> = {
-  soldier: SOLDIER_COST,
-  archer: ARCHER_COST
-};
-
-export function spawnUnit(
-  state: GameState,
-  type: UnitType,
-  id: string,
-  coord: AxialCoord,
-  faction: string
-): Unit | null {
-  const cost = UNIT_COST[type];
-  if (!state.canAfford(cost, Resource.GOLD)) {
-    return null;
-  }
-  state.addResource(Resource.GOLD, -cost);
-  switch (type) {
-    case 'soldier':
-      return new Soldier(id, coord, faction);
-    case 'archer':
-      return new Archer(id, coord, faction);
-    default:
-      return null;
-  }
-}
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:415f8aa4d2253be5aed70beacb02e5af96a022993cf5bf97ec69c5e6c7f4a680
+size 1025
