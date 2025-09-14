@@ -3,6 +3,7 @@ import { GameState, Resource } from '../core/GameState.ts';
 import { Unit } from './Unit.ts';
 import { Soldier, SOLDIER_COST } from './Soldier.ts';
 import { Archer, ARCHER_COST } from './Archer.ts';
+import { play } from '../sfx.ts';
 
 export type UnitType = 'soldier' | 'archer';
 
@@ -20,16 +21,24 @@ export function spawnUnit(
 ): Unit | null {
   const cost = UNIT_COST[type];
   if (!state.canAfford(cost, Resource.GOLD)) {
+    play('error');
     return null;
   }
   state.addResource(Resource.GOLD, -cost);
+  let unit: Unit | null = null;
   switch (type) {
     case 'soldier':
-      return new Soldier(id, coord, faction);
+      unit = new Soldier(id, coord, faction);
+      break;
     case 'archer':
-      return new Archer(id, coord, faction);
+      unit = new Archer(id, coord, faction);
+      break;
     default:
-      return null;
+      unit = null;
   }
+  if (unit) {
+    play('spawn');
+  }
+  return unit;
 }
 
