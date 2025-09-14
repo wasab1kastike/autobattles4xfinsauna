@@ -2,10 +2,5 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: "/autobattles4xfinsauna/",
-  root: 'src',
-  publicDir: '../public',
-  build: {
-    outDir: '../dist',
-    emptyOutDir: true
-  }
+  // plugins: [...]
 });
