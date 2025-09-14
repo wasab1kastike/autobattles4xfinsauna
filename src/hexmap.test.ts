@@ -1,20 +1,3 @@
-import { describe, it, expect } from 'vitest';
-import { HexMap } from './hexmap.ts';
-import { HexTile } from './hex/HexTile.ts';
-
-describe('HexMap', () => {
-  it('generates a grid of tiles', () => {
-    const map = new HexMap(3, 3);
-    let count = 0;
-    map.forEachTile(() => count++);
-    expect(count).toBe(9);
-    expect(map.getTile(0, 0)).toBeInstanceOf(HexTile);
-  });
-
-  it('returns neighboring tiles', () => {
-    const map = new HexMap(3, 3);
-    const neighbors = map.getNeighbors(1, 1);
-    expect(neighbors).toHaveLength(6);
-    neighbors.forEach((tile) => expect(tile).toBeInstanceOf(HexTile));
-  });
-});
+version https://git-lfs.github.com/spec/v1
+oid sha256:ca480b5e3cfe517fb8f73b40be8a4abf013bca6c91accc12fc41516c1d83070e
+size 1515
