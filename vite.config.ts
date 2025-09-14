@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig(() => ({
+export default defineConfig({
+  root: 'src',
   base: process.env.BASE_PATH ?? '/',
-  // plugins: [...]
-}));
+  publicDir: '../public',
+  build: {
+    outDir: '../dist',
+    emptyOutDir: true,
+  },
+});

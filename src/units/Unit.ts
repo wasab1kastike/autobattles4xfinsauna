@@ -1,4 +1,5 @@
-import { AxialCoord, getNeighbors, axialToPixel } from '../hex/HexUtils.ts';
+import type { AxialCoord } from '../hex/HexUtils.ts';
+import { getNeighbors, axialToPixel } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
