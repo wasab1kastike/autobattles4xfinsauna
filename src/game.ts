@@ -20,21 +20,22 @@ import { setupRightPanel } from './ui/rightPanel.tsx';
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
 
+const asset = (p: string) => import.meta.env.BASE_URL + p;
 const assetPaths: AssetPaths = {
   images: {
     placeholder:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-    'terrain-plains': '/assets/sprites/plains.svg',
-    'terrain-forest': '/assets/sprites/forest.svg',
-    'terrain-hills': '/assets/sprites/hills.svg',
-    'terrain-lake': '/assets/sprites/lake.svg',
-    'building-farm': '/assets/sprites/farm.svg',
-    'building-barracks': '/assets/sprites/barracks.svg',
-    'building-city': '/assets/sprites/city.svg',
-    'building-mine': '/assets/sprites/mine.svg',
-    'unit-soldier': '/assets/sprites/soldier.svg',
-    'unit-archer': '/assets/sprites/archer.svg',
-    'unit-raider': '/assets/sprites/raider.svg'
+    'terrain-plains': asset('assets/sprites/plains.svg'),
+    'terrain-forest': asset('assets/sprites/forest.svg'),
+    'terrain-hills': asset('assets/sprites/hills.svg'),
+    'terrain-lake': asset('assets/sprites/lake.svg'),
+    'building-farm': asset('assets/sprites/farm.svg'),
+    'building-barracks': asset('assets/sprites/barracks.svg'),
+    'building-city': asset('assets/sprites/city.svg'),
+    'building-mine': asset('assets/sprites/mine.svg'),
+    'unit-soldier': asset('assets/sprites/soldier.svg'),
+    'unit-archer': asset('assets/sprites/archer.svg'),
+    'unit-raider': asset('assets/sprites/raider.svg')
   }
 };
 let assets: LoadedAssets;
