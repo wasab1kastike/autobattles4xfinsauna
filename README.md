@@ -20,6 +20,9 @@ npm install
 - `npm run build` – compile TypeScript and bundle the production build.
 - `npm run preview` – preview the built app locally.
 - `npm test` – run the test suite with Vitest.
+- `npm run check:demo` – verify the README demo link and ensure the GitHub Pages
+  deployment responds with a 200 status and contains the game's
+  `<title>Autobattles4xFinsauna</title>` tag.
 
 ## Gameplay
 
