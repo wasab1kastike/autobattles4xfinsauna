@@ -17,6 +17,7 @@ import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { sfx } from './sfx.ts';
+import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -77,6 +78,7 @@ const sauna = createSauna({
 map.revealAround(sauna.pos, 3);
 const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state);
+eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
@@ -119,6 +121,11 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
     }
     ctx.drawImage(img, x, y, hexWidth, hexHeight);
     ctx.filter = 'none';
+    if (isSisuActive() && unit.faction === 'player') {
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, hexWidth, hexHeight);
+    }
   }
 }
 
