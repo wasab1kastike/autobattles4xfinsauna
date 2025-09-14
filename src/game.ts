@@ -118,9 +118,19 @@ const onPolicyApplied = ({ policy }) => {
 };
 eventBus.on('policyApplied', onPolicyApplied);
 
+const onUnitDied = ({ unitId }: { unitId: string }) => {
+  const idx = units.findIndex((u) => u.id === unitId);
+  if (idx !== -1) {
+    units.splice(idx, 1);
+    draw();
+  }
+};
+eventBus.on('unitDied', onUnitDied);
+
 window.addEventListener('beforeunload', () => {
   eventBus.off('resourceChanged', onResourceChanged);
   eventBus.off('policyApplied', onPolicyApplied);
+  eventBus.off('unitDied', onUnitDied);
 });
 
 buildFarmBtn.addEventListener('click', () => {

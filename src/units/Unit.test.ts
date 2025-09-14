@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Unit, UnitStats } from './Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
+import { eventBus } from '../events';
 
 function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
   return new Unit(id, coord, 'faction', { ...stats });
@@ -65,6 +66,33 @@ describe('Unit combat', () => {
     attacker.attack(defender);
     expect(defender.stats.health).toBe(0);
     expect(units).toHaveLength(0);
+  });
+
+  it('no longer appears in active collection after death', () => {
+    const attacker = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 5,
+      attackRange: 1,
+      movementRange: 1
+    });
+    const defender = createUnit('b', { q: 1, r: 0 }, {
+      health: 4,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 1
+    });
+
+    const units = [defender];
+    const onDied = ({ unitId }: { unitId: string }) => {
+      const idx = units.findIndex((u) => u.id === unitId);
+      if (idx !== -1) units.splice(idx, 1);
+    };
+    eventBus.on('unitDied', onDied);
+
+    attacker.attack(defender);
+    expect(units).toHaveLength(0);
+
+    eventBus.off('unitDied', onDied);
   });
 });
 
