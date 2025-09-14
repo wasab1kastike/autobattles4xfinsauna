@@ -79,4 +79,20 @@ describe('GameState', () => {
     expect(map2.getTile(coord.q, coord.r)?.building).toBe('farm');
     expect(loaded.getBuildingAt(coord)?.type).toBe('farm');
   });
+
+  it('restores building counts after save/load', () => {
+    const map1 = new HexMap(3, 3, 1);
+    const state = new GameState(1000);
+    state.addResource(Resource.GOLD, 100);
+    const coord = { q: 0, r: 0 };
+    expect(state.placeBuilding(new Farm(), coord, map1)).toBe(true);
+    state.save();
+
+    const map2 = new HexMap(3, 3, 1);
+    const loaded = new GameState(1000);
+    loaded.load(map2);
+
+    expect((loaded as any).buildings['farm']).toBe(1);
+    expect(map2.getTile(coord.q, coord.r)?.building).toBe('farm');
+  });
 });

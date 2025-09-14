@@ -30,6 +30,14 @@ export const PASSIVE_GENERATION: Record<Resource, number> = {
   [Resource.GOLD]: 1
 };
 
+// Shape of the serialized game state stored in localStorage.
+type SerializedState = {
+  resources: Record<Resource, number>;
+  lastSaved: number;
+  buildings: Record<string, number>;
+  buildingPlacements: Record<string, string>;
+};
+
 export class GameState {
   /** Current amounts of each resource. */
   resources: Record<Resource, number> = {
@@ -70,15 +78,13 @@ export class GameState {
     this.buildingPlacements.forEach((b, k) => {
       placements[k] = b.type;
     });
-    localStorage.setItem(
-      this.storageKey,
-      JSON.stringify({
-        resources: this.resources,
-        lastSaved: this.lastSaved,
-        buildings: this.buildings,
-        buildingPlacements: placements
-      })
-    );
+    const serialized: SerializedState = {
+      resources: this.resources,
+      lastSaved: this.lastSaved,
+      buildings: this.buildings,
+      buildingPlacements: placements
+    };
+    localStorage.setItem(this.storageKey, JSON.stringify(serialized));
   }
 
   load(map?: HexMap): void {
@@ -88,14 +94,9 @@ export class GameState {
       return;
     }
     try {
-      const data = JSON.parse(raw) as {
-        resources?: Record<Resource, number>;
-        lastSaved?: number;
-        buildings?: Record<string, number>;
-        buildingPlacements?: Record<string, string>;
-      };
+      const data = JSON.parse(raw) as Partial<SerializedState>;
       this.resources = { ...this.resources, ...data.resources };
-      this.buildings = { ...data.buildings };
+      this.buildings = { ...(data.buildings ?? {}) };
       this.buildingPlacements.clear();
       if (data.buildingPlacements) {
         Object.entries(data.buildingPlacements).forEach(([key, type]) => {
