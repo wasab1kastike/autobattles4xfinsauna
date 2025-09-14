@@ -13,7 +13,10 @@ export class BattleManager {
       const target = Targeting.selectTarget(unit, units);
       if (!target) continue;
       if (unit.distanceTo(target.coord) > unit.stats.attackRange) {
-        unit.moveTowards(target.coord, this.map);
+        const path = unit.moveTowards(target.coord, this.map);
+        if (path.length > 0) {
+          unit.coord = path[path.length - 1];
+        }
       }
       if (unit.distanceTo(target.coord) <= unit.stats.attackRange && !target.isDead()) {
         unit.attack(target);

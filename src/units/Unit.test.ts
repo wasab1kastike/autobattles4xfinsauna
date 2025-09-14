@@ -78,8 +78,13 @@ describe('Unit movement', () => {
       attackRange: 1,
       movementRange: 1
     });
-    unit.moveTowards({ q: 2, r: 0 }, map);
-    expect(unit.coord).toEqual({ q: 0, r: 1 });
+    const path = unit.moveTowards({ q: 2, r: 0 }, map);
+    expect(path).toEqual([
+      { q: 0, r: 0 },
+      { q: 0, r: 1 }
+    ]);
+    // Unit should not move yet; animator handles movement.
+    expect(unit.coord).toEqual({ q: 0, r: 0 });
   });
 
   it('selects the nearest reachable enemy', () => {
