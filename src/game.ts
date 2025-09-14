@@ -81,14 +81,21 @@ function log(msg: string): void {
   eventLog.appendChild(div);
 }
 
-eventBus.on('resourceChanged', ({ resource, total, amount }) => {
+const onResourceChanged = ({ resource, total, amount }) => {
   resourceBar.textContent = `Resources: ${total}`;
   const sign = amount > 0 ? '+' : '';
   log(`${resource}: ${sign}${amount}`);
-});
+};
+eventBus.on('resourceChanged', onResourceChanged);
 
-eventBus.on('policyApplied', ({ policy }) => {
+const onPolicyApplied = ({ policy }) => {
   log(`Policy applied: ${policy}`);
+};
+eventBus.on('policyApplied', onPolicyApplied);
+
+window.addEventListener('beforeunload', () => {
+  eventBus.off('resourceChanged', onResourceChanged);
+  eventBus.off('policyApplied', onPolicyApplied);
 });
 
 buildFarmBtn.addEventListener('click', () => {
