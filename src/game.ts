@@ -3,7 +3,7 @@ import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
-import { Unit } from './unit.ts';
+import { Unit, spawnUnit, UnitType } from './unit.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 import { Farm, Barracks } from './buildings/index.ts';
@@ -40,14 +40,18 @@ const clock = new GameClock(1000, () => {
   state.save();
 });
 
-const units: Unit[] = [
-  new Unit('u1', { q: 2, r: 2 }, 'player', {
-    health: 10,
-    attackDamage: 2,
-    attackRange: 1,
-    movementRange: 1
-  })
-];
+const units: Unit[] = [];
+
+function spawn(type: UnitType, coord: AxialCoord): void {
+  const id = `u${units.length + 1}`;
+  const unit = spawnUnit(state, type, id, coord, 'player');
+  if (unit) {
+    units.push(unit);
+  }
+}
+
+state.addResource(Resource.GOLD, 200);
+spawn('soldier', { q: 2, r: 2 });
 
 let selected: AxialCoord | null = null;
 
