@@ -6,3 +6,4 @@
 - Output builds directly to `docs/` and remove deprecated `dist` directory
 - Add `.nojekyll` to bypass Jekyll on GitHub Pages
 - Resolve sprite paths using `import.meta.env.BASE_URL` so builds work from repository subdirectory
+- Add script to fail tests when URLs start with `/assets/`
