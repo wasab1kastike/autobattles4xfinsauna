@@ -1,4 +1,5 @@
-import { AxialCoord, axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
+import type { AxialCoord } from './hex/HexUtils.ts';
+import { axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
 import { TerrainId, generateTerrain } from './map/terrain.ts';
 import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
