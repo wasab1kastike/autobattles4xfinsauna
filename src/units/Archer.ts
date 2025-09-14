@@ -1,4 +1,5 @@
-import { Unit, UnitStats } from './Unit.ts';
+import { Unit } from './Unit.ts';
+import type { UnitStats } from './Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 
 export const ARCHER_STATS: UnitStats = {
