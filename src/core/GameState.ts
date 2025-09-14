@@ -3,6 +3,13 @@
  * Handles saving/loading via localStorage and offline progress.
  */
 import { eventBus } from '../events/EventBus';
+import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { HexMap } from '../hexmap.ts';
+import type { Building } from '../buildings/index.ts';
+
+function coordKey(c: AxialCoord): string {
+  return `${c.q},${c.r}`;
+}
 
 /** Available resource types. */
 export enum Resource {
@@ -29,6 +36,9 @@ export class GameState {
 
   /** Track constructed buildings by type. */
   private buildings: Record<string, number> = {};
+
+  /** Mapping of tile coordinates to constructed building instances. */
+  private buildingPlacements = new Map<string, Building>();
 
   /** Policies currently applied. */
   private policies = new Set<string>();
@@ -122,6 +132,33 @@ export class GameState {
     }
     this.buildings[building] = (this.buildings[building] ?? 0) + 1;
     return true;
+  }
+
+  /**
+   * Place a building instance on the given map coordinate if affordable and vacant.
+   * Returns true on success.
+   */
+  placeBuilding(
+    building: Building,
+    coord: AxialCoord,
+    map: HexMap,
+    res: Resource = Resource.GOLD
+  ): boolean {
+    const tile = map.getTile(coord.q, coord.r);
+    if (!tile || tile.building) {
+      return false;
+    }
+    if (!this.construct(building.type, building.cost, res)) {
+      return false;
+    }
+    this.buildingPlacements.set(coordKey(coord), building);
+    tile.placeBuilding(building.type);
+    return true;
+  }
+
+  /** Retrieve a building instance at the given coordinate, if any. */
+  getBuildingAt(coord: AxialCoord): Building | undefined {
+    return this.buildingPlacements.get(coordKey(coord));
   }
 
   /** Spend resources to upgrade a building. */
