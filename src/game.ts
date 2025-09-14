@@ -19,7 +19,15 @@ const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
 const assetPaths: AssetPaths = {
   images: {
     placeholder:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII='
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
+    grass:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGNU6lb6z0ABYKJE86gBowaMGjCYDAAAlL8B7iuXN0wAAAAASUVORK5CYII=',
+    water:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGOUm/D/PwMFgIkSzaMGjBowasBgMgAAGD4CzKXqJDYAAAAASUVORK5CYII=',
+    'unit-soldier':
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGPcpKT0n4ECwESJ5lEDRg0YNWAwGQAAM4ACFQNjXqgAAAAASUVORK5CYII=',
+    farm:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGO8tVThPwMFgIkSzaMGjBowasBgMgAA4QYCvtGd17wAAAAASUVORK5CYII='
   },
   sounds: {
     // Minimal silent WAV
@@ -57,19 +65,19 @@ let selected: AxialCoord | null = null;
 
 function draw(): void {
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx || !assets) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  map.draw(ctx, selected ?? undefined);
+  map.draw(ctx, assets.images, selected ?? undefined);
   drawUnits(ctx);
 }
 
 function drawUnits(ctx: CanvasRenderingContext2D): void {
+  const sprite = assets.images['unit-soldier'];
+  const hexWidth = map.hexSize * Math.sqrt(3);
+  const hexHeight = map.hexSize * 2;
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
-    ctx.fillStyle = 'red';
-    ctx.beginPath();
-    ctx.arc(x + map.hexSize, y + map.hexSize, map.hexSize / 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.drawImage(sprite, x, y, hexWidth, hexHeight);
   }
 }
 
