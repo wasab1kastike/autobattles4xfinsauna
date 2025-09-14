@@ -1,5 +1,5 @@
 export type TerrainType = 'plain' | 'water' | 'forest' | 'mountain';
-export type BuildingType = 'city' | 'farm' | 'mine' | null;
+export type BuildingType = 'city' | 'farm' | 'barracks' | 'mine' | null;
 
 /** Represents a single hex tile on the map. */
 export class HexTile {
