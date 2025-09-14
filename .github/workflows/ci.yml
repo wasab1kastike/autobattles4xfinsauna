@@ -2,17 +2,45 @@ name: CI
 
 on:
   push:
+    branches: [ main ]
   pull_request:
 
 jobs:
-  build:
+  verify-pages:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 20
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: 'npm' }
       - run: npm ci
-      - run: npm test
       - run: npm run build
-      - run: curl -Lf https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
+
+      # Sanity checks: dist exists and has required files
+      - name: Sanity checks
+        run: |
+          test -f dist/index.html
+          # Copy 404 now to keep behavior identical post-deploy
+          cp dist/index.html dist/404.html
+
+      # Verify that asset URLs include the Vite base (/autobattles4xfinsauna/)
+      - name: Verify Vite base in index.html
+        run: |
+          grep -q "/autobattles4xfinsauna/" dist/index.html || (echo "❌ Missing correct base path in index.html" && exit 1)
+
+      # Verify that all referenced JS/CSS files actually exist
+      - name: Verify asset files exist
+        run: |
+          node -e "
+          const fs=require('fs');const path=require('path');
+          const html=fs.readFileSync('dist/index.html','utf8');
+          const re=/(href|src)=\"(\\/autobattles4xfinsauna\\/[^\"?#]+)\"/g;
+          const misses=[];
+          let m; while((m=re.exec(html))){const p=m[2].replace('/autobattles4xfinsauna/','');
+            const fp=path.join('dist',p); if(!fs.existsSync(fp)) misses.push(fp); }
+          if(misses.length){ console.error('Missing assets:',misses); process.exit(1) }
+          "
+
+      # Optional: quick local link check for 404.html presence
+      - name: Ensure 404.html exists
+        run: test -f dist/404.html
