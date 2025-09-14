@@ -33,4 +33,32 @@ describe('GameState', () => {
     state.tick();
     expect(state.getResource(Resource.GOLD)).toBe(2); // base 1 + eco policy
   });
+
+  it('constructs and upgrades buildings when affordable', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.GOLD, 100);
+
+    const built = state.construct('hut', 60);
+    const upgraded = state.upgrade('hut', 30);
+
+    expect(built).toBe(true);
+    expect(upgraded).toBe(true);
+    expect(state.getResource(Resource.GOLD)).toBe(10);
+    expect((state as any).buildings['hut']).toBe(1);
+    expect((state as any).buildings['upgrade:hut']).toBe(1);
+  });
+
+  it('fails to construct or upgrade without sufficient resources', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.GOLD, 5);
+
+    const built = state.construct('hut', 10);
+    const upgraded = state.upgrade('hut', 10);
+
+    expect(built).toBe(false);
+    expect(upgraded).toBe(false);
+    expect(state.getResource(Resource.GOLD)).toBe(5);
+    expect((state as any).buildings['hut']).toBeUndefined();
+    expect((state as any).buildings['upgrade:hut']).toBeUndefined();
+  });
 });
