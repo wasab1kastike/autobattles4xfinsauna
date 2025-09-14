@@ -3,6 +3,7 @@ import { Unit, UnitStats } from './Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
+import { Sauna } from '../buildings/Sauna.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -163,6 +164,35 @@ describe('Unit movement', () => {
     const path = unit.moveTowards(blocker.coord, map, occupied);
     expect(path).toEqual([]);
     expect(unit.coord).toEqual({ q: 0, r: 0 });
+  });
+});
+
+describe('Unit sauna regeneration', () => {
+  it('regenerates health near sauna and spawns markers once per second', () => {
+    const unit = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 0,
+      attackRange: 1,
+      movementRange: 1
+    });
+    unit.takeDamage(5);
+    const sauna = new Sauna({ q: 0, r: 0 }, 1, 2);
+    const canvas = document.createElement('canvas');
+    canvas.id = 'game-canvas';
+    document.body.appendChild(canvas);
+
+    unit.update(0.5, sauna);
+    expect(unit.stats.health).toBeCloseTo(6);
+    expect(document.querySelectorAll('.heal-marker')).toHaveLength(0);
+
+    unit.update(0.5, sauna);
+    expect(unit.stats.health).toBeCloseTo(7);
+    expect(document.querySelectorAll('.heal-marker')).toHaveLength(1);
+
+    unit.update(10, sauna);
+    expect(unit.stats.health).toBe(10);
+
+    document.body.innerHTML = '';
   });
 });
 
