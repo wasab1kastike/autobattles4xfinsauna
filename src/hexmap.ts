@@ -1,47 +1,85 @@
 import type { AxialCoord } from './hex/HexUtils.ts';
 import { axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
-import { TerrainId, generateTerrain } from './map/terrain.ts';
+import { TerrainId, terrainAt } from './map/terrain.ts';
 import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
 export class HexMap {
-  readonly tiles: HexTile[][];
+  /** Map of serialized "q,r" keys to tiles. */
+  readonly tiles = new Map<string, HexTile>();
+
+  /** Current map bounds. */
+  minQ: number;
+  maxQ: number;
+  minR: number;
+  maxR: number;
 
   constructor(
-    public readonly width = 10,
-    public readonly height = 10,
+    width = 10,
+    height = 10,
     public readonly hexSize = 32,
-    seed = 0
+    private readonly seed = 0
   ) {
-    this.tiles = [];
-    const terrain = generateTerrain(width, height, seed);
-    for (let r = 0; r < height; r++) {
-      const row: HexTile[] = [];
-      for (let q = 0; q < width; q++) {
-        row.push(new HexTile(terrain[r][q]));
+    this.minQ = 0;
+    this.minR = 0;
+    this.maxQ = width - 1;
+    this.maxR = height - 1;
+    for (let r = this.minR; r <= this.maxR; r++) {
+      for (let q = this.minQ; q <= this.maxQ; q++) {
+        this.tiles.set(this.key(q, r), new HexTile(terrainAt(q, r, seed)));
       }
-      this.tiles.push(row);
     }
   }
 
-  getTile(q: number, r: number): HexTile | undefined {
-    return this.tiles[r]?.[q];
+  /** Current width derived from tracked bounds. */
+  get width(): number {
+    return this.maxQ - this.minQ + 1;
+  }
+
+  /** Current height derived from tracked bounds. */
+  get height(): number {
+    return this.maxR - this.minR + 1;
+  }
+
+  private key(q: number, r: number): string {
+    return `${q},${r}`;
+  }
+
+  /** Ensure a tile exists at the given coordinate, creating it if missing. */
+  ensureTile(q: number, r: number): HexTile {
+    const k = this.key(q, r);
+    let tile = this.tiles.get(k);
+    if (!tile) {
+      tile = new HexTile(terrainAt(q, r, this.seed));
+      this.tiles.set(k, tile);
+      this.minQ = Math.min(this.minQ, q);
+      this.maxQ = Math.max(this.maxQ, q);
+      this.minR = Math.min(this.minR, r);
+      this.maxR = Math.max(this.maxR, r);
+      if (!tile.isFogged) {
+        markRevealed({ q, r }, this.hexSize);
+      }
+    }
+    return tile;
+  }
+
+  getTile(q: number, r: number): HexTile {
+    return this.ensureTile(q, r);
   }
 
   forEachTile(cb: (tile: HexTile, coord: AxialCoord) => void): void {
-    for (let r = 0; r < this.height; r++) {
-      for (let q = 0; q < this.width; q++) {
-        cb(this.tiles[r][q], { q, r });
+    for (let r = this.minR; r <= this.maxR; r++) {
+      for (let q = this.minQ; q <= this.maxQ; q++) {
+        const tile = this.ensureTile(q, r);
+        cb(tile, { q, r });
       }
     }
   }
 
-  /** Retrieve existing neighbor tiles around the given coordinate. */
+  /** Retrieve neighbor tiles around the given coordinate, generating them on demand. */
   getNeighbors(q: number, r: number): HexTile[] {
-    return axialNeighbors({ q, r })
-      .map((c) => this.getTile(c.q, c.r))
-      .filter((t): t is HexTile => Boolean(t));
+    return axialNeighbors({ q, r }).map((c) => this.ensureTile(c.q, c.r));
   }
 
   /**
@@ -57,11 +95,9 @@ export class HexMap {
       const rMax = Math.min(radius, -dq + radius);
       for (let dr = rMin; dr <= rMax; dr++) {
         const coord = { q: center.q + dq, r: center.r + dr };
-        const tile = this.getTile(coord.q, coord.r);
-        if (tile) {
-          tile.reveal();
-          markRevealed(coord, this.hexSize);
-        }
+        const tile = this.ensureTile(coord.q, coord.r);
+        tile.reveal();
+        markRevealed(coord, this.hexSize);
       }
     }
 
@@ -80,29 +116,33 @@ export class HexMap {
   ): void {
     const hexWidth = this.hexSize * Math.sqrt(3);
     const hexHeight = this.hexSize * 2;
-    this.forEachTile((tile, coord) => {
-      const { x, y } = axialToPixel(coord, this.hexSize);
+    const origin = axialToPixel({ q: this.minQ, r: this.minR }, this.hexSize);
+    for (const [key, tile] of this.tiles) {
+      const [q, r] = key.split(',').map(Number);
+      const { x, y } = axialToPixel({ q, r }, this.hexSize);
+      const drawX = x - origin.x;
+      const drawY = y - origin.y;
       ctx.save();
       if (tile.isFogged) ctx.globalAlpha *= 0.4;
 
-      this.drawTerrain(ctx, images, tile.terrain, x, y);
+      this.drawTerrain(ctx, images, tile.terrain, drawX, drawY);
 
       if (tile.building) {
         const building = images[`building-${tile.building}`] ?? images['placeholder'];
-        ctx.drawImage(building, x, y, hexWidth, hexHeight);
+        ctx.drawImage(building, drawX, drawY, hexWidth, hexHeight);
       }
 
       const isSelected =
-        selected && coord.q === selected.q && coord.r === selected.r;
+        selected && q === selected.q && r === selected.r;
       this.strokeHex(
         ctx,
-        x + this.hexSize,
-        y + this.hexSize,
+        drawX + this.hexSize,
+        drawY + this.hexSize,
         this.hexSize,
         Boolean(isSelected)
       );
       ctx.restore();
-    });
+    }
   }
 
   /** Convenience method to draw directly to a canvas element. */
