@@ -10,7 +10,6 @@ import Animator from './render/Animator.ts';
 import { eventBus } from './events';
 import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
-import { Farm, Barracks } from './buildings/index.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { raiderSVG } from './ui/sprites.ts';
@@ -18,14 +17,10 @@ import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { sfx } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
+import { setupRightPanel } from './ui/rightPanel.tsx';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
-const eventLog = document.getElementById('event-log')!;
-const buildFarmBtn = document.getElementById('build-farm') as HTMLButtonElement;
-const buildBarracksBtn = document.getElementById('build-barracks') as HTMLButtonElement;
-const upgradeFarmBtn = document.getElementById('upgrade-farm') as HTMLButtonElement;
-const policyBtn = document.getElementById('policy-eco') as HTMLButtonElement;
 
 const assetPaths: AssetPaths = {
   images: {
@@ -78,6 +73,7 @@ const sauna = createSauna({
 map.revealAround(sauna.pos, 3);
 const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state);
+const { log, addEvent } = setupRightPanel(state);
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 
 function spawn(type: UnitType, coord: AxialCoord): void {
@@ -150,17 +146,6 @@ canvas.addEventListener('click', (e) => {
   draw();
 });
 
-const MAX_LOG_MESSAGES = 100;
-
-function log(msg: string): void {
-  const div = document.createElement('div');
-  div.textContent = msg;
-  eventLog.appendChild(div);
-  while (eventLog.childElementCount > MAX_LOG_MESSAGES) {
-    eventLog.removeChild(eventLog.firstChild!);
-  }
-}
-
 const onResourceChanged = ({ resource, total, amount }) => {
   resourceBar.textContent = `Resources: ${total}`;
   const sign = amount > 0 ? '+' : '';
@@ -186,30 +171,6 @@ window.addEventListener('beforeunload', () => {
   eventBus.off('resourceChanged', onResourceChanged);
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
-});
-
-buildFarmBtn.addEventListener('click', () => {
-  if (!selected) return;
-  if (state.placeBuilding(new Farm(), selected, map)) {
-    log('Farm constructed');
-    draw();
-  }
-});
-
-buildBarracksBtn.addEventListener('click', () => {
-  if (!selected) return;
-  if (state.placeBuilding(new Barracks(), selected, map)) {
-    log('Barracks constructed');
-    draw();
-  }
-});
-
-upgradeFarmBtn.addEventListener('click', () => {
-  state.upgrade('farm', 20);
-});
-
-policyBtn.addEventListener('click', () => {
-  state.applyPolicy('eco', 15);
 });
 
 async function start(): Promise<void> {
