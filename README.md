@@ -34,18 +34,25 @@ npm install
 
 ## Deployment
 
-The site is published to GitHub Pages. After the workflow runs, it will be
-available at:
+Run the production build and copy the output to the `docs/` directory to
+publish the site via GitHub Pages:
+
+```bash
+npm run build
+cp -R dist docs
+cp dist/index.html docs/404.html
+touch docs/.nojekyll
+```
+
+Push the updated `docs/` folder to `main` and configure GitHub Pages to deploy
+from the `docs` directory. The site will then be available at:
 
 https://<your-github-username>.github.io/autobattles4xfinsauna/
 
-Replace `<your-github-username>` with your GitHub account name.
-
 The Vite configuration automatically sets the correct base path for the build
-using the repository name. This ensures asset URLs resolve properly on GitHub
-Pages and prevents the site from rendering as plain text. If you fork or rename
-the repository, update the `name` field in `package.json` so the build step
-continues to point to the right base path.
+using the repository name. If you fork or rename the repository, update the
+`name` field in `package.json` so the build continues to point to the right base
+path.
 
 ## Live Demo
 Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
