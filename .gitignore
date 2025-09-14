@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sprite assets (binary files not tracked)
+public/assets/sprites/*.png
+public/assets/sprites/*.jpg
+public/assets/sprites/*.gif
