@@ -4,6 +4,7 @@ import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel, AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit, UnitType } from './unit.ts';
+import Animator from './render/Animator.ts';
 import { eventBus } from './events';
 import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 import { Farm, Barracks } from './buildings/index.ts';
@@ -46,7 +47,10 @@ state.load();
 const clock = new GameClock(1000, () => {
   state.tick();
   state.save();
+  draw();
 });
+
+const animator = new Animator(draw);
 
 const units: Unit[] = [];
 
@@ -86,6 +90,13 @@ canvas.addEventListener('click', (e) => {
   const x = e.clientX - rect.left - map.hexSize;
   const y = e.clientY - rect.top - map.hexSize;
   selected = pixelToAxial(x, y, map.hexSize);
+  const unit = units[0];
+  if (unit) {
+    const path = unit.moveTowards(selected, map);
+    if (path.length > 0) {
+      animator.animate(unit, path);
+    }
+  }
   draw();
 });
 
@@ -144,7 +155,14 @@ async function start(): Promise<void> {
   }
   resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
   draw();
-  clock.start();
+  let last = performance.now();
+  function gameLoop(now: number) {
+    const delta = now - last;
+    last = now;
+    clock.tick(delta);
+    requestAnimationFrame(gameLoop);
+  }
+  requestAnimationFrame(gameLoop);
 }
 
 start();
