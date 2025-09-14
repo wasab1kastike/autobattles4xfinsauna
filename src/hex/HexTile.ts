@@ -1,10 +1,12 @@
-export type TerrainType = 'plain' | 'water' | 'forest' | 'mountain';
+import { TerrainId } from '../map/terrain.ts';
+
+export type TerrainType = TerrainId;
 export type BuildingType = 'city' | 'farm' | 'barracks' | 'mine' | null;
 
 /** Represents a single hex tile on the map. */
 export class HexTile {
   constructor(
-    public terrain: TerrainType = 'plain',
+    public terrain: TerrainType = TerrainId.Plains,
     public building: BuildingType = null,
     public isFogged: boolean = true
   ) {}

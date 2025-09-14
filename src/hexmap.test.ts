@@ -31,6 +31,11 @@ describe('HexMap', () => {
       closePath: vi.fn(),
       fill: vi.fn(),
       stroke: vi.fn(),
+      clip: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      arc: vi.fn(),
+      globalAlpha: 1,
       fillStyle: '',
       strokeStyle: '',
     } as unknown as CanvasRenderingContext2D;

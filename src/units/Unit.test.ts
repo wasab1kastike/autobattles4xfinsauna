@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Unit, UnitStats } from './Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
+import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import { Sauna } from '../buildings/Sauna.ts';
 
@@ -104,7 +105,7 @@ describe('Unit combat', () => {
 describe('Unit movement', () => {
   it('moves around impassable terrain', () => {
     const map = new HexMap(3, 3);
-    map.getTile(1, 0)!.terrain = 'water';
+    map.getTile(1, 0)!.terrain = TerrainId.Lake;
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
@@ -122,7 +123,7 @@ describe('Unit movement', () => {
 
   it('selects the nearest reachable enemy', () => {
     const map = new HexMap(3, 3);
-    map.getTile(1, 0)!.terrain = 'water';
+    map.getTile(1, 0)!.terrain = TerrainId.Lake;
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
