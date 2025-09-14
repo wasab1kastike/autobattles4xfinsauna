@@ -1,5 +1,6 @@
 import { AxialCoord, getNeighbors, axialToPixel } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
+import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
 
@@ -257,7 +258,7 @@ export class Unit {
     if (occupied && occupied.has(coordKey(coord))) {
       return false;
     }
-    return tile.terrain !== 'water' && tile.terrain !== 'mountain';
+    return tile.terrain !== TerrainId.Lake;
   }
 }
 
