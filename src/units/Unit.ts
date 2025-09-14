@@ -39,7 +39,8 @@ export class Unit {
     public readonly id: string,
     public coord: AxialCoord,
     public readonly faction: string,
-    public readonly stats: UnitStats
+    public readonly stats: UnitStats,
+    public readonly priorityFactions: string[] = []
   ) {}
 
   onDeath(cb: Listener): void {
