@@ -1,4 +1,5 @@
 import type { Sauna } from '../sim/sauna.ts';
+import { sfx } from '../sfx';
 
 export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   const overlay = document.getElementById('ui-overlay');
@@ -34,6 +35,7 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   checkbox.checked = sauna.rallyToFront;
   checkbox.addEventListener('change', () => {
     sauna.rallyToFront = checkbox.checked;
+    sfx.play('click');
   });
   label.appendChild(checkbox);
   label.appendChild(document.createTextNode(' Rally to Front'));
@@ -43,6 +45,7 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
 
   btn.addEventListener('click', () => {
     card.style.display = card.style.display === 'none' ? 'block' : 'none';
+    sfx.play('click');
   });
 
   return () => {

@@ -38,11 +38,6 @@ const assetPaths: AssetPaths = {
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGPcpKT0n4ECwESJ5lEDRg0YNWAwGQAAM4ACFQNjXqgAAAAASUVORK5CYII=',
     farm:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHUlEQVR4nGO8tVThPwMFgIkSzaMGjBowasBgMgAA4QYCvtGd17wAAAAASUVORK5CYII='
-  },
-  sounds: {
-    // Minimal silent WAV
-    click:
-      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YQAAAAA='
   }
 };
 let assets: LoadedAssets;
@@ -83,6 +78,9 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   const unit = spawnUnit(state, type, id, coord, 'player');
   if (unit) {
     units.push(unit);
+    sfx.play('spawn');
+  } else {
+    sfx.play('error');
   }
 }
 
@@ -123,6 +121,7 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
 }
 
 canvas.addEventListener('click', (e) => {
+  sfx.play('click');
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left - map.hexSize;
   const y = e.clientY - rect.top - map.hexSize;
@@ -182,33 +181,44 @@ window.addEventListener('beforeunload', () => {
 });
 
 buildFarmBtn.addEventListener('click', () => {
+  sfx.play('click');
   if (!selected) return;
   if (state.placeBuilding(new Farm(), selected, map)) {
     log('Farm constructed');
     draw();
+  } else {
+    sfx.play('error');
   }
 });
 
 buildBarracksBtn.addEventListener('click', () => {
+  sfx.play('click');
   if (!selected) return;
   if (state.placeBuilding(new Barracks(), selected, map)) {
     log('Barracks constructed');
     draw();
+  } else {
+    sfx.play('error');
   }
 });
 
 upgradeFarmBtn.addEventListener('click', () => {
-  state.upgrade('farm', 20);
+  sfx.play('click');
+  if (!state.upgrade('farm', 20)) {
+    sfx.play('error');
+  }
 });
 
 policyBtn.addEventListener('click', () => {
-  state.applyPolicy('eco', 15);
+  sfx.play('click');
+  if (!state.applyPolicy('eco', 15)) {
+    sfx.play('error');
+  }
 });
 
 async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
   assets = loaded;
-  Object.entries(assets.sounds).forEach(([name, audio]) => sfx.register(name, audio));
   if (failures.length) {
     console.warn('Failed to load assets', failures);
   }
@@ -221,6 +231,7 @@ async function start(): Promise<void> {
     clock.tick(delta);
       sauna.update(delta / 1000, units, (u) => {
         units.push(u);
+        sfx.play('spawn');
         draw();
       });
       updateSaunaUI();

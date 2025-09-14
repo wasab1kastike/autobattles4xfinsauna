@@ -61,6 +61,17 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   });
   bar.appendChild(sisuBtn);
 
+  const muteBtn = document.createElement('button');
+  let muted = localStorage.getItem('muted') === 'true';
+  muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+  muteBtn.addEventListener('click', () => {
+    muted = !muted;
+    sfx.setMuted(muted);
+    muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+    sfx.play('click');
+  });
+  bar.appendChild(muteBtn);
+
   gold.value.textContent = String(state.getResource(Resource.GOLD));
 
   const badges: Record<string, Badge> = {
@@ -81,6 +92,8 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     }, 1000);
     sfx.play('click');
   });
+
+  eventBus.on('sisuPulse', () => sfx.play('sisu'));
 
   let elapsed = 0;
   return (deltaMs: number) => {
