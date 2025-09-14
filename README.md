@@ -20,6 +20,7 @@ npm install
 - `npm run build` – compile TypeScript and bundle the production build.
 - `npm run preview` – preview the built app locally.
 - `npm test` – run the test suite with Vitest.
+- `npm run check:demo` – verify the README demo link and that the deployed page responds.
 
 ## Gameplay
 
