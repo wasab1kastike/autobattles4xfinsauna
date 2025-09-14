@@ -15,3 +15,4 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - run: curl -Lf https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
