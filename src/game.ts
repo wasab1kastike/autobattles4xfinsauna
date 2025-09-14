@@ -1,10 +1,10 @@
 import './style.css';
-import { GameState, Resource } from './core/GameState.ts';
+import { GameState, Resource, PASSIVE_GENERATION } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial, axialToPixel } from './hex/HexUtils.ts';
 import type { AxialCoord } from './hex/HexUtils.ts';
-import { Unit, spawnUnit } from './unit.ts';
+import { Unit, spawnUnit, Soldier, Archer, Raider } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import Animator from './render/Animator.ts';
 import { eventBus } from './events';
@@ -17,6 +17,8 @@ import { raiderSVG } from './ui/sprites.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { sfx } from './sfx.ts';
+import { serialize, deserialize, type SaveData } from './save.ts';
+import type { Building } from './buildings/Building.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -53,28 +55,115 @@ map.forEachTile((t) => t.setFogged(true));
 resetAutoFrame();
 
 const state = new GameState(1000);
-state.load(map);
-const VISION_RADIUS = 2;
-const clock = new GameClock(1000, () => {
-  state.tick();
-  state.save();
-  // Reveal around all friendly units each tick
-  for (const unit of units) {
-    if (!unit.isDead() && unit.faction === 'player') {
-      map.revealAround(unit.coord, VISION_RADIUS);
-    }
-  }
-  draw();
-});
-
-const animator = new Animator(draw);
-
 const units: Unit[] = [];
 const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
 });
-map.revealAround(sauna.pos, 3);
+
+const BUILDING_FACTORIES: Record<string, () => Building> = {
+  farm: () => new Farm(),
+  barracks: () => new Barracks()
+};
+
+function createBuilding(type: string): Building | undefined {
+  return BUILDING_FACTORIES[type]?.();
+}
+
+function saveGame(): void {
+  const data = serialize(state, map, units, sauna);
+  localStorage.setItem('save', JSON.stringify(data));
+}
+
+function applySave(data: SaveData): void {
+  (state as any).resources = { ...data.resources };
+  (state as any).policies = new Set(data.policies ?? []);
+  state.time = data.time ?? 0;
+  (state as any).passiveGeneration = { ...PASSIVE_GENERATION };
+  for (const policy of (state as any).policies) {
+    eventBus.emit('policyApplied', { policy, state });
+  }
+
+  map.forEachTile((t) => {
+    t.setFogged(true);
+    t.placeBuilding(null);
+  });
+  for (const key of data.revealed) {
+    const [q, r] = key.split(',').map(Number);
+    map.getTile(q, r)?.setFogged(false);
+  }
+
+  const placements = (state as any).buildingPlacements as Map<string, Building>;
+  placements.clear();
+  (state as any).buildings = {};
+  for (const [key, type] of Object.entries(data.buildings)) {
+    const b = createBuilding(type);
+    if (!b) continue;
+    placements.set(key, b);
+    (state as any).buildings[type] = ((state as any).buildings[type] ?? 0) + 1;
+    const [q, r] = key.split(',').map(Number);
+    map.getTile(q, r)?.placeBuilding(type as any);
+    if (b instanceof Farm) {
+      state.modifyPassiveGeneration(Resource.GOLD, b.foodPerTick);
+    }
+  }
+
+  units.length = 0;
+  for (const u of data.units) {
+    let unit: Unit | null = null;
+    switch (u.type) {
+      case 'Soldier':
+        unit = new Soldier(u.id, u.coord, u.faction);
+        break;
+      case 'Archer':
+        unit = new Archer(u.id, u.coord, u.faction);
+        break;
+      case 'Raider':
+        unit = new Raider(u.id, u.coord, u.faction);
+        break;
+    }
+    if (unit) {
+      unit.stats = { ...unit.stats, ...u.stats };
+      units.push(unit);
+    }
+  }
+
+  Object.assign(sauna, data.sauna);
+  resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
+  updateSaunaUI();
+  updateTopbar(0);
+  draw();
+  clock.setTime(state.time);
+}
+
+function loadGameFromStorage(): boolean {
+  const raw = localStorage.getItem('save');
+  if (!raw) return false;
+  try {
+    const data = deserialize(JSON.parse(raw));
+    applySave(data);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const VISION_RADIUS = 2;
+const clock = new GameClock(
+  1000,
+  (delta) => {
+    state.tick();
+    for (const unit of units) {
+      if (!unit.isDead() && unit.faction === 'player') {
+        map.revealAround(unit.coord, VISION_RADIUS);
+      }
+    }
+    draw();
+  },
+  () => saveGame()
+);
+
+const animator = new Animator(draw);
 const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state);
 
@@ -86,8 +175,17 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   }
 }
 
-state.addResource(Resource.GOLD, 200);
-spawn('soldier', { q: 2, r: 2 });
+const loaded = loadGameFromStorage();
+if (!loaded) {
+  map.revealAround(sauna.pos, 3);
+  state.addResource(Resource.GOLD, 200);
+  spawn('soldier', { q: 2, r: 2 });
+}
+
+eventBus.on('saveGame', saveGame);
+eventBus.on('loadGame', () => {
+  loadGameFromStorage();
+});
 
 let selected: AxialCoord | null = null;
 

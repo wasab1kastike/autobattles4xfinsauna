@@ -36,6 +36,7 @@ type SerializedState = {
   lastSaved: number;
   buildings: Record<string, number>;
   buildingPlacements: Record<string, string>;
+  time: number;
 };
 
 export class GameState {
@@ -43,6 +44,9 @@ export class GameState {
   resources: Record<Resource, number> = {
     [Resource.GOLD]: 0
   };
+
+  /** Elapsed in-game time in milliseconds. */
+  time = 0;
 
   /** Passive generation applied each tick. */
   private passiveGeneration: Record<Resource, number> = {
@@ -67,6 +71,7 @@ export class GameState {
 
   /** Increment resources by passive generation. */
   tick(): void {
+    this.time += this.tickInterval;
     (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
       this.addResource(res, this.passiveGeneration[res]);
     });
@@ -82,7 +87,8 @@ export class GameState {
       resources: this.resources,
       lastSaved: this.lastSaved,
       buildings: this.buildings,
-      buildingPlacements: placements
+      buildingPlacements: placements,
+      time: this.time
     };
     localStorage.setItem(this.storageKey, JSON.stringify(serialized));
   }
@@ -111,6 +117,7 @@ export class GameState {
           eventBus.emit('buildingPlaced', { building: b, coord: { q, r }, state: this });
         });
       }
+      this.time = data.time ?? this.time;
       this.lastSaved = data.lastSaved ?? Date.now();
       const elapsed = Date.now() - this.lastSaved;
       const offlineTicks = Math.floor(elapsed / this.tickInterval);

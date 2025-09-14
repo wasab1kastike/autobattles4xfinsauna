@@ -59,7 +59,27 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     eventBus.emit('sisuPulse', {});
     sfx.play('click');
   });
-  bar.appendChild(sisuBtn);
+  const overflow = document.createElement('div');
+  overflow.style.marginLeft = 'auto';
+  bar.appendChild(overflow);
+
+  overflow.appendChild(sisuBtn);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.addEventListener('click', () => {
+    eventBus.emit('saveGame', {});
+    sfx.play('click');
+  });
+  overflow.appendChild(saveBtn);
+
+  const loadBtn = document.createElement('button');
+  loadBtn.textContent = 'Load';
+  loadBtn.addEventListener('click', () => {
+    eventBus.emit('loadGame', {});
+    sfx.play('click');
+  });
+  overflow.appendChild(loadBtn);
 
   gold.value.textContent = String(state.getResource(Resource.GOLD));
 
@@ -82,10 +102,8 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     sfx.play('click');
   });
 
-  let elapsed = 0;
-  return (deltaMs: number) => {
-    elapsed += deltaMs;
-    const totalSeconds = Math.floor(elapsed / 1000);
+  return () => {
+    const totalSeconds = Math.floor(state.time / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     time.value.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;

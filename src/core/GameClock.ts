@@ -1,4 +1,5 @@
 export type TickCallback = (deltaMs: number) => void;
+export type DayCallback = (day: number) => void;
 
 /**
  * GameClock schedules fixed interval ticks and allows speed multipliers
@@ -9,8 +10,13 @@ export class GameClock {
   private speed = 1;
   private lastTick = 0;
   private accumulator = 0;
-
-  constructor(private readonly baseInterval: number, private readonly onTick: TickCallback) {}
+  private elapsed = 0;
+  private dayCount = 0;
+  constructor(
+    private readonly baseInterval: number,
+    private readonly onTick: TickCallback,
+    private readonly onDay?: DayCallback
+  ) {}
 
   /** Start ticking. */
   start(): void {
@@ -57,10 +63,25 @@ export class GameClock {
    * animation frame loop to keep ticks in sync with rendering.
    */
   tick(deltaMs: number): void {
-    this.accumulator += deltaMs * this.speed;
+    const scaled = deltaMs * this.speed;
+    this.accumulator += scaled;
+    this.elapsed += scaled;
     while (this.accumulator >= this.baseInterval) {
       this.accumulator -= this.baseInterval;
       this.onTick(this.baseInterval);
+      this.dayCount++;
+      if (this.onDay) {
+        this.onDay(this.dayCount);
+      }
     }
+  }
+
+  getTime(): number {
+    return this.elapsed;
+  }
+
+  setTime(ms: number): void {
+    this.elapsed = ms;
+    this.dayCount = Math.floor(ms / this.baseInterval);
   }
 }
