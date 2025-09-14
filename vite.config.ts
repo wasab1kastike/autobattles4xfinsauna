@@ -1,14 +1,15 @@
 import { defineConfig } from 'vite';
 
-export default defineConfig(({ command }) => ({
+// Vite configuration
+export default defineConfig({
   root: 'src',
-  // Use the repository name as the base path for production builds so assets
-  // resolve correctly on GitHub Pages deployments. In development we keep the
-  // base at '/' to match the local dev server.
-  base: command === 'build' ? '/autobattles4xfinsauna/' : '/',
+  // Use the repository name as the base path so assets resolve correctly on
+  // GitHub Pages deployments. Development runs off the same base to simplify
+  // local testing.
+  base: '/autobattles4xfinsauna/', // DO NOT CHANGE
   publicDir: '../public',
   build: {
     outDir: '../dist',
     emptyOutDir: true,
   },
-}));
+});
