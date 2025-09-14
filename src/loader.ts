@@ -8,34 +8,51 @@ export type LoadedAssets = {
   sounds: Record<string, HTMLAudioElement>;
 };
 
-export async function loadAssets(paths: AssetPaths): Promise<LoadedAssets> {
+export type AssetLoadResult = {
+  assets: LoadedAssets;
+  failures: string[];
+};
+
+export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
   const images: Record<string, HTMLImageElement> = {};
+  const sounds: Record<string, HTMLAudioElement> = {};
+  const failures: string[] = [];
+
   const imagePromises = Object.entries(paths.images ?? {}).map(([key, src]) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const img = new Image();
-      img.src = src;
       img.onload = () => {
         images[key] = img;
         resolve();
       };
-      img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+      img.onerror = () => {
+        const msg = `Failed to load image: ${src}`;
+        console.error(msg);
+        failures.push(msg);
+        resolve();
+      };
+      img.src = src;
     });
   });
 
-  const sounds: Record<string, HTMLAudioElement> = {};
   const soundPromises = Object.entries(paths.sounds ?? {}).map(([key, src]) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<void>((resolve) => {
       const audio = new Audio();
-      audio.src = src;
       audio.oncanplaythrough = () => {
         sounds[key] = audio;
         resolve();
       };
-      audio.onerror = () => reject(new Error(`Failed to load sound: ${src}`));
+      audio.onerror = () => {
+        const msg = `Failed to load sound: ${src}`;
+        console.error(msg);
+        failures.push(msg);
+        resolve();
+      };
+      audio.src = src;
       audio.load();
     });
   });
 
   await Promise.all([...imagePromises, ...soundPromises]);
-  return { images, sounds };
+  return { assets: { images, sounds }, failures };
 }

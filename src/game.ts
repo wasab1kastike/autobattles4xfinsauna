@@ -111,7 +111,11 @@ policyBtn.addEventListener('click', () => {
 });
 
 async function start(): Promise<void> {
-  assets = await loadAssets(assetPaths);
+  const { assets: loaded, failures } = await loadAssets(assetPaths);
+  assets = loaded;
+  if (failures.length) {
+    console.warn('Failed to load assets', failures);
+  }
   resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
   draw();
   clock.start();
