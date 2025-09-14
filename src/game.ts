@@ -10,6 +10,7 @@ import { loadAssets, AssetPaths, LoadedAssets } from './loader.ts';
 import { Farm, Barracks } from './buildings/index.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
+import { resetAutoFrame } from './camera/autoFrame.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -43,6 +44,7 @@ let assets: LoadedAssets;
 const map = new HexMap(10, 10, 32);
 // Ensure all tiles start fogged
 map.forEachTile((t) => t.setFogged(true));
+resetAutoFrame();
 
 const state = new GameState(1000);
 state.load(map);
@@ -66,6 +68,7 @@ const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
 });
+map.revealAround(sauna.pos, 3);
 const updateSaunaUI = setupSaunaUI(sauna);
 
 function spawn(type: UnitType, coord: AxialCoord): void {
