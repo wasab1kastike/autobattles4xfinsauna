@@ -42,38 +42,15 @@ body {
   border: 1px solid #333;
 }
 
-#ui-overlay {
-  pointer-events: none;
+
+.hud {
   position: absolute;
   inset: 0;
-}
-
-#resource-bar {
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px;
-}
-
-#event-log {
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px;
-  position: absolute;
-  top: 24px;
-  left: 0;
-  max-height: 100px;
-  width: 200px;
-  overflow-y: auto;
-  font-size: 14px;
-}
-
-#build-menu {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  pointer-events: auto;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px;
+  display: grid;
+  grid-template-columns: 300px 1fr 360px;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  pointer-events: none;
 }
 
 h1 {

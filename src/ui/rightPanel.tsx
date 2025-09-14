@@ -8,30 +8,25 @@ export type GameEvent = {
   buttonText?: string;
 };
 
-export function setupRightPanel(state: GameState): {
+export function setupRightPanel(
+  state: GameState,
+  mount: HTMLElement
+): {
   log: (msg: string) => void;
   addEvent: (ev: GameEvent) => void;
 } {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) {
-    return { log: () => {}, addEvent: () => {} };
-  }
-
   const panel = document.createElement('div');
   panel.id = 'right-panel';
-  panel.style.position = 'absolute';
-  panel.style.top = '0';
-  panel.style.right = '0';
-  panel.style.width = '240px';
   panel.style.height = '100%';
   panel.style.display = 'flex';
   panel.style.flexDirection = 'column';
   panel.style.background = 'rgba(0,0,0,0.5)';
   panel.style.color = '#fff';
 
-  overlay.appendChild(panel);
+  mount.appendChild(panel);
 
   const tabBar = document.createElement('div');
+  tabBar.setAttribute('role', 'tablist');
   tabBar.style.display = 'flex';
   panel.appendChild(tabBar);
 
@@ -53,23 +48,50 @@ export function setupRightPanel(state: GameState): {
     Log: logTab
   };
 
-  function show(tab: string): void {
-    for (const [name, el] of Object.entries(tabs)) {
-      el.style.display = name === tab ? 'block' : 'none';
-    }
-    for (const btn of tabBar.children) {
-      const b = btn as HTMLButtonElement;
-      b.disabled = b.textContent === tab;
-    }
+  const tabButtons: HTMLButtonElement[] = [];
+  const names = Object.keys(tabs);
+  let active = 0;
+
+  function show(index: number): void {
+    active = index;
+    names.forEach((name, i) => {
+      const selected = i === index;
+      const panelEl = tabs[name];
+      panelEl.hidden = !selected;
+      panelEl.setAttribute('role', 'tabpanel');
+      panelEl.setAttribute('aria-selected', String(selected));
+      const btn = tabButtons[i];
+      btn.setAttribute('aria-selected', String(selected));
+      btn.tabIndex = selected ? 0 : -1;
+    });
+    tabButtons[index].focus();
   }
 
-  for (const name of Object.keys(tabs)) {
+  names.forEach((name, i) => {
     const btn = document.createElement('button');
     btn.textContent = name;
-    btn.addEventListener('click', () => show(name));
+    btn.setAttribute('role', 'tab');
+    btn.tabIndex = i === 0 ? 0 : -1;
+    btn.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    btn.addEventListener('click', () => show(i));
     tabBar.appendChild(btn);
-    content.appendChild(tabs[name]);
-  }
+    tabButtons.push(btn);
+
+    const panelEl = tabs[name];
+    panelEl.setAttribute('role', 'tabpanel');
+    panelEl.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+    panelEl.hidden = i !== 0;
+    content.appendChild(panelEl);
+  });
+
+  tabBar.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const delta = e.key === 'ArrowRight' ? 1 : -1;
+      const next = (active + delta + names.length) % names.length;
+      show(next);
+      e.preventDefault();
+    }
+  });
 
   // --- Policies ---
   type PolicyDef = {
@@ -191,7 +213,7 @@ export function setupRightPanel(state: GameState): {
     }
   }
 
-  show('Policies');
+  show(0);
   return { log, addEvent };
 }
 

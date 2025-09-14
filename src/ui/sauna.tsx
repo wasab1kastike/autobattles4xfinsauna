@@ -1,17 +1,11 @@
 import type { Sauna } from '../sim/sauna.ts';
 
-export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) return () => {};
-
+export function setupSaunaUI(sauna: Sauna, mount: HTMLElement): (dt: number) => void {
   const btn = document.createElement('button');
   btn.textContent = 'Sauna \u2668\ufe0f';
-  overlay.appendChild(btn);
+  mount.appendChild(btn);
 
   const card = document.createElement('div');
-  card.style.position = 'absolute';
-  card.style.left = '0';
-  card.style.top = '0';
   card.style.background = 'rgba(0,0,0,0.7)';
   card.style.color = '#fff';
   card.style.padding = '8px';
@@ -39,7 +33,7 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   label.appendChild(document.createTextNode(' Rally to Front'));
   card.appendChild(label);
 
-  overlay.appendChild(card);
+  mount.appendChild(card);
 
   btn.addEventListener('click', () => {
     card.style.display = card.style.display === 'none' ? 'block' : 'none';

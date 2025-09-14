@@ -32,15 +32,15 @@ function createBadge(label: string): Badge {
   return { container, value: valueSpan, delta: deltaSpan };
 }
 
-export function setupTopbar(state: GameState): (deltaMs: number) => void {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) return () => {};
-
+export function setupTopbar(
+  state: GameState,
+  mount: HTMLElement
+): (deltaMs: number) => void {
   const bar = document.createElement('div');
   bar.id = 'topbar';
   bar.style.display = 'flex';
   bar.style.alignItems = 'center';
-  overlay.appendChild(bar);
+  mount.appendChild(bar);
 
   const saunakunnia = createBadge('Saunakunnia');
   const sisu = createBadge('SISU🔥');

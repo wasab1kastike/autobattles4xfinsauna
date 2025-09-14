@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 describe('log function', () => {
   it('caps event log at 100 messages', async () => {
     document.body.innerHTML = `
-      <canvas id="game-canvas"></canvas>
-      <div id="resource-bar"></div>
-      <div id="ui-overlay"></div>
+      <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+      </div>
     `;
 
     const { log } = await import('./game.ts');

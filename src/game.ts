@@ -10,15 +10,11 @@ import { eventBus } from './events';
 import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna } from './sim/sauna.ts';
-import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { play } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
-import { setupRightPanel } from './ui/rightPanel.tsx';
-
-const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const resourceBar = document.getElementById('resource-bar')!;
+import { initLayout } from './ui/layout.ts';
 
 const assetPaths: AssetPaths = {
   images: {
@@ -66,9 +62,11 @@ const sauna = createSauna({
   r: Math.floor(map.height / 2)
 });
 map.revealAround(sauna.pos, 3);
-const updateSaunaUI = setupSaunaUI(sauna);
-const updateTopbar = setupTopbar(state);
-const { log, addEvent } = setupRightPanel(state);
+const { canvas, topbarMount, updateSaunaUI, log, addEvent } = initLayout(
+  state,
+  sauna
+);
+const updateTopbar = setupTopbar(state, topbarMount);
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 eventBus.on('sisuPulseStart', () => play('sisu'));
 
@@ -120,8 +118,7 @@ canvas.addEventListener('click', (e) => {
   draw();
 });
 
-const onResourceChanged = ({ resource, total, amount }) => {
-  resourceBar.textContent = `Resources: ${total}`;
+const onResourceChanged = ({ resource, amount }) => {
   const sign = amount > 0 ? '+' : '';
   log(`${resource}: ${sign}${amount}`);
 };
@@ -153,7 +150,6 @@ async function start(): Promise<void> {
   if (failures.length) {
     console.warn('Failed to load assets', failures);
   }
-  resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
   draw();
   let last = performance.now();
   function gameLoop(now: number) {
