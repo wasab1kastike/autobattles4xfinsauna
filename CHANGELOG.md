@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Serve built app from repository root instead of `docs/` for GitHub Pages
+- Update deployment workflow and README for root-based Pages hosting
 - Rebuild docs with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
 - Rebuild docs with relative asset paths so GitHub Pages loads CSS and JS correctly

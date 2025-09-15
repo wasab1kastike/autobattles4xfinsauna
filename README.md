@@ -35,8 +35,8 @@ npm install
 ## Deployment
 
 Pushing to `main` runs a workflow that builds the app and commits the result to
-the `docs/` folder so GitHub Pages serves the game. In the repository settings
-set **Pages → Source** to `main` and `/docs`.
+the repository root so GitHub Pages serves the game. In the repository settings
+set **Pages → Source** to `main` and `/`.
 
 To build locally:
 

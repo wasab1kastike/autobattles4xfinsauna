@@ -1,11 +1,11 @@
-name: Pages (docs/)
+name: Pages (root)
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  publish-docs:
+  publish-root:
     runs-on: ubuntu-latest
     needs: [ verify-pages ]  # <-- hard dependency on CI job
     if: ${{ needs.verify-pages.result == 'success' }}
@@ -17,16 +17,22 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Prepare docs folder
+      - name: Publish to root
         run: |
-          rm -rf docs
-          mkdir -p docs
-          cp -R dist/* docs/
-          cp dist/index.html docs/404.html
-          touch docs/.nojekyll
+          cp dist/index.html index.html
+          cp dist/index.html 404.html
+          rm -rf assets vite.svg
+          cp -R dist/assets .
+          cp dist/vite.svg .
+          touch .nojekyll
 
-      - name: Commit docs
+      - name: Commit build
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore(pages): publish dist → docs"
-          file_pattern: docs/*
+          commit_message: "chore(pages): publish dist → root"
+          file_pattern: |
+            index.html
+            404.html
+            assets/**
+            vite.svg
+            .nojekyll
