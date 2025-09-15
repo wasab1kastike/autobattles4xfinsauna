@@ -29,4 +29,5 @@
 - Add `getMaxHealth` method to `Unit` and use it in game rendering
 - Gracefully fall back when Web Audio API is unavailable and resume audio on first interaction
 - Display a styled error overlay when asset loading fails
+- Defer game initialization until DOMContentLoaded via exported `init()`
 
