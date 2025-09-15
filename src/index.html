@@ -13,6 +13,9 @@
         <div id="resource-bar">Resources: 0</div>
       </div>
     </div>
-    <script type="module" src="/game.ts"></script>
+    <script type="module">
+      import { init } from '/game.ts';
+      window.addEventListener('DOMContentLoaded', init);
+    </script>
   </body>
 </html>
