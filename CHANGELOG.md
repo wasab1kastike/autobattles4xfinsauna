@@ -23,4 +23,5 @@
 - Improve high-DPI rendering by scaling canvas to `devicePixelRatio`
 - Add responsive layout and media queries for mobile UI components
 - Add `getMaxHealth` method to `Unit` and use it in game rendering
+- Add noscript message in index to guide users when JavaScript is disabled
 
