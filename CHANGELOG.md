@@ -1,19 +1,3 @@
-# Changelog
-
-## Unreleased
-- Set HTML title to Autobattles4xFinsauna
-- Add `.nojekyll` to bypass Jekyll on GitHub Pages
-- Resolve sprite paths using `import.meta.env.BASE_URL` so builds work from repository subdirectory
-- Restore `.nojekyll` automatically after production builds
-- Build outputs to `dist/` and workflow publishes to `docs/`
-- Add workflow to build and publish `docs/` on pushes to `main`
-- Set explicit Vite base path for GitHub Pages
-- Fix Vite base path to always `/autobattles4xfinsauna/`
-- Add `verify-pages` CI workflow to validate Pages builds
-- Publish `dist/` to `docs/` only after verification succeeds
-- Remove legacy Pages deployment workflow
-- Redirect project root to `docs/` so GitHub Pages serves the game
-- Improve mobile scaling by resizing canvas to viewport and device pixel ratio
-- Improve high-DPI rendering by scaling canvas to `devicePixelRatio`
-- Add responsive layout and media queries for mobile UI components
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:756bb44209a2442a81169b759cb493da39b82582b0ebddfebaf9aa05f2d2b1b6
+size 1038
