@@ -123,7 +123,9 @@ export class GameState {
       (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
         this.resources[res] += offlineTicks * this.passiveGeneration[res];
       });
-    } catch {
+    } catch (err) {
+      console.warn('Failed to load game state, clearing saved data', err);
+      localStorage.removeItem(this.storageKey);
       this.lastSaved = Date.now();
     }
   }
