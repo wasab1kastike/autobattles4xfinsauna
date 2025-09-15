@@ -1,10 +1,11 @@
-import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
 import { isSisuActive } from '../sim/sisu.ts';
 import { HexMapRenderer } from './HexMapRenderer.ts';
+import { camera } from '../camera/autoFrame.ts';
 
 export function draw(
   ctx: CanvasRenderingContext2D,
@@ -14,31 +15,51 @@ export function draw(
   selected: AxialCoord | null
 ): void {
   const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
+  const canvasWidth = ctx.canvas.width;
+  const canvasHeight = ctx.canvas.height;
+
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  const viewportWidth = canvasWidth / dpr;
+  const viewportHeight = canvasHeight / dpr;
+
+  ctx.scale(dpr, dpr);
+  ctx.translate(viewportWidth / 2, viewportHeight / 2);
+  ctx.scale(camera.zoom, camera.zoom);
+
+  const origin = mapRenderer.getOrigin();
+  ctx.translate(-(camera.x - origin.x), -(camera.y - origin.y));
+
   mapRenderer.draw(ctx, assets, selected ?? undefined);
-  drawUnits(ctx, mapRenderer, assets, units);
+  drawUnits(ctx, mapRenderer, assets, units, origin);
+  ctx.restore();
 }
 
 export function drawUnits(
   ctx: CanvasRenderingContext2D,
   mapRenderer: HexMapRenderer,
   assets: LoadedAssets['images'],
-  units: Unit[]
+  units: Unit[],
+  origin: PixelCoord
 ): void {
   const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
+    const drawX = x - origin.x;
+    const drawY = y - origin.y;
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
     ctx.save();
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }
-    ctx.drawImage(img, x, y, hexWidth, hexHeight);
+    ctx.drawImage(img, drawX, drawY, hexWidth, hexHeight);
     if (isSisuActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, hexWidth, hexHeight);
+      ctx.strokeRect(drawX, drawY, hexWidth, hexHeight);
     }
     ctx.restore();
   }
