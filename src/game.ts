@@ -209,6 +209,7 @@ export async function start(): Promise<void> {
     });
     updateSaunaUI();
     updateTopbar(delta);
+    draw();
     requestAnimationFrame(gameLoop);
   }
   requestAnimationFrame(gameLoop);

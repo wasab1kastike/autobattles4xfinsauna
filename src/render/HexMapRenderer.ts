@@ -1,4 +1,4 @@
-import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { HexMap } from '../hexmap.ts';
@@ -11,13 +11,17 @@ export class HexMapRenderer {
     return this.mapRef.hexSize;
   }
 
+  getOrigin(): PixelCoord {
+    return axialToPixel({ q: this.mapRef.minQ, r: this.mapRef.minR }, this.hexSize);
+  }
+
   draw(
     ctx: CanvasRenderingContext2D,
     images: Record<string, HTMLImageElement>,
     selected?: AxialCoord
   ): void {
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const origin = axialToPixel({ q: this.mapRef.minQ, r: this.mapRef.minR }, this.hexSize);
+    const origin = this.getOrigin();
     for (const [key, tile] of this.mapRef.tiles) {
       const [q, r] = key.split(',').map(Number);
       const { x, y } = axialToPixel({ q, r }, this.hexSize);
