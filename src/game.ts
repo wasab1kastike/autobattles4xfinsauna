@@ -13,7 +13,7 @@ import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
-import { play } from './sfx.ts';
+import { playSafe } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
 
@@ -88,7 +88,7 @@ const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state);
 const { log, addEvent } = setupRightPanel(state);
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
-eventBus.on('sisuPulseStart', () => play('sisu'));
+eventBus.on('sisuPulseStart', () => playSafe('sisu'));
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
