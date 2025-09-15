@@ -2,20 +2,117 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Autobattles4xFinsauna</title>
-    <script type="module" crossorigin src="./assets/index-Rv6u3tTc.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BrShhiro.css">
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" crossorigin href="./assets/index-ChTCDhpL.css" />
   </head>
   <body>
-    <p>Loading…</p>
-    <noscript><p>JavaScript is required. Open <a href="docs/">docs/</a>.</p></noscript>
-    <div id="game-container">
-      <canvas id="game-canvas"></canvas>
-      <div id="ui-overlay">
-        <div id="resource-bar">Resources: 0</div>
+    <div id="game-root">
+      <div id="game-container">
+        <canvas
+          id="game-canvas"
+          aria-label="Autobattles4xFinsauna battlefield"
+          role="img"
+        ></canvas>
+        <div id="ui-overlay">
+          <header id="topbar" role="banner">
+            <div class="topbar-badge badge-sauna">
+              <img
+                src="./assets/ui/resource.svg"
+                alt=""
+                decoding="async"
+                class="topbar-badge-icon"
+                aria-hidden="true"
+              />
+              <div class="badge-text">
+                <span class="badge-label">Saunakunnia</span>
+                <span class="badge-value">0</span>
+              </div>
+              <span class="badge-delta" aria-hidden="true">+0</span>
+            </div>
+            <div class="topbar-badge badge-sisu" style="display: none;">
+              <div class="badge-text">
+                <span class="badge-label">SISU🔥</span>
+                <span class="badge-value">0</span>
+              </div>
+              <span class="badge-delta" aria-hidden="true">+0</span>
+            </div>
+            <div class="topbar-badge badge-gold">
+              <img
+                src="./assets/ui/gold.svg"
+                alt=""
+                decoding="async"
+                class="topbar-badge-icon"
+                aria-hidden="true"
+              />
+              <div class="badge-text">
+                <span class="badge-label">Gold</span>
+                <span class="badge-value">0</span>
+              </div>
+              <span class="badge-delta" aria-hidden="true">+0</span>
+            </div>
+            <div class="topbar-badge badge-time">
+              <div class="badge-text">
+                <span class="badge-label">Time</span>
+                <span class="badge-value">0:00</span>
+              </div>
+              <span class="badge-delta" aria-hidden="true"></span>
+            </div>
+            <button class="topbar-button sisu-button" type="button">Sisu</button>
+            <button class="topbar-button sound-button" type="button" aria-pressed="false">
+              <img
+                src="./assets/ui/sound.svg"
+                alt=""
+                decoding="async"
+                aria-hidden="true"
+              />
+              <span>Sound</span>
+            </button>
+          </header>
+
+          <div id="resource-bar" role="status" aria-live="polite">
+            <img
+              src="./assets/ui/resource.svg"
+              alt=""
+              decoding="async"
+              class="resource-icon"
+              aria-hidden="true"
+            />
+            <div class="resource-text">
+              <span class="resource-label">Resources</span>
+              <span class="resource-value">Loading…</span>
+            </div>
+          </div>
+
+          <section id="event-log" aria-label="Recent events">
+            <h2 class="sr-only">Recent events</h2>
+            <ul>
+              <li>Initializing simulation…</li>
+              <li>Deploying scouts to the frontier…</li>
+            </ul>
+          </section>
+
+          <nav id="build-menu" aria-label="Build menu">
+            <button type="button">Build Farm</button>
+            <button type="button">Build Barracks</button>
+            <button type="button">Upgrade Farm</button>
+            <button type="button">Eco Policy</button>
+          </nav>
+
+          <div class="loading-message" role="status">Preparing arena</div>
+        </div>
       </div>
     </div>
+
+    <noscript>
+      <p>
+        JavaScript is required to run Autobattles4xFinsauna. Visit the
+        <a href="docs/">documentation</a> for a static overview.
+      </p>
+    </noscript>
+
+    <script type="module" crossorigin src="./assets/index-j7uryX2L.js"></script>
   </body>
 </html>
