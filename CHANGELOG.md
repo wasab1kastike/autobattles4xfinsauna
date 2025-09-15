@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Safeguard unit rendering by bracketing canvas state changes with `save()`/`restore()`
 - Move hex map rendering into a dedicated `HexMapRenderer` to separate presentation from tile management
 - Share hex dimension calculations through a reusable helper used by map and unit rendering
 - Refactor game initialization and rendering helpers into dedicated `ui` and `render` modules
