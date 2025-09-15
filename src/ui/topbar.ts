@@ -33,14 +33,11 @@ function createBadge(label: string): Badge {
 }
 
 export function setupTopbar(state: GameState): (deltaMs: number) => void {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) return () => {};
+  const bar = document.getElementById('topbar');
+  if (!bar) return () => {};
 
-  const bar = document.createElement('div');
-  bar.id = 'topbar';
   bar.style.display = 'flex';
   bar.style.alignItems = 'center';
-  overlay.appendChild(bar);
 
   const saunakunnia = createBadge('Saunakunnia');
   const sisu = createBadge('SISU🔥');

@@ -13,3 +13,4 @@
 - Publish `dist/` to `docs/` only after verification succeeds
 - Remove legacy Pages deployment workflow
 - Redirect project root to `docs/` so GitHub Pages serves the game
+- Introduce grid-based HUD layout with accessible right panel tabs
