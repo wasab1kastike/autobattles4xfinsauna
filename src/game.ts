@@ -117,7 +117,7 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
     const img = assets.images[`unit-${unit.type}`] ?? assets.images['placeholder'];
-    const maxHealth = (unit as any).maxHealth ?? unit.stats.health;
+    const maxHealth = unit.getMaxHealth();
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }

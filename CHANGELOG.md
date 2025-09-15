@@ -17,4 +17,5 @@
 - Improve mobile scaling by resizing canvas to viewport and device pixel ratio
 - Improve high-DPI rendering by scaling canvas to `devicePixelRatio`
 - Add responsive layout and media queries for mobile UI components
+- Add `getMaxHealth` method to `Unit` and use it in game rendering
 
