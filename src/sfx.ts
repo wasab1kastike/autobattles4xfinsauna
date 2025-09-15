@@ -6,15 +6,30 @@ export type SfxName = 'click' | 'spawn' | 'error' | 'sisu';
 let audioCtx: AudioContext | null = null;
 const buffers: Partial<Record<SfxName, AudioBuffer>> = {};
 
-function init(): void {
-  if (audioCtx || typeof window === 'undefined') return;
-  const AC = (window.AudioContext || (window as any).webkitAudioContext);
-  if (!AC) return;
-  audioCtx = new AC();
+function initAudioSafe(): AudioContext | null {
+  if (audioCtx || typeof window === 'undefined') return audioCtx;
+  const AC = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AC) {
+    console.warn('Web Audio API not supported');
+    return null;
+  }
+  try {
+    audioCtx = new AC();
+  } catch (err) {
+    console.warn('Unable to create AudioContext', err);
+    return null;
+  }
   buffers.click = createClick();
   buffers.spawn = createSpawn();
   buffers.error = createError();
   buffers.sisu = createSisu();
+  if (audioCtx.state === 'suspended') {
+    const resume = () => {
+      void audioCtx?.resume();
+    };
+    window.addEventListener('pointerdown', resume, { once: true });
+  }
+  return audioCtx;
 }
 
 function createBuffer(length: number, fill: (t: number) => number): AudioBuffer {
@@ -74,28 +89,30 @@ export function setMuted(m: boolean): void {
   }
 }
 
-export function play(name: SfxName): void {
+export function playSafe(name: SfxName): void {
   if (muted) return;
-  if (!audioCtx) init();
-  if (!audioCtx) return;
+  const ctx = initAudioSafe();
+  if (!ctx) return;
   const buffer = buffers[name];
   if (!buffer) return;
-  if (audioCtx.state === 'suspended') {
-    void audioCtx.resume();
+  if (ctx.state === 'suspended') {
+    void ctx.resume();
   }
-  const source = audioCtx.createBufferSource();
+  const source = ctx.createBufferSource();
   source.buffer = buffer;
-  source.connect(audioCtx.destination);
+  source.connect(ctx.destination);
   source.start();
 }
 
 if (typeof document !== 'undefined') {
   document.addEventListener('click', (e) => {
     if (e.target instanceof HTMLButtonElement) {
-      play('click');
+      playSafe('click');
     }
   });
 }
 
 // Initialize when module loaded (if possible)
-init();
+initAudioSafe();
+
+export { initAudioSafe };
