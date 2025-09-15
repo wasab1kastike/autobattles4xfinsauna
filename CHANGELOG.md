@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Regenerate production bundle and update `index.html` to reference the latest hashed assets
 - Safeguard unit rendering by bracketing canvas state changes with `save()`/`restore()`
 - Move hex map rendering into a dedicated `HexMapRenderer` to separate presentation from tile management
 - Share hex dimension calculations through a reusable helper used by map and unit rendering
