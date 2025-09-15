@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Rebuild docs with latest hashed assets
 - Include custom 404 page for GitHub Pages
 - Fail Pages build when bare `assets/` URLs are detected in `dist/index.html`
 - Use relative asset paths in root index and rebuild bundles
