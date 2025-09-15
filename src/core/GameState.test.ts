@@ -116,8 +116,8 @@ describe('GameState', () => {
     const serialized = {
       resources: { [Resource.GOLD]: 0 },
       lastSaved: 0,
-      buildings: { mystery: 1 },
-      buildingPlacements: { '0,0': 'mystery' }
+      buildings: { mystery: 1, farm: 2 },
+      buildingPlacements: { '0,0': 'mystery', '1,1': 'farm' }
     };
     localStorage.setItem('gameState', JSON.stringify(serialized));
 
@@ -127,5 +127,8 @@ describe('GameState', () => {
 
     expect(state.getBuildingAt({ q: 0, r: 0 })).toBeUndefined();
     expect(map.getTile(0, 0)?.building).toBeNull();
+    expect((state as any).buildings['mystery']).toBeUndefined();
+    expect((state as any).buildings['farm']).toBe(2);
+    expect(map.getTile(1, 1)?.building).toBe('farm');
   });
 });
