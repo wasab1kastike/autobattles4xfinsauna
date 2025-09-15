@@ -5,7 +5,7 @@ export default defineConfig({
   root: 'src',
   // Use an absolute base path so built assets resolve from the site root.
   // This ensures asset URLs remain correct in production deployments.
-  base: '/',
+  base: '/autobattles4xfinsauna/',
   publicDir: '../public',
   build: {
     outDir: '../dist',
