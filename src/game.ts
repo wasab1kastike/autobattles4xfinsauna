@@ -20,6 +20,16 @@ import { setupRightPanel } from './ui/rightPanel.tsx';
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
 
+function resizeCanvas(): void {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * dpr;
+  canvas.height = window.innerHeight * dpr;
+  draw();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
 const asset = (p: string) => import.meta.env.BASE_URL + p;
 const assetPaths: AssetPaths = {
   images: {
@@ -88,7 +98,9 @@ let selected: AxialCoord | null = null;
 function draw(): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || !assets) return;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
   map.draw(ctx, assets.images, selected ?? undefined);
   drawUnits(ctx);
 }
