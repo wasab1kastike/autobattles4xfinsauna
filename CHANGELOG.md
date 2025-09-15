@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Introduce a glassmorphism-inspired HUD styling system with shared color tokens,
+  tooltip affordances, and tile highlight treatments
 - Replace the root HTML shell with the new HUD layout, dedicated stylesheet, and SVG-powered icons
 - Add high-contrast tile and UI SVG icon sets, integrate them into the top bar/resource display, and register the new asset paths in the loader
 - Regenerate production bundle and update `index.html` to reference the latest hashed assets
