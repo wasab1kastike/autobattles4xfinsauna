@@ -401,3 +401,7 @@ export function init(): void {
   }
 }
 
+if (!import.meta.vitest) {
+  init();
+}
+
