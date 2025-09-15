@@ -1,8 +1,7 @@
 import type { AxialCoord } from './hex/HexUtils.ts';
-import { axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
+import { getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
-import { TerrainId, terrainAt } from './map/terrain.ts';
-import { getHexDimensions } from './hex/HexDimensions.ts';
+import { terrainAt } from './map/terrain.ts';
 import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
@@ -109,97 +108,4 @@ export class HexMap {
     tweenCamera(frame, 300);
   }
 
-  /** Draw the map onto a canvas context. */
-  draw(
-    ctx: CanvasRenderingContext2D,
-    images: Record<string, HTMLImageElement>,
-    selected?: AxialCoord
-  ): void {
-    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const origin = axialToPixel({ q: this.minQ, r: this.minR }, this.hexSize);
-    for (const [key, tile] of this.tiles) {
-      const [q, r] = key.split(',').map(Number);
-      const { x, y } = axialToPixel({ q, r }, this.hexSize);
-      const drawX = x - origin.x;
-      const drawY = y - origin.y;
-      ctx.save();
-      if (tile.isFogged) ctx.globalAlpha *= 0.4;
-
-      this.drawTerrain(ctx, images, tile.terrain, drawX, drawY);
-
-      if (tile.building) {
-        const building = images[`building-${tile.building}`] ?? images['placeholder'];
-        ctx.drawImage(building, drawX, drawY, hexWidth, hexHeight);
-      }
-
-      const isSelected =
-        selected && q === selected.q && r === selected.r;
-      this.strokeHex(
-        ctx,
-        drawX + this.hexSize,
-        drawY + this.hexSize,
-        this.hexSize,
-        Boolean(isSelected)
-      );
-      ctx.restore();
-    }
-  }
-
-  /** Convenience method to draw directly to a canvas element. */
-  drawToCanvas(
-    canvas: HTMLCanvasElement,
-    images: Record<string, HTMLImageElement>,
-    selected?: AxialCoord
-  ): void {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      throw new Error('Canvas 2D context not available');
-    }
-    this.draw(ctx, images, selected);
-  }
-
-  private hexPath(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    size: number
-  ): void {
-    ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 180) * (60 * i - 30);
-      const px = x + size * Math.cos(angle);
-      const py = y + size * Math.sin(angle);
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
-    ctx.closePath();
-  }
-
-  private drawTerrain(
-    ctx: CanvasRenderingContext2D,
-    images: Record<string, HTMLImageElement>,
-    terrain: TerrainId,
-    x: number,
-    y: number
-  ): void {
-    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const key = `terrain-${TerrainId[terrain].toLowerCase()}`;
-    const img = images[key] ?? images['placeholder'];
-    ctx.drawImage(img, x, y, hexWidth, hexHeight);
-  }
-
-  private strokeHex(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    size: number,
-    selected = false
-  ): void {
-    this.hexPath(ctx, x, y, size);
-    ctx.strokeStyle = selected ? '#ff0000' : '#000000';
-    ctx.stroke();
-  }
 }
