@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Share hex dimension calculations through a reusable helper used by map and unit rendering
 - Refactor game initialization and rendering helpers into dedicated `ui` and `render` modules
 - Include `404.html` in `docs/` and refresh build output
 - Set Vite `base` to `/autobattles4xfinsauna/` and regenerate `docs/` build output
