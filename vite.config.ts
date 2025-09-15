@@ -3,10 +3,10 @@ import { defineConfig } from 'vite';
 // Vite configuration
 export default defineConfig({
   root: 'src',
-  // Use the repository name as the base path so assets resolve correctly on
-  // GitHub Pages deployments. Development runs off the same base to simplify
-  // local testing.
-  base: '/autobattles4xfinsauna/', // DO NOT CHANGE
+  // Use a relative base path so built assets resolve no matter where the site
+  // is hosted. This allows GitHub Pages and local previews to load assets
+  // correctly without needing the repository name in the URL.
+  base: './',
   publicDir: '../public',
   build: {
     outDir: '../dist',
