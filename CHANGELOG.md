@@ -35,4 +35,5 @@
 - Display a styled error overlay when asset loading fails
 - Defer game initialization until DOMContentLoaded via exported `init()`
 - Add workflow to deploy docs from `dist/` on pushes to `main`
+- Switch deployment workflow to Node.js 18
 
