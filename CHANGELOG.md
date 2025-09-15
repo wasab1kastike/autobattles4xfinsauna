@@ -12,3 +12,4 @@
 - Add `verify-pages` CI workflow to validate Pages builds
 - Publish `dist/` to `docs/` only after verification succeeds
 - Remove legacy Pages deployment workflow
+- Introduce grid-based HUD layout with accessible right panel tabs

@@ -1,7 +1,7 @@
 import type { Sauna } from '../sim/sauna.ts';
 
-export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
-  const overlay = document.getElementById('ui-overlay');
+export function setupSaunaUI(sauna: Sauna, mount?: HTMLElement): (dt: number) => void {
+  const overlay = mount ?? document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
   const btn = document.createElement('button');

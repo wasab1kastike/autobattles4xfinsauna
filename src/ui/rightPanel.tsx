@@ -8,68 +8,77 @@ export type GameEvent = {
   buttonText?: string;
 };
 
-export function setupRightPanel(state: GameState): {
-  log: (msg: string) => void;
-  addEvent: (ev: GameEvent) => void;
-} {
-  const overlay = document.getElementById('ui-overlay');
-  if (!overlay) {
+export function setupRightPanel(
+  state: GameState,
+  mount?: HTMLElement
+): { log: (msg: string) => void; addEvent: (ev: GameEvent) => void } {
+  const container = mount ?? document.getElementById('right-panel');
+  if (!container) {
     return { log: () => {}, addEvent: () => {} };
   }
 
-  const panel = document.createElement('div');
-  panel.id = 'right-panel';
-  panel.style.position = 'absolute';
-  panel.style.top = '0';
-  panel.style.right = '0';
-  panel.style.width = '240px';
-  panel.style.height = '100%';
-  panel.style.display = 'flex';
-  panel.style.flexDirection = 'column';
-  panel.style.background = 'rgba(0,0,0,0.5)';
-  panel.style.color = '#fff';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.background = 'rgba(0,0,0,0.5)';
+  container.style.color = '#fff';
+  container.style.height = '100%';
 
-  overlay.appendChild(panel);
-
-  const tabBar = document.createElement('div');
-  tabBar.style.display = 'flex';
-  panel.appendChild(tabBar);
+  const tablist = document.createElement('div');
+  tablist.setAttribute('role', 'tablist');
+  container.appendChild(tablist);
 
   const content = document.createElement('div');
   content.style.flex = '1';
   content.style.overflowY = 'auto';
-  panel.appendChild(content);
+  container.appendChild(content);
 
-  const policiesTab = document.createElement('div');
-  const eventsTab = document.createElement('div');
-  const logTab = document.createElement('div');
-  logTab.id = 'event-log';
-  logTab.style.display = 'flex';
-  logTab.style.flexDirection = 'column';
-
-  const tabs: Record<string, HTMLDivElement> = {
-    Policies: policiesTab,
-    Events: eventsTab,
-    Log: logTab
+  const panels: Record<string, HTMLDivElement> = {
+    Policies: document.createElement('div'),
+    Events: document.createElement('div'),
+    Log: document.createElement('div')
   };
 
-  function show(tab: string): void {
-    for (const [name, el] of Object.entries(tabs)) {
-      el.style.display = name === tab ? 'block' : 'none';
-    }
-    for (const btn of tabBar.children) {
-      const b = btn as HTMLButtonElement;
-      b.disabled = b.textContent === tab;
+  panels.Log.id = 'event-log';
+  panels.Log.style.display = 'flex';
+  panels.Log.style.flexDirection = 'column';
+
+  const tabs: Record<string, HTMLButtonElement> = {};
+  const order = Object.keys(panels);
+
+  function show(name: string): void {
+    for (const key of order) {
+      const selected = key === name;
+      panels[key].hidden = !selected;
+      panels[key].setAttribute('role', 'tabpanel');
+      panels[key].setAttribute('aria-selected', selected ? 'true' : 'false');
+      tabs[key].setAttribute('aria-selected', selected ? 'true' : 'false');
     }
   }
 
-  for (const name of Object.keys(tabs)) {
+  for (const name of order) {
     const btn = document.createElement('button');
     btn.textContent = name;
+    btn.setAttribute('role', 'tab');
     btn.addEventListener('click', () => show(name));
-    tabBar.appendChild(btn);
-    content.appendChild(tabs[name]);
+    tablist.appendChild(btn);
+    tabs[name] = btn;
+    content.appendChild(panels[name]);
   }
+
+  tablist.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const current = order.findIndex((n) => tabs[n] === document.activeElement);
+    let next = current;
+    if (e.key === 'ArrowRight') {
+      next = (current + 1) % order.length;
+    } else if (e.key === 'ArrowLeft') {
+      next = (current - 1 + order.length) % order.length;
+    }
+    const nextName = order[next];
+    tabs[nextName].focus();
+    show(nextName);
+  });
 
   // --- Policies ---
   type PolicyDef = {
@@ -100,7 +109,8 @@ export function setupRightPanel(state: GameState): {
   const policyButtons: Record<string, HTMLButtonElement> = {};
 
   function renderPolicies(): void {
-    policiesTab.innerHTML = '';
+    const root = panels.Policies;
+    root.innerHTML = '';
     for (const def of policyDefs) {
       const btn = document.createElement('button');
       btn.textContent = `${def.name} (${def.cost}g)`;
@@ -111,8 +121,8 @@ export function setupRightPanel(state: GameState): {
           updatePolicyButtons();
         }
       });
-      policiesTab.appendChild(btn);
-      policiesTab.appendChild(document.createElement('br'));
+      root.appendChild(btn);
+      root.appendChild(document.createElement('br'));
       policyButtons[def.id] = btn;
     }
   }
@@ -134,7 +144,8 @@ export function setupRightPanel(state: GameState): {
   const events: GameEvent[] = [];
 
   function renderEvents(): void {
-    eventsTab.innerHTML = '';
+    const root = panels.Events;
+    root.innerHTML = '';
     for (const ev of events) {
       const wrapper = document.createElement('div');
       const h = document.createElement('h4');
@@ -153,7 +164,7 @@ export function setupRightPanel(state: GameState): {
       wrapper.appendChild(h);
       wrapper.appendChild(p);
       wrapper.appendChild(btn);
-      eventsTab.appendChild(wrapper);
+      root.appendChild(wrapper);
     }
   }
 
@@ -171,12 +182,12 @@ export function setupRightPanel(state: GameState): {
     for (const msg of pending) {
       const div = document.createElement('div');
       div.textContent = msg;
-      logTab.appendChild(div);
+      panels.Log.appendChild(div);
     }
-    while (logTab.childElementCount > MAX_LOG_MESSAGES) {
-      logTab.removeChild(logTab.firstChild!);
+    while (panels.Log.childElementCount > MAX_LOG_MESSAGES) {
+      panels.Log.removeChild(panels.Log.firstChild!);
     }
-    logTab.scrollTop = logTab.scrollHeight;
+    panels.Log.scrollTop = panels.Log.scrollHeight;
     pending.length = 0;
     scheduled = false;
   }
@@ -194,4 +205,3 @@ export function setupRightPanel(state: GameState): {
   show('Policies');
   return { log, addEvent };
 }
-

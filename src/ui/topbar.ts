@@ -40,6 +40,8 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   bar.id = 'topbar';
   bar.style.display = 'flex';
   bar.style.alignItems = 'center';
+  bar.style.gridColumn = '1 / span 3';
+  bar.style.gridRow = '1';
   overlay.appendChild(bar);
 
   const saunakunnia = createBadge('Saunakunnia');
