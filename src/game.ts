@@ -1,4 +1,15 @@
 import './style.css';
+import plains from '../assets/sprites/plains.svg';
+import forest from '../assets/sprites/forest.svg';
+import hills from '../assets/sprites/hills.svg';
+import lake from '../assets/sprites/lake.svg';
+import farm from '../assets/sprites/farm.svg';
+import barracks from '../assets/sprites/barracks.svg';
+import city from '../assets/sprites/city.svg';
+import mine from '../assets/sprites/mine.svg';
+import soldier from '../assets/sprites/soldier.svg';
+import archer from '../assets/sprites/archer.svg';
+import raider from '../assets/sprites/raider.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
@@ -57,22 +68,21 @@ export function init(): void {
   }
 }
 
-const asset = (p: string) => import.meta.env.BASE_URL + p;
 const assetPaths: AssetPaths = {
   images: {
     placeholder:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-    'terrain-plains': asset('assets/sprites/plains.svg'),
-    'terrain-forest': asset('assets/sprites/forest.svg'),
-    'terrain-hills': asset('assets/sprites/hills.svg'),
-    'terrain-lake': asset('assets/sprites/lake.svg'),
-    'building-farm': asset('assets/sprites/farm.svg'),
-    'building-barracks': asset('assets/sprites/barracks.svg'),
-    'building-city': asset('assets/sprites/city.svg'),
-    'building-mine': asset('assets/sprites/mine.svg'),
-    'unit-soldier': asset('assets/sprites/soldier.svg'),
-    'unit-archer': asset('assets/sprites/archer.svg'),
-    'unit-raider': asset('assets/sprites/raider.svg')
+    'terrain-plains': plains,
+    'terrain-forest': forest,
+    'terrain-hills': hills,
+    'terrain-lake': lake,
+    'building-farm': farm,
+    'building-barracks': barracks,
+    'building-city': city,
+    'building-mine': mine,
+    'unit-soldier': soldier,
+    'unit-archer': archer,
+    'unit-raider': raider
   }
 };
 let assets: LoadedAssets;
