@@ -2,6 +2,7 @@ import type { AxialCoord } from './hex/HexUtils.ts';
 import { axialToPixel, getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile } from './hex/HexTile.ts';
 import { TerrainId, terrainAt } from './map/terrain.ts';
+import { getHexDimensions } from './hex/HexDimensions.ts';
 import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
 
 /** Simple hex map composed of tiles in axial coordinates. */
@@ -114,8 +115,7 @@ export class HexMap {
     images: Record<string, HTMLImageElement>,
     selected?: AxialCoord
   ): void {
-    const hexWidth = this.hexSize * Math.sqrt(3);
-    const hexHeight = this.hexSize * 2;
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
     const origin = axialToPixel({ q: this.minQ, r: this.minR }, this.hexSize);
     for (const [key, tile] of this.tiles) {
       const [q, r] = key.split(',').map(Number);
@@ -185,8 +185,7 @@ export class HexMap {
     x: number,
     y: number
   ): void {
-    const hexWidth = this.hexSize * Math.sqrt(3);
-    const hexHeight = this.hexSize * 2;
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
     const key = `terrain-${TerrainId[terrain].toLowerCase()}`;
     const img = images[key] ?? images['placeholder'];
     ctx.drawImage(img, x, y, hexWidth, hexHeight);
