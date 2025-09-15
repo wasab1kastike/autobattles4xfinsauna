@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Move hex map rendering into a dedicated `HexMapRenderer` to separate presentation from tile management
 - Share hex dimension calculations through a reusable helper used by map and unit rendering
 - Refactor game initialization and rendering helpers into dedicated `ui` and `render` modules
 - Include `404.html` in `docs/` and refresh build output
