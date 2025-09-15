@@ -12,3 +12,4 @@
 - Add `verify-pages` CI workflow to validate Pages builds
 - Publish `dist/` to `docs/` only after verification succeeds
 - Remove legacy Pages deployment workflow
+- Redirect project root to `docs/` so GitHub Pages serves the game
