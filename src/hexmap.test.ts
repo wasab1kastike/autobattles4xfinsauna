@@ -32,6 +32,7 @@ describe('HexMap', () => {
     const tile = map.getTile(0, 0)!;
     tile.placeBuilding('barracks');
     // stub canvas context
+    const gradient = { addColorStop: vi.fn() };
     const ctx = {
       drawImage: vi.fn(),
       beginPath: vi.fn(),
@@ -44,13 +45,22 @@ describe('HexMap', () => {
       save: vi.fn(),
       restore: vi.fn(),
       arc: vi.fn(),
+      fillRect: vi.fn(),
+      createRadialGradient: vi.fn(() => gradient),
       globalAlpha: 1,
       fillStyle: '',
       strokeStyle: '',
+      lineWidth: 1,
+      lineJoin: 'round' as CanvasLineJoin,
+      lineCap: 'round' as CanvasLineCap,
+      shadowColor: '',
+      shadowBlur: 0,
+      shadowOffsetX: 0,
+      shadowOffsetY: 0,
+      globalCompositeOperation: 'source-over' as GlobalCompositeOperation,
     } as unknown as CanvasRenderingContext2D;
     const createImg = () => document.createElement('img') as HTMLImageElement;
     const images = {
-      'terrain-plains': createImg(),
       'building-barracks': createImg(),
       placeholder: createImg(),
     };
