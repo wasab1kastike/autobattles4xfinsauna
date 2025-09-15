@@ -22,8 +22,15 @@ const resourceBar = document.getElementById('resource-bar')!;
 
 function resizeCanvas(): void {
   const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+  }
   draw();
 }
 
@@ -99,7 +106,6 @@ function draw(): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || !assets) return;
   const dpr = window.devicePixelRatio || 1;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
   map.draw(ctx, assets.images, selected ?? undefined);
   drawUnits(ctx);
