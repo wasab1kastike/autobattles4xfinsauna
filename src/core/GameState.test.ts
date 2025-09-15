@@ -111,4 +111,21 @@ describe('GameState', () => {
 
     expect(loaded.getResource(Resource.GOLD)).toBe(52);
   });
+
+  it('skips unknown building types when loading', () => {
+    const serialized = {
+      resources: { [Resource.GOLD]: 0 },
+      lastSaved: 0,
+      buildings: { mystery: 1 },
+      buildingPlacements: { '0,0': 'mystery' }
+    };
+    localStorage.setItem('gameState', JSON.stringify(serialized));
+
+    const map = new HexMap(3, 3, 1);
+    const state = new GameState(1000);
+    state.load(map);
+
+    expect(state.getBuildingAt({ q: 0, r: 0 })).toBeUndefined();
+    expect(map.getTile(0, 0)?.building).toBeNull();
+  });
 });

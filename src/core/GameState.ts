@@ -7,6 +7,7 @@ import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
 import { markRevealed } from '../camera/autoFrame.ts';
+import { safeLoadJSON } from '../loader.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -92,42 +93,35 @@ export class GameState {
   }
 
   load(map?: HexMap): void {
-    const raw = localStorage.getItem(this.storageKey);
-    if (!raw) {
+    const data = safeLoadJSON<Partial<SerializedState>>(this.storageKey);
+    if (!data) {
       this.lastSaved = Date.now();
       return;
     }
-    try {
-      const data = JSON.parse(raw) as Partial<SerializedState>;
-      this.resources = { ...this.resources, ...data.resources };
-      this.buildings = { ...(data.buildings ?? {}) };
-      this.buildingPlacements.clear();
-      if (data.buildingPlacements) {
-        Object.entries(data.buildingPlacements).forEach(([key, type]) => {
-          const b = createBuilding(type);
-          if (!b) return;
-          this.buildingPlacements.set(key, b);
-          const [q, r] = key.split(',').map(Number);
-          if (map) {
-            const tile = map.ensureTile(q, r);
-            tile.placeBuilding(b.type);
-            tile.reveal();
-            markRevealed({ q, r }, map.hexSize);
-          }
-          eventBus.emit('buildingPlaced', { building: b, coord: { q, r }, state: this });
-        });
-      }
-      this.lastSaved = data.lastSaved ?? Date.now();
-      const elapsed = Date.now() - this.lastSaved;
-      const offlineTicks = Math.floor(elapsed / this.tickInterval);
-      (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
-        this.resources[res] += offlineTicks * this.passiveGeneration[res];
+    this.resources = { ...this.resources, ...data.resources };
+    this.buildings = { ...(data.buildings ?? {}) };
+    this.buildingPlacements.clear();
+    if (data.buildingPlacements) {
+      Object.entries(data.buildingPlacements).forEach(([key, type]) => {
+        const b = createBuilding(type);
+        if (!b) return;
+        this.buildingPlacements.set(key, b);
+        const [q, r] = key.split(',').map(Number);
+        if (map) {
+          const tile = map.ensureTile(q, r);
+          tile.placeBuilding(b.type);
+          tile.reveal();
+          markRevealed({ q, r }, map.hexSize);
+        }
+        eventBus.emit('buildingPlaced', { building: b, coord: { q, r }, state: this });
       });
-    } catch (err) {
-      console.warn('Failed to load game state, clearing saved data', err);
-      localStorage.removeItem(this.storageKey);
-      this.lastSaved = Date.now();
     }
+    this.lastSaved = data.lastSaved ?? Date.now();
+    const elapsed = Date.now() - this.lastSaved;
+    const offlineTicks = Math.floor(elapsed / this.tickInterval);
+    (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
+      this.resources[res] += offlineTicks * this.passiveGeneration[res];
+    });
   }
 
   /** Current amount of a resource. */
