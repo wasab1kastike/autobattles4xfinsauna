@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Add high-contrast tile and UI SVG icon sets, integrate them into the top bar/resource display, and register the new asset paths in the loader
 - Regenerate production bundle and update `index.html` to reference the latest hashed assets
 - Safeguard unit rendering by bracketing canvas state changes with `save()`/`restore()`
 - Move hex map rendering into a dedicated `HexMapRenderer` to separate presentation from tile management

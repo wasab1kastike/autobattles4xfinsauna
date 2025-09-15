@@ -52,8 +52,169 @@ body {
 
 #resource-bar {
   pointer-events: auto;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.58));
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(16px);
+  color: #f8fafc;
+}
+
+#resource-bar .resource-icon {
+  width: 24px;
+  height: 24px;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.6));
+}
+
+#resource-bar .resource-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #cbd5f5;
+}
+
+#resource-bar .resource-value {
+  font-size: 20px;
+  font-weight: 700;
+  text-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+}
+
+#topbar {
+  pointer-events: auto;
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.66));
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(18px);
+  color: #e2e8f0;
+  z-index: 5;
+}
+
+#topbar .topbar-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 18px;
+  min-width: 120px;
+}
+
+#topbar .topbar-badge-icon {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 14px rgba(59, 130, 246, 0.55));
+}
+
+#topbar .badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.1;
+}
+
+#topbar .badge-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+#topbar .badge-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #f8fafc;
+  text-shadow: 0 0 20px rgba(148, 163, 184, 0.5);
+}
+
+#topbar .badge-sauna .badge-value {
+  color: #facc15;
+}
+
+#topbar .badge-sisu .badge-value {
+  color: #fb923c;
+}
+
+#topbar .badge-gold .badge-value {
+  color: #fbbf24;
+}
+
+#topbar .badge-delta {
+  position: absolute;
+  top: -16px;
+  right: 2px;
+  font-size: 12px;
+  color: #38bdf8;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.6);
+  pointer-events: none;
+}
+
+#topbar .topbar-button {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.12));
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#topbar .topbar-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(59, 130, 246, 0.35);
+  border-color: rgba(96, 165, 250, 0.6);
+}
+
+#topbar .topbar-button:active {
+  transform: translateY(0);
+}
+
+#topbar .topbar-button img {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 0 10px rgba(148, 163, 184, 0.6));
+}
+
+#topbar .topbar-button.is-muted {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7));
+  border-color: rgba(71, 85, 105, 0.6);
+}
+
+#topbar .topbar-button.is-muted img {
+  filter: grayscale(100%) brightness(0.7);
+}
+
+#topbar .topbar-button.is-muted span {
+  opacity: 0.75;
+}
+
+#topbar .sisu-button {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.32), rgba(220, 38, 38, 0.22));
+  border-color: rgba(248, 113, 113, 0.5);
+  box-shadow: 0 16px 30px rgba(220, 38, 38, 0.4);
+}
+
+#topbar .sisu-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 #event-log {
@@ -86,12 +247,30 @@ body {
     gap: 4px;
   }
 
+  #topbar,
   #resource-bar,
   #event-log,
   #build-menu {
     position: static;
     width: 100%;
     max-width: 100%;
+    transform: none;
+  }
+
+  #topbar {
+    order: 0;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  #topbar .topbar-badge {
+    min-width: calc(50% - 12px);
+  }
+
+  #topbar .topbar-button {
+    flex: 1 1 calc(50% - 12px);
+    justify-content: center;
   }
 
   #resource-bar { order: 1; }
