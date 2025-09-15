@@ -1,33 +1,33 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
-import type { HexMap } from '../hexmap.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
 import { isSisuActive } from '../sim/sisu.ts';
+import { HexMapRenderer } from './HexMapRenderer.ts';
 
 export function draw(
   ctx: CanvasRenderingContext2D,
-  map: HexMap,
+  mapRenderer: HexMapRenderer,
   assets: LoadedAssets['images'],
   units: Unit[],
   selected: AxialCoord | null
 ): void {
   const dpr = window.devicePixelRatio || 1;
   ctx.clearRect(0, 0, ctx.canvas.width / dpr, ctx.canvas.height / dpr);
-  map.draw(ctx, assets, selected ?? undefined);
-  drawUnits(ctx, map, assets, units);
+  mapRenderer.draw(ctx, assets, selected ?? undefined);
+  drawUnits(ctx, mapRenderer, assets, units);
 }
 
 export function drawUnits(
   ctx: CanvasRenderingContext2D,
-  map: HexMap,
+  mapRenderer: HexMapRenderer,
   assets: LoadedAssets['images'],
   units: Unit[]
 ): void {
-  const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
+  const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
   for (const unit of units) {
-    const { x, y } = axialToPixel(unit.coord, map.hexSize);
+    const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
     if (unit.stats.health / maxHealth < 0.5) {
