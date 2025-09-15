@@ -14,4 +14,5 @@
 - Remove legacy Pages deployment workflow
 - Redirect project root to `docs/` so GitHub Pages serves the game
 - Improve mobile scaling by resizing canvas to viewport and device pixel ratio
+- Enhance UI responsiveness: use relative widths and stack resource bar, event log, and build menu on small screens
 
