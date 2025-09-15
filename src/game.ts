@@ -30,12 +30,48 @@ import { showError } from './ui/overlay.ts';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 
+const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
+const tileAssets = {
+  forest: `${PUBLIC_ASSET_BASE}assets/tiles/forest.svg`,
+  water: `${PUBLIC_ASSET_BASE}assets/tiles/water.svg`,
+  mountain: `${PUBLIC_ASSET_BASE}assets/tiles/mountain.svg`,
+  plains: `${PUBLIC_ASSET_BASE}assets/tiles/plains.svg`
+};
+
+const uiIcons = {
+  gold: `${PUBLIC_ASSET_BASE}assets/ui/gold.svg`,
+  resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
+  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
+};
+
 let canvas: HTMLCanvasElement;
 let resourceBar: HTMLElement;
+let resourceValue: HTMLSpanElement | null = null;
 
 export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElement): void {
   canvas = canvasEl;
   resourceBar = resourceBarEl;
+  resourceBar.classList.add('resource-bar');
+  resourceBar.setAttribute('role', 'status');
+  resourceBar.setAttribute('aria-live', 'polite');
+  resourceBar.replaceChildren();
+
+  const icon = document.createElement('img');
+  icon.src = uiIcons.resource;
+  icon.alt = 'Resources';
+  icon.decoding = 'async';
+  icon.classList.add('resource-icon');
+
+  const labelSpan = document.createElement('span');
+  labelSpan.textContent = 'Resources';
+  labelSpan.classList.add('resource-label');
+
+  resourceValue = document.createElement('span');
+  resourceValue.textContent = '0';
+  resourceValue.classList.add('resource-value');
+
+  resourceBar.append(icon, labelSpan, resourceValue);
+  updateResourceDisplay(state.getResource(Resource.GOLD));
 }
 
 export function handleCanvasClick(x: number, y: number): void {
@@ -57,7 +93,14 @@ const assetPaths: AssetPaths = {
     'building-mine': mine,
     'unit-soldier': soldier,
     'unit-archer': archer,
-    'unit-raider': raider
+    'unit-raider': raider,
+    'tile-forest': tileAssets.forest,
+    'tile-water': tileAssets.water,
+    'tile-mountain': tileAssets.mountain,
+    'tile-plains': tileAssets.plains,
+    'icon-gold': uiIcons.gold,
+    'icon-resource': uiIcons.resource,
+    'icon-sound': uiIcons.sound
   }
 };
 let assets: LoadedAssets;
@@ -91,7 +134,12 @@ const sauna = createSauna({
 });
 map.revealAround(sauna.pos, 3);
 const updateSaunaUI = setupSaunaUI(sauna);
-const updateTopbar = setupTopbar(state);
+const updateTopbar = setupTopbar(state, {
+  saunakunnia: uiIcons.resource,
+  sisu: uiIcons.resource,
+  gold: uiIcons.gold,
+  sound: uiIcons.sound
+});
 const { log, addEvent } = setupRightPanel(state);
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 eventBus.on('sisuPulseStart', () => playSafe('sisu'));
@@ -115,7 +163,7 @@ export function draw(): void {
 }
 
 const onResourceChanged = ({ resource, total, amount }) => {
-  resourceBar.textContent = `Resources: ${total}`;
+  updateResourceDisplay(total);
   const sign = amount > 0 ? '+' : '';
   log(`${resource}: ${sign}${amount}`);
 };
@@ -148,7 +196,7 @@ export async function start(): Promise<void> {
     console.warn('Failed to load assets', failures);
     showError(failures);
   }
-  resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
+  updateResourceDisplay(state.getResource(Resource.GOLD));
   draw();
   let last = performance.now();
   function gameLoop(now: number) {
@@ -167,3 +215,11 @@ export async function start(): Promise<void> {
 }
 
 export { log };
+
+function updateResourceDisplay(total: number): void {
+  if (resourceValue) {
+    resourceValue.textContent = String(total);
+  } else if (resourceBar) {
+    resourceBar.textContent = `Resources: ${total}`;
+  }
+}
