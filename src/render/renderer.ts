@@ -1,5 +1,6 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
+import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
@@ -24,8 +25,7 @@ export function drawUnits(
   assets: LoadedAssets['images'],
   units: Unit[]
 ): void {
-  const hexWidth = map.hexSize * Math.sqrt(3);
-  const hexHeight = map.hexSize * 2;
+  const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, map.hexSize);
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
