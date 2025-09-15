@@ -18,8 +18,8 @@ import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
 import { showError } from './ui/overlay.ts';
 
-const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-const resourceBar = document.getElementById('resource-bar')!;
+let canvas: HTMLCanvasElement;
+let resourceBar: HTMLElement;
 
 function resizeCanvas(): void {
   const dpr = window.devicePixelRatio || 1;
@@ -35,8 +35,27 @@ function resizeCanvas(): void {
   draw();
 }
 
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+export function init(): void {
+  const canvasEl = document.getElementById('game-canvas') as HTMLCanvasElement | null;
+  const resourceBarEl = document.getElementById('resource-bar');
+  if (!canvasEl || !resourceBarEl) {
+    return;
+  }
+  canvas = canvasEl;
+  resourceBar = resourceBarEl;
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - map.hexSize;
+    const y = e.clientY - rect.top - map.hexSize;
+    selected = pixelToAxial(x, y, map.hexSize);
+    draw();
+  });
+  resizeCanvas();
+  if (!import.meta.vitest) {
+    start();
+  }
+}
 
 const asset = (p: string) => import.meta.env.BASE_URL + p;
 const assetPaths: AssetPaths = {
@@ -132,14 +151,6 @@ function drawUnits(ctx: CanvasRenderingContext2D): void {
   }
 }
 
-canvas.addEventListener('click', (e) => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left - map.hexSize;
-  const y = e.clientY - rect.top - map.hexSize;
-  selected = pixelToAxial(x, y, map.hexSize);
-  draw();
-});
-
 const onResourceChanged = ({ resource, total, amount }) => {
   resourceBar.textContent = `Resources: ${total}`;
   const sign = amount > 0 ? '+' : '';
@@ -190,10 +201,6 @@ async function start(): Promise<void> {
     requestAnimationFrame(gameLoop);
   }
   requestAnimationFrame(gameLoop);
-}
-
-if (!import.meta.vitest) {
-  start();
 }
 
 export { log };
