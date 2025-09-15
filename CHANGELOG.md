@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Rebuild docs with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
 - Rebuild docs with relative asset paths so GitHub Pages loads CSS and JS correctly
 - Set HTML title to Autobattles4xFinsauna
