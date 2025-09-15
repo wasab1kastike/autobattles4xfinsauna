@@ -30,15 +30,16 @@ export function drawUnits(
     const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
+    ctx.save();
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }
     ctx.drawImage(img, x, y, hexWidth, hexHeight);
-    ctx.filter = 'none';
     if (isSisuActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
       ctx.strokeRect(x, y, hexWidth, hexHeight);
     }
+    ctx.restore();
   }
 }
