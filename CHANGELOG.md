@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Copy built 404 page into docs for consistent asset paths
 - Set Vite `base` to `/autobattles4xfinsauna/` and regenerate `docs/` build output
 - Set Vite `base` to `/` for root-based asset paths
 - Regenerate docs with latest build output and hashed assets
