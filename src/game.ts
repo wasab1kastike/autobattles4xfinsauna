@@ -28,6 +28,7 @@ import { activateSisuPulse } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
 import { showError } from './ui/overlay.ts';
 import { draw as render } from './render/renderer.ts';
+import { HexMapRenderer } from './render/HexMapRenderer.ts';
 
 let canvas: HTMLCanvasElement;
 let resourceBar: HTMLElement;
@@ -62,6 +63,7 @@ const assetPaths: AssetPaths = {
 let assets: LoadedAssets;
 
 const map = new HexMap(10, 10, 32);
+const mapRenderer = new HexMapRenderer(map);
 // Ensure all tiles start fogged
 map.forEachTile((t) => t.setFogged(true));
 resetAutoFrame();
@@ -109,7 +111,7 @@ let selected: AxialCoord | null = null;
 export function draw(): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || !assets) return;
-  render(ctx, map, assets.images, units, selected);
+  render(ctx, mapRenderer, assets.images, units, selected);
 }
 
 const onResourceChanged = ({ resource, total, amount }) => {

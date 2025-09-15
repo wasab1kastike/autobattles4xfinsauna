@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { HexMap } from './hexmap.ts';
 import { HexTile } from './hex/HexTile.ts';
 import { getHexDimensions } from './hex/HexDimensions.ts';
+import { HexMapRenderer } from './render/HexMapRenderer.ts';
 
 describe('HexMap', () => {
   it('derives sprite dimensions for a given hex size', () => {
@@ -53,7 +54,8 @@ describe('HexMap', () => {
       'building-barracks': createImg(),
       placeholder: createImg(),
     };
-    map.draw(ctx, images);
+    const renderer = new HexMapRenderer(map);
+    renderer.draw(ctx, images);
     expect(ctx.drawImage).toHaveBeenCalledWith(
       images['building-barracks'],
       expect.any(Number),
