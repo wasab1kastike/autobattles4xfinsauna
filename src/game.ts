@@ -1,4 +1,3 @@
-import './style.css';
 import plains from '../assets/sprites/plains.svg';
 import forest from '../assets/sprites/forest.svg';
 import hills from '../assets/sprites/hills.svg';
@@ -13,7 +12,7 @@ import raider from '../assets/sprites/raider.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
-import { pixelToAxial, axialToPixel } from './hex/HexUtils.ts';
+import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
@@ -25,47 +24,22 @@ import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
-import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
+import { activateSisuPulse } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
 import { showError } from './ui/overlay.ts';
+import { draw as render } from './render/renderer.ts';
 
 let canvas: HTMLCanvasElement;
 let resourceBar: HTMLElement;
 
-function resizeCanvas(): void {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.style.width = `${window.innerWidth}px`;
-  canvas.style.height = `${window.innerHeight}px`;
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-  }
-  draw();
-}
-
-export function init(): void {
-  const canvasEl = document.getElementById('game-canvas') as HTMLCanvasElement | null;
-  const resourceBarEl = document.getElementById('resource-bar');
-  if (!canvasEl || !resourceBarEl) {
-    return;
-  }
+export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElement): void {
   canvas = canvasEl;
   resourceBar = resourceBarEl;
-  window.addEventListener('resize', resizeCanvas);
-  canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left - map.hexSize;
-    const y = e.clientY - rect.top - map.hexSize;
-    selected = pixelToAxial(x, y, map.hexSize);
-    draw();
-  });
-  resizeCanvas();
-  if (!import.meta.vitest) {
-    start();
-  }
+}
+
+export function handleCanvasClick(x: number, y: number): void {
+  selected = pixelToAxial(x - map.hexSize, y - map.hexSize, map.hexSize);
+  draw();
 }
 
 const assetPaths: AssetPaths = {
@@ -132,33 +106,10 @@ state.addResource(Resource.GOLD, 200);
 
 let selected: AxialCoord | null = null;
 
-function draw(): void {
+export function draw(): void {
   const ctx = canvas.getContext('2d');
   if (!ctx || !assets) return;
-  const dpr = window.devicePixelRatio || 1;
-  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-  map.draw(ctx, assets.images, selected ?? undefined);
-  drawUnits(ctx);
-}
-
-function drawUnits(ctx: CanvasRenderingContext2D): void {
-  const hexWidth = map.hexSize * Math.sqrt(3);
-  const hexHeight = map.hexSize * 2;
-  for (const unit of units) {
-    const { x, y } = axialToPixel(unit.coord, map.hexSize);
-    const img = assets.images[`unit-${unit.type}`] ?? assets.images['placeholder'];
-    const maxHealth = unit.getMaxHealth();
-    if (unit.stats.health / maxHealth < 0.5) {
-      ctx.filter = 'saturate(0)';
-    }
-    ctx.drawImage(img, x, y, hexWidth, hexHeight);
-    ctx.filter = 'none';
-    if (isSisuActive() && unit.faction === 'player') {
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x, y, hexWidth, hexHeight);
-    }
-  }
+  render(ctx, map, assets.images, units, selected);
 }
 
 const onResourceChanged = ({ resource, total, amount }) => {
@@ -182,13 +133,13 @@ const onUnitDied = ({ unitId }: { unitId: string }) => {
 };
 eventBus.on('unitDied', onUnitDied);
 
-window.addEventListener('beforeunload', () => {
+export function cleanup(): void {
   eventBus.off('resourceChanged', onResourceChanged);
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
-});
+}
 
-async function start(): Promise<void> {
+export async function start(): Promise<void> {
   const { assets: loaded, failures } = await loadAssets(assetPaths);
   assets = loaded;
   if (failures.length) {
