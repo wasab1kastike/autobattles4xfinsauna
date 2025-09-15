@@ -56,3 +56,22 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
   await Promise.all([...imagePromises, ...soundPromises]);
   return { assets: { images, sounds }, failures };
 }
+
+/**
+ * Safely load and parse JSON from localStorage. If parsing fails, the
+ * corrupted entry is removed and a warning is emitted. Returns undefined when
+ * the key is absent or invalid.
+ */
+export function safeLoadJSON<T>(key: string): T | undefined {
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    return JSON.parse(raw) as T;
+  } catch (err) {
+    console.warn(`Failed to parse data for "${key}", clearing`, err);
+    localStorage.removeItem(key);
+    return undefined;
+  }
+}
