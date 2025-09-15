@@ -1,7 +1,3 @@
-import plains from '../assets/sprites/plains.svg';
-import forest from '../assets/sprites/forest.svg';
-import hills from '../assets/sprites/hills.svg';
-import lake from '../assets/sprites/lake.svg';
 import farm from '../assets/sprites/farm.svg';
 import barracks from '../assets/sprites/barracks.svg';
 import city from '../assets/sprites/city.svg';
@@ -31,13 +27,6 @@ import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
-const tileAssets = {
-  forest: `${PUBLIC_ASSET_BASE}assets/tiles/forest.svg`,
-  water: `${PUBLIC_ASSET_BASE}assets/tiles/water.svg`,
-  mountain: `${PUBLIC_ASSET_BASE}assets/tiles/mountain.svg`,
-  plains: `${PUBLIC_ASSET_BASE}assets/tiles/plains.svg`
-};
-
 const uiIcons = {
   gold: `${PUBLIC_ASSET_BASE}assets/ui/gold.svg`,
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
@@ -83,10 +72,6 @@ const assetPaths: AssetPaths = {
   images: {
     placeholder:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-    'terrain-plains': plains,
-    'terrain-forest': forest,
-    'terrain-hills': hills,
-    'terrain-lake': lake,
     'building-farm': farm,
     'building-barracks': barracks,
     'building-city': city,
@@ -94,10 +79,6 @@ const assetPaths: AssetPaths = {
     'unit-soldier': soldier,
     'unit-archer': archer,
     'unit-raider': raider,
-    'tile-forest': tileAssets.forest,
-    'tile-water': tileAssets.water,
-    'tile-mountain': tileAssets.mountain,
-    'tile-plains': tileAssets.plains,
     'icon-gold': uiIcons.gold,
     'icon-resource': uiIcons.resource,
     'icon-sound': uiIcons.sound
