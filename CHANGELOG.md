@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Render hex tiles using a palette-driven gradient fill, cached SVG terrain icons,
+  and highlight styling shared with the `.tile-highlight` class
 - Introduce a glassmorphism-inspired HUD styling system with shared color tokens,
   tooltip affordances, and tile highlight treatments
 - Establish a `main.ts` rendering entry point that drives canvas resizing,
