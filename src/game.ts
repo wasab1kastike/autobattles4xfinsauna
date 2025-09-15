@@ -16,6 +16,7 @@ import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
 import { activateSisuPulse, isSisuActive } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
+import { showError } from './ui/overlay.ts';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
 const resourceBar = document.getElementById('resource-bar')!;
@@ -171,6 +172,7 @@ async function start(): Promise<void> {
   assets = loaded;
   if (failures.length) {
     console.warn('Failed to load assets', failures);
+    showError(failures);
   }
   resourceBar.textContent = `Resources: ${state.getResource(Resource.GOLD)}`;
   draw();
