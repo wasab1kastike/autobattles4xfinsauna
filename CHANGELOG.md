@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Set Vite `base` to `/` for root-based asset paths
 - Regenerate docs with latest build output and hashed assets
 - Import sprite URLs directly and drop `asset()` helper
 - Include custom 404 page for GitHub Pages
