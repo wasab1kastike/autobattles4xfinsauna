@@ -4,6 +4,7 @@
 - Fail Pages build when bare `assets/` URLs are detected in `dist/index.html`
 - Use relative asset paths in root index and rebuild bundles
 - Set Vite `base` to `./` and rebuild docs with relative asset paths
+- Provide noscript fallback linking to documentation when JavaScript is disabled
 - Serve game directly from repository root and drop `docs/` redirect
 - Refresh documentation with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
