@@ -17,6 +17,8 @@
   --shadow-strong: 0 32px 64px rgba(8, 25, 53, 0.6);
   --shadow-soft: 0 24px 48px rgba(8, 25, 53, 0.45);
   --shadow-glow: 0 0 36px rgba(56, 189, 248, 0.5);
+  --tile-highlight-ring: rgba(56, 189, 248, 0.85);
+  --tile-highlight-glow: rgba(56, 189, 248, 0.45);
   --radius-panel: 24px;
   --radius-pill: 999px;
   --transition-snappy: 180ms ease;
@@ -408,6 +410,61 @@ button {
 [data-tooltip]:focus-visible::after {
   opacity: 1;
   transform: translate(-50%, 0);
+}
+
+.tile-highlight {
+  position: relative;
+  isolation: isolate;
+  transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
+    filter var(--transition-snappy);
+}
+
+.tile-highlight::before,
+.tile-highlight::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-snappy), filter var(--transition-snappy),
+    transform var(--transition-snappy);
+  z-index: -1;
+}
+
+.tile-highlight::before {
+  inset: -6px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(148, 163, 184, 0.08));
+  border: 1px solid color-mix(in srgb, var(--tile-highlight-ring) 45%, transparent);
+  filter: blur(0);
+}
+
+.tile-highlight::after {
+  background: radial-gradient(circle, var(--tile-highlight-glow), rgba(56, 189, 248, 0));
+  filter: blur(18px);
+}
+
+.tile-highlight:hover,
+.tile-highlight:focus-visible,
+.tile-highlight.is-selected {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 18px 36px rgba(56, 189, 248, 0.35);
+  filter: saturate(1.12);
+}
+
+.tile-highlight:hover::before,
+.tile-highlight:focus-visible::before,
+.tile-highlight.is-selected::before,
+.tile-highlight:hover::after,
+.tile-highlight:focus-visible::after,
+.tile-highlight.is-selected::after {
+  opacity: 1;
+}
+
+.tile-highlight:hover::before,
+.tile-highlight:focus-visible::before,
+.tile-highlight.is-selected::before {
+  filter: blur(6px);
 }
 
 .tile--highlighted {
