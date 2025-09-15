@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Refactor game initialization and rendering helpers into dedicated `ui` and `render` modules
 - Include `404.html` in `docs/` and refresh build output
 - Set Vite `base` to `/autobattles4xfinsauna/` and regenerate `docs/` build output
 - Set Vite `base` to `/` for root-based asset paths
