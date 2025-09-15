@@ -128,4 +128,18 @@ describe('GameState', () => {
     expect(state.getBuildingAt({ q: 0, r: 0 })).toBeUndefined();
     expect(map.getTile(0, 0)?.building).toBeNull();
   });
+
+  it('filters invalid building counts when loading', () => {
+    const serialized = {
+      resources: { [Resource.GOLD]: 0 },
+      lastSaved: 0,
+      buildings: { farm: 2, mystery: 3 }
+    };
+    localStorage.setItem('gameState', JSON.stringify(serialized));
+
+    const state = new GameState(1000);
+    state.load();
+
+    expect((state as any).buildings).toEqual({ farm: 2 });
+  });
 });

@@ -30,4 +30,5 @@
 - Gracefully fall back when Web Audio API is unavailable and resume audio on first interaction
 - Display a styled error overlay when asset loading fails
 - Defer game initialization until DOMContentLoaded via exported `init()`
+- Filter unknown building types from saved building counts during load
 

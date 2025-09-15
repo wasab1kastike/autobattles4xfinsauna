@@ -99,7 +99,13 @@ export class GameState {
       return;
     }
     this.resources = { ...this.resources, ...data.resources };
-    this.buildings = { ...(data.buildings ?? {}) };
+    const validBuildings: Record<string, number> = {};
+    Object.entries(data.buildings ?? {}).forEach(([type, count]) => {
+      if (type in BUILDING_FACTORIES) {
+        validBuildings[type] = count;
+      }
+    });
+    this.buildings = { ...this.buildings, ...validBuildings };
     this.buildingPlacements.clear();
     if (data.buildingPlacements) {
       Object.entries(data.buildingPlacements).forEach(([key, type]) => {
