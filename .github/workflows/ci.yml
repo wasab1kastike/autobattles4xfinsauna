@@ -28,6 +28,12 @@ jobs:
         run: |
           grep -q "/autobattles4xfinsauna/" dist/index.html || (echo "❌ Missing correct base path in index.html" && exit 1)
 
+      # Guard against bare asset paths without the base prefix
+      - name: Check for bare asset paths
+        run: |
+          grep -q 'href="assets/' dist/index.html && (echo "❌ Found href=\"assets/\" in index.html" && exit 1)
+          grep -q 'src="assets/' dist/index.html && (echo "❌ Found src=\"assets/\" in index.html" && exit 1)
+
       # Verify that all referenced JS/CSS files actually exist
       - name: Verify asset files exist
         run: |

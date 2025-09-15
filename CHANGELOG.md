@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Fail Pages build when bare `assets/` URLs are detected in `dist/index.html`
 - Use relative asset paths in root index and rebuild bundles
 - Set Vite `base` to `./` and rebuild docs with relative asset paths
 - Serve game directly from repository root and drop `docs/` redirect
