@@ -65,6 +65,11 @@ export class Unit {
     return !this.alive;
   }
 
+  /** Return the unit's maximum health. */
+  getMaxHealth(): number {
+    return this.maxHealth;
+  }
+
   distanceTo(coord: AxialCoord): number {
     return hexDistance(this.coord, coord);
   }
