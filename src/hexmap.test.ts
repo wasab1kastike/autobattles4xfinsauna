@@ -1,8 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { HexMap } from './hexmap.ts';
 import { HexTile } from './hex/HexTile.ts';
+import { getHexDimensions } from './hex/HexDimensions.ts';
 
 describe('HexMap', () => {
+  it('derives sprite dimensions for a given hex size', () => {
+    const size = 32;
+    const { width, height } = getHexDimensions(size);
+    expect(width).toBeCloseTo(size * Math.sqrt(3));
+    expect(height).toBe(size * 2);
+  });
+
   it('generates a grid of tiles', () => {
     const map = new HexMap(3, 3);
     let count = 0;
