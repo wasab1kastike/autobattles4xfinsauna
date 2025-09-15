@@ -1,24 +1,10 @@
-import { eventBus } from '../events/EventBus.ts';
-import type { AxialCoord } from '../hex/HexUtils.ts';
-import type { GameState } from '../core/GameState.ts';
+import { eventBus } from '../events';
 import { Resource } from '../core/GameState.ts';
 import { Farm } from './Farm.ts';
 import { Barracks } from './Barracks.ts';
-import type { Building } from './Building.ts';
+import type { BuildingPlacedEvent, BuildingRemovedEvent } from '../events';
 
-export type BuildingPlacedPayload = {
-  building: Building;
-  coord: AxialCoord;
-  state: GameState;
-};
-
-export type BuildingRemovedPayload = {
-  building: Building;
-  coord: AxialCoord;
-  state: GameState;
-};
-
-const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): void => {
+const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedEvent): void => {
   if (building instanceof Farm) {
     state.modifyPassiveGeneration(Resource.GOLD, building.foodPerTick);
   } else if (building instanceof Barracks) {
@@ -29,12 +15,12 @@ const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): vo
   }
 };
 
-const onBuildingRemoved = ({ building, state }: BuildingRemovedPayload): void => {
+const onBuildingRemoved = ({ building, state }: BuildingRemovedEvent): void => {
   if (building instanceof Farm) {
     state.modifyPassiveGeneration(Resource.GOLD, -building.foodPerTick);
   }
 };
 
 // register listeners for building effects
-eventBus.on<BuildingPlacedPayload>('buildingPlaced', onBuildingPlaced);
-eventBus.on<BuildingRemovedPayload>('buildingRemoved', onBuildingRemoved);
+eventBus.on<BuildingPlacedEvent>('buildingPlaced', onBuildingPlaced);
+eventBus.on<BuildingRemovedEvent>('buildingRemoved', onBuildingRemoved);

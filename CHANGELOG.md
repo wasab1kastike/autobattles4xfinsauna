@@ -17,4 +17,5 @@
 - Improve mobile scaling by resizing canvas to viewport and device pixel ratio
 - Improve high-DPI rendering by scaling canvas to `devicePixelRatio`
 - Add responsive layout and media queries for mobile UI components
+- Add typed interfaces for event payloads and annotate game listeners
 

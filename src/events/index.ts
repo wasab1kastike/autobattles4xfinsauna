@@ -1,4 +1,5 @@
 export { eventBus } from './EventBus';
+export type * from './types.ts';
 
 // register policy listeners
 import './policies';

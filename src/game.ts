@@ -7,6 +7,11 @@ import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
+import type {
+  ResourceChangedEvent,
+  PolicyAppliedEvent,
+  UnitDiedEvent
+} from './events';
 import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna } from './sim/sauna.ts';
@@ -139,19 +144,19 @@ canvas.addEventListener('click', (e) => {
   draw();
 });
 
-const onResourceChanged = ({ resource, total, amount }) => {
+const onResourceChanged = ({ resource, total, amount }: ResourceChangedEvent): void => {
   resourceBar.textContent = `Resources: ${total}`;
   const sign = amount > 0 ? '+' : '';
   log(`${resource}: ${sign}${amount}`);
 };
 eventBus.on('resourceChanged', onResourceChanged);
 
-const onPolicyApplied = ({ policy }) => {
+const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
   log(`Policy applied: ${policy}`);
 };
 eventBus.on('policyApplied', onPolicyApplied);
 
-const onUnitDied = ({ unitId }: { unitId: string }) => {
+const onUnitDied = ({ unitId }: UnitDiedEvent): void => {
   const idx = units.findIndex((u) => u.id === unitId);
   if (idx !== -1) {
     units.splice(idx, 1);
