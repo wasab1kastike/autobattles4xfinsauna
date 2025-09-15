@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Auto-initialize the game entry point outside of Vitest by invoking `init()`
+  on module load so the map and resource bar render immediately
 - Add a dedicated build step that emits `main.js` and `assets/game.css` at the
   repository root, refresh production HTML references, and clean up legacy
   hashed bundle artifacts
