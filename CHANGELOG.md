@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Serve game directly from repository root and drop `docs/` redirect
 - Refresh documentation with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
 - Rebuild docs with relative asset paths so GitHub Pages loads CSS and JS correctly
