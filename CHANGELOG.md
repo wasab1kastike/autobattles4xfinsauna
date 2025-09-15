@@ -33,4 +33,5 @@
 - Gracefully fall back when Web Audio API is unavailable and resume audio on first interaction
 - Display a styled error overlay when asset loading fails
 - Defer game initialization until DOMContentLoaded via exported `init()`
+- Add workflow to deploy docs from `dist/` on pushes to `main`
 
