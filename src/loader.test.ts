@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loadAssets, AssetPaths } from './loader.ts';
+import { loadAssets, AssetPaths, safeLoadJSON } from './loader.ts';
 
 describe('loadAssets', () => {
   const OriginalImage = globalThis.Image;
@@ -80,6 +80,26 @@ describe('loadAssets', () => {
     expect(result.failures).toHaveLength(2);
     expect(errorSpy).toHaveBeenCalledTimes(2);
     errorSpy.mockRestore();
+  });
+});
+
+describe('safeLoadJSON', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('parses valid JSON', () => {
+    localStorage.setItem('test', '{"a":1}');
+    expect(safeLoadJSON<{ a: number }>('test')).toEqual({ a: 1 });
+  });
+
+  it('clears invalid JSON and warns', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    localStorage.setItem('test', '{oops');
+    expect(safeLoadJSON('test')).toBeUndefined();
+    expect(localStorage.getItem('test')).toBeNull();
+    expect(warnSpy).toHaveBeenCalledOnce();
+    warnSpy.mockRestore();
   });
 });
 

@@ -5,6 +5,7 @@
 - Serve game directly from repository root and drop `docs/` redirect
 - Refresh documentation with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
+- Load game state via `safeLoadJSON` and ignore unknown building types
 - Rebuild docs with relative asset paths so GitHub Pages loads CSS and JS correctly
 - Set HTML title to Autobattles4xFinsauna
 - Add `.nojekyll` to bypass Jekyll on GitHub Pages
