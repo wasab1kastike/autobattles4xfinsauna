@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Set Vite `base` to `./` and rebuild docs with relative asset paths
 - Serve game directly from repository root and drop `docs/` redirect
 - Refresh documentation with latest build output
 - Clear corrupted game state from localStorage and warn when load fails
