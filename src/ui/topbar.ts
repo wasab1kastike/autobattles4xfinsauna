@@ -8,45 +8,67 @@ type Badge = {
   delta: HTMLSpanElement;
 };
 
-function createBadge(label: string): Badge {
+type TopbarIcons = {
+  saunakunnia?: string;
+  sisu?: string;
+  gold?: string;
+  sound?: string;
+};
+
+function createBadge(label: string, iconSrc?: string): Badge {
   const container = document.createElement('div');
-  container.style.position = 'relative';
-  container.style.marginRight = '8px';
+  container.classList.add('topbar-badge');
+
+  if (iconSrc) {
+    const icon = document.createElement('img');
+    icon.src = iconSrc;
+    icon.alt = label;
+    icon.decoding = 'async';
+    icon.classList.add('topbar-badge-icon');
+    container.appendChild(icon);
+  }
+
+  const textWrapper = document.createElement('div');
+  textWrapper.classList.add('badge-text');
 
   const labelSpan = document.createElement('span');
-  labelSpan.textContent = label + ': ';
-  container.appendChild(labelSpan);
+  labelSpan.textContent = label;
+  labelSpan.classList.add('badge-label');
+  textWrapper.appendChild(labelSpan);
 
   const valueSpan = document.createElement('span');
   valueSpan.textContent = '0';
-  container.appendChild(valueSpan);
+  valueSpan.classList.add('badge-value');
+  textWrapper.appendChild(valueSpan);
 
   const deltaSpan = document.createElement('span');
-  deltaSpan.style.position = 'absolute';
-  deltaSpan.style.right = '0';
-  deltaSpan.style.top = '-10px';
+  deltaSpan.classList.add('badge-delta');
   deltaSpan.style.opacity = '0';
-  deltaSpan.style.transition = 'opacity 0.5s';
-  container.appendChild(deltaSpan);
+  deltaSpan.style.transform = 'translateY(-6px)';
+  deltaSpan.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+
+  container.append(textWrapper, deltaSpan);
 
   return { container, value: valueSpan, delta: deltaSpan };
 }
 
-export function setupTopbar(state: GameState): (deltaMs: number) => void {
+export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs: number) => void {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
   const bar = document.createElement('div');
   bar.id = 'topbar';
-  bar.style.display = 'flex';
-  bar.style.alignItems = 'center';
   overlay.appendChild(bar);
 
-  const saunakunnia = createBadge('Saunakunnia');
-  const sisu = createBadge('SISU🔥');
+  const saunakunnia = createBadge('Saunakunnia', icons.saunakunnia);
+  saunakunnia.container.classList.add('badge-sauna');
+  const sisu = createBadge('SISU🔥', icons.sisu);
+  sisu.container.classList.add('badge-sisu');
   sisu.container.style.display = 'none';
-  const gold = createBadge('Gold');
+  const gold = createBadge('Gold', icons.gold);
+  gold.container.classList.add('badge-gold');
   const time = createBadge('Time');
+  time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
 
   bar.appendChild(saunakunnia.container);
@@ -55,15 +77,37 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
   bar.appendChild(time.container);
 
   const sisuBtn = document.createElement('button');
+  sisuBtn.type = 'button';
   sisuBtn.textContent = 'SISU';
+  sisuBtn.classList.add('topbar-button', 'sisu-button');
   sisuBtn.addEventListener('click', () => {
     eventBus.emit('sisuPulse', {});
   });
   bar.appendChild(sisuBtn);
 
   const muteBtn = document.createElement('button');
+  muteBtn.type = 'button';
+  muteBtn.title = 'Toggle sound';
+  muteBtn.classList.add('topbar-button', 'sound-button');
+  const muteLabel = document.createElement('span');
+  muteLabel.textContent = 'Sound';
+
+  if (icons.sound) {
+    const muteIcon = document.createElement('img');
+    muteIcon.src = icons.sound;
+    muteIcon.alt = '';
+    muteIcon.decoding = 'async';
+    muteIcon.setAttribute('aria-hidden', 'true');
+    muteBtn.appendChild(muteIcon);
+  }
+
+  muteBtn.appendChild(muteLabel);
+
   function renderMute(): void {
-    muteBtn.textContent = isMuted() ? 'Unmute' : 'Mute';
+    const muted = isMuted();
+    muteLabel.textContent = muted ? 'Muted' : 'Sound';
+    muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    muteBtn.classList.toggle('is-muted', muted);
   }
   muteBtn.addEventListener('click', () => {
     setMuted(!isMuted());
@@ -102,8 +146,10 @@ export function setupTopbar(state: GameState): (deltaMs: number) => void {
     const sign = amount > 0 ? '+' : '';
     badge.delta.textContent = `${sign}${amount}`;
     badge.delta.style.opacity = '1';
+    badge.delta.style.transform = 'translateY(0)';
     setTimeout(() => {
       badge.delta.style.opacity = '0';
+      badge.delta.style.transform = 'translateY(-6px)';
     }, 1000);
   });
 
