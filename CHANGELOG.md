@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Copy `docs/index.html` to `docs/404.html` during the build step and remove the
+  legacy root-level `404.html`
 - Sync GitHub Pages output directly from `dist/`, generating a SPA-friendly
   `404.html` and removing legacy root-level bundles
 - Treat the live demo availability check as a warning when outbound network
