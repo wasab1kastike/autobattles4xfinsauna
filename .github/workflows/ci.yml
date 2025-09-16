@@ -22,29 +22,67 @@ jobs:
           test -f dist/index.html
           test -f dist/404.html
 
-      # Verify that asset URLs include the Vite base (/autobattles4xfinsauna/)
-      - name: Verify Vite base in index.html
+      # Verify that asset URLs use root-relative /assets/ prefixes
+      - name: Verify root-relative asset URLs in index.html
         run: |
-          grep -q "/autobattles4xfinsauna/" dist/index.html || (echo "❌ Missing correct base path in index.html" && exit 1)
+          if ! grep -qE "=(\"|')/assets/" dist/index.html; then
+            echo "❌ Missing root-relative /assets/ references in index.html"
+            exit 1
+          fi
 
       # Guard against bare asset paths without the base prefix
       - name: Check for bare asset paths
         run: |
-          grep -q 'href="assets/' dist/index.html && (echo "❌ Found href=\"assets/\" in index.html" && exit 1)
-          grep -q 'src="assets/' dist/index.html && (echo "❌ Found src=\"assets/\" in index.html" && exit 1)
+          node <<'NODE'
+          const fs = require('fs');
+          const html = fs.readFileSync('dist/index.html', 'utf8');
+          const attrRe = /(href|src)=["']([^"'#?]+)["']/g;
+          const offenders = [];
+          let match;
+          while ((match = attrRe.exec(html))) {
+            const value = match[2];
+            if (!value.startsWith('/') && /^(\.{0,2}\/)?assets\//.test(value)) {
+              offenders.push(value);
+            }
+          }
+          if (offenders.length) {
+            console.error('❌ Found relative asset references without leading slash:', offenders);
+            process.exit(1);
+          }
+          NODE
 
       # Verify that all referenced JS/CSS files actually exist
       - name: Verify asset files exist
         run: |
-          node -e "
-          const fs=require('fs');const path=require('path');
-          const html=fs.readFileSync('dist/index.html','utf8');
-          const re=/(href|src)=\"(\\/autobattles4xfinsauna\\/[^\"?#]+)\"/g;
-          const misses=[];
-          let m; while((m=re.exec(html))){const p=m[2].replace('/autobattles4xfinsauna/','');
-            const fp=path.join('dist',p); if(!fs.existsSync(fp)) misses.push(fp); }
-          if(misses.length){ console.error('Missing assets:',misses); process.exit(1) }
-          "
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const html = fs.readFileSync('dist/index.html', 'utf8');
+          const attrRe = /(href|src)=["']([^"'#?]+)["']/g;
+          const misses = [];
+          let match;
+
+          while ((match = attrRe.exec(html))) {
+            const value = match[2];
+            if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('//')) {
+              continue;
+            }
+            if (!value.startsWith('/')) {
+              continue;
+            }
+            const relativePath = value.replace(/^\/+/, '');
+            const filePath = path.join('dist', relativePath);
+            if (!fs.existsSync(filePath)) {
+              misses.push(`${value} -> ${filePath}`);
+            }
+          }
+
+          if (misses.length) {
+            console.error('Missing assets:', misses);
+            process.exit(1);
+          }
+          NODE
 
       # Optional: quick local link check for 404.html presence
       - name: Ensure 404.html exists
