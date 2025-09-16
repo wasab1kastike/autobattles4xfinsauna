@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Resolve the current git commit via `git rev-parse --short HEAD`, expose it as
+  a shared `__COMMIT__` define, and use it for build-aware tooling and tests
+- Refresh the HUD build badge with a glowing commit chip that surfaces the
+  resolved hash (or a dev indicator) alongside improved accessibility metadata
 - Regenerate GitHub Pages artifacts by running the latest production build,
   syncing hashed bundles into `docs/`, duplicating the SPA fallback, and
   reaffirming the `.nojekyll` guard file

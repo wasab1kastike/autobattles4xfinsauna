@@ -14,9 +14,15 @@
       <canvas id="game-canvas"></canvas>
       <div id="ui-overlay">
         <div id="resource-bar">Resources: 0</div>
-        <footer id="build-id" aria-live="polite">
+        <footer
+          id="build-id"
+          aria-live="polite"
+          aria-label="Development build"
+          data-build-state="development"
+          title="Unversioned development build"
+        >
           <span class="build-id__label">Build</span>
-          <span class="build-id__value" data-build-commit>—</span>
+          <span class="build-id__value" data-build-commit data-state="dev">—</span>
         </footer>
       </div>
     </div>
