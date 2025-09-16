@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Anchor the sauna HUD toggle within the shared top bar and refresh styling so
+  interactive controls remain pointer-enabled at the top of the overlay
 - Add development-only Saunoja diagnostics that confirm storage seeding and log
   restored attendant coordinates after loading
 - Simplify GitHub Pages deployment by publishing the raw `dist/` output with the

@@ -56,9 +56,19 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
-  const bar = document.createElement('div');
-  bar.id = 'topbar';
-  overlay.appendChild(bar);
+  let bar = document.getElementById('topbar') as HTMLDivElement | null;
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'topbar';
+    overlay.appendChild(bar);
+  } else if (bar.parentElement !== overlay) {
+    overlay.appendChild(bar);
+  }
+
+  const preservedActions = Array.from(bar.querySelectorAll<HTMLElement>('.topbar-button'));
+  for (const action of preservedActions) {
+    bar.removeChild(action);
+  }
 
   const saunakunnia = createBadge('Saunakunnia', icons.saunakunnia);
   saunakunnia.container.classList.add('badge-sauna');
@@ -115,6 +125,10 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   });
   renderMute();
   bar.appendChild(muteBtn);
+
+  for (const action of preservedActions) {
+    bar.appendChild(action);
+  }
 
   eventBus.on('sisuPulseStart', ({ remaining }) => {
     sisuBtn.disabled = true;

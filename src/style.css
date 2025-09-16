@@ -148,6 +148,10 @@ body > #game-container {
 
 #topbar {
   pointer-events: auto;
+  position: absolute;
+  top: clamp(18px, 3vw, 32px);
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: clamp(14px, 2vw, 22px);
@@ -160,6 +164,7 @@ body > #game-container {
   box-shadow: var(--shadow-soft);
   color: var(--color-foreground);
   white-space: nowrap;
+  z-index: 210;
 }
 
 .topbar-badge {
@@ -251,6 +256,21 @@ body > #game-container {
 .topbar-button[aria-pressed="true"] {
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.35), rgba(30, 64, 175, 0.4));
   box-shadow: var(--shadow-glow);
+}
+
+.sauna-button {
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.26), rgba(249, 115, 22, 0.22));
+  border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  box-shadow: 0 14px 28px rgba(249, 115, 22, 0.32);
+}
+
+.sauna-button:hover,
+.sauna-button:focus-visible {
+  box-shadow: 0 20px 40px rgba(249, 115, 22, 0.44);
+}
+
+.sauna-button:active {
+  transform: translateY(0);
 }
 
 #resource-bar {
@@ -959,6 +979,15 @@ body > #game-container {
   #ui-overlay {
     padding: 16px;
     gap: 16px;
+  }
+
+  #topbar {
+    position: static;
+    transform: none;
+    left: auto;
+    right: auto;
+    margin: 0 auto;
+    width: 100%;
   }
 
   .hud-row {
