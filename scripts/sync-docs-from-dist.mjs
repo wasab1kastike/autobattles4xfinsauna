@@ -31,7 +31,25 @@ async function refreshDocsFromDist() {
 async function ensureSpaFallback() {
   const indexPath = path.join(docsDir, 'index.html');
   const fallbackPath = path.join(docsDir, '404.html');
+
+  try {
+    const stats = await stat(indexPath);
+    if (!stats.isFile()) {
+      throw new Error(`Expected ${indexPath} to be a file`);
+    }
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+      throw new Error('Docs index was not generated, cannot create SPA fallback.');
+    }
+    throw error;
+  }
+
   await copyFile(indexPath, fallbackPath);
+}
+
+async function removeLegacyRootFallback() {
+  const rootFallbackPath = path.join(repoRoot, '404.html');
+  await rm(rootFallbackPath, { force: true });
 }
 
 async function ensureNoJekyll() {
@@ -44,6 +62,7 @@ async function main() {
   await refreshDocsFromDist();
   await ensureSpaFallback();
   await ensureNoJekyll();
+  await removeLegacyRootFallback();
 }
 
 main().catch((error) => {
