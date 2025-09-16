@@ -48,7 +48,7 @@ npm run build
 The production files are written to `dist/`.
 
 ## Live Demo
-Experience the latest build at https://www.artobest.com/?utm_source=chatgpt.com
+Experience the latest build at https://artobest.com/?utm_source=chatgpt.com
 
 ## Running Tests
 
