@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Persist Saunoja attendants across sessions via localStorage, spawn an initial
+  guide when none exist, and pipe their selection-aware rendering through the
+  main canvas renderer
 - Render Saunoja units with a dedicated canvas helper that preloads the SVG
   icon, applies warm tint and highlight overlays, and layers steam and HP bars
   within clipped hex silhouettes

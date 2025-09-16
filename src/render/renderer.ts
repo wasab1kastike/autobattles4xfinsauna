@@ -6,13 +6,29 @@ import type { Unit } from '../unit.ts';
 import { isSisuActive } from '../sim/sisu.ts';
 import { HexMapRenderer } from './HexMapRenderer.ts';
 import { camera } from '../camera/autoFrame.ts';
+import type { Saunoja } from '../units/saunoja.ts';
+import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
+
+type DrawSaunojaFn = (
+  ctx: CanvasRenderingContext2D,
+  units: Saunoja[],
+  options?: DrawSaunojasOptions
+) => void;
+
+export interface DrawOptions {
+  saunojas?: {
+    units: Saunoja[];
+    draw: DrawSaunojaFn;
+  };
+}
 
 export function draw(
   ctx: CanvasRenderingContext2D,
   mapRenderer: HexMapRenderer,
   assets: LoadedAssets['images'],
   units: Unit[],
-  selected: AxialCoord | null
+  selected: AxialCoord | null,
+  options?: DrawOptions
 ): void {
   const dpr = window.devicePixelRatio || 1;
   const canvasWidth = ctx.canvas.width;
@@ -33,6 +49,14 @@ export function draw(
   ctx.translate(-(camera.x - origin.x), -(camera.y - origin.y));
 
   mapRenderer.draw(ctx, assets, selected ?? undefined);
+  const saunojaLayer = options?.saunojas;
+  if (saunojaLayer && Array.isArray(saunojaLayer.units) && saunojaLayer.units.length > 0) {
+    saunojaLayer.draw(ctx, saunojaLayer.units, {
+      originX: origin.x,
+      originY: origin.y,
+      hexRadius: mapRenderer.hexSize
+    });
+  }
   drawUnits(ctx, mapRenderer, assets, units, origin);
   ctx.restore();
 }
