@@ -172,10 +172,8 @@ function isTapGesture(state: TouchGestureState): boolean {
 
 function fireTap(state: TouchGestureState): void {
   if (!canvasRef || state.startX == null || state.startY == null) return;
-  const rect = canvasRef.getBoundingClientRect();
-  const canvasX = state.startX - rect.left;
-  const canvasY = state.startY - rect.top;
-  handleCanvasClick(canvasX, canvasY);
+  const world = screenToWorld(canvasRef, state.startX, state.startY);
+  handleCanvasClick(world);
 }
 
 function handlePanTouch(touch: Touch): void {
@@ -310,8 +308,8 @@ function onTouchEnd(event: TouchEvent): void {
 
 function onCanvasClick(event: MouseEvent): void {
   if (!canvasRef) return;
-  const rect = canvasRef.getBoundingClientRect();
-  handleCanvasClick(event.clientX - rect.left, event.clientY - rect.top);
+  const world = screenToWorld(canvasRef, event.clientX, event.clientY);
+  handleCanvasClick(world);
 }
 
 function attachCanvasListeners(canvas: HTMLCanvasElement): void {
