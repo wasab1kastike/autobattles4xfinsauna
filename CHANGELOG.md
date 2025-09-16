@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Replace the Pages deployment workflow with a Node.js 20 pipeline that
+  rebuilds docs, validates the generated title tag, and recommits the output
+  to `main`
 - Resolve the current git commit via `git rev-parse --short HEAD`, expose it as
   a shared `__COMMIT__` define, and use it for build-aware tooling and tests
 - Refresh the HUD build badge with a glowing commit chip that surfaces the
