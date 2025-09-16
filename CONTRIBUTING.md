@@ -1,10 +1,3 @@
-# Contributing
-
-Thank you for considering a contribution!
-
-- Ensure the README's "Live Demo" link points to:
-  https://artobest.com/?utm_source=chatgpt.com
-- Run the full CI workflow locally before pushing:
-  - `npm test`
-  - `npm run build`
-- Open a pull request with your changes.
+version https://git-lfs.github.com/spec/v1
+oid sha256:f586e53b8fed8d34ae1755574adeb38ca7f56acded869c5507ae593c03e206d0
+size 1248
