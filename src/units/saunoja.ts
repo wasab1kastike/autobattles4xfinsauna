@@ -13,6 +13,8 @@ export interface Saunoja {
   hp: number;
   /** Steam intensity from 0 (idle) to 1 (billowing). */
   steam: number;
+  /** Timestamp in milliseconds of the most recent damage event. */
+  lastHitAt: number;
   /** Whether the unit is currently selected in the UI. */
   selected: boolean;
 }
@@ -24,12 +26,14 @@ export interface SaunojaInit {
   maxHp?: number;
   hp?: number;
   steam?: number;
+  lastHitAt?: number;
   selected?: boolean;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
 const DEFAULT_NAME = 'Saunoja';
 const DEFAULT_MAX_HP = 18;
+const DEFAULT_LAST_HIT_AT = 0;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -47,6 +51,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     maxHp = DEFAULT_MAX_HP,
     hp = maxHp,
     steam = 0,
+    lastHitAt = DEFAULT_LAST_HIT_AT,
     selected = false
   } = init;
 
@@ -55,6 +60,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const clampedHp = clamp(normalizedHpSource, 0, normalizedMaxHp);
   const normalizedSteamSource = Number.isFinite(steam) ? steam : 0;
   const clampedSteam = clamp(normalizedSteamSource, 0, 1);
+  const normalizedLastHitSource = Number.isFinite(lastHitAt) ? lastHitAt : DEFAULT_LAST_HIT_AT;
+  const clampedLastHitAt = Math.max(0, normalizedLastHitSource);
 
   return {
     id,
@@ -63,6 +70,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     maxHp: normalizedMaxHp,
     hp: clampedHp,
     steam: clampedSteam,
+    lastHitAt: clampedLastHitAt,
     selected
   };
 }

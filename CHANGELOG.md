@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Track Saunoja damage timestamps and render a clipped radial hit flash when a
+  unit is struck for more immediate feedback
 - Resolve Saunoja icon path against the configured Vite base URL so attendants
   render correctly when the game is served from a subdirectory
 - Convert canvas clicks to world-space selection toggles that persist Saunoja
