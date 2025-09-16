@@ -8,6 +8,7 @@ import { HexMapRenderer } from './HexMapRenderer.ts';
 import { camera } from '../camera/autoFrame.ts';
 import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
+import { drawUnitDamageFlash } from './unitDamageFlash.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -69,6 +70,10 @@ export function drawUnits(
   origin: PixelCoord
 ): void {
   const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
+  const now =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
   for (const unit of units) {
     const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
     const drawX = x - origin.x;
@@ -86,5 +91,14 @@ export function drawUnits(
       ctx.strokeRect(drawX, drawY, hexWidth, hexHeight);
     }
     ctx.restore();
+
+    drawUnitDamageFlash(
+      ctx,
+      unit.id,
+      drawX + mapRenderer.hexSize,
+      drawY + mapRenderer.hexSize,
+      mapRenderer.hexSize,
+      now
+    );
   }
 }

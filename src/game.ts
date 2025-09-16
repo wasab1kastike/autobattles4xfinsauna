@@ -25,6 +25,7 @@ import { setupRightPanel } from './ui/rightPanel.tsx';
 import { showError } from './ui/overlay.ts';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
+import { activateUnitDamageFlashTracking, deactivateUnitDamageFlashTracking } from './render/unitDamageFlash.ts';
 import type { Saunoja } from './units/saunoja.ts';
 import { makeSaunoja } from './units/saunoja.ts';
 import { preloadSaunojaIcon, drawSaunojas } from './units/renderSaunoja.ts';
@@ -153,6 +154,7 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
 
   resourceBar.append(icon, labelSpan, resourceValue);
   updateResourceDisplay(state.getResource(Resource.GOLD));
+  activateUnitDamageFlashTracking();
 }
 
 const assetPaths: AssetPaths = {
@@ -366,6 +368,7 @@ export function cleanup(): void {
   eventBus.off('resourceChanged', onResourceChanged);
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
+  deactivateUnitDamageFlashTracking();
 }
 
 export async function start(): Promise<void> {

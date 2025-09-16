@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Highlight recently damaged units with a screen-blended hex flash driven by
+  the draw loop and event-bus tracking
 - Convert canvas clicks to world-space selection toggles that persist Saunoja
   highlights, clear selection on empty hexes, and redraw the scene only when the
   active Saunoja set changes
