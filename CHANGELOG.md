@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Relocate `CNAME` from `docs/` to `public/` so production builds retain the
+  custom domain via Vite's static asset pipeline
 - Set Vite `base` to `/` so production builds resolve polished assets from the
   site root without relying on a subdirectory deployment
 - Recompose the HUD layout so the build menu and sauna controls live beside a
