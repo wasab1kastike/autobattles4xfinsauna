@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Introduce a unified resource bootstrapper that surfaces a polished HUD loader,
+  aggregates asset warnings, and presents graceful recovery banners when
+  initialization fails
 - Copy production build output to `docs/` via an `npm postbuild` script that
   mirrors GitHub Pages fallbacks using standard shell utilities
 - Stretch the canvas container to the full viewport, adopt dynamic viewport

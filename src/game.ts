@@ -13,7 +13,6 @@ import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
-import { loadAssets } from './loader.ts';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna } from './sim/sauna.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
@@ -22,12 +21,11 @@ import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
 import { activateSisuPulse } from './sim/sisu.ts';
 import { setupRightPanel } from './ui/rightPanel.tsx';
-import { showError } from './ui/overlay.ts';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja } from './units/saunoja.ts';
 import { makeSaunoja } from './units/saunoja.ts';
-import { preloadSaunojaIcon, drawSaunojas } from './units/renderSaunoja.ts';
+import { drawSaunojas } from './units/renderSaunoja.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -155,7 +153,7 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   updateResourceDisplay(state.getResource(Resource.GOLD));
 }
 
-const assetPaths: AssetPaths = {
+export const assetPaths: AssetPaths = {
   images: {
     placeholder:
       'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
@@ -171,7 +169,11 @@ const assetPaths: AssetPaths = {
     'icon-sound': uiIcons.sound
   }
 };
-let assets: LoadedAssets;
+let assets: LoadedAssets | null = null;
+
+export function setAssets(loaded: LoadedAssets): void {
+  assets = loaded;
+}
 
 const map = new HexMap(10, 10, 32);
 const mapRenderer = new HexMapRenderer(map);
@@ -368,15 +370,10 @@ export function cleanup(): void {
   eventBus.off('unitDied', onUnitDied);
 }
 
-export async function start(): Promise<void> {
-  preloadSaunojaIcon().catch((error) => {
-    console.warn('Unable to preload Saunoja icon', error);
-  });
-  const { assets: loaded, failures } = await loadAssets(assetPaths);
-  assets = loaded;
-  if (failures.length) {
-    console.warn('Failed to load assets', failures);
-    showError(failures);
+export function start(): void {
+  if (!assets) {
+    console.error('Cannot start game without loaded assets.');
+    return;
   }
   updateResourceDisplay(state.getResource(Resource.GOLD));
   draw();
