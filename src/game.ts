@@ -213,6 +213,14 @@ if (saunojas.length === 0) {
     })
   );
   saveUnits();
+  if (import.meta.env.DEV) {
+    const storage = getSaunojaStorage();
+    const storedValue = storage?.getItem(SAUNOJA_STORAGE_KEY);
+    console.debug('Seeded Saunoja storage with default attendant', {
+      storageAvailable: Boolean(storage),
+      storageKeyPresent: typeof storedValue === 'string'
+    });
+  }
 } else {
   let foundSelected = false;
   let selectionDirty = false;
@@ -228,6 +236,12 @@ if (saunojas.length === 0) {
   if (selectionDirty) {
     saveUnits();
   }
+}
+if (import.meta.env.DEV) {
+  console.debug('Saunoja roster restored', {
+    count: saunojas.length,
+    coordinates: saunojas.map((unit) => ({ q: unit.coord.q, r: unit.coord.r }))
+  });
 }
 const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state, {
