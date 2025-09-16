@@ -1,7 +1,21 @@
+import { execSync } from 'node:child_process';
 import { defineConfig } from 'vite';
-import { getShortCommitHash } from './build-info';
 
-const buildCommit = getShortCommitHash();
+let GIT_COMMIT = JSON.stringify('unknown');
+
+try {
+  const commit = execSync('git rev-parse --short HEAD', {
+    stdio: ['ignore', 'pipe', 'ignore'],
+  })
+    .toString()
+    .trim();
+
+  if (commit) {
+    GIT_COMMIT = JSON.stringify(commit);
+  }
+} catch (error) {
+  console.warn('Unable to resolve git commit hash:', error);
+}
 
 // Vite configuration
 export default defineConfig({
@@ -14,6 +28,6 @@ export default defineConfig({
     emptyOutDir: true,
   },
   define: {
-    __BUILD_COMMIT__: JSON.stringify(buildCommit),
+    __COMMIT__: GIT_COMMIT,
   },
 });
