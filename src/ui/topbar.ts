@@ -1,6 +1,7 @@
 import { eventBus } from '../events';
 import { setMuted, isMuted } from '../sfx.ts';
 import { GameState, Resource } from '../core/GameState.ts';
+import { ensureHudLayout } from './layout.ts';
 
 type Badge = {
   container: HTMLDivElement;
@@ -56,9 +57,11 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
+  const { actions } = ensureHudLayout(overlay);
+
   const bar = document.createElement('div');
   bar.id = 'topbar';
-  overlay.appendChild(bar);
+  actions.prepend(bar);
 
   const saunakunnia = createBadge('Saunakunnia', icons.saunakunnia);
   saunakunnia.container.classList.add('badge-sauna');
