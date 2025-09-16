@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "postbuild": "mkdir -p docs && cp -R dist/* docs/ && cp docs/index.html docs/404.html && touch docs/.nojekyll",
     "preview": "vite preview",
     "test": "vitest run && node scripts/check-demo-link.js",
     "check:demo": "node scripts/check-demo-link.js"

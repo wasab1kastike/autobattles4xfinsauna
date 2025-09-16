@@ -20,8 +20,7 @@ jobs:
       - name: Sanity checks
         run: |
           test -f dist/index.html
-          # Copy 404 now to keep behavior identical post-deploy
-          cp dist/index.html dist/404.html
+          test -f dist/404.html
 
       # Verify that asset URLs include the Vite base (/autobattles4xfinsauna/)
       - name: Verify Vite base in index.html
