@@ -1,9 +1,9 @@
 # Changelog
 
 ## Unreleased
-- Replace the legacy deploy workflow with a Node.js 20 GitHub Pages pipeline
-  that rebuilds docs, verifies `docs/index.html` retains a `<title>`, and
-  commits refreshed artifacts directly to `main`
+- Simplify GitHub Pages deployment by publishing the raw `dist/` output with the
+  official Pages actions, removing the repository-managed `docs/` mirror, and
+  introducing a polished SPA-friendly 404 fallback in `public/404.html`
 - Resolve the current git commit via `git rev-parse --short HEAD`, expose it as
   a shared `__COMMIT__` define, and use it for build-aware tooling and tests
 - Refresh the HUD build badge with a glowing commit chip that surfaces the
