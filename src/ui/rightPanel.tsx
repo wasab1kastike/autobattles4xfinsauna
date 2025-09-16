@@ -1,5 +1,6 @@
 import { GameState } from '../core/GameState.ts';
 import { eventBus } from '../events';
+import { ensureHudLayout } from './layout.ts';
 
 export type GameEvent = {
   id: string;
@@ -17,35 +18,35 @@ export function setupRightPanel(state: GameState): {
     return { log: () => {}, addEvent: () => {} };
   }
 
+  const { side } = ensureHudLayout(overlay);
+
+  const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
+  if (existingPanel) {
+    existingPanel.remove();
+  }
+
   const panel = document.createElement('div');
   panel.id = 'right-panel';
-  panel.style.position = 'absolute';
-  panel.style.top = '0';
-  panel.style.right = '0';
-  panel.style.width = '240px';
-  panel.style.height = '100%';
-  panel.style.display = 'flex';
-  panel.style.flexDirection = 'column';
-  panel.style.background = 'rgba(0,0,0,0.5)';
-  panel.style.color = '#fff';
-
-  overlay.appendChild(panel);
+  panel.classList.add('hud-card');
+  panel.setAttribute('role', 'complementary');
+  panel.setAttribute('aria-label', 'Policies and events');
 
   const tabBar = document.createElement('div');
-  tabBar.style.display = 'flex';
+  tabBar.classList.add('panel-tabs');
   panel.appendChild(tabBar);
 
   const content = document.createElement('div');
-  content.style.flex = '1';
-  content.style.overflowY = 'auto';
+  content.classList.add('panel-content');
   panel.appendChild(content);
 
   const policiesTab = document.createElement('div');
+  policiesTab.id = 'right-panel-policies';
   const eventsTab = document.createElement('div');
+  eventsTab.id = 'right-panel-events';
   const logTab = document.createElement('div');
   logTab.id = 'event-log';
-  logTab.style.display = 'flex';
-  logTab.style.flexDirection = 'column';
+  logTab.setAttribute('role', 'log');
+  logTab.setAttribute('aria-live', 'polite');
 
   const tabs: Record<string, HTMLDivElement> = {
     Policies: policiesTab,
@@ -53,23 +54,40 @@ export function setupRightPanel(state: GameState): {
     Log: logTab
   };
 
+  for (const [name, section] of Object.entries(tabs)) {
+    section.classList.add('panel-section', 'panel-section--scroll');
+    section.dataset.tab = name;
+    section.hidden = true;
+  }
+  logTab.classList.add('panel-section--log');
+
   function show(tab: string): void {
     for (const [name, el] of Object.entries(tabs)) {
-      el.style.display = name === tab ? 'block' : 'none';
+      el.hidden = name !== tab;
     }
-    for (const btn of tabBar.children) {
+    for (const btn of Array.from(tabBar.children)) {
       const b = btn as HTMLButtonElement;
-      b.disabled = b.textContent === tab;
+      const isActive = b.textContent === tab;
+      b.disabled = isActive;
+      b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     }
   }
 
   for (const name of Object.keys(tabs)) {
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.textContent = name;
+    const section = tabs[name];
+    if (section?.id) {
+      btn.setAttribute('aria-controls', section.id);
+    }
+    btn.setAttribute('aria-pressed', 'false');
     btn.addEventListener('click', () => show(name));
     tabBar.appendChild(btn);
     content.appendChild(tabs[name]);
   }
+
+  side.appendChild(panel);
 
   // --- Policies ---
   type PolicyDef = {
@@ -105,6 +123,7 @@ export function setupRightPanel(state: GameState): {
       const btn = document.createElement('button');
       btn.textContent = `${def.name} (${def.cost}g)`;
       btn.title = def.description;
+      btn.classList.add('panel-action');
       btn.disabled = !def.prerequisite(state) || state.hasPolicy(def.id);
       btn.addEventListener('click', () => {
         if (state.applyPolicy(def.id, def.cost)) {
@@ -112,7 +131,6 @@ export function setupRightPanel(state: GameState): {
         }
       });
       policiesTab.appendChild(btn);
-      policiesTab.appendChild(document.createElement('br'));
       policyButtons[def.id] = btn;
     }
   }
@@ -137,12 +155,14 @@ export function setupRightPanel(state: GameState): {
     eventsTab.innerHTML = '';
     for (const ev of events) {
       const wrapper = document.createElement('div');
+      wrapper.classList.add('panel-event');
       const h = document.createElement('h4');
       h.textContent = ev.headline;
       const p = document.createElement('p');
       p.textContent = ev.body;
       const btn = document.createElement('button');
       btn.textContent = ev.buttonText ?? 'Acknowledge';
+      btn.classList.add('panel-action');
       btn.addEventListener('click', () => {
         const idx = events.findIndex((e) => e.id === ev.id);
         if (idx !== -1) {
@@ -171,6 +191,7 @@ export function setupRightPanel(state: GameState): {
     for (const msg of pending) {
       const div = document.createElement('div');
       div.textContent = msg;
+      div.classList.add('panel-log-entry');
       logTab.appendChild(div);
     }
     while (logTab.childElementCount > MAX_LOG_MESSAGES) {

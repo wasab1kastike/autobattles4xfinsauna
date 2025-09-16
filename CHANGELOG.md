@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Recompose the HUD layout so the build menu and sauna controls live beside a
+  fixed-width right panel, eliminating overlap and polishing the top-row
+  alignment
 - Add development-only Saunoja diagnostics that confirm storage seeding and log
   restored attendant coordinates after loading
 - Simplify GitHub Pages deployment by publishing the raw `dist/` output with the
