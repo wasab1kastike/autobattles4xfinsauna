@@ -32,7 +32,7 @@ interface TouchGestureState {
   moved: boolean;
 }
 
-function applyBuildMetadata(): void {
+function applyBuildIdentity(): void {
   if (typeof document === 'undefined') {
     return;
   }
@@ -42,30 +42,27 @@ function applyBuildMetadata(): void {
     return;
   }
 
-  const normalizedCommit =
-    typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__.trim() : '';
-  const displayValue =
-    normalizedCommit && normalizedCommit !== 'unknown'
-      ? normalizedCommit
-      : 'development';
+  const rawCommit = typeof __COMMIT__ === 'string' ? __COMMIT__.trim() : '';
+  const isCommitAvailable = rawCommit.length > 0 && rawCommit !== 'unknown';
 
+  const displayValue = isCommitAvailable ? `#${rawCommit}` : 'DEV BUILD';
   buildValueElement.textContent = displayValue;
+  buildValueElement.dataset.state = isCommitAvailable ? 'commit' : 'dev';
 
   const container = buildValueElement.closest<HTMLElement>('#build-id');
   if (container) {
-    const accessibleLabel =
-      normalizedCommit && normalizedCommit !== 'unknown'
-        ? `Build commit ${normalizedCommit}`
-        : 'Development build';
+    const accessibleLabel = isCommitAvailable
+      ? `Build commit ${rawCommit}`
+      : 'Development build';
     container.setAttribute('aria-label', accessibleLabel);
-    container.title =
-      normalizedCommit && normalizedCommit !== 'unknown'
-        ? `Commit ${normalizedCommit}`
-        : 'Unversioned development build';
+    container.title = isCommitAvailable
+      ? `Autobattles build ${rawCommit}`
+      : 'Unversioned development build';
+    container.dataset.buildState = isCommitAvailable ? 'release' : 'development';
   }
 }
 
-applyBuildMetadata();
+applyBuildIdentity();
 
 const cleanupHandlers: Array<() => void> = [];
 
