@@ -2,7 +2,8 @@
 
 ## Unreleased
 - Replace the legacy deploy workflow with a Node.js 20 GitHub Pages pipeline
-  that rebuilds docs, reruns smoke checks, and commits refreshed artifacts
+  that rebuilds docs, verifies `docs/index.html` retains a `<title>`, and
+  commits refreshed artifacts directly to `main`
 - Resolve the current git commit via `git rev-parse --short HEAD`, expose it as
   a shared `__COMMIT__` define, and use it for build-aware tooling and tests
 - Refresh the HUD build badge with a glowing commit chip that surfaces the

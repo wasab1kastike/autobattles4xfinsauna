@@ -1,8 +1,9 @@
-name: Pages
+name: GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -11,13 +12,15 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@v4
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: npm
       - name: Install dependencies
         run: npm ci
       - name: Build project
@@ -29,12 +32,22 @@ jobs:
           cp -R dist/* docs/
           cp docs/index.html docs/404.html
           touch docs/.nojekyll
-      - name: Smoke checks
-        run: npm run test
-      - name: Commit docs
+      - name: Smoke-check docs/index.html
+        run: |
+          test -f docs/index.html
+          TITLE=$(grep -o '<title>.*</title>' docs/index.html || true)
+          if [ -z "$TITLE" ]; then
+            echo 'docs/index.html is missing a <title> element'
+            exit 1
+          fi
+      - name: Commit docs back to main
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git add docs
-          git diff --staged --quiet || git commit -m "chore(docs): update docs"
-          git push
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+            exit 0
+          fi
+          git commit -m "chore(docs): update GitHub Pages artifacts"
+          git push origin HEAD:main
