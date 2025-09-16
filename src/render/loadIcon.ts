@@ -5,7 +5,8 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
   if (!icon) {
     icon = new Image();
     icon.decoding = 'async';
-    icon.src = path;
+    const normalized = new URL(path, import.meta.env.BASE_URL).href;
+    icon.src = normalized;
     iconCache.set(path, icon);
   }
 
