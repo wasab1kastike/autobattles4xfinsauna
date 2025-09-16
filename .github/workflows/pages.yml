@@ -1,4 +1,4 @@
-name: Deploy
+name: Pages
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,11 +16,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - run: rm -rf docs && cp -r dist docs
+      - name: Install dependencies
+        run: npm ci
+      - name: Build project
+        run: npm run build
+      - name: Prepare docs artifacts
+        run: |
+          rm -rf docs
+          mkdir -p docs
+          cp -R dist/* docs/
+          cp docs/index.html docs/404.html
+          touch docs/.nojekyll
+      - name: Smoke checks
+        run: npm run test
       - name: Commit docs
         run: |
           git config user.name "${{ github.actor }}"
