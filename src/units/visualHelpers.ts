@@ -21,6 +21,13 @@ export interface SteamOptions {
   intensity?: number;
 }
 
+export interface HitFlashOptions {
+  centerX: number;
+  centerY: number;
+  radius?: number;
+  progress?: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
@@ -58,6 +65,37 @@ export function drawHP(
   ctx.lineWidth = Math.max(1, radius * 0.12);
   ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
   ctx.stroke();
+  ctx.restore();
+}
+
+export function drawHitFlash(
+  ctx: CanvasRenderingContext2D,
+  { centerX, centerY, radius = HEX_R, progress = 0 }: HitFlashOptions
+): void {
+  const clampedProgress = clamp(progress, 0, 1);
+  if (clampedProgress <= 0) {
+    return;
+  }
+
+  const safeRadius = Number.isFinite(radius) && radius > 0 ? radius : HEX_R;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = clampedProgress;
+  const gradient = ctx.createRadialGradient(
+    centerX,
+    centerY,
+    Math.max(1, safeRadius * 0.1),
+    centerX,
+    centerY,
+    safeRadius
+  );
+  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.92)');
+  gradient.addColorStop(0.45, 'rgba(255, 255, 255, 0.68)');
+  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, safeRadius, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 
