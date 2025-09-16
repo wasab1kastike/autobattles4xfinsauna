@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Render Saunoja units with a dedicated canvas helper that preloads the SVG
+  icon, applies warm tint and highlight overlays, and layers steam and HP bars
+  within clipped hex silhouettes
 - Introduce Saunoja data helpers, sauna combat damage utilities, and polished
   canvas rendering helpers for HP, selection, and steam effects
 - Add a polished monochrome Saunoja unit icon to `public/assets/units`
