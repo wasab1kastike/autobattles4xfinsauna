@@ -50,6 +50,21 @@ The production files are written to `dist/`.
 ## Live Demo
 Experience the latest build at https://artobest.com/?utm_source=chatgpt.com
 
+## Troubleshooting
+
+### Canvas fails to render on artobest.com or other hosts
+
+If the live site loads without showing the canvas or HUD, confirm the hosting
+shell matches the expected structure:
+
+1. Ensure the HTML includes both `<canvas id="game-canvas"></canvas>` and a
+   `<div id="resource-bar"></div>` element before loading the entry module.
+2. Load `src/main.ts` after the DOM has been parsed (for example, place the
+   `<script type="module" src="./main.ts"></script>` tag at the end of the
+   `<body>` or invoke `init()` after the `DOMContentLoaded` event).
+3. Open the browser console to review diagnostics—the bootstrapper now logs a
+   descriptive error when either required element is missing.
+
 ## Running Tests
 
 ```bash

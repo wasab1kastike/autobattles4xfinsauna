@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Wait for the DOM to finish parsing before bootstrapping the canvas so the
+  artobest.com deployment reliably mounts the game shell on every visit
+- Document the DOM-ready requirement and troubleshooting steps for external
+  hosts so blank-screen issues can be resolved quickly
 - Mount the sauna toggle and dropdown directly to the polished top bar so the
   controls align with other HUD actions
 - Update the custom domain configuration and documentation to serve the live
