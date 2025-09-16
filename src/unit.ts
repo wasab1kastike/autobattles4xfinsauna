@@ -3,3 +3,6 @@ export * from './units/Soldier.ts';
 export * from './units/Archer.ts';
 export * from './units/Raider.ts';
 export * from './units/UnitFactory.ts';
+export * from './units/saunoja.ts';
+export * from './units/combat.ts';
+export * from './units/visualHelpers.ts';

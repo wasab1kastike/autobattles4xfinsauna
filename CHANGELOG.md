@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Introduce Saunoja data helpers, sauna combat damage utilities, and polished
+  canvas rendering helpers for HP, selection, and steam effects
 - Add a polished monochrome Saunoja unit icon to `public/assets/units`
 - Export shared hex rendering helpers (radius constant, `axialToPixel`, and
   a flat-topped `pathHex` canvas utility) via `src/hex/index.ts`
