@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Resolve Saunoja icon path against the configured Vite base URL so attendants
+  render correctly when the game is served from a subdirectory
 - Convert canvas clicks to world-space selection toggles that persist Saunoja
   highlights, clear selection on empty hexes, and redraw the scene only when the
   active Saunoja set changes
