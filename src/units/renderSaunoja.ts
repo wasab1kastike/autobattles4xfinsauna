@@ -1,6 +1,6 @@
 import { axialToPixel, HEX_R, pathHex } from '../hex/index.ts';
 import type { Saunoja } from './saunoja.ts';
-import { drawHP, drawSteam } from './visualHelpers.ts';
+import { drawHP, drawHitFlash, drawSteam } from './visualHelpers.ts';
 
 function resolveSaunojaIconPath(): string {
   const baseUrl = import.meta.env.BASE_URL ?? '/';
@@ -161,6 +161,14 @@ export function drawSaunojas(
     ctx.fillStyle = highlight;
     ctx.fillRect(centerX - clipRadius, centerY - clipRadius, clipRadius * 2, clipRadius * 2);
     ctx.restore();
+
+    const now = performance.now();
+    const elapsed = now - unit.lastHitAt;
+    const FLASH_MS = 120;
+    if (elapsed < FLASH_MS) {
+      const progress = 1 - elapsed / FLASH_MS;
+      drawHitFlash(ctx, { centerX, centerY, radius: clipRadius, progress });
+    }
 
     ctx.restore();
 
