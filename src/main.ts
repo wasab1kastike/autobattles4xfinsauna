@@ -771,6 +771,13 @@ export function init(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
   const resourceBar = document.getElementById('resource-bar');
   if (!canvas || !resourceBar) {
+    console.error(
+      'Autobattles4xFinsauna shell is missing the required canvas or resource bar elements.',
+      {
+        hasCanvas: Boolean(canvas),
+        hasResourceBar: Boolean(resourceBar),
+      }
+    );
     return;
   }
 
@@ -800,7 +807,25 @@ export function init(): void {
   }
 }
 
+function initWhenDomReady(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const start = () => {
+    document.removeEventListener('DOMContentLoaded', start);
+    init();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+    return;
+  }
+
+  start();
+}
+
 if (!import.meta.vitest) {
-  init();
+  initWhenDomReady();
 }
 
