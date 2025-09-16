@@ -2,7 +2,7 @@
   "name": "autobattles4xfinsauna",
   "private": true,
   "version": "0.0.0",
-  "homepage": "https://www.artobest.com/",
+  "homepage": "https://artobest.com/",
   "type": "module",
   "scripts": {
     "dev": "vite",
