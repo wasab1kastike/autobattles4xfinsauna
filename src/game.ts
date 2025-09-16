@@ -9,7 +9,7 @@ import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { pixelToAxial } from './hex/HexUtils.ts';
-import type { AxialCoord } from './hex/HexUtils.ts';
+import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
@@ -155,26 +155,6 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   updateResourceDisplay(state.getResource(Resource.GOLD));
 }
 
-export function handleCanvasClick(x: number, y: number): void {
-  const clicked = pixelToAxial(x - map.hexSize, y - map.hexSize, map.hexSize);
-  selected = clicked;
-
-  let selectionChanged = false;
-  for (const unit of saunojas) {
-    const isSelected = unit.coord.q === clicked.q && unit.coord.r === clicked.r;
-    if (unit.selected !== isSelected) {
-      unit.selected = isSelected;
-      selectionChanged = true;
-    }
-  }
-
-  if (selectionChanged) {
-    saveUnits();
-  }
-
-  draw();
-}
-
 const assetPaths: AssetPaths = {
   images: {
     placeholder:
@@ -272,6 +252,82 @@ let selected: AxialCoord | null = null;
 const storedSelection = saunojas.find((unit) => unit.selected);
 if (storedSelection) {
   selected = { q: storedSelection.coord.q, r: storedSelection.coord.r };
+}
+
+function coordsEqual(a: AxialCoord | null, b: AxialCoord | null): boolean {
+  if (!a || !b) {
+    return a === b;
+  }
+  return a.q === b.q && a.r === b.r;
+}
+
+function setSelectedCoord(next: AxialCoord | null): boolean {
+  if (coordsEqual(selected, next)) {
+    return false;
+  }
+  selected = next ? { q: next.q, r: next.r } : null;
+  return true;
+}
+
+function deselectAllSaunojas(except?: Saunoja): boolean {
+  let changed = false;
+  for (const unit of saunojas) {
+    if (except && unit === except) {
+      continue;
+    }
+    if (unit.selected) {
+      unit.selected = false;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+export function handleCanvasClick(world: PixelCoord): void {
+  const clicked = pixelToAxial(world.x - map.hexSize, world.y - map.hexSize, map.hexSize);
+  const target = saunojas.find(
+    (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
+  );
+
+  let selectionChanged = false;
+
+  if (!target) {
+    if (deselectAllSaunojas()) {
+      selectionChanged = true;
+    }
+    if (setSelectedCoord(null)) {
+      selectionChanged = true;
+    }
+  } else {
+    const toggledSelected = !target.selected;
+    if (target.selected !== toggledSelected) {
+      target.selected = toggledSelected;
+      selectionChanged = true;
+    }
+
+    if (toggledSelected) {
+      if (deselectAllSaunojas(target)) {
+        selectionChanged = true;
+      }
+      if (setSelectedCoord(target.coord)) {
+        selectionChanged = true;
+      }
+    } else {
+      if (deselectAllSaunojas()) {
+        selectionChanged = true;
+      }
+      if (setSelectedCoord(null)) {
+        selectionChanged = true;
+      }
+    }
+  }
+
+  if (!selectionChanged) {
+    return;
+  }
+
+  saveUnits();
+  draw();
 }
 
 export function draw(): void {
