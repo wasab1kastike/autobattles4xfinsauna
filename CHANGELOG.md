@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Regenerate GitHub Pages artifacts by running the latest production build,
+  syncing hashed bundles into `docs/`, duplicating the SPA fallback, and
+  reaffirming the `.nojekyll` guard file
 - Introduce a unified resource bootstrapper that surfaces a polished HUD loader,
   aggregates asset warnings, and presents graceful recovery banners when
   initialization fails
