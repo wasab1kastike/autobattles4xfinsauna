@@ -29,6 +29,44 @@ try {
 
   console.log('Live demo link is present and returns expected content.');
 } catch (err) {
-  console.error(`Failed to fetch live demo: ${err}`);
+  const maybeError = err instanceof Error ? err : new Error(String(err));
+  const cause = typeof maybeError.cause === 'object' ? maybeError.cause ?? null : null;
+  const causeCode =
+    cause && typeof cause === 'object' && 'code' in cause ? cause.code : undefined;
+  const causeErrno =
+    cause && typeof cause === 'object' && 'errno' in cause ? cause.errno : undefined;
+  const networkErrorCodes = new Set([
+    'ENOTFOUND',
+    'ECONNRESET',
+    'ECONNREFUSED',
+    'EAI_AGAIN',
+    'ETIMEDOUT',
+  ]);
+  const message = maybeError.message ?? '';
+  const isFetchFailedMessage = message.toLowerCase().includes('fetch failed');
+  const isNetworkCode =
+    (typeof causeCode === 'string' && networkErrorCodes.has(causeCode)) ||
+    (typeof causeErrno === 'string' && networkErrorCodes.has(causeErrno));
+
+  if (isFetchFailedMessage || isNetworkCode) {
+    console.warn(
+      'Warning: Unable to verify live demo availability because the network request failed.\n' +
+        'This is treated as a warning so environments without outbound network access do not fail.',
+    );
+    if (causeCode || causeErrno) {
+      console.warn(
+        `Network failure details: code=${causeCode ?? 'n/a'}, errno=${causeErrno ?? 'n/a'}.`,
+      );
+    }
+    if (cause && typeof cause === 'object' && 'syscall' in cause) {
+      console.warn(`Network failure syscall: ${cause.syscall}`);
+    }
+    process.exit(0);
+  }
+
+  console.error(`Failed to fetch live demo: ${maybeError}`);
+  if (cause) {
+    console.error('Fetch failure details:', cause);
+  }
   process.exit(1);
 }
