@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Stretch the canvas container to the full viewport, adopt dynamic viewport
+  sizing, disable default touch gestures, and enforce 44px minimum hit targets
+  for buttons and shared `.btn` styles
 - Extend the viewport meta tag for full-bleed mobile layouts and surface the
   short git commit hash in a polished HUD footer
 - Copy `docs/index.html` to `docs/404.html` during the build step and remove the
