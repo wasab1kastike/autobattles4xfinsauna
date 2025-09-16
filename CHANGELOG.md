@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Copy production build output to `docs/` via an `npm postbuild` script that
+  mirrors GitHub Pages fallbacks using standard shell utilities
 - Stretch the canvas container to the full viewport, adopt dynamic viewport
   sizing, disable default touch gestures, and enforce 44px minimum hit targets
   for buttons and shared `.btn` styles
