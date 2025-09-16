@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Layer polished stroke patterns onto every terrain hex and dim fog-of-war tiles
+  to 40% opacity for clearer, more atmospheric map readability
 - Wait for the DOM to finish parsing before bootstrapping the canvas so the
   artobest.com deployment reliably mounts the game shell on every visit
 - Mount the sauna toggle and dropdown directly to the polished top bar so the
