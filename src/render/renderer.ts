@@ -4,10 +4,12 @@ import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
 import { isSisuActive } from '../sim/sisu.ts';
+import type { Sauna } from '../sim/sauna.ts';
 import { HexMapRenderer } from './HexMapRenderer.ts';
 import { camera } from '../camera/autoFrame.ts';
 import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
+import { drawSaunaOverlay } from './saunaOverlay.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -20,6 +22,7 @@ export interface DrawOptions {
     units: Saunoja[];
     draw: DrawSaunojaFn;
   };
+  sauna?: Sauna | null;
 }
 
 export function draw(
@@ -58,6 +61,12 @@ export function draw(
     });
   }
   drawUnits(ctx, mapRenderer, assets, units, origin);
+  if (options?.sauna) {
+    drawSaunaOverlay(ctx, options.sauna, {
+      origin,
+      hexSize: mapRenderer.hexSize
+    });
+  }
   ctx.restore();
 }
 
