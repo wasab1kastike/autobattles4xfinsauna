@@ -71,12 +71,15 @@ function createMockContext() {
 beforeEach(() => {
   vi.resetModules();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+  vi.stubEnv('BASE_URL', '/test-base/');
   MockImage.reset();
   // @ts-ignore - override Image constructor for tests
   globalThis.Image = MockImage as any;
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   if (OriginalImage) {
     // @ts-ignore - restore original constructor
     globalThis.Image = OriginalImage;
@@ -99,7 +102,7 @@ describe('preloadSaunojaIcon', () => {
 
     const icon = await promise1;
     expect(icon).toBe(instance);
-    expect(icon.src).toBe('/assets/units/saunoja.svg');
+    expect(icon.src).toBe('/test-base/assets/units/saunoja.svg');
     expect(icon.decoding).toBe('async');
 
     const promise3 = preloadSaunojaIcon();
