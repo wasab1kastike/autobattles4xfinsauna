@@ -25,7 +25,7 @@ import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja } from './units/saunoja.ts';
 import { makeSaunoja } from './units/saunoja.ts';
-import { drawSaunojas } from './units/renderSaunoja.ts';
+import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -370,13 +370,22 @@ export function cleanup(): void {
   eventBus.off('unitDied', onUnitDied);
 }
 
-export function start(): void {
+export async function start(): Promise<void> {
   if (!assets) {
     console.error('Cannot start game without loaded assets.');
     return;
   }
   updateResourceDisplay(state.getResource(Resource.GOLD));
   draw();
+  try {
+    await preloadSaunojaIcon(() => {
+      draw();
+    }).then(() => {
+      draw();
+    });
+  } catch (error) {
+    console.warn('Failed to preload Saunoja icon before starting the game', error);
+  }
   let last = performance.now();
   function gameLoop(now: number) {
     const delta = now - last;

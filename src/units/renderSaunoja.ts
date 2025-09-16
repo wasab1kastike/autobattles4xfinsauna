@@ -18,13 +18,33 @@ function isImageReady(image: HTMLImageElement | null): image is HTMLImageElement
   return Boolean(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
 }
 
-export function preloadSaunojaIcon(): Promise<HTMLImageElement> {
+function notifyLoaded(
+  icon: HTMLImageElement,
+  onLoad?: (icon: HTMLImageElement) => void
+): HTMLImageElement {
+  if (!onLoad) {
+    return icon;
+  }
+
+  try {
+    onLoad(icon);
+  } catch (error) {
+    console.error('Saunoja icon onLoad callback failed', error);
+  }
+
+  return icon;
+}
+
+export function preloadSaunojaIcon(onLoad?: (icon: HTMLImageElement) => void): Promise<HTMLImageElement> {
+  const withCallback = (promise: Promise<HTMLImageElement>) =>
+    onLoad ? promise.then((icon) => notifyLoaded(icon, onLoad)) : promise;
+
   if (isImageReady(saunojaIcon)) {
-    return Promise.resolve(saunojaIcon);
+    return withCallback(Promise.resolve(saunojaIcon));
   }
 
   if (saunojaIconPromise) {
-    return saunojaIconPromise;
+    return withCallback(saunojaIconPromise);
   }
 
   if (typeof Image === 'undefined') {
@@ -47,11 +67,13 @@ export function preloadSaunojaIcon(): Promise<HTMLImageElement> {
     };
 
     img.onload = finalize;
-    img.onerror = () => {
+    img.onerror = (event) => {
       cleanup();
       saunojaIcon = null;
       saunojaIconPromise = null;
-      reject(new Error(`Failed to load saunoja icon from ${SAUNOJA_ICON_PATH}`));
+      const error = new Error(`Failed to load saunoja icon from ${SAUNOJA_ICON_PATH}`);
+      console.warn(error.message, event);
+      reject(error);
     };
 
     img.src = SAUNOJA_ICON_PATH;
@@ -61,7 +83,7 @@ export function preloadSaunojaIcon(): Promise<HTMLImageElement> {
     }
   });
 
-  return saunojaIconPromise;
+  return withCallback(saunojaIconPromise);
 }
 
 export interface DrawSaunojasOptions {
