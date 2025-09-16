@@ -34,9 +34,10 @@ npm install
 
 ## Deployment
 
-Pushing to `main` runs a workflow that builds the app and commits the result to
-the `docs/` folder so GitHub Pages serves the game. In the repository settings
-set **Pages → Source** to `main` and `/docs`.
+Pushing to `main` runs a workflow that builds the app and publishes the
+contents of `dist/` directly to GitHub Pages using the official deployment
+actions. The workflow uploads the Vite build output as a Pages artifact and
+releases it without committing generated files back to the repository.
 
 To build locally:
 

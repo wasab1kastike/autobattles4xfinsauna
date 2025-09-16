@@ -6,10 +6,16 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -25,29 +31,27 @@ jobs:
         run: npm ci
       - name: Build project
         run: npm run build
-      - name: Prepare docs artifacts
+      - name: Smoke-check dist output
         run: |
-          rm -rf docs
-          mkdir -p docs
-          cp -R dist/* docs/
-          cp docs/index.html docs/404.html
-          touch docs/.nojekyll
-      - name: Smoke-check docs/index.html
-        run: |
-          test -f docs/index.html
-          TITLE=$(grep -o '<title>.*</title>' docs/index.html || true)
+          test -f dist/index.html
+          TITLE=$(grep -o '<title>.*</title>' dist/index.html || true)
           if [ -z "$TITLE" ]; then
-            echo 'docs/index.html is missing a <title> element'
+            echo 'dist/index.html is missing a <title> element'
             exit 1
           fi
-      - name: Commit docs back to main
-        run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git add docs
-          if git diff --cached --quiet; then
-            echo 'No changes to commit.'
-            exit 0
-          fi
-          git commit -m "chore(docs): update GitHub Pages artifacts"
-          git push origin HEAD:main
+          test -f dist/404.html
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
