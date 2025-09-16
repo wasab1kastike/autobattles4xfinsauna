@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Treat the live demo availability check as a warning when outbound network
+  access is blocked so offline CI runs can succeed
 - Track Saunoja damage timestamps and render a clipped radial hit flash when a
   unit is struck for more immediate feedback
 - Resolve Saunoja icon path against the configured Vite base URL so attendants
