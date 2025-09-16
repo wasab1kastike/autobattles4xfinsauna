@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node scripts/build-root-bundle.mjs",
-    "postbuild": "touch dist/.nojekyll",
+    "build": "vite build && node scripts/sync-docs-from-dist.mjs",
     "preview": "vite preview",
     "test": "vitest run && node scripts/check-demo-link.js",
     "check:demo": "node scripts/check-demo-link.js"
