@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Convert canvas clicks to world-space selection toggles that persist Saunoja
+  highlights, clear selection on empty hexes, and redraw the scene only when the
+  active Saunoja set changes
 - Persist Saunoja attendants across sessions via localStorage, spawn an initial
   guide when none exist, and pipe their selection-aware rendering through the
   main canvas renderer
