@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Confirm Vite's root-level base path configuration and regenerate the
+  production build to deliver `/assets/`-prefixed bundles for the GitHub Pages
+  workflow
 - Point the documented live demo links and npm `homepage` metadata to
   https://www.artobest.com/ so references match the production site
 - Relocate `CNAME` from `docs/` to `public/` so production builds retain the
