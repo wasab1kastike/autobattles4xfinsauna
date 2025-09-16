@@ -21,6 +21,41 @@ interface TouchGestureState {
   moved: boolean;
 }
 
+function applyBuildMetadata(): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
+  const buildValueElement = document.querySelector<HTMLElement>('[data-build-commit]');
+  if (!buildValueElement) {
+    return;
+  }
+
+  const normalizedCommit =
+    typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__.trim() : '';
+  const displayValue =
+    normalizedCommit && normalizedCommit !== 'unknown'
+      ? normalizedCommit
+      : 'development';
+
+  buildValueElement.textContent = displayValue;
+
+  const container = buildValueElement.closest<HTMLElement>('#build-id');
+  if (container) {
+    const accessibleLabel =
+      normalizedCommit && normalizedCommit !== 'unknown'
+        ? `Build commit ${normalizedCommit}`
+        : 'Development build';
+    container.setAttribute('aria-label', accessibleLabel);
+    container.title =
+      normalizedCommit && normalizedCommit !== 'unknown'
+        ? `Commit ${normalizedCommit}`
+        : 'Unversioned development build';
+  }
+}
+
+applyBuildMetadata();
+
 const cleanupHandlers: Array<() => void> = [];
 
 let canvasRef: HTMLCanvasElement | null = null;

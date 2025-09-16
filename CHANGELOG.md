@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Extend the viewport meta tag for full-bleed mobile layouts and surface the
+  short git commit hash in a polished HUD footer
 - Copy `docs/index.html` to `docs/404.html` during the build step and remove the
   legacy root-level `404.html`
 - Sync GitHub Pages output directly from `dist/`, generating a SPA-friendly
