@@ -13,5 +13,9 @@ export function applyDamage(target: Saunoja, amount: number): boolean {
   }
 
   target.hp = Math.max(0, target.hp - amount);
+  const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+  target.lastHitAt = now;
   return target.hp === 0;
 }
