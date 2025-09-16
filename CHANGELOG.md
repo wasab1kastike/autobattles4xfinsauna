@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Anchor the sauna controls within the polished HUD top bar, style the sauna
+  toggle with premium gradients, and ensure the overlay keeps pointer
+  interactions enabled for those controls
 - Simplify GitHub Pages deployment by publishing the raw `dist/` output with the
   official Pages actions, removing the repository-managed `docs/` mirror, and
   introducing a polished SPA-friendly 404 fallback in `public/404.html`

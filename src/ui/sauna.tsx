@@ -5,10 +5,30 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   if (!overlay) return () => {};
 
   const btn = document.createElement('button');
+  btn.type = 'button';
   btn.textContent = 'Sauna \u2668\ufe0f';
-  overlay.appendChild(btn);
+  btn.classList.add('topbar-button', 'sauna-button');
+  btn.setAttribute('aria-expanded', 'false');
+
+  const attachToTopbar = (): boolean => {
+    const topbar = document.getElementById('topbar');
+    if (!topbar) return false;
+    topbar.appendChild(btn);
+    return true;
+  };
+
+  if (!attachToTopbar()) {
+    const observer = new MutationObserver(() => {
+      if (attachToTopbar()) {
+        observer.disconnect();
+      }
+    });
+    observer.observe(overlay, { childList: true });
+  }
 
   const card = document.createElement('div');
+  const cardId = 'sauna-control-card';
+  card.id = cardId;
   card.style.position = 'absolute';
   card.style.left = '0';
   card.style.top = '0';
@@ -17,6 +37,8 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   card.style.padding = '8px';
   card.style.display = 'none';
   card.style.minWidth = '120px';
+  card.style.pointerEvents = 'auto';
+  card.style.zIndex = '5';
 
   const barContainer = document.createElement('div');
   barContainer.style.height = '8px';
@@ -42,8 +64,12 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   overlay.appendChild(card);
 
   btn.addEventListener('click', () => {
-    card.style.display = card.style.display === 'none' ? 'block' : 'none';
+    const isHidden = card.style.display === 'none';
+    card.style.display = isHidden ? 'block' : 'none';
+    btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
   });
+
+  btn.setAttribute('aria-controls', cardId);
 
   return () => {
     const progress = 1 - sauna.timer / sauna.spawnCooldown;
