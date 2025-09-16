@@ -1,22 +1,3 @@
-const iconCache = new Map<string, HTMLImageElement>();
-
-export function loadIcon(path: string): HTMLImageElement | undefined {
-  let icon = iconCache.get(path);
-  if (!icon) {
-    icon = new Image();
-    icon.decoding = 'async';
-    const normalized = new URL(path, import.meta.env.BASE_URL).href;
-    icon.src = normalized;
-    iconCache.set(path, icon);
-  }
-
-  if (icon.complete && icon.naturalWidth > 0 && icon.naturalHeight > 0) {
-    return icon;
-  }
-
-  return undefined;
-}
-
-export function clearIconCache(): void {
-  iconCache.clear();
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:4af9e5738e8667f3d4d7b71bcef9c5b3d44873f1bc928c22ac2dc28805085ebe
+size 1214
