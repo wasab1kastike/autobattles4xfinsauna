@@ -30,6 +30,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body,
+#game-root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
 *,
 *::before,
 *::after {
@@ -37,8 +46,10 @@
 }
 
 body {
-  margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
   background:
     radial-gradient(circle at 20% -10%, rgba(56, 189, 248, 0.26), transparent 55%),
     radial-gradient(circle at 80% 110%, rgba(248, 113, 113, 0.18), transparent 60%),
@@ -61,6 +72,12 @@ img {
   max-width: 100%;
 }
 
+button,
+.btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -71,16 +88,30 @@ button {
 
 #game-root {
   position: relative;
+  width: 100%;
+  flex: 1 1 auto;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.35), transparent 60%),
     linear-gradient(135deg, rgba(2, 6, 23, 0.9), rgba(15, 23, 42, 0.92));
 }
 
+#game-root > #game-container,
+body > #game-container {
+  flex: 1 1 auto;
+}
+
 #game-container {
   position: relative;
-  width: min(1400px, 100vw);
-  height: min(900px, 100vh);
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  min-width: 100%;
   margin: 0 auto;
   overflow: hidden;
   border-radius: clamp(18px, 3vw, 28px);
@@ -94,6 +125,7 @@ button {
   display: block;
   background:
     radial-gradient(circle at 50% 30%, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.65) 55%, rgba(2, 6, 23, 0.92));
+  touch-action: none;
 }
 
 #ui-overlay {
@@ -544,8 +576,9 @@ button {
 
 @media (max-width: 960px) {
   #game-container {
-    height: 100vh;
-    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    width: 100dvw;
     border-radius: 0;
   }
 
