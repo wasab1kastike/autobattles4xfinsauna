@@ -5,6 +5,8 @@
   artobest.com deployment reliably mounts the game shell on every visit
 - Mount the sauna toggle and dropdown directly to the polished top bar so the
   controls align with other HUD actions
+- Refresh README and contributor documentation to describe the current HUD
+  feature set and reiterate the artobest.com GitHub Pages deployment
 - Update the custom domain configuration and documentation to serve the live
   build from https://artobest.com/ after the DNS cutover
 - Confirm Vite's root-level base path configuration and regenerate the
