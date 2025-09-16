@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Point the documented live demo links and npm `homepage` metadata to
+  https://www.artobest.com/ so references match the production site
 - Relocate `CNAME` from `docs/` to `public/` so production builds retain the
   custom domain via Vite's static asset pipeline
 - Set Vite `base` to `/` so production builds resolve polished assets from the
