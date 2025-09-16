@@ -6,8 +6,8 @@ const OriginalImage = globalThis.Image;
 class MockImage {
   static lastInstance: MockImage | null = null;
   static created: MockImage[] = [];
-  onload: (() => void) | null = null;
-  onerror: (() => void) | null = null;
+  onload: ((event?: unknown) => void) | null = null;
+  onerror: ((event?: unknown) => void) | null = null;
   decoding = '';
   complete = false;
   naturalWidth = 0;
@@ -31,7 +31,15 @@ class MockImage {
     this.naturalWidth = width;
     this.naturalHeight = height;
     this.complete = true;
-    this.onload?.();
+    const event = typeof Event === 'function' ? new Event('load') : undefined;
+    this.onload?.(event);
+  }
+
+  triggerError(event?: unknown) {
+    this.complete = false;
+    const errorEvent =
+      event || (typeof Event === 'function' ? new Event('error') : { type: 'error' });
+    this.onerror?.(errorEvent);
   }
 
   static reset(): void {
@@ -107,6 +115,40 @@ describe('preloadSaunojaIcon', () => {
 
     const promise3 = preloadSaunojaIcon();
     expect(await promise3).toBe(icon);
+  });
+
+  it('invokes the provided onLoad callback when the icon becomes available', async () => {
+    const { preloadSaunojaIcon } = await import('./renderSaunoja.ts');
+    const onLoad = vi.fn();
+    const promise = preloadSaunojaIcon(onLoad);
+
+    const instance = MockImage.lastInstance;
+    expect(instance).toBeTruthy();
+    instance?.triggerLoad(192, 192);
+
+    const icon = await promise;
+    expect(onLoad).toHaveBeenCalledTimes(1);
+    expect(onLoad).toHaveBeenCalledWith(icon);
+
+    const cachedCallback = vi.fn();
+    await preloadSaunojaIcon(cachedCallback);
+    expect(cachedCallback).toHaveBeenCalledTimes(1);
+    expect(cachedCallback).toHaveBeenCalledWith(icon);
+  });
+
+  it('warns when the icon fails to load', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { preloadSaunojaIcon } = await import('./renderSaunoja.ts');
+    const promise = preloadSaunojaIcon();
+
+    const instance = MockImage.lastInstance;
+    expect(instance).toBeTruthy();
+    instance?.triggerError();
+
+    await expect(promise).rejects.toThrow('Failed to load saunoja icon');
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0][0]).toContain('Failed to load saunoja icon');
+    warnSpy.mockRestore();
   });
 });
 
