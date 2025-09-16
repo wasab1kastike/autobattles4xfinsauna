@@ -1,56 +1,86 @@
 # autobattles4xfinsauna
 
-Prototype of a small autobattler/4X experiment built with Vite and
-TypeScript.
+Autobattles4xFinsauna is a polished autobattler/4X prototype that pairs a
+dynamic hex-map canvas with a glassmorphism-inspired HUD. The project is built
+with Vite and TypeScript and focuses on responsive, touch-friendly interactions
+with cinematic UI flourishes.
 
-## Prerequisites
+## Live Build
+
+- Experience the latest build at https://artobest.com/?utm_source=chatgpt.com
+- The GitHub Pages workflow publishes to the custom domain at
+  [https://artobest.com/](https://artobest.com/), so any documentation or
+  tooling should reference that URL.
+
+## Feature Highlights
+
+- **Saunoja attendants** persist between sessions, can be selected directly on
+  the board, and glow with warm highlights when active.
+- **SISU pulses** live in the top bar, letting you trigger timed combat bursts
+  while monitoring the countdown badge.
+- **Glass HUD overlays** (resource bar, build badge, and right-panel cards)
+  are layered over the canvas with high-end gradients, blur, and accessible
+  aria labels.
+- **Sauna operations** expose a toggleable control card to manage rally
+  behavior and visualize spawn progress.
+- **Policies, events, and logs** occupy a dedicated right-hand column with tab
+  controls for quick context switching and a running activity feed.
+- **Build identity chip** surfaces the deployed commit hash (or development
+  mode indicator) so the running build can be verified at a glance.
+- **Responsive input** supports mouse, trackpad, and touch gestures with
+  smooth zooming, panning, and viewport scaling.
+
+## Gameplay Flow
+
+1. **Select attendants** by tapping or clicking the highlighted Saunoja tokens;
+   selections persist across reloads.
+2. **Manage resources** through the top-bar badges—resource changes animate,
+   and the timer badge keeps the current session readable.
+3. **Trigger SISU** to launch a temporary combat surge and watch the countdown
+   indicator pulse while the ability is active.
+4. **Adjust sauna tactics** from the sauna card: expand the card from the top
+   bar to toggle the rally option and monitor spawn progress.
+5. **Review events and policies** from the right panel. Apply policies when you
+   have the gold, acknowledge events to clear the queue, and scan the log for a
+   curated history of recent actions.
+
+## Local Development
+
+### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
 - `npm`
 
-## Setup
+### Installation
 
 ```bash
 npm install
 ```
 
-## Available Commands
+### Common Scripts
 
 - `npm run dev` – start a development server with hot reloading.
-- `npm run build` – compile TypeScript and bundle the production build.
-- `npm run preview` – preview the built app locally.
-- `npm test` – run the test suite with Vitest.
-- `npm run check:demo` – verify the README demo link and ensure the live site
-  responds with a 200 status and contains the game's
-  `<title>Autobattles4xFinsauna</title>` tag.
+- `npm run build` – compile TypeScript and emit the production bundle to
+  `dist/`.
+- `npm run preview` – serve the production bundle locally.
+- `npm test` – run the Vitest suite and the live demo availability check.
+- `npm run check:demo` – verify the README demo link resolves the Pages build
+  and still advertises `<title>Autobattles4xFinsauna</title>`.
 
-## Gameplay
+### Build Output
 
-- Click on the map to move the selected soldier to that hex.
-- Use the build menu to **Build Farm**, **Build Barracks**, **Upgrade Farm**,
-  or apply the **Eco Policy**.
-- The resource bar shows your current gold and the event log lists recent
-  actions.
+Running `npm run build` produces the Vite output in `dist/`. The custom domain
+is preserved automatically because `public/CNAME` is copied into the build
+output alongside the SPA-friendly `404.html` fallback.
 
 ## Deployment
 
-Pushing to `main` runs a workflow that builds the app and publishes the
-contents of `dist/` directly to GitHub Pages using the official deployment
-actions. The workflow uploads the Vite build output as a Pages artifact and
-releases it without committing generated files back to the repository.
+Pushing to `main` runs a GitHub Actions workflow that builds the app and
+publishes the contents of `dist/` directly to GitHub Pages. The workflow uploads
+the artifact and releases it without committing generated files back to the
+repository, keeping the default branch clean.
 
-To build locally:
-
-```bash
-npm run build
-```
-
-The production files are written to `dist/`.
-
-## Live Demo
-Experience the latest build at https://artobest.com/?utm_source=chatgpt.com
-
-## Running Tests
+## Testing
 
 ```bash
 npm test
@@ -58,7 +88,11 @@ npm test
 
 ## Contributing
 
-Contributions are welcome! Fork the repository, create a branch, make your
-changes, and open a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for
-guidelines.
+Contributions are welcome! Fork the repository, make your changes, and open a
+pull request. See [CONTRIBUTING.md](CONTRIBUTING.md) for the expectations around
+documentation, changelog entries, and domain checks.
+
+## Changelog
+
+Key updates are catalogued in [CHANGELOG.md](CHANGELOG.md).
 
