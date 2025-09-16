@@ -353,7 +353,8 @@ export function draw(): void {
     saunojas: {
       units: saunojas,
       draw: drawSaunojas
-    }
+    },
+    sauna
   });
 }
 

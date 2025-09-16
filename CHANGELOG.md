@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Paint a pulsing sauna aura overlay with a countdown badge and seat the sauna
+  controls beneath the left HUD actions for aligned interaction
 - Normalize icon loader paths against `import.meta.env.BASE_URL` so nested
   deployments fetch HUD imagery without 404s
 - Layer polished stroke patterns onto every terrain hex and dim fog-of-war tiles
