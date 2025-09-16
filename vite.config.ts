@@ -21,7 +21,7 @@ try {
 export default defineConfig({
   root: 'src',
   // Ensure assets resolve correctly when hosted on GitHub Pages.
-  base: '/autobattles4xfinsauna/',
+  base: '/',
   publicDir: '../public',
   build: {
     outDir: '../dist',
