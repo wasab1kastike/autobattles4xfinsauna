@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Add a polished monochrome Saunoja unit icon to `public/assets/units`
+- Export shared hex rendering helpers (radius constant, `axialToPixel`, and
+  a flat-topped `pathHex` canvas utility) via `src/hex/index.ts`
 - Auto-initialize the game entry point outside of Vitest by invoking `init()`
   on module load so the map and resource bar render immediately
 - Add a dedicated build step that emits `main.js` and `assets/game.css` at the
