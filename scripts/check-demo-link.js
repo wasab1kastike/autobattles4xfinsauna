@@ -5,8 +5,7 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const readmePath = join(__dirname, '..', 'README.md');
 const readme = readFileSync(readmePath, 'utf8');
-const demoUrl =
-  'https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com';
+const demoUrl = 'https://www.artobest.com/?utm_source=chatgpt.com';
 const expectedTitle = '<title>Autobattles4xFinsauna</title>';
 
 if (!readme.includes(demoUrl)) {
