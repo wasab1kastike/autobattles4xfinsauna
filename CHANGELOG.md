@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Drop the tracked `docs/` bundle, rely on Vite's standard `dist/` output, and
+  deploy it through GitHub Pages artifact workflows that recreate the SPA
+  fallback and `.nojekyll` marker inside `dist/`
 - Replace the legacy deploy workflow with a Node.js 20 GitHub Pages pipeline
   that rebuilds docs, reruns smoke checks, and commits refreshed artifacts
 - Resolve the current git commit via `git rev-parse --short HEAD`, expose it as

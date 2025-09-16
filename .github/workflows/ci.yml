@@ -17,11 +17,11 @@ jobs:
       - run: npm run build
 
       # Sanity checks: dist exists and has required files
-      - name: Sanity checks
+      - name: Prepare GitHub Pages artifacts
         run: |
           test -f dist/index.html
-          # Copy 404 now to keep behavior identical post-deploy
           cp dist/index.html dist/404.html
+          touch dist/.nojekyll
 
       # Verify that asset URLs include the Vite base (/autobattles4xfinsauna/)
       - name: Verify Vite base in index.html
@@ -48,5 +48,7 @@ jobs:
           "
 
       # Optional: quick local link check for 404.html presence
-      - name: Ensure 404.html exists
-        run: test -f dist/404.html
+      - name: Ensure SPA fallbacks exist
+        run: |
+          test -f dist/404.html
+          test -f dist/.nojekyll

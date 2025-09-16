@@ -34,9 +34,12 @@ npm install
 
 ## Deployment
 
-Pushing to `main` runs a workflow that builds the app and commits the result to
-the `docs/` folder so GitHub Pages serves the game. In the repository settings
-set **Pages → Source** to `main` and `/docs`.
+Pushing to `main` runs the GitHub Pages workflow, which builds the app and
+publishes the `dist/` artifact via GitHub's Pages deployment actions. In the
+repository settings set **Pages → Source** to **GitHub Actions** so the workflow
+controls deployments. The job also mirrors `dist/index.html` to `dist/404.html`
+and touches `dist/.nojekyll` to keep single-page app routing functional after
+deployment.
 
 To build locally:
 
