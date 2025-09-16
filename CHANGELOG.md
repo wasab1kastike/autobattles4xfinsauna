@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Add development-only Saunoja diagnostics that confirm storage seeding and log
+  restored attendant coordinates after loading
 - Simplify GitHub Pages deployment by publishing the raw `dist/` output with the
   official Pages actions, removing the repository-managed `docs/` mirror, and
   introducing a polished SPA-friendly 404 fallback in `public/404.html`
