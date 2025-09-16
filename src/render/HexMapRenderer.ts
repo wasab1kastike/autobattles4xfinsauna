@@ -2,6 +2,8 @@ import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { HexMap } from '../hexmap.ts';
+import type { HexPatternOptions } from '../map/hexPatterns.ts';
+import { drawForest, drawHills, drawPlains, drawWater } from '../map/hexPatterns.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { TERRAIN } from './TerrainPalette.ts';
 import { loadIcon } from './loadIcon.ts';
@@ -11,6 +13,13 @@ const DEFAULT_HIGHLIGHT_GLOW = 'rgba(56, 189, 248, 0.45)';
 
 let highlightStroke: string | null = null;
 let highlightGlow: string | null = null;
+
+const TERRAIN_PATTERNS: Record<TerrainId, (options: HexPatternOptions) => void> = {
+  [TerrainId.Plains]: drawPlains,
+  [TerrainId.Forest]: drawForest,
+  [TerrainId.Hills]: drawHills,
+  [TerrainId.Lake]: drawWater,
+};
 
 function getHighlightTokens(): { stroke: string; glow: string } {
   if (highlightStroke && highlightGlow) {
@@ -78,7 +87,9 @@ export class HexMapRenderer {
       const drawX = x - origin.x;
       const drawY = y - origin.y;
       ctx.save();
-      if (tile.isFogged) ctx.globalAlpha *= 0.4;
+      if (tile.isFogged) {
+        ctx.globalAlpha = 0.4;
+      }
 
       this.drawTerrain(ctx, tile.terrain, drawX, drawY, hexWidth, hexHeight);
 
@@ -140,6 +151,20 @@ export class HexMapRenderer {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
     ctx.fillRect(x - radius * 0.1, y - radius * 0.1, width + radius * 0.2, height + radius * 0.2);
+
+    const patternOptions: HexPatternOptions = {
+      ctx,
+      x,
+      y,
+      width,
+      height,
+      radius,
+      centerX,
+      centerY,
+      baseColor: palette.baseColor,
+    };
+    const drawPattern = TERRAIN_PATTERNS[terrain] ?? drawPlains;
+    drawPattern(patternOptions);
 
     ctx.globalCompositeOperation = 'lighter';
     const rim = ctx.createRadialGradient(centerX, centerY, radius * 0.85, centerX, centerY, radius * 1.18);
