@@ -1,4 +1,4 @@
-# autobattles4xfinsauna
+# Autobattles4xFinsauna · [https://www.artobest.com/](https://www.artobest.com/)
 
 Prototype of a small autobattler/4X experiment built with Vite and
 TypeScript.
@@ -48,7 +48,7 @@ npm run build
 The production files are written to `dist/`.
 
 ## Live Demo
-Experience the latest build at https://artobest.com/?utm_source=chatgpt.com
+Experience the latest build at https://www.artobest.com/?utm_source=chatgpt.com
 
 ## Running Tests
 

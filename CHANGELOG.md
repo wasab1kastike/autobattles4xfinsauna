@@ -1,13 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Refresh documentation references to point to https://www.artobest.com/ instead of the legacy GitHub Pages URLs
 - Update the custom domain configuration and documentation to serve the live
-  build from https://artobest.com/ after the DNS cutover
+  build from https://www.artobest.com/ after the DNS cutover
 - Confirm Vite's root-level base path configuration and regenerate the
   production build to deliver `/assets/`-prefixed bundles for the GitHub Pages
   workflow
 - Point the documented live demo links and npm `homepage` metadata to
-  https://artobest.com/ so references match the production site
+  https://www.artobest.com/ so references match the production site
 - Relocate `CNAME` from `docs/` to `public/` so production builds retain the
   custom domain via Vite's static asset pipeline
 - Set Vite `base` to `/` so production builds resolve polished assets from the
@@ -80,7 +81,7 @@
 - Share hex dimension calculations through a reusable helper used by map and unit rendering
 - Refactor game initialization and rendering helpers into dedicated `ui` and `render` modules
 - Include `404.html` in `docs/` and refresh build output
-- Set Vite `base` to `/autobattles4xfinsauna/` and regenerate `docs/` build output
+- Set Vite `base` to align with the https://www.artobest.com/ deployment and regenerate `docs/` build output
 - Set Vite `base` to `/` for root-based asset paths
 - Regenerate docs with latest build output and hashed assets
 - Import sprite URLs directly and drop `asset()` helper
@@ -102,7 +103,7 @@
 - Build outputs to `dist/` and workflow publishes to `docs/`
 - Add workflow to build and publish `docs/` on pushes to `main`
 - Set explicit Vite base path for GitHub Pages
-- Fix Vite base path to always `/autobattles4xfinsauna/`
+- Fix Vite base path to always target https://www.artobest.com/
 - Add `verify-pages` CI workflow to validate Pages builds
 - Publish `dist/` to `docs/` only after verification succeeds
 - Remove legacy Pages deployment workflow
