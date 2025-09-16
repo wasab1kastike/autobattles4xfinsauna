@@ -2,7 +2,14 @@ import { axialToPixel, HEX_R, pathHex } from '../hex/index.ts';
 import type { Saunoja } from './saunoja.ts';
 import { drawHP, drawSteam } from './visualHelpers.ts';
 
-const SAUNOJA_ICON_PATH = '/assets/units/saunoja.svg';
+function resolveSaunojaIconPath(): string {
+  const baseUrl = import.meta.env.BASE_URL ?? '/';
+  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+  const assetPath = 'assets/units/saunoja.svg';
+  return `${normalizedBase}${assetPath.replace(/^\/+/, '')}`;
+}
+
+const SAUNOJA_ICON_PATH = resolveSaunojaIconPath();
 
 let saunojaIcon: HTMLImageElement | null = null;
 let saunojaIconPromise: Promise<HTMLImageElement> | null = null;
