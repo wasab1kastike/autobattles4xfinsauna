@@ -1,11 +1,11 @@
 import { defineConfig } from 'vitest/config';
 import { getShortCommitHash } from './build-info';
 
-const buildCommit = getShortCommitHash();
+const gitCommit = getShortCommitHash();
 
 export default defineConfig({
   define: {
-    __BUILD_COMMIT__: JSON.stringify(buildCommit),
+    __COMMIT__: JSON.stringify(gitCommit),
   },
   test: {
     environment: 'jsdom',
