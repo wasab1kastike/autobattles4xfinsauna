@@ -1,11 +1,8 @@
 import type { Sauna } from '../sim/sauna.ts';
-import { ensureHudLayout } from './layout.ts';
 
 export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
-
-  const { actions } = ensureHudLayout(overlay);
 
   const container = document.createElement('div');
   container.classList.add('sauna-control');
@@ -45,7 +42,24 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   card.appendChild(label);
 
   container.appendChild(card);
-  actions.appendChild(container);
+
+  const attachToTopbar = (): HTMLDivElement | null => {
+    const topbar = overlay.querySelector<HTMLDivElement>('#topbar');
+    if (!topbar) return null;
+    if (container.parentElement !== topbar) {
+      topbar.appendChild(container);
+    }
+    return topbar;
+  };
+
+  if (!attachToTopbar()) {
+    const observer = new MutationObserver(() => {
+      if (attachToTopbar()) {
+        observer.disconnect();
+      }
+    });
+    observer.observe(overlay, { childList: true, subtree: true });
+  }
 
   btn.addEventListener('click', () => {
     const nextHidden = !card.hidden;
