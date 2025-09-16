@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Normalize icon loader paths against `import.meta.env.BASE_URL` so nested
+  deployments fetch HUD imagery without 404s
 - Layer polished stroke patterns onto every terrain hex and dim fog-of-war tiles
   to 40% opacity for clearer, more atmospheric map readability
 - Wait for the DOM to finish parsing before bootstrapping the canvas so the
