@@ -20,8 +20,8 @@ npm install
 - `npm run build` – compile TypeScript and bundle the production build.
 - `npm run preview` – preview the built app locally.
 - `npm test` – run the test suite with Vitest.
-- `npm run check:demo` – verify the README demo link and ensure the GitHub Pages
-  deployment responds with a 200 status and contains the game's
+- `npm run check:demo` – verify the README demo link and ensure the live site
+  responds with a 200 status and contains the game's
   `<title>Autobattles4xFinsauna</title>` tag.
 
 ## Gameplay
@@ -48,7 +48,7 @@ npm run build
 The production files are written to `dist/`.
 
 ## Live Demo
-Deployed on GitHub Pages: https://wasab1kastike.github.io/autobattles4xfinsauna/?utm_source=chatgpt.com
+Experience the latest build at https://www.artobest.com/?utm_source=chatgpt.com
 
 ## Running Tests
 
