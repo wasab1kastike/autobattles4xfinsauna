@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Surface the short git commit hash at build time, expose it via Vite/Vitest globals, and render a refined HUD badge for quick build identification
 - Introduce a unified resource bootstrapper that surfaces a polished HUD loader,
   aggregates asset warnings, and presents graceful recovery banners when
   initialization fails

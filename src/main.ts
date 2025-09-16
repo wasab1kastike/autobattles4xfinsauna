@@ -43,25 +43,29 @@ function applyBuildMetadata(): void {
   }
 
   const normalizedCommit =
-    typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__.trim() : '';
-  const displayValue =
-    normalizedCommit && normalizedCommit !== 'unknown'
-      ? normalizedCommit
-      : 'development';
+    typeof __COMMIT__ === 'string' ? __COMMIT__.trim() : '';
+  const isCommitKnown =
+    normalizedCommit.length > 0 && normalizedCommit !== 'unknown';
+  const displayValue = isCommitKnown ? `#${normalizedCommit}` : 'development';
 
   buildValueElement.textContent = displayValue;
+  buildValueElement.dataset.buildState = isCommitKnown ? 'commit' : 'development';
+
+  if (isCommitKnown) {
+    buildValueElement.dataset.commitHash = normalizedCommit;
+  } else {
+    delete buildValueElement.dataset.commitHash;
+  }
 
   const container = buildValueElement.closest<HTMLElement>('#build-id');
   if (container) {
-    const accessibleLabel =
-      normalizedCommit && normalizedCommit !== 'unknown'
-        ? `Build commit ${normalizedCommit}`
-        : 'Development build';
+    const accessibleLabel = isCommitKnown
+      ? `Build commit ${normalizedCommit}`
+      : 'Development build';
     container.setAttribute('aria-label', accessibleLabel);
-    container.title =
-      normalizedCommit && normalizedCommit !== 'unknown'
-        ? `Commit ${normalizedCommit}`
-        : 'Unversioned development build';
+    container.title = isCommitKnown
+      ? `Commit ${normalizedCommit}`
+      : 'Unversioned development build';
   }
 }
 

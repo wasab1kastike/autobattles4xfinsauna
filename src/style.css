@@ -702,6 +702,22 @@ body > #game-container {
   font-size: clamp(12px, 1vw, 13px);
   letter-spacing: 0.18em;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.45);
+  transition: background var(--transition-snappy), box-shadow var(--transition-snappy),
+    color var(--transition-snappy);
+}
+
+#build-id .build-id__value[data-build-state='commit'] {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(37, 99, 235, 0.12));
+  box-shadow:
+    0 18px 28px rgba(15, 23, 42, 0.55),
+    0 0 12px rgba(56, 189, 248, 0.35);
+  color: color-mix(in srgb, var(--color-foreground) 90%, white 10%);
+}
+
+#build-id .build-id__value[data-build-state='development'] {
+  background: color-mix(in srgb, var(--color-surface) 68%, transparent);
+  color: color-mix(in srgb, var(--color-muted) 85%, white 15%);
+  letter-spacing: 0.12em;
 }
 
 .sr-only {
