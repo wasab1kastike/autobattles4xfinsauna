@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Set Vite `base` to `/` so production builds resolve polished assets from the
+  site root without relying on a subdirectory deployment
 - Recompose the HUD layout so the build menu and sauna controls live beside a
   fixed-width right panel, eliminating overlap and polishing the top-row
   alignment
