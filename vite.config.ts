@@ -1,4 +1,7 @@
 import { defineConfig } from 'vite';
+import { getShortCommitHash } from './build-info';
+
+const buildCommit = getShortCommitHash();
 
 // Vite configuration
 export default defineConfig({
@@ -9,5 +12,8 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+  },
+  define: {
+    __BUILD_COMMIT__: JSON.stringify(buildCommit),
   },
 });
