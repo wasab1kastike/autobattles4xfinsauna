@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Update CI asset verification to expect root-relative `/assets/` URLs and confirm hashed bundles exist before publishing
 - Paint a pulsing sauna aura overlay with a countdown badge and seat the sauna
   controls beneath the left HUD actions for aligned interaction
 - Normalize icon loader paths against `import.meta.env.BASE_URL` so nested
