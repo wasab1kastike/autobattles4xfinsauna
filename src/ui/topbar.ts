@@ -86,7 +86,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
 
   const resourceDescriptions: Record<Resource, string> = {
     [Resource.SAUNA_BEER]:
-      'Sauna beer stocked for construction trades and eager recruits.',
+      'Sauna beer bottles chilled for construction crews and eager recruits.',
     [Resource.SAUNAKUNNIA]:
       'Saunakunnia—prestige earned from sauna rituals and triumphant battles.'
   };
@@ -179,6 +179,10 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     [Resource.SAUNA_BEER]: 'Sauna Beer',
     [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
+  const resourceUnits: Record<Resource, { singular: string; plural: string }> = {
+    [Resource.SAUNA_BEER]: { singular: 'bottle', plural: 'bottles' },
+    [Resource.SAUNAKUNNIA]: { singular: 'honor', plural: 'honor' }
+  };
   const deltaSuffix: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: '🍺',
     [Resource.SAUNAKUNNIA]: '⚜️'
@@ -212,6 +216,11 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     }
     const verb = amount > 0 ? 'gained' : 'spent';
     const magnitude = numberFormatter.format(Math.abs(amount));
+    const units = resourceUnits[resource];
+    if (units) {
+      const unitLabel = Math.abs(amount) === 1 ? units.singular : units.plural;
+      return `${verb} ${magnitude} ${resourceNames[resource]} ${unitLabel}`.trim();
+    }
     return `${verb} ${magnitude} ${resourceNames[resource]}`;
   }
 
