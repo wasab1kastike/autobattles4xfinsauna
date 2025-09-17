@@ -4,6 +4,6 @@ import type { BuildingType } from '../hex/HexTile.ts';
 export interface Building {
   /** Unique string identifier for the building type. */
   readonly type: BuildingType;
-  /** One-time gold cost to construct the building. */
+  /** One-time sauna beer cost to construct the building. */
   readonly cost: number;
 }

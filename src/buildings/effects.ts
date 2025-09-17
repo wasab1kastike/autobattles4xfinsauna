@@ -20,7 +20,7 @@ export type BuildingRemovedPayload = {
 
 const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): void => {
   if (building instanceof Farm) {
-    state.modifyPassiveGeneration(Resource.GOLD, building.foodPerTick);
+    state.modifyPassiveGeneration(Resource.SAUNA_BEER, building.foodPerTick);
   } else if (building instanceof Barracks) {
     // Spawn a basic unit for the player when barracks is placed
     import('../units/UnitFactory.ts').then(({ spawnUnit }) => {
@@ -31,7 +31,7 @@ const onBuildingPlaced = ({ building, coord, state }: BuildingPlacedPayload): vo
 
 const onBuildingRemoved = ({ building, state }: BuildingRemovedPayload): void => {
   if (building instanceof Farm) {
-    state.modifyPassiveGeneration(Resource.GOLD, -building.foodPerTick);
+    state.modifyPassiveGeneration(Resource.SAUNA_BEER, -building.foodPerTick);
   }
 };
 

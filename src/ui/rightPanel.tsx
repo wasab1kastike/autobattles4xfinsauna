@@ -102,7 +102,7 @@ export function setupRightPanel(state: GameState): {
   const numberFormatter = new Intl.NumberFormat('en-US');
 
   const resourceLabel: Record<Resource, string> = {
-    [Resource.GOLD]: 'Gold',
+    [Resource.SAUNA_BEER]: 'Sauna Beer',
     [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
 
@@ -110,7 +110,7 @@ export function setupRightPanel(state: GameState): {
     {
       id: 'eco',
       name: 'Eco Policy',
-      description: 'Increase gold income by 1',
+      description: 'Increase sauna beer income by 1',
       cost: 15,
       prerequisite: () => true
     },
@@ -137,7 +137,7 @@ export function setupRightPanel(state: GameState): {
     policiesTab.innerHTML = '';
     for (const def of policyDefs) {
       const btn = document.createElement('button');
-      const resource = def.resource ?? Resource.GOLD;
+      const resource = def.resource ?? Resource.SAUNA_BEER;
       btn.textContent = `${def.name} (${numberFormatter.format(def.cost)} ${resourceLabel[resource]})`;
       btn.title = `${def.description}. Costs ${numberFormatter.format(def.cost)} ${resourceLabel[resource]}.`;
       btn.classList.add('panel-action');
@@ -159,7 +159,7 @@ export function setupRightPanel(state: GameState): {
     for (const def of policyDefs) {
       const btn = policyButtons[def.id];
       if (btn) {
-        const resource = def.resource ?? Resource.GOLD;
+        const resource = def.resource ?? Resource.SAUNA_BEER;
         btn.disabled =
           !def.prerequisite(state) ||
           state.hasPolicy(def.id) ||

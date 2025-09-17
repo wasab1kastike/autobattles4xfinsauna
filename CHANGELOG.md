@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Rebrand the HUD gold economy into sauna beer with new resource enums,
+  UI strings, polished bottle iconography, and refreshed tests
 - Focus the event log on sauna-flavored narratives by muting resource gain spam,
   echoing right-panel events, and celebrating unit arrivals and farewells
 - Replace every terrain, building, and unit sprite with high-fidelity SVG art
