@@ -4,6 +4,7 @@ import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { HexPatternOptions } from '../map/hexPatterns.ts';
 import { drawForest, drawHills, drawPlains, drawWater } from '../map/hexPatterns.ts';
+import type { LoadedAssets } from '../loader.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { TERRAIN } from './TerrainPalette.ts';
 import { loadIcon } from './loadIcon.ts';
@@ -64,6 +65,10 @@ function withAlpha([r, g, b]: [number, number, number], alpha: number): string {
 }
 
 export class HexMapRenderer {
+  private cachedCanvasElement?: HTMLCanvasElement;
+  private cachedCanvasOffset: PixelCoord = { x: 0, y: 0 };
+  private cachedHexSize: number | null = null;
+
   constructor(private readonly mapRef: HexMap) {}
 
   get hexSize(): number {
@@ -74,39 +79,101 @@ export class HexMapRenderer {
     return axialToPixel({ q: this.mapRef.minQ, r: this.mapRef.minR }, this.hexSize);
   }
 
-  draw(
-    ctx: CanvasRenderingContext2D,
-    images: Record<string, HTMLImageElement>,
-    selected?: AxialCoord
-  ): void {
+  get cachedCanvas(): HTMLCanvasElement | undefined {
+    return this.cachedCanvasElement;
+  }
+
+  get cachedOffset(): PixelCoord {
+    return this.cachedCanvasOffset;
+  }
+
+  buildCache(images: LoadedAssets['images']): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
     const origin = this.getOrigin();
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const [key] of this.mapRef.tiles) {
+      const [q, r] = key.split(',').map(Number);
+      const { x, y } = axialToPixel({ q, r }, this.hexSize);
+      const drawX = x - origin.x;
+      const drawY = y - origin.y;
+      minX = Math.min(minX, drawX);
+      minY = Math.min(minY, drawY);
+      maxX = Math.max(maxX, drawX + hexWidth);
+      maxY = Math.max(maxY, drawY + hexHeight);
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      this.cachedCanvasElement = undefined;
+      this.cachedCanvasOffset = { x: 0, y: 0 };
+      return;
+    }
+
+    const cacheWidth = Math.max(1, Math.ceil(maxX - minX));
+    const cacheHeight = Math.max(1, Math.ceil(maxY - minY));
+    const canvas = document.createElement('canvas');
+    canvas.width = cacheWidth;
+    canvas.height = cacheHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D context not available for cache rendering');
+    }
+
+    ctx.translate(-minX, -minY);
+
     for (const [key, tile] of this.mapRef.tiles) {
       const [q, r] = key.split(',').map(Number);
       const { x, y } = axialToPixel({ q, r }, this.hexSize);
       const drawX = x - origin.x;
       const drawY = y - origin.y;
       ctx.save();
-      if (tile.isFogged) {
-        ctx.globalAlpha = 0.4;
-      }
+      this.drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight);
+      this.strokeHex(ctx, drawX + this.hexSize, drawY + this.hexSize, this.hexSize, false);
+      ctx.restore();
+    }
 
-      this.drawTerrain(ctx, tile.terrain, drawX, drawY, hexWidth, hexHeight);
+    this.cachedCanvasElement = canvas;
+    this.cachedCanvasOffset = { x: minX, y: minY };
+    this.cachedHexSize = this.hexSize;
+  }
 
-      if (tile.building) {
-        const building = images[`building-${tile.building}`] ?? images['placeholder'];
-        ctx.drawImage(building, drawX, drawY, hexWidth, hexHeight);
-      }
+  invalidateCache(): void {
+    this.cachedCanvasElement = undefined;
+    this.cachedCanvasOffset = { x: 0, y: 0 };
+    this.cachedHexSize = null;
+  }
 
-      const isSelected = selected && q === selected.q && r === selected.r;
+  draw(
+    ctx: CanvasRenderingContext2D,
+    images: Record<string, HTMLImageElement>,
+    selected?: AxialCoord
+  ): void {
+    if (this.cachedCanvasElement && this.cachedHexSize !== this.hexSize) {
+      this.invalidateCache();
+    }
+    if (!this.cachedCanvasElement) {
+      this.drawFullMap(ctx, images, selected);
+      return;
+    }
+
+    const origin = this.getOrigin();
+    this.drawFogLayer(ctx, origin);
+    if (selected) {
+      const { x, y } = axialToPixel(selected, this.hexSize);
       this.strokeHex(
         ctx,
-        drawX + this.hexSize,
-        drawY + this.hexSize,
+        x - origin.x + this.hexSize,
+        y - origin.y + this.hexSize,
         this.hexSize,
-        Boolean(isSelected)
+        true
       );
-      ctx.restore();
     }
   }
 
@@ -122,15 +189,39 @@ export class HexMapRenderer {
     this.draw(ctx, images, selected);
   }
 
-  private drawTerrain(
+  private drawFullMap(
     ctx: CanvasRenderingContext2D,
-    terrain: TerrainId,
+    images: Record<string, HTMLImageElement>,
+    selected?: AxialCoord
+  ): void {
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const origin = this.getOrigin();
+    for (const [key, tile] of this.mapRef.tiles) {
+      const [q, r] = key.split(',').map(Number);
+      const { x, y } = axialToPixel({ q, r }, this.hexSize);
+      const drawX = x - origin.x;
+      const drawY = y - origin.y;
+      ctx.save();
+      if (tile.isFogged) {
+        ctx.globalAlpha = 0.4;
+      }
+      this.drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight);
+      const isSelected = selected && q === selected.q && r === selected.r;
+      this.strokeHex(ctx, drawX + this.hexSize, drawY + this.hexSize, this.hexSize, Boolean(isSelected));
+      ctx.restore();
+    }
+  }
+
+  private drawTerrainAndBuilding(
+    ctx: CanvasRenderingContext2D,
+    tile: { terrain: TerrainId; building: string | null },
+    images: Record<string, HTMLImageElement>,
     x: number,
     y: number,
     width: number,
     height: number
   ): void {
-    const palette = TERRAIN[terrain] ?? TERRAIN[TerrainId.Plains];
+    const palette = TERRAIN[tile.terrain] ?? TERRAIN[TerrainId.Plains];
     const rgb = toRgb(palette.baseColor);
     const radius = this.hexSize;
     const centerX = x + radius;
@@ -163,7 +254,7 @@ export class HexMapRenderer {
       centerY,
       baseColor: palette.baseColor,
     };
-    const drawPattern = TERRAIN_PATTERNS[terrain] ?? drawPlains;
+    const drawPattern = TERRAIN_PATTERNS[tile.terrain] ?? drawPlains;
     drawPattern(patternOptions);
 
     ctx.globalCompositeOperation = 'lighter';
@@ -183,6 +274,37 @@ export class HexMapRenderer {
       ctx.save();
       ctx.globalAlpha *= 0.92;
       ctx.drawImage(icon, iconX, iconY, iconSize, iconSize);
+      ctx.restore();
+    }
+
+    if (tile.building) {
+      const building = images[`building-${tile.building}`] ?? images['placeholder'];
+      ctx.drawImage(building, x, y, width, height);
+    }
+  }
+
+  private drawFogLayer(
+    ctx: CanvasRenderingContext2D,
+    origin: PixelCoord
+  ): void {
+    for (const [key, tile] of this.mapRef.tiles) {
+      if (!tile.isFogged) {
+        continue;
+      }
+      const [q, r] = key.split(',').map(Number);
+      const { x, y } = axialToPixel({ q, r }, this.hexSize);
+      const drawX = x - origin.x;
+      const drawY = y - origin.y;
+      const radius = this.hexSize;
+      const centerX = drawX + radius;
+      const centerY = drawY + radius;
+      ctx.save();
+      this.hexPath(ctx, centerX, centerY, radius);
+      const fog = ctx.createRadialGradient(centerX, centerY, radius * 0.15, centerX, centerY, radius * 1.1);
+      fog.addColorStop(0, 'rgba(24, 34, 48, 0.5)');
+      fog.addColorStop(1, 'rgba(8, 12, 20, 0.82)');
+      ctx.fillStyle = fog;
+      ctx.fill();
       ctx.restore();
     }
   }

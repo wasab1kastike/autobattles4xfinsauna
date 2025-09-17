@@ -273,6 +273,12 @@ export function setAssets(loaded: LoadedAssets): void {
 const map = new HexMap(10, 10, 32);
 const battleManager = new BattleManager(map);
 const mapRenderer = new HexMapRenderer(map);
+const invalidateTerrainCache = (): void => {
+  mapRenderer.invalidateCache();
+  draw();
+};
+eventBus.on('buildingPlaced', invalidateTerrainCache);
+eventBus.on('buildingRemoved', invalidateTerrainCache);
 // Ensure all tiles start fogged
 map.forEachTile((t) => t.setFogged(true));
 resetAutoFrame();
@@ -742,6 +748,8 @@ export function cleanup(): void {
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
   eventBus.off('unitSpawned', onUnitSpawned);
+  eventBus.off('buildingPlaced', invalidateTerrainCache);
+  eventBus.off('buildingRemoved', invalidateTerrainCache);
 }
 
 export async function start(): Promise<void> {
