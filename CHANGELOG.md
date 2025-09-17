@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Redirect policy investments to Saunakunnia honors, refresh Steam Diplomat
+  rewards, and remove passive Saunakunnia trickles so prestige is only earned
+  through deliberate play
 - Sync stored Saunoja roster coordinates with live friendly unit movement so HUD
   overlays track attendants as they reposition across the battlefield
 - Retire the sauna aura's passive Saunakunnia trickle so idling near the steam no
