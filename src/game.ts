@@ -285,47 +285,6 @@ resetAutoFrame();
 
 const units: Unit[] = [];
 
-function pickRandomEdgeFreeTile(): AxialCoord | undefined {
-  const occupied = new Set<string>();
-  for (const unit of units) {
-    if (!unit.isDead()) {
-      occupied.add(`${unit.coord.q},${unit.coord.r}`);
-    }
-  }
-
-  const candidates: AxialCoord[] = [];
-  const seen = new Set<string>();
-  const pushIfFree = (q: number, r: number) => {
-    const key = `${q},${r}`;
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    if (!occupied.has(key)) {
-      candidates.push({ q, r });
-    }
-  };
-
-  for (let q = map.minQ; q <= map.maxQ; q++) {
-    pushIfFree(q, map.minR);
-    pushIfFree(q, map.maxR);
-  }
-
-  for (let r = map.minR; r <= map.maxR; r++) {
-    pushIfFree(map.minQ, r);
-    pushIfFree(map.maxQ, r);
-  }
-
-  if (candidates.length === 0) {
-    return undefined;
-  }
-
-  const index = Math.floor(Math.random() * candidates.length);
-  const choice = candidates[index];
-  map.ensureTile(choice.q, choice.r);
-  return choice;
-}
-
 type UnitSpawnedPayload = { unit: Unit };
 
 function detachSaunoja(unitId: string): void {
@@ -445,7 +404,7 @@ const clock = new GameClock(1000, (deltaMs) => {
   });
   enemySpawner.update(dtSeconds, units, (unit) => {
     registerUnit(unit);
-  }, pickRandomEdgeFreeTile);
+  });
   battleManager.tick(units);
   syncSaunojaRosterWithUnits();
   let upkeepDrain = 0;
@@ -491,7 +450,7 @@ if (!hasActivePlayerUnit) {
     registerUnit(fallbackUnit);
   }
 }
-const enemySpawner = new EnemySpawner();
+const enemySpawner = new EnemySpawner(map);
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
