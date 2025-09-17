@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Pace battle movement with per-unit cooldowns so units only step once every
+  five seconds, aligning pathfinding, stats, and tests with the slower cadence
 - Offset auto-framing calculations to subtract the right HUD occlusion, keeping
   newly revealed tiles centered within the unobscured canvas when the command
   console is open
