@@ -1,5 +1,5 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
-import { getNeighbors, axialToPixel } from '../hex/HexUtils.ts';
+import { getNeighbors, axialToPixel, hexDistance } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
@@ -23,22 +23,15 @@ function fromKey(key: string): AxialCoord {
   return { q, r };
 }
 
-function hexDistance(a: AxialCoord, b: AxialCoord): number {
-  const ay = -a.q - a.r;
-  const by = -b.q - b.r;
-  return Math.max(
-    Math.abs(a.q - b.q),
-    Math.abs(a.r - b.r),
-    Math.abs(ay - by)
-  );
-}
-
 export class Unit {
   /** Whether the unit is still alive. */
   private alive = true;
   private listeners: { death?: Listener[] } = {};
   private maxHealth: number;
   private healMarkerElapsed = 0;
+  private cachedTargetKey?: string;
+  private cachedStartKey?: string;
+  private cachedPath?: AxialCoord[];
 
   constructor(
     public readonly id: string,
@@ -154,15 +147,19 @@ export class Unit {
     map: HexMap,
     occupied: Set<string>
   ): AxialCoord[] {
-    const path = this.findPath(target, map, occupied);
+    const path = this.getPathTo(target, map, occupied);
     if (path.length < 2) {
       return [];
     }
     // Stop before the first occupied tile in the path
     let endIndex = 0;
+    const targetKey = coordKey(target);
     for (let i = 1; i < path.length; i++) {
       const key = coordKey(path[i]);
       if (occupied.has(key)) {
+        if (key !== targetKey) {
+          this.clearPathCache();
+        }
         break;
       }
       endIndex = i;
@@ -174,6 +171,45 @@ export class Unit {
     return path.slice(0, steps + 1);
   }
 
+  getPathTo(
+    target: AxialCoord,
+    map: HexMap,
+    occupied: Set<string>
+  ): AxialCoord[] {
+    const startKey = coordKey(this.coord);
+    const targetKey = coordKey(target);
+    if (
+      !this.cachedPath ||
+      this.cachedTargetKey !== targetKey ||
+      this.cachedStartKey !== startKey
+    ) {
+      this.cachedPath = this.findPath(target, map, occupied);
+      this.cachedTargetKey = targetKey;
+      this.cachedStartKey = startKey;
+    }
+    return this.cachedPath!;
+  }
+
+  advancePathCache(toIndex: number): void {
+    if (!this.cachedPath || toIndex <= 0) {
+      return;
+    }
+    this.cachedPath = this.cachedPath.slice(toIndex);
+    if (this.cachedPath.length > 0) {
+      this.cachedStartKey = coordKey(this.cachedPath[0]);
+    } else {
+      this.cachedPath = undefined;
+      this.cachedStartKey = undefined;
+      this.cachedTargetKey = undefined;
+    }
+  }
+
+  clearPathCache(): void {
+    this.cachedPath = undefined;
+    this.cachedStartKey = undefined;
+    this.cachedTargetKey = undefined;
+  }
+
   findPath(
     target: AxialCoord,
     map: HexMap,
@@ -182,26 +218,42 @@ export class Unit {
     const start = this.coord;
     const startKey = coordKey(start);
     const targetKey = coordKey(target);
-    const queue: AxialCoord[] = [start];
-    const cameFrom = new Map<string, string | null>();
-    cameFrom.set(startKey, null);
+    const open = new Set<string>([startKey]);
+    const cameFrom = new Map<string, string | null>([[startKey, null]]);
+    const gScore = new Map<string, number>([[startKey, 0]]);
+    const fScore = new Map<string, number>([[startKey, hexDistance(start, target)]]);
 
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const currentKey = coordKey(current);
+    while (open.size > 0) {
+      let currentKey: string | null = null;
+      let bestF = Infinity;
+      for (const key of open) {
+        const value = fScore.get(key) ?? Infinity;
+        if (value < bestF) {
+          bestF = value;
+          currentKey = key;
+        }
+      }
+      if (currentKey === null) {
+        break;
+      }
       if (currentKey === targetKey) {
         break;
       }
+      open.delete(currentKey);
+      const current = fromKey(currentKey);
+      const currentG = gScore.get(currentKey) ?? Infinity;
       for (const neighbor of getNeighbors(current)) {
-        const nKey = coordKey(neighbor);
-        if (nKey !== targetKey && !this.isPassable(neighbor, map, occupied)) {
+        const neighborKey = coordKey(neighbor);
+        if (neighborKey !== targetKey && !this.isPassable(neighbor, map, occupied)) {
           continue;
         }
-        if (cameFrom.has(nKey)) {
-          continue;
+        const tentativeG = currentG + 1;
+        if (tentativeG < (gScore.get(neighborKey) ?? Infinity)) {
+          cameFrom.set(neighborKey, currentKey);
+          gScore.set(neighborKey, tentativeG);
+          fScore.set(neighborKey, tentativeG + hexDistance(neighbor, target));
+          open.add(neighborKey);
         }
-        queue.push(neighbor);
-        cameFrom.set(nKey, currentKey);
       }
     }
 
@@ -210,10 +262,10 @@ export class Unit {
     }
 
     const path: AxialCoord[] = [];
-    let curr: string | null = targetKey;
-    while (curr) {
-      path.push(fromKey(curr));
-      curr = cameFrom.get(curr) ?? null;
+    let current: string | null = targetKey;
+    while (current) {
+      path.push(fromKey(current));
+      current = cameFrom.get(current) ?? null;
     }
     return path.reverse();
   }
@@ -270,6 +322,3 @@ export class Unit {
     return tile.terrain !== TerrainId.Lake;
   }
 }
-
-export { hexDistance };
-
