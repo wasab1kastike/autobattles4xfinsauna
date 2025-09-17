@@ -412,7 +412,7 @@ const clock = new GameClock(1000, (deltaMs) => {
   enemySpawner.update(dtSeconds, units, (unit) => {
     registerUnit(unit);
   });
-  battleManager.tick(units);
+  battleManager.tick(units, dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
   }

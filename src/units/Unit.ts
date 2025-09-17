@@ -13,6 +13,8 @@ export interface UnitStats {
   visionRange?: number;
 }
 
+export const UNIT_MOVEMENT_STEP_SECONDS = 5;
+
 type Listener = () => void;
 
 function coordKey(c: AxialCoord): string {
@@ -33,6 +35,7 @@ export class Unit {
   private cachedTargetKey?: string;
   private cachedStartKey?: string;
   private cachedPath?: AxialCoord[];
+  private movementCooldownSeconds = 0;
 
   constructor(
     public readonly id: string,
@@ -139,6 +142,25 @@ export class Unit {
       });
       this.emitDeath();
     }
+  }
+
+  addMovementTime(delta: number): void {
+    if (!Number.isFinite(delta) || delta <= 0) {
+      return;
+    }
+    this.movementCooldownSeconds += delta;
+  }
+
+  canStep(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
+    return this.movementCooldownSeconds >= stepCost;
+  }
+
+  consumeMovementCooldown(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
+    if (!this.canStep(stepCost)) {
+      return false;
+    }
+    this.movementCooldownSeconds -= stepCost;
+    return true;
   }
 
   /**
