@@ -1,32 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="farm-base" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6e7a0" />
-      <stop offset="1" stop-color="#cf9b32" />
-    </linearGradient>
-    <linearGradient id="farm-ridges" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffecc4" stop-opacity="0.9" />
-      <stop offset="1" stop-color="#b37319" stop-opacity="0.3" />
-    </linearGradient>
-    <linearGradient id="farm-barn" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ff6b6b" />
-      <stop offset="1" stop-color="#c1282a" />
-    </linearGradient>
-  </defs>
-  <path d="M64 8 118 64 64 120 10 64z" fill="url(#farm-base)" stroke="#7a4a11" stroke-width="4" stroke-linejoin="round" />
-  <path d="M26 68c12-22 38-38 66-32 16 4 26 16 30 30L64 112z" fill="url(#farm-ridges)" />
-  <g fill="none" stroke-linecap="round" stroke-width="4">
-    <path d="M30 76c12-12 42-20 68-12" stroke="#b37319" />
-    <path d="M34 88c16-12 44-18 68-10" stroke="#8c5113" />
-    <path d="M40 100c18-10 44-12 60-6" stroke="#a66417" />
-  </g>
-  <g stroke-linejoin="round" stroke="#611919" stroke-width="4">
-    <path d="M48 58 64 44l16 14v24H48z" fill="url(#farm-barn)" />
-    <path d="M58 68h12v18H58z" fill="#ffe3d1" stroke="#b84c2f" stroke-width="3" />
-  </g>
-  <g stroke="#ffe7c9" stroke-width="3" stroke-linecap="round" opacity="0.7">
-    <path d="M50 66h12" />
-    <path d="M68 66h6" />
-  </g>
-  <path d="M44 96h40l-8 18H52z" fill="#9c641a" opacity="0.6" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#a4d67a" />
+  <polygon points="16,48 32,16 48,48" fill="#d2691e" />
+  <rect x="24" y="32" width="16" height="16" fill="#f4a460" />
 </svg>
