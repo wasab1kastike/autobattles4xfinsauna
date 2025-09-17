@@ -4,6 +4,8 @@ import { Targeting } from '../ai/Targeting.ts';
 import { getNeighbors } from '../hex/HexUtils.ts';
 import { TerrainId } from '../map/terrain.ts';
 
+export const MAX_ENEMIES = 30;
+
 function coordKey(c: { q: number; r: number }): string {
   return `${c.q},${c.r}`;
 }
