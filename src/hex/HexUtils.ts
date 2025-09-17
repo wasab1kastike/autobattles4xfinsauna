@@ -51,6 +51,17 @@ export function getNeighbor(hex: AxialCoord, direction: number): AxialCoord {
   return { q: hex.q + dir.q, r: hex.r + dir.r };
 }
 
+/** Compute the hex distance between two axial coordinates. */
+export function hexDistance(a: AxialCoord, b: AxialCoord): number {
+  const ay = -a.q - a.r;
+  const by = -b.q - b.r;
+  return Math.max(
+    Math.abs(a.q - b.q),
+    Math.abs(a.r - b.r),
+    Math.abs(ay - by)
+  );
+}
+
 /** Round a fractional axial coordinate to the nearest valid hex. */
 export function hexRound(frac: AxialCoord): AxialCoord {
   let x = frac.q;

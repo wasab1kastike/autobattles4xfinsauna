@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Upgrade unit pathfinding to an A*-driven, cached system and stagger battle
+  processing each tick so movement stays responsive even with crowded hexes
 - Cache the static hex terrain layer on an offscreen canvas, refreshing it only
   when tiles mutate so the renderer blits a polished base map each frame while
   drawing fog, highlights, and units as overlays
