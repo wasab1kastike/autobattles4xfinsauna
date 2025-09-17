@@ -4,6 +4,7 @@ import { Unit } from './Unit.ts';
 import { Soldier, SOLDIER_COST } from './Soldier.ts';
 import { Archer, ARCHER_COST } from './Archer.ts';
 import { playSafe } from '../sfx.ts';
+import { eventBus } from '../events/EventBus.ts';
 
 export type UnitType = 'soldier' | 'archer';
 
@@ -38,6 +39,7 @@ export function spawnUnit(
   }
   if (unit) {
     playSafe('spawn');
+    eventBus.emit('unitSpawned', { unit });
   }
   return unit;
 }
