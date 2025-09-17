@@ -8,6 +8,7 @@ import raider from '../assets/sprites/raider.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
+import { BattleManager } from './battle/BattleManager.ts';
 import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
@@ -44,7 +45,7 @@ const SAUNAKUNNIA_AURA_INTERVAL = 2000;
 const SAUNAKUNNIA_AURA_GAIN = 1;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
-let canvas: HTMLCanvasElement;
+let canvas: HTMLCanvasElement | null = null;
 let resourceBar: HTMLElement;
 let resourceValue: HTMLSpanElement | null = null;
 let saunojas: Saunoja[] = [];
@@ -198,16 +199,38 @@ export function setAssets(loaded: LoadedAssets): void {
 }
 
 const map = new HexMap(10, 10, 32);
+const battleManager = new BattleManager(map);
 const mapRenderer = new HexMapRenderer(map);
 // Ensure all tiles start fogged
 map.forEachTile((t) => t.setFogged(true));
 resetAutoFrame();
+
+const units: Unit[] = [];
+
+type UnitSpawnedPayload = { unit: Unit };
+
+function registerUnit(unit: Unit): void {
+  if (units.some((existing) => existing.id === unit.id)) {
+    return;
+  }
+  units.push(unit);
+  if (canvas) {
+    draw();
+  }
+}
+
+const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
+  registerUnit(unit);
+};
+
+eventBus.on('unitSpawned', onUnitSpawned);
 
 const state = new GameState(1000);
 state.load(map);
 const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
+  battleManager.tick(units);
   state.save();
   // Reveal around all friendly units each tick
   for (const unit of units) {
@@ -217,9 +240,6 @@ const clock = new GameClock(1000, () => {
   }
   draw();
 });
-
-
-const units: Unit[] = [];
 const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
@@ -281,7 +301,7 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
   const unit = spawnUnit(state, type, id, coord, 'player');
   if (unit) {
-    units.push(unit);
+    registerUnit(unit);
   }
 }
 
@@ -409,6 +429,9 @@ export function handleCanvasClick(world: PixelCoord): void {
 }
 
 export function draw(): void {
+  if (!canvas) {
+    return;
+  }
   const ctx = canvas.getContext('2d');
   if (!ctx || !assets) return;
   render(ctx, mapRenderer, assets.images, units, selected, {
@@ -503,8 +526,7 @@ export async function start(): Promise<void> {
     last = now;
     clock.tick(delta);
     sauna.update(delta / 1000, units, (u) => {
-      units.push(u);
-      draw();
+      registerUnit(u);
     });
     updateSaunaUI();
     updateTopbar(delta);
