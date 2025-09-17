@@ -1,6 +1,11 @@
 import { eventBus } from '../events';
 import { setMuted, isMuted } from '../sfx.ts';
 import { GameState, Resource } from '../core/GameState.ts';
+import {
+  isSisuBurstActive,
+  SISU_BURST_COST,
+  TORILLE_COST
+} from '../sim/sisu.ts';
 import { ensureHudLayout } from './layout.ts';
 
 type Badge = {
@@ -21,6 +26,11 @@ type TopbarIcons = {
   sisu?: string;
   saunaBeer?: string;
   sound?: string;
+};
+
+type TopbarAbilities = {
+  useSisuBurst?: () => boolean;
+  torille?: () => boolean;
 };
 
 function createBadge(label: string, options: BadgeOptions = {}): Badge {
@@ -74,7 +84,11 @@ function createBadge(label: string, options: BadgeOptions = {}): Badge {
   return { container, value: valueSpan, delta: deltaSpan, label: accessibleLabel };
 }
 
-export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs: number) => void {
+export function setupTopbar(
+  state: GameState,
+  icons: TopbarIcons = {},
+  abilities: TopbarAbilities = {}
+): (deltaMs: number) => void {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) return () => {};
 
@@ -88,44 +102,99 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     [Resource.SAUNA_BEER]:
       'Sauna beer bottles chilled for construction crews and eager recruits.',
     [Resource.SAUNAKUNNIA]:
-      'Saunakunnia—prestige earned from sauna rituals and triumphant battles.'
+      'Saunakunnia—prestige earned from sauna rituals and triumphant battles.',
+    [Resource.SISU]:
+      'Sisu—the relentless grit forged when your warriors triumph on the snow.'
   };
 
-  const saunakunnia = createBadge('Saunakunnia', {
-    iconSrc: icons.saunakunnia,
-    description: resourceDescriptions[Resource.SAUNAKUNNIA],
-    srLabel: 'Saunakunnia'
-  });
-  saunakunnia.container.classList.add('badge-sauna');
-  const sisu = createBadge('SISU🔥', {
-    iconSrc: icons.sisu,
-    srLabel: 'Sisu pulse timer'
-  });
-  sisu.container.classList.add('badge-sisu');
-  sisu.container.style.display = 'none';
   const saunaBeer = createBadge('Sauna Beer', {
     iconSrc: icons.saunaBeer,
     description: resourceDescriptions[Resource.SAUNA_BEER],
     srLabel: 'Sauna beer reserves'
   });
   saunaBeer.container.classList.add('badge-sauna-beer');
+  const sisuResource = createBadge('Sisu', {
+    iconSrc: icons.sisu,
+    description: resourceDescriptions[Resource.SISU],
+    srLabel: 'Sisu reserves'
+  });
+  sisuResource.container.classList.add('badge-sisu');
+  const saunakunnia = createBadge('Saunakunnia', {
+    iconSrc: icons.saunakunnia,
+    description: resourceDescriptions[Resource.SAUNAKUNNIA],
+    srLabel: 'Saunakunnia'
+  });
+  saunakunnia.container.classList.add('badge-sauna');
+  const burstTimer = createBadge('Burst 🔥', {
+    srLabel: 'Sisu burst countdown'
+  });
+  burstTimer.container.classList.add('badge-sisu');
+  burstTimer.container.style.display = 'none';
+  burstTimer.delta.style.display = 'none';
   const time = createBadge('Time');
   time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
 
-  bar.appendChild(saunakunnia.container);
-  bar.appendChild(sisu.container);
   bar.appendChild(saunaBeer.container);
+  bar.appendChild(sisuResource.container);
+  bar.appendChild(saunakunnia.container);
+  bar.appendChild(burstTimer.container);
   bar.appendChild(time.container);
 
-  const sisuBtn = document.createElement('button');
-  sisuBtn.type = 'button';
-  sisuBtn.textContent = 'SISU';
-  sisuBtn.classList.add('topbar-button', 'sisu-button');
-  sisuBtn.addEventListener('click', () => {
-    eventBus.emit('sisuPulse', {});
-  });
-  bar.appendChild(sisuBtn);
+  let burstBtn: HTMLButtonElement | null = null;
+  let rallyBtn: HTMLButtonElement | null = null;
+
+  if (abilities.useSisuBurst) {
+    burstBtn = document.createElement('button');
+    burstBtn.type = 'button';
+    burstBtn.classList.add('topbar-button', 'sisu-button');
+    burstBtn.textContent = `Sisu Burst \u2212${SISU_BURST_COST}\ud83d\udd25`;
+    burstBtn.title = 'Spend SISU to ignite a short-lived surge in allied attack and movement.';
+    burstBtn.addEventListener('click', () => {
+      void abilities.useSisuBurst?.();
+      refreshAbilityButtons();
+    });
+    bar.appendChild(burstBtn);
+  }
+
+  if (abilities.torille) {
+    rallyBtn = document.createElement('button');
+    rallyBtn.type = 'button';
+    rallyBtn.classList.add('topbar-button', 'torille-button');
+    rallyBtn.textContent = `Torille! \u2212${TORILLE_COST}\ud83d\udd25`;
+    rallyBtn.title = 'Call every surviving fighter back to the sauna to regroup.';
+    rallyBtn.addEventListener('click', () => {
+      void abilities.torille?.();
+      refreshAbilityButtons();
+    });
+    bar.appendChild(rallyBtn);
+  }
+
+  function refreshAbilityButtons(): void {
+    const sisuStock = state.getResource(Resource.SISU);
+    if (burstBtn) {
+      const canAffordBurst = sisuStock >= SISU_BURST_COST;
+      const active = isSisuBurstActive();
+      burstBtn.disabled = !canAffordBurst || active;
+      const hints: string[] = ['Spend SISU to ignite a short-lived surge in allied attack and movement.'];
+      if (!canAffordBurst) {
+        hints.push(`Requires ${SISU_BURST_COST} SISU.`);
+      }
+      if (active) {
+        hints.push('Burst already active.');
+      }
+      burstBtn.title = hints.join(' ');
+    }
+    if (rallyBtn) {
+      const canAffordRally = sisuStock >= TORILLE_COST;
+      rallyBtn.disabled = !canAffordRally;
+      rallyBtn.title = canAffordRally
+        ? 'Call every surviving fighter back to the sauna to regroup.'
+        : `Requires ${TORILLE_COST} SISU to rally everyone home.`;
+    }
+  }
+
+  refreshAbilityButtons();
 
   const muteBtn = document.createElement('button');
   muteBtn.type = 'button';
@@ -158,39 +227,53 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   renderMute();
   bar.appendChild(muteBtn);
 
-  eventBus.on('sisuPulseStart', ({ remaining }) => {
-    sisuBtn.disabled = true;
-    sisu.container.style.display = 'block';
-    sisu.value.textContent = String(remaining);
+  eventBus.on('sisuBurstStart', ({ remaining }: { remaining: number }) => {
+    const seconds = Math.max(0, Math.ceil(remaining));
+    burstTimer.container.style.display = 'block';
+    burstTimer.value.textContent = String(seconds);
+    burstTimer.delta.textContent = '';
+    burstTimer.container.setAttribute(
+      'aria-label',
+      `Sisu burst active — ${seconds} seconds remaining`
+    );
+    refreshAbilityButtons();
   });
-  eventBus.on('sisuPulseTick', ({ remaining }) => {
-    sisu.value.textContent = String(remaining);
+  eventBus.on('sisuBurstTick', ({ remaining }: { remaining: number }) => {
+    const seconds = Math.max(0, Math.ceil(remaining));
+    burstTimer.value.textContent = String(seconds);
+    burstTimer.container.setAttribute(
+      'aria-label',
+      `Sisu burst active — ${seconds} seconds remaining`
+    );
   });
-  eventBus.on('sisuPulseEnd', () => {
-    sisu.container.style.display = 'none';
-  });
-  eventBus.on('sisuCooldownEnd', () => {
-    sisuBtn.disabled = false;
+  eventBus.on('sisuBurstEnd', () => {
+    burstTimer.container.style.display = 'none';
+    burstTimer.value.textContent = '0';
+    refreshAbilityButtons();
   });
 
   const numberFormatter = new Intl.NumberFormat('en-US');
   const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
   const resourceNames: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: 'Sauna Beer',
-    [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+    [Resource.SAUNAKUNNIA]: 'Saunakunnia',
+    [Resource.SISU]: 'Sisu'
   };
   const resourceUnits: Record<Resource, { singular: string; plural: string }> = {
     [Resource.SAUNA_BEER]: { singular: 'bottle', plural: 'bottles' },
-    [Resource.SAUNAKUNNIA]: { singular: 'Saunakunnia', plural: 'Saunakunnia' }
+    [Resource.SAUNAKUNNIA]: { singular: 'Saunakunnia', plural: 'Saunakunnia' },
+    [Resource.SISU]: { singular: 'Sisu', plural: 'Sisu' }
   };
   const deltaSuffix: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: '🍺',
-    [Resource.SAUNAKUNNIA]: '⚜️'
+    [Resource.SAUNAKUNNIA]: '⚜️',
+    [Resource.SISU]: '🔥'
   };
 
   const resourceBadges: Record<Resource, Badge> = {
     [Resource.SAUNA_BEER]: saunaBeer,
-    [Resource.SAUNAKUNNIA]: saunakunnia
+    [Resource.SAUNAKUNNIA]: saunakunnia,
+    [Resource.SISU]: sisuResource
   };
 
   const deltaTimers: Partial<Record<Resource, ReturnType<typeof setTimeout>>> = {};
@@ -272,6 +355,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     Resource.SAUNAKUNNIA,
     state.getResource(Resource.SAUNAKUNNIA)
   );
+  updateResourceBadge(Resource.SISU, state.getResource(Resource.SISU));
 
   eventBus.on('resourceChanged', ({ resource, amount, total }) => {
     const typedResource = resource as Resource;
@@ -279,6 +363,9 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
       return;
     }
     updateResourceBadge(typedResource, total, amount);
+    if (typedResource === Resource.SISU) {
+      refreshAbilityButtons();
+    }
   });
 
   let elapsed = 0;

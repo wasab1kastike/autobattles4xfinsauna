@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Introduce SISU as a persistent resource, award it for battlefield victories, and
+  surface polished HUD controls for the new burst and Torille! abilities that
+  spend the grit to empower or regroup allied units
 - Introduce randomized Saunoja trait rolls, daily beer upkeep drain, and a roster
   card readout so attendants surface their quirks and maintenance costs at a glance
 - Let BattleManager nudge stalled units into adjacent free hexes when pathfinding

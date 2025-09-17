@@ -3,7 +3,7 @@ import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
-import { isSisuActive } from '../sim/sisu.ts';
+import { isSisuBurstActive } from '../sim/sisu.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import { HexMapRenderer } from './HexMapRenderer.ts';
 import { camera } from '../camera/autoFrame.ts';
@@ -89,7 +89,7 @@ export function drawUnits(
       ctx.filter = 'saturate(0)';
     }
     ctx.drawImage(img, drawX, drawY, hexWidth, hexHeight);
-    if (isSisuActive() && unit.faction === 'player') {
+    if (isSisuBurstActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
       ctx.strokeRect(drawX, drawY, hexWidth, hexHeight);

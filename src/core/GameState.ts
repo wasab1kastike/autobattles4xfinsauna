@@ -25,13 +25,15 @@ function createBuilding(type: string): Building | undefined {
 /** Available resource types. */
 export enum Resource {
   SAUNA_BEER = 'sauna-beer',
-  SAUNAKUNNIA = 'saunakunnia'
+  SAUNAKUNNIA = 'saunakunnia',
+  SISU = 'sisu'
 }
 
 /** Default passive generation per tick for each resource. */
 export const PASSIVE_GENERATION: Record<Resource, number> = {
   [Resource.SAUNA_BEER]: 1,
-  [Resource.SAUNAKUNNIA]: 0
+  [Resource.SAUNAKUNNIA]: 0,
+  [Resource.SISU]: 0
 };
 
 // Shape of the serialized game state stored in localStorage.
@@ -46,7 +48,8 @@ export class GameState {
   /** Current amounts of each resource. */
   resources: Record<Resource, number> = {
     [Resource.SAUNA_BEER]: 0,
-    [Resource.SAUNAKUNNIA]: 0
+    [Resource.SAUNAKUNNIA]: 0,
+    [Resource.SISU]: 0
   };
 
   /** Passive generation applied each tick. */
@@ -147,6 +150,11 @@ export class GameState {
   /** Determine if the player can afford a cost. */
   canAfford(cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     return this.resources[res] >= cost;
+  }
+
+  /** Attempt to spend a resource cost. Returns true if the transaction succeeds. */
+  spendResource(cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
+    return this.spend(cost, res);
   }
 
   private spend(cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
