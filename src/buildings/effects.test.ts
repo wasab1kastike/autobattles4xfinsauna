@@ -26,6 +26,7 @@ describe('building effects', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
     const map = new HexMap(3, 3, 1);
+    map.ensureTile(coordFarm.q, coordFarm.r).reveal();
     expect(state.placeBuilding(new Farm(), coordFarm, map)).toBe(true);
     state.tick();
     // 100 start - 50 cost + (1 base + 1 farm) = 52
@@ -36,6 +37,7 @@ describe('building effects', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 500);
     const map = new HexMap(3, 3, 1);
+    map.ensureTile(coordBarracks.q, coordBarracks.r).reveal();
     expect(state.placeBuilding(new Barracks(), coordBarracks, map)).toBe(true);
     await new Promise((r) => setTimeout(r, 0));
     expect(spawnUnitSpy).toHaveBeenCalledWith(
@@ -51,6 +53,7 @@ describe('building effects', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
     const map = new HexMap(3, 3, 1);
+    map.ensureTile(coordFarm.q, coordFarm.r).reveal();
     expect(state.placeBuilding(new Farm(), coordFarm, map)).toBe(true);
     state.tick();
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(52);

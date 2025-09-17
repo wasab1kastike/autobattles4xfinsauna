@@ -4,6 +4,11 @@ import { HexMap } from '../hexmap.ts';
 import { Farm } from '../buildings/index.ts';
 import '../events';
 
+function ensureRevealed(map: HexMap, coord: { q: number; r: number }): void {
+  const tile = map.ensureTile(coord.q, coord.r);
+  tile.reveal();
+}
+
 describe('GameState', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -116,6 +121,7 @@ describe('GameState', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
     const coord = { q: 1, r: 1 };
+    ensureRevealed(map1, coord);
     expect(state.placeBuilding(new Farm(), coord, map1)).toBe(true);
     state.save();
 
@@ -132,6 +138,7 @@ describe('GameState', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
     const coord = { q: 0, r: 0 };
+    ensureRevealed(map1, coord);
     expect(state.placeBuilding(new Farm(), coord, map1)).toBe(true);
     state.save();
 
@@ -148,6 +155,7 @@ describe('GameState', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
     const coord = { q: 0, r: 0 };
+    ensureRevealed(map1, coord);
     expect(state.placeBuilding(new Farm(), coord, map1)).toBe(true);
     state.save();
 
@@ -169,6 +177,7 @@ describe('GameState', () => {
     localStorage.setItem('gameState', JSON.stringify(serialized));
 
     const map = new HexMap(3, 3, 1);
+    map.ensureTile(0, 0);
     const state = new GameState(1000);
     state.load(map);
 

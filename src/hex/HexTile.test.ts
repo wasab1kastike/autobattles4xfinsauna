@@ -22,6 +22,6 @@ describe('HexTile', () => {
     map.revealAround({ q: 2, r: 2 }, 1);
     expect(map.getTile(2, 2)?.isFogged).toBe(false);
     expect(map.getTile(2, 3)?.isFogged).toBe(false); // neighbor within radius
-    expect(map.getTile(4, 2)?.isFogged).toBe(true); // outside radius
+    expect(map.getTile(4, 2)).toBeUndefined(); // tiles beyond the reveal radius remain ungenerated
   });
 });

@@ -321,7 +321,9 @@ function pickRandomEdgeFreeTile(): AxialCoord | undefined {
   }
 
   const index = Math.floor(Math.random() * candidates.length);
-  return candidates[index];
+  const choice = candidates[index];
+  map.ensureTile(choice.q, choice.r);
+  return choice;
 }
 
 type UnitSpawnedPayload = { unit: Unit };
