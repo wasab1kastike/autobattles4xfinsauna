@@ -5,6 +5,10 @@ import mine from '../assets/sprites/mine.svg';
 import soldier from '../assets/sprites/soldier.svg';
 import archer from '../assets/sprites/archer.svg';
 import avantoMarauder from '../assets/sprites/avanto-marauder.svg';
+import saunaBeerIcon from '../assets/ui/sauna-beer.svg';
+import saunojaRosterIcon from '../assets/ui/saunoja-roster.svg';
+import resourceIcon from '../assets/ui/resource.svg';
+import soundIcon from '../assets/ui/sound.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
@@ -28,12 +32,11 @@ import type { Saunoja } from './units/saunoja.ts';
 import { makeSaunoja } from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 
-const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
-  saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
-  saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
-  resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
+  saunaBeer: saunaBeerIcon,
+  saunojaRoster: saunojaRosterIcon,
+  resource: resourceIcon,
+  sound: soundIcon
 };
 
 const INITIAL_SAUNA_BEER = 200;
