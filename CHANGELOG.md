@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Offset auto-framing calculations to subtract the right HUD occlusion, keeping
+  newly revealed tiles centered within the unobscured canvas when the command
+  console is open
 - Elevate the right panel into a sauna command console with a dedicated roster
   tab that highlights attendant status, live health bars, polished trait
   summaries, and direct selection alongside the policies, events, and log panes
