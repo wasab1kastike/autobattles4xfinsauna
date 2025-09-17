@@ -11,7 +11,7 @@ function coordKey(c: AxialCoord): string {
 }
 
 function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
-  return new Unit(id, coord, 'faction', { ...stats });
+  return new Unit(id, 'test', coord, 'faction', { ...stats });
 }
 
 describe('Unit combat', () => {

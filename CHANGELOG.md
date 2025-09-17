@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Attach sprite identifiers to every unit instance and thread them through
+  factories so the renderer can resolve polished SVG art without fallbacks
 - Introduce SISU as a persistent resource, award it for battlefield victories, and
   surface polished HUD controls for the new burst and Torille! abilities that
   spend the grit to empower or regroup allied units

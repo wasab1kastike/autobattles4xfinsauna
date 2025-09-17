@@ -14,6 +14,7 @@ describe('UnitFactory', () => {
     const unit = spawnUnit(state, 'soldier', 's1', origin, 'player');
     expect(unit).not.toBeNull();
     expect(unit!.stats).toEqual(SOLDIER_STATS);
+    expect(unit!.type).toBe('soldier');
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(100 - SOLDIER_COST);
   });
 
@@ -23,6 +24,7 @@ describe('UnitFactory', () => {
     const unit = spawnUnit(state, 'archer', 'a1', origin, 'player');
     expect(unit).not.toBeNull();
     expect(unit!.stats).toEqual(ARCHER_STATS);
+    expect(unit!.type).toBe('archer');
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(200 - ARCHER_COST);
   });
 
