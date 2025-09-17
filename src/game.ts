@@ -35,10 +35,16 @@ const uiIcons = {
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
 
+const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_AURA_INTERVAL = 2000;
 const SAUNAKUNNIA_AURA_GAIN = 1;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
+
+const RESOURCE_LABELS: Record<Resource, string> = {
+  [Resource.SAUNA_BEER]: 'Sauna Beer',
+  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+};
 
 let canvas: HTMLCanvasElement | null = null;
 let rosterBar: HTMLElement;
@@ -348,8 +354,14 @@ function handleSaunaAura(deltaMs: number): void {
   state.addResource(Resource.SAUNAKUNNIA, honorGain);
 }
 
-state.addResource(Resource.SAUNA_BEER, 200);
+state.addResource(Resource.SAUNA_BEER, INITIAL_SAUNA_BEER);
+log(
+  `Quartermaster stocks ${INITIAL_SAUNA_BEER} bottles of ${RESOURCE_LABELS[Resource.SAUNA_BEER]} to launch your campaign.`
+);
 state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
+log(
+  `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`
+);
 
 let selected: AxialCoord | null = null;
 const storedSelection = saunojas.find((unit) => unit.selected);
