@@ -1,5 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#4682b4" />
-  <circle cx="32" cy="24" r="12" fill="#fff" />
-  <rect x="28" y="36" width="8" height="16" fill="#fff" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="soldier-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23364f" />
+      <stop offset="1" stop-color="#0f1824" />
+    </linearGradient>
+    <linearGradient id="soldier-armor" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9fc0ff" />
+      <stop offset="1" stop-color="#4a6a9b" />
+    </linearGradient>
+    <linearGradient id="soldier-shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe37d" />
+      <stop offset="1" stop-color="#c46b16" />
+    </linearGradient>
+  </defs>
+  <circle cx="64" cy="64" r="60" fill="url(#soldier-bg)" stroke="#060a0f" stroke-width="4" />
+  <g fill="url(#soldier-armor)" stroke="#1a2b40" stroke-width="4" stroke-linejoin="round">
+    <path d="M48 98h32l-4-28H52z" />
+    <path d="M54 54c0-14 6-26 10-30 4 4 10 16 10 30" />
+    <path d="M42 66c6-12 16-20 22-20s16 8 22 20" opacity="0.75" />
+  </g>
+  <g fill="#f8f9fb" stroke="#18263a" stroke-width="4" stroke-linejoin="round">
+    <circle cx="64" cy="46" r="14" />
+    <path d="M54 108h20l-6 12H60z" />
+  </g>
+  <g fill="url(#soldier-shield)" stroke="#3c2410" stroke-width="5" stroke-linejoin="round">
+    <path d="M32 72c4-12 18-24 32-24 14 0 28 12 32 24-8 14-22 26-32 26s-24-12-32-26z" />
+    <path d="M64 56c10 0 20 8 24 16-6 10-16 18-24 18s-18-8-24-18c4-8 14-16 24-16z" fill="#ffdca4" opacity="0.7" />
+  </g>
+  <g stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.7">
+    <path d="M58 44h12" />
+    <path d="M44 72h8" />
+    <path d="M76 72h8" />
+  </g>
+  <path d="M72 80c0 4-4 8-8 8s-8-4-8-8" fill="none" stroke="#243956" stroke-width="4" stroke-linecap="round" />
 </svg>
