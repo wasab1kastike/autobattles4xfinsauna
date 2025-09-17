@@ -102,7 +102,7 @@ export function setupRightPanel(state: GameState): {
   const numberFormatter = new Intl.NumberFormat('en-US');
 
   const resourceLabel: Record<Resource, string> = {
-    [Resource.SAUNA_BEER]: 'Sauna Beer',
+    [Resource.SAUNA_BEER]: 'Sauna Beer Bottles',
     [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
 
@@ -110,7 +110,7 @@ export function setupRightPanel(state: GameState): {
     {
       id: 'eco',
       name: 'Eco Policy',
-      description: 'Increase sauna beer income by 1',
+      description: 'Increase passive sauna beer brewing by 1 bottle per tick',
       cost: 15,
       prerequisite: () => true
     },
@@ -124,7 +124,7 @@ export function setupRightPanel(state: GameState): {
     {
       id: 'steam-diplomats',
       name: 'Steam Diplomats',
-      description: '+1 Saunakunnia passive income',
+      description: '+1 Saunakunnia honor each tick',
       cost: 8,
       resource: Resource.SAUNAKUNNIA,
       prerequisite: () => true
