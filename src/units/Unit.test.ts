@@ -14,6 +14,12 @@ function createUnit(id: string, coord: AxialCoord, stats: UnitStats): Unit {
   return new Unit(id, 'test', coord, 'faction', { ...stats });
 }
 
+function ensureTiles(map: HexMap, coords: AxialCoord[]): void {
+  for (const coord of coords) {
+    map.ensureTile(coord.q, coord.r);
+  }
+}
+
 describe('Unit combat', () => {
   it('deals damage within range', () => {
     const attacker = createUnit('a', { q: 0, r: 0 }, {
@@ -105,7 +111,14 @@ describe('Unit combat', () => {
 describe('Unit movement', () => {
   it('moves around impassable terrain', () => {
     const map = new HexMap(3, 3);
-    map.getTile(1, 0)!.terrain = TerrainId.Lake;
+    ensureTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+      { q: 0, r: 1 },
+      { q: 1, r: 1 },
+      { q: 2, r: 0 },
+    ]);
+    map.ensureTile(1, 0).terrain = TerrainId.Lake;
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
@@ -123,7 +136,15 @@ describe('Unit movement', () => {
 
   it('selects the nearest reachable enemy', () => {
     const map = new HexMap(3, 3);
-    map.getTile(1, 0)!.terrain = TerrainId.Lake;
+    ensureTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+      { q: 0, r: 1 },
+      { q: 0, r: 2 },
+      { q: 1, r: 1 },
+      { q: 2, r: 0 },
+    ]);
+    map.ensureTile(1, 0).terrain = TerrainId.Lake;
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
@@ -149,6 +170,10 @@ describe('Unit movement', () => {
 
   it('does not move into occupied tiles', () => {
     const map = new HexMap(3, 3);
+    ensureTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+    ]);
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
@@ -169,6 +194,11 @@ describe('Unit movement', () => {
 
   it('caches paths and invalidates when blocked', () => {
     const map = new HexMap(3, 3);
+    ensureTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+      { q: 2, r: 0 },
+    ]);
     const unit = createUnit('a', { q: 0, r: 0 }, {
       health: 10,
       attackDamage: 2,
