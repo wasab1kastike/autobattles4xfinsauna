@@ -1,5 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#8b0000" />
-  <line x1="18" y1="18" x2="46" y2="46" stroke="#fff" stroke-width="4" />
-  <line x1="46" y1="18" x2="18" y2="46" stroke="#fff" stroke-width="4" />
-</svg>
+version https://git-lfs.github.com/spec/v1
+oid sha256:3bc4e91cd88cb5760d64656813acad339ecde90784f7d3f0fa6158afc116c38a
+size 1729
