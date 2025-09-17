@@ -24,13 +24,13 @@ function createBuilding(type: string): Building | undefined {
 
 /** Available resource types. */
 export enum Resource {
-  GOLD = 'gold',
+  SAUNA_BEER = 'sauna-beer',
   SAUNAKUNNIA = 'saunakunnia'
 }
 
 /** Default passive generation per tick for each resource. */
 export const PASSIVE_GENERATION: Record<Resource, number> = {
-  [Resource.GOLD]: 1,
+  [Resource.SAUNA_BEER]: 1,
   [Resource.SAUNAKUNNIA]: 0
 };
 
@@ -45,7 +45,7 @@ type SerializedState = {
 export class GameState {
   /** Current amounts of each resource. */
   resources: Record<Resource, number> = {
-    [Resource.GOLD]: 0,
+    [Resource.SAUNA_BEER]: 0,
     [Resource.SAUNAKUNNIA]: 0
   };
 
@@ -144,11 +144,11 @@ export class GameState {
   }
 
   /** Determine if the player can afford a cost. */
-  canAfford(cost: number, res: Resource = Resource.GOLD): boolean {
+  canAfford(cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     return this.resources[res] >= cost;
   }
 
-  private spend(cost: number, res: Resource = Resource.GOLD): boolean {
+  private spend(cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     if (!this.canAfford(cost, res)) {
       return false;
     }
@@ -178,7 +178,7 @@ export class GameState {
   }
 
   /** Spend resources to construct a building of the given type. */
-  construct(building: string, cost: number, res: Resource = Resource.GOLD): boolean {
+  construct(building: string, cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     if (!this.spend(cost, res)) {
       return false;
     }
@@ -194,7 +194,7 @@ export class GameState {
     building: Building,
     coord: AxialCoord,
     map: HexMap,
-    res: Resource = Resource.GOLD
+    res: Resource = Resource.SAUNA_BEER
   ): boolean {
     const tile = map.getTile(coord.q, coord.r);
     if (!tile || tile.building) {
@@ -238,12 +238,12 @@ export class GameState {
   }
 
   /** Spend resources to upgrade a building. */
-  upgrade(building: string, cost: number, res: Resource = Resource.GOLD): boolean {
+  upgrade(building: string, cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     return this.construct(`upgrade:${building}`, cost, res);
   }
 
   /** Spend resources to apply a policy. */
-  applyPolicy(policy: string, cost: number, res: Resource = Resource.GOLD): boolean {
+  applyPolicy(policy: string, cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
     if (!this.spend(cost, res)) {
       return false;
     }

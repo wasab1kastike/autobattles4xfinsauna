@@ -19,7 +19,7 @@ type BadgeOptions = {
 type TopbarIcons = {
   saunakunnia?: string;
   sisu?: string;
-  gold?: string;
+  saunaBeer?: string;
   sound?: string;
 };
 
@@ -85,7 +85,8 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   actions.prepend(bar);
 
   const resourceDescriptions: Record<Resource, string> = {
-    [Resource.GOLD]: 'Gold used for construction and recruitment.',
+    [Resource.SAUNA_BEER]:
+      'Sauna beer stocked for construction trades and eager recruits.',
     [Resource.SAUNAKUNNIA]:
       'Saunakunnia—prestige earned from sauna rituals and triumphant battles.'
   };
@@ -102,19 +103,19 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   });
   sisu.container.classList.add('badge-sisu');
   sisu.container.style.display = 'none';
-  const gold = createBadge('Gold', {
-    iconSrc: icons.gold,
-    description: resourceDescriptions[Resource.GOLD],
-    srLabel: 'Gold reserves'
+  const saunaBeer = createBadge('Sauna Beer', {
+    iconSrc: icons.saunaBeer,
+    description: resourceDescriptions[Resource.SAUNA_BEER],
+    srLabel: 'Sauna beer reserves'
   });
-  gold.container.classList.add('badge-gold');
+  saunaBeer.container.classList.add('badge-sauna-beer');
   const time = createBadge('Time');
   time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
 
   bar.appendChild(saunakunnia.container);
   bar.appendChild(sisu.container);
-  bar.appendChild(gold.container);
+  bar.appendChild(saunaBeer.container);
   bar.appendChild(time.container);
 
   const sisuBtn = document.createElement('button');
@@ -175,16 +176,16 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   const numberFormatter = new Intl.NumberFormat('en-US');
   const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
   const resourceNames: Record<Resource, string> = {
-    [Resource.GOLD]: 'Gold',
+    [Resource.SAUNA_BEER]: 'Sauna Beer',
     [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
   const deltaSuffix: Record<Resource, string> = {
-    [Resource.GOLD]: '🪙',
+    [Resource.SAUNA_BEER]: '🍺',
     [Resource.SAUNAKUNNIA]: '⚜️'
   };
 
   const resourceBadges: Record<Resource, Badge> = {
-    [Resource.GOLD]: gold,
+    [Resource.SAUNA_BEER]: saunaBeer,
     [Resource.SAUNAKUNNIA]: saunakunnia
   };
 
@@ -192,7 +193,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
 
   function formatValue(resource: Resource, total: number): string {
     const safeTotal = Number.isFinite(total) ? total : 0;
-    if (resource === Resource.GOLD) {
+    if (resource === Resource.SAUNA_BEER) {
       return numberFormatter.format(Math.max(0, Math.floor(safeTotal)));
     }
     return numberFormatter.format(Math.max(0, Math.round(safeTotal)));
@@ -250,7 +251,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     badge.container.setAttribute('aria-label', labelParts.join(' — '));
   }
 
-  updateResourceBadge(Resource.GOLD, state.getResource(Resource.GOLD));
+  updateResourceBadge(Resource.SAUNA_BEER, state.getResource(Resource.SAUNA_BEER));
   updateResourceBadge(
     Resource.SAUNAKUNNIA,
     state.getResource(Resource.SAUNAKUNNIA)
