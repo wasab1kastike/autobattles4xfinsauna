@@ -6,7 +6,7 @@ export const AVANTO_MARAUDER_STATS: UnitStats = {
   health: 12,
   attackDamage: 4,
   attackRange: 1,
-  movementRange: 2,
+  movementRange: 1,
   visionRange: 3
 };
 
