@@ -13,7 +13,7 @@ export const ARCHER_COST = 75;
 
 export class Archer extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, coord, faction, { ...ARCHER_STATS });
+    super(id, 'archer', coord, faction, { ...ARCHER_STATS });
   }
 }
 

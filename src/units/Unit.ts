@@ -42,6 +42,7 @@ export class Unit {
 
   constructor(
     public readonly id: string,
+    public readonly type: string,
     public coord: AxialCoord,
     public readonly faction: string,
     public readonly stats: UnitStats,
