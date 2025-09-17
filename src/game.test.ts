@@ -40,17 +40,33 @@ describe('game logging', () => {
     expect(eventLog.firstChild?.textContent).toBe('msg 51');
   });
 
-  it('updates sauna beer HUD without logging resource changes', async () => {
+  it('tracks the active Saunoja roster as units rally and fall', async () => {
     const { eventBus } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
 
-    eventBus.emit('resourceChanged', { resource: 'sauna-beer', total: 42, amount: 5 });
+    const rosterValue = () =>
+      document.querySelector<HTMLSpanElement>('.sauna-roster__value')?.textContent ?? '';
+
+    expect(rosterValue()).toBe('1');
+
+    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
+    expect(rosterValue()).toBe('2');
 
-    const resourceValue = document.querySelector<HTMLSpanElement>('.resource-value');
-    expect(resourceValue?.textContent).toBe('42');
+    const foe = new Unit('steam-foe', { q: 1, r: 0 }, 'enemy', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: foe });
+    await flushLogs();
+    expect(rosterValue()).toBe('2');
 
-    const eventLog = document.getElementById('event-log')!;
-    expect(eventLog.childElementCount).toBe(0);
+    eventBus.emit('unitDied', {
+      unitId: ally.id,
+      unitFaction: 'player',
+      attackerFaction: 'enemy'
+    });
+    await flushLogs();
+    expect(rosterValue()).toBe('1');
   });
 
   it('records spawn and casualty events with sauna flavor', async () => {
