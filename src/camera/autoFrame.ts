@@ -18,6 +18,11 @@ export function markRevealed(coord: AxialCoord, hexSize: number): void {
 export interface ViewportSize {
   width: number;
   height: number;
+  /**
+   * Portion of the viewport width that is obscured by HUD overlays on the
+   * right-hand side (for example the command console panel).
+   */
+  safeRight?: number;
 }
 
 export interface CameraFrame {
@@ -55,10 +60,16 @@ export function autoFrame(viewport: ViewportSize): CameraFrame {
   const height = maxY - minY;
   const padding = 96;
   const center = { x: minX + width / 2, y: minY + height / 2 };
-  const zoomX = viewport.width / (width + padding * 2);
+  const safeRight = Math.max(0, Math.min(viewport.safeRight ?? 0, viewport.width));
+  const effectiveWidth = Math.max(viewport.width - safeRight, 1);
+  const zoomX = effectiveWidth / (width + padding * 2);
   const zoomY = viewport.height / (height + padding * 2);
   const zoom = Math.min(zoomX, zoomY);
-  return { center, zoom };
+  const adjustedCenterX = zoom > 0 ? center.x - safeRight / (2 * zoom) : center.x;
+  return {
+    center: { x: adjustedCenterX, y: center.y },
+    zoom,
+  };
 }
 
 export interface CameraState {

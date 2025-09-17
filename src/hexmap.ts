@@ -95,8 +95,33 @@ export class HexMap {
     }
 
     const viewport = typeof window !== 'undefined'
-      ? { width: window.innerWidth, height: window.innerHeight }
-      : { width: 0, height: 0 };
+      ? (() => {
+          const width = Math.max(window.innerWidth, 0);
+          const height = Math.max(window.innerHeight, 0);
+          let occlusion = 0;
+          if (typeof document !== 'undefined') {
+            const rightPanel = document.getElementById('right-panel');
+            if (rightPanel) {
+              const panelRect = rightPanel.getBoundingClientRect();
+              if (panelRect.width > 0) {
+                const overlay = rightPanel.closest<HTMLElement>('#ui-overlay');
+                if (overlay) {
+                  const overlayRect = overlay.getBoundingClientRect();
+                  const overlayStyles = window.getComputedStyle(overlay);
+                  const paddingRight = Number.parseFloat(overlayStyles.paddingRight || '0');
+                  const occlusionFromRects = overlayRect.right - panelRect.left;
+                  const occlusionWithPadding = panelRect.width + (Number.isFinite(paddingRight) ? paddingRight : 0);
+                  occlusion = Math.max(0, Math.max(occlusionFromRects, occlusionWithPadding));
+                } else {
+                  occlusion = Math.max(0, panelRect.width);
+                }
+              }
+            }
+          }
+          const safeRight = Math.min(Math.max(occlusion, 0), width);
+          return { width, height, safeRight };
+        })()
+      : { width: 0, height: 0, safeRight: 0 };
     const frame = autoFrame(viewport);
     tweenCamera(frame, 300);
   }
