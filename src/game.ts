@@ -48,6 +48,9 @@ let canvas: HTMLCanvasElement | null = null;
 let rosterBar: HTMLElement;
 let rosterValue: HTMLSpanElement | null = null;
 let saunojas: Saunoja[] = [];
+const unitToSaunoja = new Map<string, Saunoja>();
+const saunojaToUnit = new Map<string, string>();
+let selected: AxialCoord | null = null;
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
 
@@ -209,6 +212,79 @@ const units: Unit[] = [];
 
 type UnitSpawnedPayload = { unit: Unit };
 
+function detachSaunoja(unitId: string): void {
+  const saunoja = unitToSaunoja.get(unitId);
+  if (!saunoja) {
+    return;
+  }
+  unitToSaunoja.delete(unitId);
+  if (saunojaToUnit.get(saunoja.id) === unitId) {
+    saunojaToUnit.delete(saunoja.id);
+  }
+}
+
+function claimSaunoja(unit: Unit): { saunoja: Saunoja; created: boolean } {
+  const existing = unitToSaunoja.get(unit.id);
+  if (existing) {
+    return { saunoja: existing, created: false };
+  }
+
+  let match = saunojas.find((candidate) => candidate.id === unit.id);
+  if (!match) {
+    match = saunojas.find((candidate) => !saunojaToUnit.has(candidate.id));
+  }
+
+  let created = false;
+  if (!match) {
+    match = makeSaunoja({
+      id: `saunoja-${saunojas.length + 1}`,
+      coord: { q: unit.coord.q, r: unit.coord.r }
+    });
+    saunojas.push(match);
+    created = true;
+  }
+
+  const previousUnitId = saunojaToUnit.get(match.id);
+  if (previousUnitId && previousUnitId !== unit.id) {
+    unitToSaunoja.delete(previousUnitId);
+  }
+
+  unitToSaunoja.set(unit.id, match);
+  saunojaToUnit.set(match.id, unit.id);
+
+  return { saunoja: match, created };
+}
+
+function syncSaunojaRosterWithUnits(): boolean {
+  let changed = false;
+
+  for (const unit of units) {
+    if (unit.faction !== 'player' || unit.isDead()) {
+      continue;
+    }
+
+    const { saunoja, created } = claimSaunoja(unit);
+    if (created) {
+      changed = true;
+    }
+
+    const { q, r } = unit.coord;
+    if (saunoja.coord.q !== q || saunoja.coord.r !== r) {
+      saunoja.coord = { q, r };
+      changed = true;
+      if (saunoja.selected) {
+        setSelectedCoord(saunoja.coord);
+      }
+    }
+  }
+
+  if (changed) {
+    saveUnits();
+  }
+
+  return changed;
+}
+
 function describeUnit(unit: Unit): string {
   const ctorName = unit.constructor?.name ?? 'Unit';
   const spacedName = ctorName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
@@ -220,6 +296,9 @@ function registerUnit(unit: Unit): void {
     return;
   }
   units.push(unit);
+  if (unit.faction === 'player') {
+    syncSaunojaRosterWithUnits();
+  }
   if (canvas) {
     draw();
   }
@@ -242,6 +321,7 @@ const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
   battleManager.tick(units);
+  syncSaunojaRosterWithUnits();
   state.save();
   // Reveal around all friendly units each tick
   for (const unit of units) {
@@ -324,7 +404,6 @@ log(
   `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`
 );
 
-let selected: AxialCoord | null = null;
 const storedSelection = saunojas.find((unit) => unit.selected);
 if (storedSelection) {
   selected = { q: storedSelection.coord.q, r: storedSelection.coord.r };
@@ -439,6 +518,7 @@ const onUnitDied = ({
   const fallen = idx !== -1 ? units[idx] : null;
   if (idx !== -1) {
     units.splice(idx, 1);
+    detachSaunoja(unitId);
     draw();
   }
   if (unitFaction === 'player') {
@@ -496,6 +576,10 @@ export async function start(): Promise<void> {
 }
 
 export { log };
+
+export function __syncSaunojaRosterForTest(): boolean {
+  return syncSaunojaRosterWithUnits();
+}
 
 function getActiveRosterCount(): number {
   const seen = new Set<string>();
