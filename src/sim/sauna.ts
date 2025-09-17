@@ -2,15 +2,14 @@ import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { GameState } from '../core/GameState.ts';
 import type { Unit } from '../units/Unit.ts';
 import { spawnUnit } from '../units/UnitFactory.ts';
-import { SOLDIER_COST } from '../units/Soldier.ts';
-
-let saunaSpawnCounter = 0;
 
 export function pickFreeTileAround(
   origin: AxialCoord,
-  radius: number,
-  units: Unit[]
+  radiusOrUnits: number | Unit[],
+  maybeUnits?: Unit[]
 ): AxialCoord | null {
+  const radius = typeof radiusOrUnits === 'number' ? radiusOrUnits : 2;
+  const units = (typeof radiusOrUnits === 'number' ? maybeUnits : radiusOrUnits) ?? [];
   const candidates: AxialCoord[] = [];
   for (let dq = -radius; dq <= radius; dq++) {
     const rMin = Math.max(-radius, -dq - radius);
@@ -73,44 +72,32 @@ export function createSauna(pos: AxialCoord): Sauna {
       units: Unit[],
       addUnit: (u: Unit) => void
     ): void {
-      this.heat += this.heatPerTick * dt;
-      this.playerSpawnCooldown =
-        this.playerSpawnThreshold / this.heatPerTick;
-
-      if (this.heat < this.playerSpawnThreshold) {
-        this.playerSpawnTimer = Math.max(
-          (this.playerSpawnThreshold - this.heat) / this.heatPerTick,
-          0
-        );
+      if (dt <= 0) {
         return;
       }
 
-      const searchRadius = Math.max(1, Math.round(this.auraRadius));
+      this.heat += this.heatPerTick * dt;
+
+      const spawnRadius = Math.max(1, Math.round(this.auraRadius));
       while (this.heat >= this.playerSpawnThreshold) {
-        const spawnCoord = pickFreeTileAround(this.pos, searchRadius, units);
-        if (!spawnCoord) {
-          this.playerSpawnTimer = 0;
+        const coord =
+          pickFreeTileAround(this.pos, spawnRadius, units) ??
+          pickFreeTileAround(this.pos, units);
+        if (!coord) {
           break;
         }
 
-        if (!state.canAfford(SOLDIER_COST)) {
-          break;
-        }
-
-        const previousThreshold = this.playerSpawnThreshold;
-        const id = `sauna-soldier-${++saunaSpawnCounter}`;
-        const unit = spawnUnit(state, 'soldier', id, spawnCoord, 'player');
+        const unit = spawnUnit(state, 'soldier', `p${Date.now()}`, coord, 'player');
         if (!unit) {
           break;
         }
 
         addUnit(unit);
-        this.heat = Math.max(0, this.heat - previousThreshold);
-        this.playerSpawnThreshold = previousThreshold * 1.05;
-        this.playerSpawnCooldown =
-          this.playerSpawnThreshold / this.heatPerTick;
+        this.heat -= this.playerSpawnThreshold;
+        this.playerSpawnThreshold *= 1.05;
       }
 
+      this.playerSpawnCooldown = this.playerSpawnThreshold / this.heatPerTick;
       this.playerSpawnTimer = Math.max(
         (this.playerSpawnThreshold - this.heat) / this.heatPerTick,
         0

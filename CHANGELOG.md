@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Cap battlefield marauders at thirty concurrent enemies, route their arrivals
+  through a dedicated edge spawner, and let sauna heat summon only allied troops
+  with escalating thresholds so reinforcements stay balanced and readable
 - Attach sprite identifiers to every unit instance and thread them through
   factories so the renderer can resolve polished SVG art without fallbacks
 - Introduce SISU as a persistent resource, award it for battlefield victories, and
