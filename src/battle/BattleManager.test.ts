@@ -53,7 +53,7 @@ describe('BattleManager', () => {
     eventBus.on('unitDamaged', onDamage);
     eventBus.on('unitDied', onDeath);
 
-    manager.tick(units);
+    manager.tick(units, 5);
 
     eventBus.off('unitDamaged', onDamage);
     eventBus.off('unitDied', onDeath);
@@ -104,7 +104,7 @@ describe('BattleManager', () => {
     const manager = new BattleManager(map);
     const units = [attacker, defenderB, defenderC];
 
-    manager.tick(units);
+    manager.tick(units, 5);
 
     expect(defenderB.stats.health).toBe(0);
     expect(defenderC.stats.health).toBe(5);
@@ -127,10 +127,38 @@ describe('BattleManager', () => {
     });
 
     const manager = new BattleManager(map);
-    manager.tick([unit]);
+    manager.tick([unit], 5);
 
     expect(unit.coord).toEqual({ q: 1, r: 0 });
     expect((unit as any).cachedPath).toBeUndefined();
+  });
+
+  it('waits until five seconds accrue before allowing exploration movement', () => {
+    const map = new HexMap(5, 5);
+    const origin = map.ensureTile(0, 0);
+    origin.reveal();
+    origin.terrain = TerrainId.Plains;
+    const east = map.ensureTile(1, 0);
+    east.setFogged(true);
+    east.terrain = TerrainId.Plains;
+
+    const unit = createUnit('patient-scout', { q: 0, r: 0 }, 'A', {
+      health: 10,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 1
+    });
+
+    const manager = new BattleManager(map);
+
+    manager.tick([unit], 2);
+    expect(unit.coord).toEqual({ q: 0, r: 0 });
+
+    manager.tick([unit], 2);
+    expect(unit.coord).toEqual({ q: 0, r: 0 });
+
+    manager.tick([unit], 1);
+    expect(unit.coord).toEqual({ q: 1, r: 0 });
   });
 
   it('keeps idle units stationary when no reachable fog remains', () => {
@@ -153,7 +181,7 @@ describe('BattleManager', () => {
     });
 
     const manager = new BattleManager(map);
-    manager.tick([unit]);
+    manager.tick([unit], 5);
 
     expect(unit.coord).toEqual({ q: 0, r: 0 });
     expect((unit as any).cachedPath).toBeUndefined();
