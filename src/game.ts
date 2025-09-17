@@ -30,9 +30,14 @@ import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
-  gold: `${PUBLIC_ASSET_BASE}assets/ui/gold.svg`,
+  saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
+};
+
+const RESOURCE_LABELS: Record<Resource, string> = {
+  [Resource.SAUNA_BEER]: 'Sauna Beer',
+  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
 };
 
 const INITIAL_SAUNAKUNNIA = 3;
@@ -151,12 +156,12 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
 
   const icon = document.createElement('img');
   icon.src = uiIcons.resource;
-  icon.alt = 'Resources';
+  icon.alt = `${RESOURCE_LABELS[Resource.SAUNA_BEER]} reserves`;
   icon.decoding = 'async';
   icon.classList.add('resource-icon');
 
   const labelSpan = document.createElement('span');
-  labelSpan.textContent = 'Resources';
+  labelSpan.textContent = `${RESOURCE_LABELS[Resource.SAUNA_BEER]} Cellar`;
   labelSpan.classList.add('resource-label');
 
   resourceValue = document.createElement('span');
@@ -164,7 +169,7 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   resourceValue.classList.add('resource-value');
 
   resourceBar.append(icon, labelSpan, resourceValue);
-  updateResourceDisplay(state.getResource(Resource.GOLD));
+  updateResourceDisplay(state.getResource(Resource.SAUNA_BEER));
 }
 
 export const assetPaths: AssetPaths = {
@@ -178,7 +183,7 @@ export const assetPaths: AssetPaths = {
     'unit-soldier': soldier,
     'unit-archer': archer,
     'unit-raider': raider,
-    'icon-gold': uiIcons.gold,
+    'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-resource': uiIcons.resource,
     'icon-sound': uiIcons.sound
   }
@@ -288,7 +293,7 @@ const updateSaunaUI = setupSaunaUI(sauna);
 const updateTopbar = setupTopbar(state, {
   saunakunnia: uiIcons.resource,
   sisu: uiIcons.resource,
-  gold: uiIcons.gold,
+  saunaBeer: uiIcons.saunaBeer,
   sound: uiIcons.sound
 });
 const { log, addEvent } = setupRightPanel(state);
@@ -340,7 +345,7 @@ function handleSaunaAura(deltaMs: number): void {
   state.addResource(Resource.SAUNAKUNNIA, honorGain);
 }
 
-state.addResource(Resource.GOLD, 200);
+state.addResource(Resource.SAUNA_BEER, 200);
 state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
 
 let selected: AxialCoord | null = null;
@@ -442,14 +447,14 @@ export function draw(): void {
 
 const onResourceChanged = ({ resource, total }) => {
   const typedResource = resource as Resource;
-  if (typedResource === Resource.GOLD) {
+  if (typedResource === Resource.SAUNA_BEER) {
     updateResourceDisplay(total);
   }
 };
 eventBus.on('resourceChanged', onResourceChanged);
 
 const onPolicyApplied = ({ policy }) => {
-  log(`Sauna council enacts policy: ${policy}.`);
+  log(`Sauna council toasts a fresh keg for policy: ${policy}.`);
 };
 eventBus.on('policyApplied', onPolicyApplied);
 
@@ -492,7 +497,7 @@ export async function start(): Promise<void> {
     console.error('Cannot start game without loaded assets.');
     return;
   }
-  updateResourceDisplay(state.getResource(Resource.GOLD));
+  updateResourceDisplay(state.getResource(Resource.SAUNA_BEER));
   draw();
   try {
     await preloadSaunojaIcon(() => {
@@ -527,6 +532,6 @@ function updateResourceDisplay(total: number): void {
   if (resourceValue) {
     resourceValue.textContent = formatted;
   } else if (resourceBar) {
-    resourceBar.textContent = `Resources: ${formatted}`;
+    resourceBar.textContent = `${RESOURCE_LABELS[Resource.SAUNA_BEER]}: ${formatted}`;
   }
 }
