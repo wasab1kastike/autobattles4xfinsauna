@@ -103,7 +103,7 @@ export function setupRightPanel(state: GameState): {
 
   const resourceLabel: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: 'Sauna Beer Bottles',
-    [Resource.SAUNAKUNNIA]: 'Saunakunnia Honors'
+    [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
 
   const policyDefs: PolicyDef[] = [
