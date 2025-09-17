@@ -196,8 +196,12 @@ export function drawSaunaOverlay(
   ctx.stroke();
   ctx.restore();
 
-  const cooldown = sauna.spawnCooldown > 0 ? sauna.spawnCooldown : 1;
-  const remainingRatio = Math.min(1, Math.max(0, sauna.timer / cooldown));
+  const cooldown =
+    sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
+  const remainingRatio = Math.min(
+    1,
+    Math.max(0, sauna.playerSpawnTimer / cooldown)
+  );
   const progress = 1 - remainingRatio;
   const startAngle = -Math.PI / 2;
   const endAngle = startAngle + Math.PI * 2 * progress;
@@ -223,7 +227,7 @@ export function drawSaunaOverlay(
     ctx.restore();
   }
 
-  const secondsRemaining = Math.max(0, sauna.timer);
+  const secondsRemaining = Math.max(0, sauna.playerSpawnTimer);
   const countdown = Math.ceil(secondsRemaining);
 
   ctx.save();
