@@ -46,7 +46,8 @@ export function createSauna(pos: AxialCoord): Sauna {
       if (targets.length > 0) {
         const coord = targets[Math.floor(Math.random() * targets.length)];
         const id = `avantoMarauder${units.length + 1}`;
-        const avantoMarauder = new AvantoMarauder(id, coord, 'enemy');
+        const faction: Unit['faction'] = 'enemy';
+        const avantoMarauder = new AvantoMarauder(id, coord, faction);
         addUnit(avantoMarauder);
       }
       this.timer = this.spawnCooldown;
