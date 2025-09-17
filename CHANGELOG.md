@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Regenerate the GitHub Pages bundle so Steam Diplomats boost sauna beer
+  generation instead of slipping passive Saunakunnia into the hosted build
 - Extend Saunoja attendants with trait, upkeep, and experience tracking while
   normalizing stored data and persisting the new fields across sessions
 - Replace the Saunoja roster badge with a dedicated warrior crest and preload
