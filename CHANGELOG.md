@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Persist the latest game state and Saunoja roster during cleanup before
+  detaching event hooks so storage restrictions cannot drop late-session
+  progress
 - Cap battlefield marauders at thirty concurrent enemies, route their arrivals
   through a dedicated edge spawner, and let sauna heat summon only allied troops
   with escalating thresholds so reinforcements stay balanced and readable
