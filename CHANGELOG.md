@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Guarantee the battlefield opens with a steadfast sauna guard by auto-spawning a
+  player soldier when no active attendants remain, preventing targetless combat
 - Channel sauna heat into rallying allied soldiers, surface player-facing spawn
   thresholds, and reuse the HUD countdown for the friendly reinforcements
 - Retitle the Saunakunnia badge and narration copy to drop the honor suffix while
