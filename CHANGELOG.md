@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Introduce randomized Saunoja trait rolls, daily beer upkeep drain, and a roster
+  card readout so attendants surface their quirks and maintenance costs at a glance
 - Let BattleManager nudge stalled units into adjacent free hexes when pathfinding
   cannot advance them yet keeps targets out of range
 - Sync fog-of-war reveals with each combat tick by updating player vision and
