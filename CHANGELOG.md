@@ -12,6 +12,8 @@
 - Cache the static hex terrain layer on an offscreen canvas, refreshing it only
   when tiles mutate so the renderer blits a polished base map each frame while
   drawing fog, highlights, and units as overlays
+- Chunk the cached terrain into 16-hex canvases, redrawing only newly revealed
+  sections before compositing them onto the polished base map each frame
 - Persist the latest game state and Saunoja roster during cleanup before
   detaching event hooks so storage restrictions cannot drop late-session
   progress
