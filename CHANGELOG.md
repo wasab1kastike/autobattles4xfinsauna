@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Retitle the Saunakunnia badge and narration copy to drop the honor suffix while
+  keeping accessibility labels polished and concise
 - Shorten the Saunakunnia policy cost label so the right panel references the
   prestige track without the redundant "Honors" suffix
 - Ship the Saunoja roster crest within `docs/assets/ui/` so the published site
