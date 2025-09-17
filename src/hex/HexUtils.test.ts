@@ -1,4 +1,11 @@
-import { axialToPixel, pixelToAxial, getNeighbors, getNeighbor, hexRound } from './HexUtils.ts';
+import {
+  axialToPixel,
+  pixelToAxial,
+  pixelToAxialUnrounded,
+  getNeighbors,
+  getNeighbor,
+  hexRound,
+} from './HexUtils.ts';
 import { describe, it, expect } from 'vitest';
 
 describe('HexUtils', () => {
@@ -8,6 +15,13 @@ describe('HexUtils', () => {
     const pixel = axialToPixel(coord, size);
     const back = pixelToAxial(pixel.x, pixel.y, size);
     expect(back).toEqual(coord);
+  });
+
+  it('returns fractional axial coordinates without rounding', () => {
+    const size = 10;
+    const coord = pixelToAxialUnrounded(18, 12, size);
+    expect(coord.q).toBeCloseTo(0.6392, 4);
+    expect(coord.r).toBeCloseTo(0.8, 4);
   });
 
   it('provides neighbor lookups', () => {
