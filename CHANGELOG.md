@@ -4,6 +4,9 @@
 - Elevate the right panel into a sauna command console with a dedicated roster
   tab that highlights attendant status, live health bars, polished trait
   summaries, and direct selection alongside the policies, events, and log panes
+- Let unattended ticks send idle scouts toward the nearest fogged hex, caching
+  partial paths yet clearing them once exploration goals are reached so units
+  keep uncovering the battlefield without drifting aimlessly
 - Generate flavorful Saunoja names when attendants join the roster so every HUD
   entry reads as a distinct warrior rather than a generic placeholder
 - March enemy spawns along the fog frontier so marauders emerge just beyond
