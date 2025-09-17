@@ -21,7 +21,7 @@ import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
-import { activateSisuPulse } from './sim/sisu.ts';
+import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu.ts';
 import { setupRightPanel, type GameEvent } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
@@ -36,6 +36,7 @@ const uiIcons = {
   saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
   saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
+  sisu: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
 
@@ -45,7 +46,8 @@ const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
-  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+  [Resource.SAUNAKUNNIA]: 'Saunakunnia',
+  [Resource.SISU]: 'Sisu'
 };
 
 let canvas: HTMLCanvasElement | null = null;
@@ -521,17 +523,42 @@ if (import.meta.env.DEV) {
   });
 }
 const updateSaunaUI = setupSaunaUI(sauna);
-const updateTopbar = setupTopbar(state, {
-  saunakunnia: uiIcons.resource,
-  sisu: uiIcons.resource,
-  saunaBeer: uiIcons.saunaBeer,
-  sound: uiIcons.sound
-});
+const updateTopbar = setupTopbar(
+  state,
+  {
+    saunakunnia: uiIcons.resource,
+    sisu: uiIcons.sisu,
+    saunaBeer: uiIcons.saunaBeer,
+    sound: uiIcons.sound
+  },
+  {
+    useSisuBurst: () => {
+      const used = useSisuBurst(state, units);
+      if (used) {
+        playSafe('sisu');
+        log(
+          `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
+        );
+      } else {
+        playSafe('error');
+      }
+      return used;
+    },
+    torille: () => {
+      const used = torille(state, units, sauna.pos, map);
+      if (used) {
+        log(`Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`);
+      } else {
+        playSafe('error');
+      }
+      return used;
+    }
+  }
+);
 const rightPanel = setupRightPanel(state);
 log = rightPanel.log;
 addEvent = rightPanel.addEvent;
-eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
-eventBus.on('sisuPulseStart', () => playSafe('sisu'));
+
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
@@ -665,6 +692,7 @@ const onUnitDied = ({
 }) => {
   const idx = units.findIndex((u) => u.id === unitId);
   const fallen = idx !== -1 ? units[idx] : null;
+  const fallenCoord = fallen ? { q: fallen.coord.q, r: fallen.coord.r } : null;
   if (idx !== -1) {
     units.splice(idx, 1);
     detachSaunoja(unitId);
@@ -679,6 +707,11 @@ const onUnitDied = ({
     unitFaction !== 'player'
   ) {
     state.addResource(Resource.SAUNAKUNNIA, SAUNAKUNNIA_VICTORY_BONUS);
+    state.addResource(Resource.SISU, 1);
+    log('Our grit surges — +1 SISU earned for the vanquished foe.');
+  }
+  if (fallenCoord) {
+    map.revealAround(fallenCoord, 1);
   }
   const side = unitFaction === 'player' ? 'our' : 'a rival';
   const label = fallen ? describeUnit(fallen) : `unit ${unitId}`;
