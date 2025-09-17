@@ -1,8 +1,10 @@
 # Changelog
 
 ## Unreleased
-- Spawn sauna raiders on the enemy faction so they leave the spa and challenge
-  the player's attendants
+- Rebrand the Raider unit into the Avanto Marauder with refreshed stats exports,
+  spawn identifiers, sauna simulation logs, and sprite mappings
+- Deploy Avanto Marauders from the enemy sauna so they leave the spa and
+  challenge the player's attendants
 - Hide inactive right-panel sections by honoring the `[hidden]` attribute so
   tab switches only render the active pane
 - Polish sauna beer HUD terminology with bottle provisioning logs, refined badge
