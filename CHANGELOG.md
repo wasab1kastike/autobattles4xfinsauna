@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Shorten the Saunakunnia policy cost label so the right panel references the
+  prestige track without the redundant "Honors" suffix
 - Ship the Saunoja roster crest within `docs/assets/ui/` so the published site
   serves the polished icon bundle without 404 regressions
 - Detect restored save files before granting starting resource windfalls so reloads resume progress without duplicate rewards
