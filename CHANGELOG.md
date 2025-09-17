@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Regenerate the production asset mirrors with the sauna beer build so hashed
+  bundles, HUD styling, and SVG art reference the updated resource palette
 - Ensure sauna-spawned Avanto Marauders join the enemy faction so they march on
   player attendants without hesitation
 - Rebrand the Raider unit into the Avanto Marauder with refreshed stats exports,

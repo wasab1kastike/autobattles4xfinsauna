@@ -1,32 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="archer-bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#264537" />
-      <stop offset="1" stop-color="#15231a" />
-    </linearGradient>
-    <linearGradient id="archer-cloak" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6ecf7e" />
-      <stop offset="1" stop-color="#2c8b5b" />
-    </linearGradient>
-    <linearGradient id="archer-bow" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f6d08b" />
-      <stop offset="1" stop-color="#a3631c" />
-    </linearGradient>
-  </defs>
-  <circle cx="64" cy="64" r="60" fill="url(#archer-bg)" stroke="#0b1510" stroke-width="4" />
-  <path d="M44 96c-4-24 8-52 20-64 12 12 20 40 16 64" fill="url(#archer-cloak)" stroke="#0f3a23" stroke-width="4" stroke-linejoin="round" />
-  <path d="M58 90c0-12 6-24 12-34 6 10 10 22 10 34" fill="#1f4c31" opacity="0.7" />
-  <path d="M80 94c-10-18-20-28-34-32" fill="none" stroke="#d6f6e0" stroke-width="5" stroke-linecap="round" opacity="0.6" />
-  <path d="M84 42c-18 10-32 24-40 44" fill="none" stroke="url(#archer-bow)" stroke-width="8" stroke-linecap="round" />
-  <path d="M84 42c6 10 10 24 10 38" fill="none" stroke="#f9e8c6" stroke-width="4" stroke-linecap="round" opacity="0.8" />
-  <path d="M48 68l30-4" stroke="#e3f7f0" stroke-width="4" stroke-linecap="round" />
-  <path d="M78 60l10-4-4 10z" fill="#f4e4c4" />
-  <g fill="#f8f0dc" stroke="#233a2c" stroke-width="4" stroke-linejoin="round">
-    <path d="M60 52c-2-6 0-12 4-16s10-6 16-2c6 4 8 12 6 18-4-8-12-10-18-4z" />
-    <path d="M52 88c6 6 16 10 24 8l-4 12H58z" />
-  </g>
-  <g stroke="#4b7b5a" stroke-width="5" stroke-linecap="round">
-    <path d="M70 80l12 10" />
-    <path d="M58 74l-8 12" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#556b2f" />
+  <line x1="16" y1="16" x2="48" y2="48" stroke="#fff" stroke-width="4" />
+  <polygon points="48,48 44,36 36,44" fill="#fff" />
 </svg>

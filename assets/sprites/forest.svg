@@ -1,31 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="forest-base" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3c5d2b" />
-      <stop offset="1" stop-color="#1f3c23" />
-    </linearGradient>
-    <radialGradient id="forest-canopy" cx="64" cy="52" r="52" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#63c26c" />
-      <stop offset="0.6" stop-color="#2e8b57" />
-      <stop offset="1" stop-color="#1e5234" />
-    </radialGradient>
-  </defs>
-  <path d="M64 10 118 64 64 118 10 64z" fill="url(#forest-base)" stroke="#0d2a15" stroke-width="4" stroke-linejoin="round" />
-  <path d="M64 24 102 64 64 104 26 64z" fill="#2a4b25" opacity="0.7" />
-  <g fill="url(#forest-canopy)" stroke="#13311e" stroke-width="5" stroke-linejoin="round">
-    <path d="M40 94c0-24 10-46 24-60 14 14 24 36 24 60" />
-    <path d="M28 86c2-18 12-36 26-48 14 12 24 30 26 48" opacity="0.75" />
-  </g>
-  <g fill="#7fd38c" stroke="#163822" stroke-width="4" stroke-linecap="round">
-    <path d="M48 70c-6-8-10-20 0-28 14-12 34-2 32 16" />
-    <path d="M80 76c8-10 8-26-6-32-16-6-26 6-24 18" />
-  </g>
-  <g stroke="#0f2415" stroke-width="4" stroke-linecap="round">
-    <path d="M58 104v-28" />
-    <path d="M70 104v-32" />
-  </g>
-  <g fill="#b9824f" stroke="#4a2a16" stroke-width="3" stroke-linejoin="round">
-    <path d="M58 92h12v12H58z" />
-    <path d="M52 98h24v10H52z" opacity="0.5" />
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#216e24" />
+  <rect x="29" y="34" width="6" height="20" fill="#8b4513" />
+  <circle cx="32" cy="24" r="16" fill="#2e8b57" />
 </svg>
