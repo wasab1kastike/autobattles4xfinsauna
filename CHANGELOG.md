@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Polish sauna beer HUD terminology with bottle provisioning logs, refined badge
+  narration, and updated policy copy
 - Rebuild the HUD roster widget with a Saunoja battalion counter, live unit
   lifecycle updates, refreshed sauna styling, and updated tests
 - Rebrand the HUD gold economy into sauna beer with new resource enums,
