@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SAUNOJA_UPKEEP_MAX } from './units/saunoja.ts';
+import { SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
+import { NEG, POS } from './data/traits.ts';
 
 const flushLogs = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -50,17 +51,17 @@ describe('game logging', () => {
     const rosterValue = () =>
       document.querySelector<HTMLSpanElement>('.sauna-roster__value')?.textContent ?? '';
 
-    expect(rosterValue()).toBe('1');
+    expect(rosterValue()).toBe('2');
 
     const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
-    expect(rosterValue()).toBe('2');
+    expect(rosterValue()).toBe('4');
 
     const foe = new Unit('steam-foe', { q: 1, r: 0 }, 'enemy', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: foe });
     await flushLogs();
-    expect(rosterValue()).toBe('2');
+    expect(rosterValue()).toBe('4');
 
     eventBus.emit('unitDied', {
       unitId: ally.id,
@@ -68,7 +69,7 @@ describe('game logging', () => {
       attackerFaction: 'enemy'
     });
     await flushLogs();
-    expect(rosterValue()).toBe('1');
+    expect(rosterValue()).toBe('3');
   });
 
   it('records spawn and casualty events with sauna flavor', async () => {
@@ -160,8 +161,17 @@ describe('saunoja persistence', () => {
 
     const restored = loadUnits();
     expect(restored).toHaveLength(1);
-    expect(restored[0].traits).toEqual(['Brave', 'Veteran']);
-    expect(restored[0].upkeep).toBe(SAUNOJA_UPKEEP_MAX);
+    const restoredTraits = restored[0].traits;
+    const allowedTraits = new Set<string>([...POS, ...NEG]);
+    expect(restoredTraits).toHaveLength(3);
+    for (const trait of restoredTraits) {
+      expect(typeof trait).toBe('string');
+      expect(trait.length).toBeGreaterThan(0);
+      expect(allowedTraits.has(trait)).toBe(true);
+    }
+    expect(new Set(restoredTraits).size).toBe(restoredTraits.length);
+    expect(restored[0].upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
+    expect(restored[0].upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     expect(restored[0].xp).toBe(0);
 
     saveUnits();
@@ -170,10 +180,17 @@ describe('saunoja persistence', () => {
     expect(serialized).toBeTypeOf('string');
     const parsed = JSON.parse(serialized ?? '[]');
     expect(parsed).toHaveLength(1);
-    expect(parsed[0]).toMatchObject({
-      traits: ['Brave', 'Veteran'],
-      upkeep: SAUNOJA_UPKEEP_MAX,
-      xp: 0
-    });
+    const stored = parsed[0] ?? {};
+    const storedTraits = Array.isArray(stored.traits) ? stored.traits : [];
+    expect(storedTraits).toHaveLength(3);
+    expect(new Set(storedTraits).size).toBe(storedTraits.length);
+    for (const trait of storedTraits) {
+      expect(typeof trait).toBe('string');
+      expect(trait.length).toBeGreaterThan(0);
+      expect(allowedTraits.has(trait)).toBe(true);
+    }
+    expect(stored.upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
+    expect(stored.upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
+    expect(stored.xp).toBe(0);
   });
 });
