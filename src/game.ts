@@ -16,6 +16,7 @@ import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna } from './sim/sauna.ts';
+import { EnemySpawner } from './sim/EnemySpawner.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
@@ -226,6 +227,45 @@ resetAutoFrame();
 
 const units: Unit[] = [];
 
+function pickRandomEdgeFreeTile(currentUnits: Unit[]): AxialCoord | null {
+  const occupied = new Set<string>();
+  for (const unit of currentUnits) {
+    if (!unit.isDead()) {
+      occupied.add(`${unit.coord.q},${unit.coord.r}`);
+    }
+  }
+
+  const candidates: AxialCoord[] = [];
+  const seen = new Set<string>();
+  const pushIfFree = (q: number, r: number) => {
+    const key = `${q},${r}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    if (!occupied.has(key)) {
+      candidates.push({ q, r });
+    }
+  };
+
+  for (let q = map.minQ; q <= map.maxQ; q++) {
+    pushIfFree(q, map.minR);
+    pushIfFree(q, map.maxR);
+  }
+
+  for (let r = map.minR; r <= map.maxR; r++) {
+    pushIfFree(map.minQ, r);
+    pushIfFree(map.maxQ, r);
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index];
+}
+
 type UnitSpawnedPayload = { unit: Unit };
 
 function detachSaunoja(unitId: string): void {
@@ -351,6 +391,7 @@ const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
 });
+const enemySpawner = new EnemySpawner(pickRandomEdgeFreeTile);
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
@@ -583,6 +624,9 @@ export async function start(): Promise<void> {
     last = now;
     clock.tick(delta);
     sauna.update(delta / 1000, state, units, (u) => {
+      registerUnit(u);
+    });
+    enemySpawner.update(delta / 1000, units, (u) => {
       registerUnit(u);
     });
     updateSaunaUI();
