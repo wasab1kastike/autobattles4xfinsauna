@@ -1,5 +1,5 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
-import { axialToPixel } from '../hex/HexUtils.ts';
+import { axialToPixel, pixelToAxialUnrounded } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { HexPatternOptions } from '../map/hexPatterns.ts';
@@ -8,6 +8,7 @@ import type { LoadedAssets } from '../loader.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { TERRAIN } from './TerrainPalette.ts';
 import { loadIcon } from './loadIcon.ts';
+import { camera, type CameraState } from '../camera/autoFrame.ts';
 
 const DEFAULT_HIGHLIGHT = 'rgba(56, 189, 248, 0.85)';
 const DEFAULT_HIGHLIGHT_GLOW = 'rgba(56, 189, 248, 0.45)';
@@ -21,6 +22,106 @@ const TERRAIN_PATTERNS: Record<TerrainId, (options: HexPatternOptions) => void> 
   [TerrainId.Hills]: drawHills,
   [TerrainId.Lake]: drawWater,
 };
+
+interface WorldRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface AxialBounds {
+  qMin: number;
+  qMax: number;
+  rMin: number;
+  rMax: number;
+}
+
+const VIEWPORT_MARGIN = 2;
+
+function getDevicePixelRatio(): number {
+  return typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+}
+
+function getWorldViewportRect(cam: CameraState, canvas: HTMLCanvasElement): WorldRect {
+  const dpr = getDevicePixelRatio();
+  const width = canvas.width / (dpr * cam.zoom);
+  const height = canvas.height / (dpr * cam.zoom);
+  return {
+    x: cam.x - width / 2,
+    y: cam.y - height / 2,
+    width,
+    height,
+  };
+}
+
+function computeAxialBounds(rect: WorldRect, hexSize: number): AxialBounds {
+  const corners = [
+    pixelToAxialUnrounded(rect.x, rect.y, hexSize),
+    pixelToAxialUnrounded(rect.x + rect.width, rect.y, hexSize),
+    pixelToAxialUnrounded(rect.x, rect.y + rect.height, hexSize),
+    pixelToAxialUnrounded(rect.x + rect.width, rect.y + rect.height, hexSize),
+  ];
+
+  let qMin = Infinity;
+  let qMax = -Infinity;
+  let rMin = Infinity;
+  let rMax = -Infinity;
+
+  for (const corner of corners) {
+    qMin = Math.min(qMin, corner.q);
+    qMax = Math.max(qMax, corner.q);
+    rMin = Math.min(rMin, corner.r);
+    rMax = Math.max(rMax, corner.r);
+  }
+
+  return {
+    qMin: Math.floor(qMin) - VIEWPORT_MARGIN,
+    qMax: Math.ceil(qMax) + VIEWPORT_MARGIN,
+    rMin: Math.floor(rMin) - VIEWPORT_MARGIN,
+    rMax: Math.ceil(rMax) + VIEWPORT_MARGIN,
+  };
+}
+
+function clampBoundsToMap(bounds: AxialBounds, map: HexMap): AxialBounds | null {
+  const qMin = Math.max(bounds.qMin, map.minQ);
+  const qMax = Math.min(bounds.qMax, map.maxQ);
+  const rMin = Math.max(bounds.rMin, map.minR);
+  const rMax = Math.min(bounds.rMax, map.maxR);
+  if (qMin > qMax || rMin > rMax) {
+    return null;
+  }
+  return { qMin, qMax, rMin, rMax };
+}
+
+function resolveVisibleBounds(
+  ctx: CanvasRenderingContext2D,
+  map: HexMap,
+  hexSize: number
+): AxialBounds | null {
+  const canvasElement = (ctx.canvas ?? null) as HTMLCanvasElement | null;
+  if (!canvasElement || typeof canvasElement.width !== 'number' || typeof canvasElement.height !== 'number') {
+    return {
+      qMin: map.minQ,
+      qMax: map.maxQ,
+      rMin: map.minR,
+      rMax: map.maxR,
+    };
+  }
+  if (canvasElement.width === 0 || canvasElement.height === 0) {
+    return {
+      qMin: map.minQ,
+      qMax: map.maxQ,
+      rMin: map.minR,
+      rMax: map.maxR,
+    };
+  }
+
+  return clampBoundsToMap(
+    computeAxialBounds(getWorldViewportRect(camera, canvasElement), hexSize),
+    map
+  );
+}
 
 function getHighlightTokens(): { stroke: string; glow: string } {
   if (highlightStroke && highlightGlow) {
@@ -158,13 +259,17 @@ export class HexMapRenderer {
     if (this.cachedCanvasElement && this.cachedHexSize !== this.hexSize) {
       this.invalidateCache();
     }
+    const origin = this.getOrigin();
+    const bounds = resolveVisibleBounds(ctx, this.mapRef, this.hexSize);
+
     if (!this.cachedCanvasElement) {
-      this.drawFullMap(ctx, images, selected);
+      this.drawVisibleTiles(ctx, images, origin, bounds, selected);
       return;
     }
 
-    const origin = this.getOrigin();
-    this.drawFogLayer(ctx, origin);
+    if (bounds) {
+      this.drawFogLayer(ctx, origin, bounds);
+    }
     if (selected) {
       const { x, y } = axialToPixel(selected, this.hexSize);
       this.strokeHex(
@@ -189,26 +294,43 @@ export class HexMapRenderer {
     this.draw(ctx, images, selected);
   }
 
-  private drawFullMap(
+  private drawVisibleTiles(
     ctx: CanvasRenderingContext2D,
     images: Record<string, HTMLImageElement>,
+    origin: PixelCoord,
+    bounds: AxialBounds | null,
     selected?: AxialCoord
   ): void {
+    if (!bounds) {
+      return;
+    }
+
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const origin = this.getOrigin();
-    for (const [key, tile] of this.mapRef.tiles) {
-      const [q, r] = key.split(',').map(Number);
-      const { x, y } = axialToPixel({ q, r }, this.hexSize);
-      const drawX = x - origin.x;
-      const drawY = y - origin.y;
-      ctx.save();
-      if (tile.isFogged) {
-        ctx.globalAlpha = 0.4;
+    for (let r = bounds.rMin; r <= bounds.rMax; r++) {
+      for (let q = bounds.qMin; q <= bounds.qMax; q++) {
+        const tile = this.mapRef.tiles.get(`${q},${r}`);
+        if (!tile) {
+          continue;
+        }
+
+        const { x, y } = axialToPixel({ q, r }, this.hexSize);
+        const drawX = x - origin.x;
+        const drawY = y - origin.y;
+        ctx.save();
+        if (tile.isFogged) {
+          ctx.globalAlpha = 0.4;
+        }
+        this.drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight);
+        const isSelected = selected && q === selected.q && r === selected.r;
+        this.strokeHex(
+          ctx,
+          drawX + this.hexSize,
+          drawY + this.hexSize,
+          this.hexSize,
+          Boolean(isSelected)
+        );
+        ctx.restore();
       }
-      this.drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight);
-      const isSelected = selected && q === selected.q && r === selected.r;
-      this.strokeHex(ctx, drawX + this.hexSize, drawY + this.hexSize, this.hexSize, Boolean(isSelected));
-      ctx.restore();
     }
   }
 
@@ -285,27 +407,38 @@ export class HexMapRenderer {
 
   private drawFogLayer(
     ctx: CanvasRenderingContext2D,
-    origin: PixelCoord
+    origin: PixelCoord,
+    bounds: AxialBounds
   ): void {
-    for (const [key, tile] of this.mapRef.tiles) {
-      if (!tile.isFogged) {
-        continue;
+    for (let r = bounds.rMin; r <= bounds.rMax; r++) {
+      for (let q = bounds.qMin; q <= bounds.qMax; q++) {
+        const tile = this.mapRef.tiles.get(`${q},${r}`);
+        if (!tile || !tile.isFogged) {
+          continue;
+        }
+
+        const { x, y } = axialToPixel({ q, r }, this.hexSize);
+        const drawX = x - origin.x;
+        const drawY = y - origin.y;
+        const radius = this.hexSize;
+        const centerX = drawX + radius;
+        const centerY = drawY + radius;
+        ctx.save();
+        this.hexPath(ctx, centerX, centerY, radius);
+        const fog = ctx.createRadialGradient(
+          centerX,
+          centerY,
+          radius * 0.15,
+          centerX,
+          centerY,
+          radius * 1.1
+        );
+        fog.addColorStop(0, 'rgba(24, 34, 48, 0.5)');
+        fog.addColorStop(1, 'rgba(8, 12, 20, 0.82)');
+        ctx.fillStyle = fog;
+        ctx.fill();
+        ctx.restore();
       }
-      const [q, r] = key.split(',').map(Number);
-      const { x, y } = axialToPixel({ q, r }, this.hexSize);
-      const drawX = x - origin.x;
-      const drawY = y - origin.y;
-      const radius = this.hexSize;
-      const centerX = drawX + radius;
-      const centerY = drawY + radius;
-      ctx.save();
-      this.hexPath(ctx, centerX, centerY, radius);
-      const fog = ctx.createRadialGradient(centerX, centerY, radius * 0.15, centerX, centerY, radius * 1.1);
-      fog.addColorStop(0, 'rgba(24, 34, 48, 0.5)');
-      fog.addColorStop(1, 'rgba(8, 12, 20, 0.82)');
-      ctx.fillStyle = fog;
-      ctx.fill();
-      ctx.restore();
     }
   }
 
