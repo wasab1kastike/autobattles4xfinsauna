@@ -6,7 +6,7 @@ export const SOLDIER_STATS: UnitStats = {
   health: 20,
   attackDamage: 5,
   attackRange: 1,
-  movementRange: 2,
+  movementRange: 1,
   visionRange: 3
 };
 

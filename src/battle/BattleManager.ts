@@ -59,11 +59,15 @@ export class BattleManager {
   }
 
   /** Process a single game tick for the provided units. */
-  tick(units: Unit[]): void {
+  tick(units: Unit[], deltaSeconds: number): void {
     const totalUnits = units.length;
     if (totalUnits === 0) {
       this.nextUnitIndex = 0;
       return;
+    }
+
+    for (const unit of units) {
+      unit.addMovementTime(deltaSeconds);
     }
 
     const occupied = new Set<string>();
@@ -94,55 +98,57 @@ export class BattleManager {
         const goal = this.findExplorationGoal(unit, occupied);
         if (goal) {
           const path = unit.moveTowards(goal, this.map, occupied);
-          if (path.length > 1) {
-            const stepsTaken = path.length - 1;
-            unit.coord = path[stepsTaken];
-            unit.advancePathCache(stepsTaken);
-            const currentKey = coordKey(unit.coord);
-            if (currentKey === coordKey(goal)) {
+          if (path.length > 1 && unit.stats.movementRange > 0) {
+            const nextCoord = path[1];
+            const stepKey = coordKey(nextCoord);
+            if (!occupied.has(stepKey)) {
+              if (!unit.canStep()) {
+                occupied.add(originalKey);
+                continue;
+              }
+              if (unit.consumeMovementCooldown()) {
+                unit.coord = nextCoord;
+                unit.advancePathCache(1);
+                const currentKey = coordKey(unit.coord);
+                if (currentKey === coordKey(goal)) {
+                  unit.clearPathCache();
+                }
+                occupied.add(currentKey);
+                continue;
+              }
+            } else {
               unit.clearPathCache();
             }
-            occupied.add(currentKey);
-            continue;
+          } else {
+            unit.clearPathCache();
           }
+        } else {
+          unit.clearPathCache();
         }
-
-        unit.clearPathCache();
-        occupied.add(coordKey(unit.coord));
+        occupied.add(originalKey);
         continue;
       }
 
       if (target.isDead()) {
         unit.clearPathCache();
-        occupied.add(coordKey(unit.coord));
+        occupied.add(originalKey);
         continue;
       }
 
       const targetKey = coordKey(target.coord);
       const path = unit.getPathTo(target.coord, this.map, occupied);
-      let destinationIndex = 0;
-      let blocked = false;
       if (path.length > 1 && unit.stats.movementRange > 0) {
-        const maxSteps = unit.stats.movementRange;
-        for (let i = 1; i < path.length && i <= maxSteps; i++) {
-          const stepKey = coordKey(path[i]);
-          if (occupied.has(stepKey) && stepKey !== targetKey) {
-            blocked = true;
-            unit.clearPathCache();
-            break;
+        const nextCoord = path[1];
+        const stepKey = coordKey(nextCoord);
+        const steppingIntoTarget = stepKey === targetKey;
+        if (!occupied.has(stepKey) || steppingIntoTarget) {
+          if (unit.canStep() && unit.consumeMovementCooldown()) {
+            unit.coord = nextCoord;
+            unit.advancePathCache(1);
           }
-          destinationIndex = i;
-          if (stepKey === targetKey) {
-            break;
-          }
+        } else {
+          unit.clearPathCache();
         }
-      }
-
-      if (destinationIndex > 0) {
-        unit.coord = path[destinationIndex];
-        unit.advancePathCache(destinationIndex);
-      } else if (blocked) {
-        unit.clearPathCache();
       }
 
       const currentKey = coordKey(unit.coord);
