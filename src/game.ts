@@ -4,7 +4,7 @@ import city from '../assets/sprites/city.svg';
 import mine from '../assets/sprites/mine.svg';
 import soldier from '../assets/sprites/soldier.svg';
 import archer from '../assets/sprites/archer.svg';
-import raider from '../assets/sprites/raider.svg';
+import avantoMarauder from '../assets/sprites/avanto-marauder.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
@@ -188,7 +188,7 @@ export const assetPaths: AssetPaths = {
     'building-mine': mine,
     'unit-soldier': soldier,
     'unit-archer': archer,
-    'unit-raider': raider,
+    'unit-avanto-marauder': avantoMarauder,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-resource': uiIcons.resource,
     'icon-sound': uiIcons.sound

@@ -1,6 +1,6 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Unit } from '../units/Unit.ts';
-import { Raider } from '../units/Raider.ts';
+import { AvantoMarauder } from '../units/AvantoMarauder.ts';
 
 export interface Sauna {
   id: 'sauna';
@@ -45,9 +45,9 @@ export function createSauna(pos: AxialCoord): Sauna {
 
       if (targets.length > 0) {
         const coord = targets[Math.floor(Math.random() * targets.length)];
-        const id = `raider${units.length + 1}`;
-        const raider = new Raider(id, coord, 'enemy');
-        addUnit(raider);
+        const id = `avantoMarauder${units.length + 1}`;
+        const avantoMarauder = new AvantoMarauder(id, coord, 'enemy');
+        addUnit(avantoMarauder);
       }
       this.timer = this.spawnCooldown;
     }
