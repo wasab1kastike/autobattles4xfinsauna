@@ -314,6 +314,14 @@ export class Unit {
     return null;
   }
 
+  canTraverse(
+    coord: AxialCoord,
+    map: HexMap,
+    occupied?: Set<string>
+  ): boolean {
+    return this.isPassable(coord, map, occupied);
+  }
+
   private isPassable(
     coord: AxialCoord,
     map: HexMap,

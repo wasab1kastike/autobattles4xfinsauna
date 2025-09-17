@@ -1,3 +1,5 @@
+import type { AxialCoord } from '../hex/HexUtils.ts';
+import { getNeighbors } from '../hex/HexUtils.ts';
 import { Unit } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
@@ -13,6 +15,48 @@ export class BattleManager {
   private nextUnitIndex = 0;
 
   constructor(private readonly map: HexMap) {}
+
+  private findExplorationGoal(
+    unit: Unit,
+    occupied: Set<string>
+  ): AxialCoord | null {
+    const start = unit.coord;
+    const startTile = this.map.ensureTile(start.q, start.r);
+    if (startTile.isFogged && unit.canTraverse(start, this.map, occupied)) {
+      return start;
+    }
+    const visited = new Set<string>([coordKey(start)]);
+    const queue: AxialCoord[] = [start];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const neighborCoords = getNeighbors(current);
+      const neighborTiles = this.map.getNeighbors(current.q, current.r);
+
+      for (let i = 0; i < neighborCoords.length; i++) {
+        const coord = neighborCoords[i];
+        const tile = neighborTiles[i];
+        const key = coordKey(coord);
+
+        if (visited.has(key)) {
+          continue;
+        }
+        visited.add(key);
+
+        if (!unit.canTraverse(coord, this.map, occupied)) {
+          continue;
+        }
+
+        if (tile.isFogged) {
+          return coord;
+        }
+
+        queue.push(coord);
+      }
+    }
+
+    return null;
+  }
 
   /** Process a single game tick for the provided units. */
   tick(units: Unit[]): void {
@@ -46,7 +90,29 @@ export class BattleManager {
       }
 
       const target = Targeting.selectTarget(unit, units);
-      if (!target || target.isDead()) {
+      if (!target) {
+        const goal = this.findExplorationGoal(unit, occupied);
+        if (goal) {
+          const path = unit.moveTowards(goal, this.map, occupied);
+          if (path.length > 1) {
+            const stepsTaken = path.length - 1;
+            unit.coord = path[stepsTaken];
+            unit.advancePathCache(stepsTaken);
+            const currentKey = coordKey(unit.coord);
+            if (currentKey === coordKey(goal)) {
+              unit.clearPathCache();
+            }
+            occupied.add(currentKey);
+            continue;
+          }
+        }
+
+        unit.clearPathCache();
+        occupied.add(coordKey(unit.coord));
+        continue;
+      }
+
+      if (target.isDead()) {
         unit.clearPathCache();
         occupied.add(coordKey(unit.coord));
         continue;
