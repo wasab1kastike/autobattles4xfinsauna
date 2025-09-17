@@ -1,5 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#8b4513" />
-  <polygon points="32,10 42,22 22,22" fill="#555" />
-  <rect x="30" y="22" width="4" height="32" fill="#ccc" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="mine-base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5d4639" />
+      <stop offset="1" stop-color="#2f1f16" />
+    </linearGradient>
+    <linearGradient id="mine-ore" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffd18d" />
+      <stop offset="1" stop-color="#ff8b47" />
+    </linearGradient>
+    <linearGradient id="mine-light" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffefc6" />
+      <stop offset="1" stop-color="#e9a74a" stop-opacity="0.4" />
+    </linearGradient>
+  </defs>
+  <path d="M64 8 118 64 64 120 10 64z" fill="url(#mine-base)" stroke="#1a0d07" stroke-width="4" stroke-linejoin="round" />
+  <path d="M32 90c6-26 18-52 32-70 14 18 26 44 32 70l-32 20z" fill="#3b2a21" />
+  <path d="M44 96h40l-6-36H50z" fill="#141010" stroke="#37251c" stroke-width="4" stroke-linejoin="round" />
+  <path d="M58 72h12l4 24H54z" fill="#1f1a18" />
+  <path d="M50 60l14-24 14 24" fill="none" stroke="#c6b098" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+  <g fill="url(#mine-ore)" stroke="#7b330f" stroke-width="3" stroke-linejoin="round">
+    <path d="M38 94 54 80l12 12-8 16z" />
+    <path d="M90 88 74 72l-10 10 12 14z" />
+  </g>
+  <path d="M64 44c-6 12-10 28-10 36l10-6 10 6c0-8-4-24-10-36z" fill="url(#mine-light)" opacity="0.85" />
+  <g stroke="#f6d28b" stroke-width="3" stroke-linecap="round" opacity="0.8">
+    <path d="M46 52l8-8" />
+    <path d="M82 54l-6-10" />
+    <path d="M64 102v-10" />
+  </g>
 </svg>

@@ -21,6 +21,8 @@ with cinematic UI flourishes.
 - **Glass HUD overlays** (resource bar, build badge, and right-panel cards)
   are layered over the canvas with high-end gradients, blur, and accessible
   aria labels.
+- **Hand-painted tactical sprites** render terrain, structures, and units with
+  crisp vector art that scales cleanly across every zoom level.
 - **Sauna operations** expose a toggleable control card to manage rally
   behavior and visualize spawn progress.
 - **Policies, events, and logs** occupy a dedicated right-hand column with tab
