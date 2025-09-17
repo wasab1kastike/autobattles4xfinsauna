@@ -94,7 +94,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   const saunakunnia = createBadge('Saunakunnia', {
     iconSrc: icons.saunakunnia,
     description: resourceDescriptions[Resource.SAUNAKUNNIA],
-    srLabel: 'Saunakunnia honor'
+    srLabel: 'Saunakunnia'
   });
   saunakunnia.container.classList.add('badge-sauna');
   const sisu = createBadge('SISU🔥', {
@@ -181,7 +181,7 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   };
   const resourceUnits: Record<Resource, { singular: string; plural: string }> = {
     [Resource.SAUNA_BEER]: { singular: 'bottle', plural: 'bottles' },
-    [Resource.SAUNAKUNNIA]: { singular: 'honor', plural: 'honor' }
+    [Resource.SAUNAKUNNIA]: { singular: 'Saunakunnia', plural: 'Saunakunnia' }
   };
   const deltaSuffix: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: '🍺',
@@ -219,9 +219,16 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     const units = resourceUnits[resource];
     if (units) {
       const unitLabel = Math.abs(amount) === 1 ? units.singular : units.plural;
-      return `${verb} ${magnitude} ${resourceNames[resource]} ${unitLabel}`.trim();
+      const resourceLabel = resourceNames[resource];
+      const detailParts = [resourceLabel];
+      if (unitLabel && unitLabel !== resourceLabel) {
+        detailParts.push(unitLabel);
+      }
+      const detailText = detailParts.filter(Boolean).join(' ');
+      return `${verb} ${magnitude}${detailText ? ` ${detailText}` : ''}`;
     }
-    return `${verb} ${magnitude} ${resourceNames[resource]}`;
+    const resourceLabel = resourceNames[resource];
+    return `${verb} ${magnitude}${resourceLabel ? ` ${resourceLabel}` : ''}`;
   }
 
   function updateResourceBadge(resource: Resource, total: number, amount = 0): void {
