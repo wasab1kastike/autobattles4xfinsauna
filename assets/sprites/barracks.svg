@@ -1,5 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#c0c0c0" />
-  <rect x="8" y="24" width="48" height="24" fill="#808080" />
-  <rect x="24" y="16" width="16" height="8" fill="#606060" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="barracks-base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8d8dd" />
+      <stop offset="1" stop-color="#8a8c98" />
+    </linearGradient>
+    <linearGradient id="barracks-roof" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f04242" />
+      <stop offset="1" stop-color="#8e171f" />
+    </linearGradient>
+    <linearGradient id="barracks-banner" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe876" />
+      <stop offset="1" stop-color="#f4b10a" />
+    </linearGradient>
+  </defs>
+  <path d="M64 8 118 64 64 120 10 64z" fill="#2b2731" stroke="#17131a" stroke-width="4" stroke-linejoin="round" />
+  <path d="M28 70c14-26 44-40 72-32 14 4 22 14 26 30L64 112z" fill="#3e3544" opacity="0.9" />
+  <g stroke="#2d2b36" stroke-width="4" stroke-linejoin="round">
+    <path d="M42 96h44l-4-36H46z" fill="url(#barracks-base)" />
+    <path d="M36 64 64 42l28 22v16H36z" fill="url(#barracks-roof)" />
+  </g>
+  <g fill="#f5f5f7" stroke="#4a4f63" stroke-width="3" stroke-linejoin="round">
+    <path d="M52 92h12V76H52z" />
+    <path d="M74 92h12V76H74z" />
+  </g>
+  <g fill="url(#barracks-banner)" stroke="#8e171f" stroke-width="3" stroke-linejoin="round">
+    <path d="M64 46v-18l10 6v12z" />
+    <path d="M64 46v-18l-10 6v12z" />
+  </g>
+  <g stroke="#ffecc0" stroke-width="3" stroke-linecap="round" opacity="0.7">
+    <path d="M48 70h12" />
+    <path d="M74 70h12" />
+  </g>
+  <path d="M42 100h44l-10 16H52z" fill="#6f758a" opacity="0.7" />
 </svg>
