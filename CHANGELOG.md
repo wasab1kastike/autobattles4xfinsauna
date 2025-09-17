@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Cull hex tile terrain and fog rendering to the active camera viewport so
+  each frame iterates only the polished, on-screen hexes
 - Keep rival armies cloaked until allied scouts enter their three-hex vision
   radius so fog-of-war respects live battlefield awareness and polished pacing
 - Upgrade unit pathfinding to an A*-driven, cached system and stagger battle

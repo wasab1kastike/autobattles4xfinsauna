@@ -29,11 +29,19 @@ export function axialToPixel(hex: AxialCoord, size: number): PixelCoord {
   };
 }
 
-/** Convert pixel coordinates to axial coordinates for pointy-topped hexes. */
-export function pixelToAxial(x: number, y: number, size: number): AxialCoord {
+/**
+ * Convert pixel coordinates to fractional axial coordinates for pointy-topped
+ * hexes without rounding to the nearest tile.
+ */
+export function pixelToAxialUnrounded(x: number, y: number, size: number): AxialCoord {
   const q = (SQRT3 / 3 * x - 1 / 3 * y) / size;
   const r = (2 / 3 * y) / size;
-  return hexRound({ q, r });
+  return { q, r };
+}
+
+/** Convert pixel coordinates to axial coordinates for pointy-topped hexes. */
+export function pixelToAxial(x: number, y: number, size: number): AxialCoord {
+  return hexRound(pixelToAxialUnrounded(x, y, size));
 }
 
 /** Get the six neighboring axial coordinates. */
