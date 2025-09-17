@@ -1,5 +1,5 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
-import { axialToPixel } from '../hex/HexUtils.ts';
+import { axialToPixel, hexDistance } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
@@ -87,7 +87,21 @@ export function drawUnits(
   origin: PixelCoord
 ): void {
   const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
+  const friendlyVisionSources = units
+    .filter((unit) => unit.faction === 'player' && !unit.isDead())
+    .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
   for (const unit of units) {
+    if (unit.isDead()) {
+      continue;
+    }
+    if (
+      unit.faction === 'enemy' &&
+      !friendlyVisionSources.some(
+        ({ coord, range }) => hexDistance(coord, unit.coord) <= range
+      )
+    ) {
+      continue;
+    }
     const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
     const drawX = x - origin.x;
     const drawY = y - origin.y;

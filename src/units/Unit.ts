@@ -10,6 +10,7 @@ export interface UnitStats {
   attackDamage: number;
   attackRange: number;
   movementRange: number;
+  visionRange?: number;
 }
 
 type Listener = () => void;
@@ -66,6 +67,12 @@ export class Unit {
 
   distanceTo(coord: AxialCoord): number {
     return hexDistance(this.coord, coord);
+  }
+
+  /** Return how far this unit can see other actors on the battlefield. */
+  getVisionRange(): number {
+    const { visionRange } = this.stats;
+    return Number.isFinite(visionRange) ? (visionRange as number) : 3;
   }
 
   attack(target: Unit): void {

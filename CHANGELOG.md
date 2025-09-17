@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Keep rival armies cloaked until allied scouts enter their three-hex vision
+  radius so fog-of-war respects live battlefield awareness and polished pacing
 - Upgrade unit pathfinding to an A*-driven, cached system and stagger battle
   processing each tick so movement stays responsive even with crowded hexes
 - Cache the static hex terrain layer on an offscreen canvas, refreshing it only

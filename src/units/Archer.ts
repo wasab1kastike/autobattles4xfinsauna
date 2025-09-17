@@ -6,7 +6,8 @@ export const ARCHER_STATS: UnitStats = {
   health: 15,
   attackDamage: 3,
   attackRange: 3,
-  movementRange: 2
+  movementRange: 2,
+  visionRange: 3
 };
 
 export const ARCHER_COST = 75;
