@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Retire the sauna aura's passive Saunakunnia trickle so idling near the steam no
+  longer grants honor automatically
 - Replace the sauna spawn timer with heat-driven thresholds that escalate after
   each Avanto Marauder emerges from the steam
 - Regenerate the production asset mirrors with the sauna beer build so hashed

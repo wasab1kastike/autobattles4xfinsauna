@@ -37,8 +37,6 @@ const uiIcons = {
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
-const SAUNAKUNNIA_AURA_INTERVAL = 2000;
-const SAUNAKUNNIA_AURA_GAIN = 1;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
@@ -306,7 +304,6 @@ const updateTopbar = setupTopbar(state, {
   sound: uiIcons.sound
 });
 const { log, addEvent } = setupRightPanel(state);
-let saunaAuraTimer = 0;
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 eventBus.on('sisuPulseStart', () => playSafe('sisu'));
 
@@ -316,42 +313,6 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   if (unit) {
     registerUnit(unit);
   }
-}
-
-function handleSaunaAura(deltaMs: number): void {
-  if (deltaMs <= 0) {
-    return;
-  }
-
-  const auraRadius = sauna.auraRadius;
-  const saunaPos = sauna.pos;
-
-  const saunojaInAura = saunojas.some((unit) => hexDistance(unit.coord, saunaPos) <= auraRadius);
-  const unitInAura = units.some(
-    (unit) =>
-      unit.faction === 'player' &&
-      !unit.isDead() &&
-      unit.distanceTo(saunaPos) <= auraRadius
-  );
-
-  if (!saunojaInAura && !unitInAura) {
-    saunaAuraTimer = 0;
-    return;
-  }
-
-  saunaAuraTimer += deltaMs;
-  if (saunaAuraTimer < SAUNAKUNNIA_AURA_INTERVAL) {
-    return;
-  }
-
-  const pulses = Math.floor(saunaAuraTimer / SAUNAKUNNIA_AURA_INTERVAL);
-  saunaAuraTimer -= pulses * SAUNAKUNNIA_AURA_INTERVAL;
-  const honorGain = pulses * SAUNAKUNNIA_AURA_GAIN;
-  if (honorGain <= 0) {
-    return;
-  }
-
-  state.addResource(Resource.SAUNAKUNNIA, honorGain);
 }
 
 state.addResource(Resource.SAUNA_BEER, INITIAL_SAUNA_BEER);
@@ -528,7 +489,6 @@ export async function start(): Promise<void> {
     });
     updateSaunaUI();
     updateTopbar(delta);
-    handleSaunaAura(delta);
     draw();
     requestAnimationFrame(gameLoop);
   }
