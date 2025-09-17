@@ -22,13 +22,14 @@ import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
 import { activateSisuPulse } from './sim/sisu.ts';
-import { setupRightPanel } from './ui/rightPanel.tsx';
+import { setupRightPanel, type GameEvent } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja } from './units/saunoja.ts';
-import { makeSaunoja } from './units/saunoja.ts';
+import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
+import { generateTraits } from './data/traits.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -50,12 +51,38 @@ const RESOURCE_LABELS: Record<Resource, string> = {
 let canvas: HTMLCanvasElement | null = null;
 let rosterBar: HTMLElement;
 let rosterValue: HTMLSpanElement | null = null;
+let rosterCard: HTMLDivElement | null = null;
+let rosterCardName: HTMLHeadingElement | null = null;
+let rosterCardTraits: HTMLParagraphElement | null = null;
+let rosterCardUpkeep: HTMLParagraphElement | null = null;
 let saunojas: Saunoja[] = [];
 const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
 let selected: AxialCoord | null = null;
+let log: (msg: string) => void = () => {};
+let addEvent: (event: GameEvent) => void = () => {};
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
+
+function rollSaunojaUpkeep(random: () => number = Math.random): number {
+  if (typeof random !== 'function') {
+    random = Math.random;
+  }
+  const min = Math.max(0, Math.floor(SAUNOJA_UPKEEP_MIN));
+  const max = Math.max(min, Math.floor(SAUNOJA_UPKEEP_MAX));
+  if (max === min) {
+    return Math.max(SAUNOJA_UPKEEP_MIN, Math.min(SAUNOJA_UPKEEP_MAX, min));
+  }
+  const span = max - min + 1;
+  const roll = Math.floor(random() * span) + min;
+  return Math.max(SAUNOJA_UPKEEP_MIN, Math.min(SAUNOJA_UPKEEP_MAX, roll));
+}
+
+function refreshSaunojaPersona(saunoja: Saunoja): void {
+  saunoja.traits = generateTraits();
+  saunoja.upkeep = rollSaunojaUpkeep();
+  saunoja.xp = 0;
+}
 
 function hexDistance(a: AxialCoord, b: AxialCoord): number {
   const ay = -a.q - a.r;
@@ -64,6 +91,7 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
 }
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const rosterUpkeepFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 function getSaunojaStorage(): Storage | null {
   try {
@@ -174,13 +202,16 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   rosterBar.setAttribute('title', 'Active sauna battalion on the field');
   rosterBar.replaceChildren();
 
+  const summary = document.createElement('div');
+  summary.classList.add('sauna-roster__summary');
+
   const icon = document.createElement('img');
   icon.src = uiIcons.saunojaRoster;
   icon.alt = 'Saunoja roster crest';
   icon.decoding = 'async';
   icon.classList.add('sauna-roster__icon');
 
-  const textContainer = document.createElement('span');
+  const textContainer = document.createElement('div');
   textContainer.classList.add('sauna-roster__text');
 
   const labelSpan = document.createElement('span');
@@ -192,7 +223,25 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   rosterValue.classList.add('sauna-roster__value');
 
   textContainer.append(labelSpan, rosterValue);
-  rosterBar.append(icon, textContainer);
+  summary.append(icon, textContainer);
+
+  rosterCard = document.createElement('div');
+  rosterCard.classList.add('saunoja-card');
+  rosterCard.setAttribute('aria-live', 'polite');
+  rosterCard.hidden = true;
+
+  rosterCardName = document.createElement('h3');
+  rosterCardName.classList.add('saunoja-card__name');
+  rosterCardName.textContent = 'Saunoja';
+
+  rosterCardTraits = document.createElement('p');
+  rosterCardTraits.classList.add('saunoja-card__traits');
+
+  rosterCardUpkeep = document.createElement('p');
+  rosterCardUpkeep.classList.add('saunoja-card__upkeep');
+
+  rosterCard.append(rosterCardName, rosterCardTraits, rosterCardUpkeep);
+  rosterBar.append(summary, rosterCard);
   updateRosterDisplay();
 }
 
@@ -280,10 +329,12 @@ function detachSaunoja(unitId: string): void {
   }
 }
 
-function claimSaunoja(unit: Unit): { saunoja: Saunoja; created: boolean } {
+function claimSaunoja(
+  unit: Unit
+): { saunoja: Saunoja; created: boolean; attached: boolean } {
   const existing = unitToSaunoja.get(unit.id);
   if (existing) {
-    return { saunoja: existing, created: false };
+    return { saunoja: existing, created: false, attached: false };
   }
 
   let match = saunojas.find((candidate) => candidate.id === unit.id);
@@ -309,7 +360,9 @@ function claimSaunoja(unit: Unit): { saunoja: Saunoja; created: boolean } {
   unitToSaunoja.set(unit.id, match);
   saunojaToUnit.set(match.id, unit.id);
 
-  return { saunoja: match, created };
+  refreshSaunojaPersona(match);
+
+  return { saunoja: match, created, attached: true };
 }
 
 function syncSaunojaRosterWithUnits(): boolean {
@@ -320,8 +373,8 @@ function syncSaunojaRosterWithUnits(): boolean {
       continue;
     }
 
-    const { saunoja, created } = claimSaunoja(unit);
-    if (created) {
+    const { saunoja, created, attached } = claimSaunoja(unit);
+    if (created || attached) {
       changed = true;
     }
 
@@ -378,6 +431,23 @@ const clock = new GameClock(1000, () => {
   state.tick();
   battleManager.tick(units);
   syncSaunojaRosterWithUnits();
+  let upkeepDrain = 0;
+  for (const unit of units) {
+    if (unit.faction !== 'player' || unit.isDead()) {
+      continue;
+    }
+    const attendant = unitToSaunoja.get(unit.id);
+    if (!attendant) {
+      continue;
+    }
+    const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
+    if (upkeep > 0) {
+      upkeepDrain += upkeep;
+    }
+  }
+  if (upkeepDrain > 0) {
+    state.addResource(Resource.SAUNA_BEER, -upkeepDrain);
+  }
   state.save();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
@@ -412,13 +482,13 @@ const enemySpawner = new EnemySpawner(pickRandomEdgeFreeTile);
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
-  saunojas.push(
-    makeSaunoja({
-      id: 'saunoja-1',
-      coord: sauna.pos,
-      selected: true
-    })
-  );
+  const seeded = makeSaunoja({
+    id: 'saunoja-1',
+    coord: sauna.pos,
+    selected: true
+  });
+  refreshSaunojaPersona(seeded);
+  saunojas.push(seeded);
   saveUnits();
   if (import.meta.env.DEV) {
     const storage = getSaunojaStorage();
@@ -457,7 +527,9 @@ const updateTopbar = setupTopbar(state, {
   saunaBeer: uiIcons.saunaBeer,
   sound: uiIcons.sound
 });
-const { log, addEvent } = setupRightPanel(state);
+const rightPanel = setupRightPanel(state);
+log = rightPanel.log;
+addEvent = rightPanel.addEvent;
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 eventBus.on('sisuPulseStart', () => playSafe('sisu'));
 
@@ -558,6 +630,7 @@ export function handleCanvasClick(world: PixelCoord): void {
   }
 
   saveUnits();
+  updateRosterDisplay();
   draw();
 }
 
@@ -675,6 +748,40 @@ function getActiveRosterCount(): number {
   return seen.size;
 }
 
+function renderSaunojaCard(): void {
+  if (!rosterCard || !rosterCardTraits || !rosterCardUpkeep) {
+    return;
+  }
+
+  const preferred =
+    saunojas.find((unit) => unit.selected) ??
+    saunojas.find((unit) => unit.hp > 0) ??
+    saunojas[0];
+
+  if (!preferred) {
+    rosterCard.hidden = true;
+    return;
+  }
+
+  rosterCard.hidden = false;
+  rosterCard.dataset.unitId = preferred.id;
+
+  if (rosterCardName) {
+    rosterCardName.textContent = preferred.name || 'Saunoja';
+  }
+
+  const traitList = preferred.traits?.filter((trait) => trait.length > 0) ?? [];
+  const traitLabel =
+    traitList.length > 0 ? traitList.join(', ') : 'No notable traits yet';
+  rosterCardTraits.textContent = traitLabel;
+  rosterCardTraits.title = traitLabel;
+
+  const upkeepValue = Math.max(0, Math.round(preferred.upkeep));
+  const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
+  rosterCardUpkeep.textContent = upkeepLabel;
+  rosterCardUpkeep.title = upkeepLabel;
+}
+
 function updateRosterDisplay(): void {
   const total = Math.max(0, Math.floor(getActiveRosterCount()));
   const formatted = rosterCountFormatter.format(total);
@@ -687,4 +794,5 @@ function updateRosterDisplay(): void {
     rosterBar.setAttribute('aria-label', `Saunoja roster: ${formatted} active attendants`);
     rosterBar.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
   }
+  renderSaunojaCard();
 }
