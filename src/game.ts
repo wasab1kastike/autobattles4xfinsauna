@@ -35,11 +35,6 @@ const uiIcons = {
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
 
-const RESOURCE_LABELS: Record<Resource, string> = {
-  [Resource.GOLD]: 'Gold',
-  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
-};
-
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_AURA_INTERVAL = 2000;
 const SAUNAKUNNIA_AURA_GAIN = 1;
@@ -59,10 +54,6 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
 }
 
 const resourceTotalFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-const resourceDeltaLogFormatter = new Intl.NumberFormat('en-US', {
-  signDisplay: 'always',
-  maximumFractionDigits: 0
-});
 
 function getSaunojaStorage(): Storage | null {
   try {
@@ -209,6 +200,12 @@ const units: Unit[] = [];
 
 type UnitSpawnedPayload = { unit: Unit };
 
+function describeUnit(unit: Unit): string {
+  const ctorName = unit.constructor?.name ?? 'Unit';
+  const spacedName = ctorName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+  return `${spacedName} ${unit.id}`.trim();
+}
+
 function registerUnit(unit: Unit): void {
   if (units.some((existing) => existing.id === unit.id)) {
     return;
@@ -217,6 +214,8 @@ function registerUnit(unit: Unit): void {
   if (canvas) {
     draw();
   }
+  const steward = unit.faction === 'player' ? 'Our' : 'A rival';
+  log(`${steward} ${describeUnit(unit)} emerges from the steam.`);
 }
 
 const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
@@ -339,8 +338,6 @@ function handleSaunaAura(deltaMs: number): void {
   }
 
   state.addResource(Resource.SAUNAKUNNIA, honorGain);
-  const magnitude = resourceTotalFormatter.format(honorGain);
-  log(`Sauna aura radiates warmth — gained ${magnitude} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]}.`);
 }
 
 state.addResource(Resource.GOLD, 200);
@@ -443,32 +440,16 @@ export function draw(): void {
   });
 }
 
-const onResourceChanged = ({ resource, total, amount }) => {
+const onResourceChanged = ({ resource, total }) => {
   const typedResource = resource as Resource;
   if (typedResource === Resource.GOLD) {
     updateResourceDisplay(total);
   }
-
-  const label = RESOURCE_LABELS[typedResource] ?? resource;
-  const normalizedTotal =
-    typedResource === Resource.GOLD
-      ? Math.max(0, Math.floor(total))
-      : Math.max(0, Math.round(total));
-  const totalText = resourceTotalFormatter.format(normalizedTotal);
-
-  if (amount === 0) {
-    log(`• ${label} steady (total ${totalText})`);
-    return;
-  }
-
-  const glyph = amount > 0 ? '▲' : '▼';
-  const deltaText = resourceDeltaLogFormatter.format(amount);
-  log(`${glyph} ${label} ${deltaText} (total ${totalText})`);
 };
 eventBus.on('resourceChanged', onResourceChanged);
 
 const onPolicyApplied = ({ policy }) => {
-  log(`Policy applied: ${policy}`);
+  log(`Sauna council enacts policy: ${policy}.`);
 };
 eventBus.on('policyApplied', onPolicyApplied);
 
@@ -482,6 +463,7 @@ const onUnitDied = ({
   unitFaction: string;
 }) => {
   const idx = units.findIndex((u) => u.id === unitId);
+  const fallen = idx !== -1 ? units[idx] : null;
   if (idx !== -1) {
     units.splice(idx, 1);
     draw();
@@ -492,9 +474,10 @@ const onUnitDied = ({
     unitFaction !== 'player'
   ) {
     state.addResource(Resource.SAUNAKUNNIA, SAUNAKUNNIA_VICTORY_BONUS);
-    const bonusText = resourceTotalFormatter.format(SAUNAKUNNIA_VICTORY_BONUS);
-    log(`Victory secured — gained ${bonusText} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]}.`);
   }
+  const side = unitFaction === 'player' ? 'our' : 'a rival';
+  const label = fallen ? describeUnit(fallen) : `unit ${unitId}`;
+  log(`The steam hushes as ${side} ${label} grows still.`);
 };
 eventBus.on('unitDied', onUnitDied);
 
