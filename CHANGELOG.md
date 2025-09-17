@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Hide inactive right-panel sections by honoring the `[hidden]` attribute so
+  tab switches only render the active pane
 - Polish sauna beer HUD terminology with bottle provisioning logs, refined badge
   narration, and updated policy copy
 - Rebuild the HUD roster widget with a Saunoja battalion counter, live unit
