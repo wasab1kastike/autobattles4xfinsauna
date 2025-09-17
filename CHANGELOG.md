@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- March enemy spawns along the fog frontier so marauders emerge just beyond
+  revealed territory and keep battles focused on the explored sauna perimeter
 - Generate hex tiles lazily upon reveal so the battlefield only materializes
   around explored territory and active frontiers
 - Cull hex tile terrain and fog rendering to the active camera viewport so
