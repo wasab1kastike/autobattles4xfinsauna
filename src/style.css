@@ -629,6 +629,131 @@ body > #game-container {
   font-size: 13px;
 }
 
+.panel-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.panel-roster__empty {
+  margin: 0;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.panel-roster__unit {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.82), rgba(30, 64, 175, 0.28));
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.24),
+    0 18px 28px rgba(15, 23, 42, 0.45);
+  transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
+}
+
+.panel-roster__unit.is-active {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 38%, transparent),
+    0 22px 36px rgba(56, 189, 248, 0.28);
+}
+
+.panel-roster__unit.is-selected {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 52%, transparent),
+    0 26px 42px rgba(56, 189, 248, 0.35);
+}
+
+.panel-roster__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-roster__name {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-foreground);
+}
+
+.panel-roster__status {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-foreground) 85%, transparent);
+  white-space: nowrap;
+}
+
+.panel-roster__health {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  overflow: hidden;
+}
+
+.panel-roster__health-fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.85), rgba(59, 130, 246, 0.95));
+  box-shadow: 0 6px 16px rgba(56, 189, 248, 0.4);
+}
+
+.panel-roster__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--color-muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.panel-roster__metric {
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface) 62%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+}
+
+.panel-roster__traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-roster__trait {
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, rgba(56, 189, 248, 0.32) 60%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.24);
+  color: var(--color-foreground);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.panel-roster__trait.is-empty {
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+}
+
 .sauna-control {
   position: relative;
   display: inline-flex;

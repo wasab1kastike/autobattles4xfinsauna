@@ -9,13 +9,29 @@ export type GameEvent = {
   buttonText?: string;
 };
 
-export function setupRightPanel(state: GameState): {
+export type RosterEntry = {
+  id: string;
+  name: string;
+  status: string;
+  hp: number;
+  maxHp: number;
+  vitalityPercent: number;
+  upkeep: number;
+  traits: string[];
+  selected: boolean;
+  active: boolean;
+};
+
+export type RightPanelControls = {
   log: (msg: string) => void;
   addEvent: (ev: GameEvent) => void;
-} {
+  setRoster: (roster: RosterEntry[]) => void;
+};
+
+export function setupRightPanel(state: GameState): RightPanelControls {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) {
-    return { log: () => {}, addEvent: () => {} };
+    return { log: () => {}, addEvent: () => {}, setRoster: () => {} };
   }
 
   const { side } = ensureHudLayout(overlay);
@@ -29,7 +45,7 @@ export function setupRightPanel(state: GameState): {
   panel.id = 'right-panel';
   panel.classList.add('hud-card');
   panel.setAttribute('role', 'complementary');
-  panel.setAttribute('aria-label', 'Policies and events');
+  panel.setAttribute('aria-label', 'Command board with roster, policies, and events');
 
   const tabBar = document.createElement('div');
   tabBar.classList.add('panel-tabs');
@@ -39,6 +55,8 @@ export function setupRightPanel(state: GameState): {
   content.classList.add('panel-content');
   panel.appendChild(content);
 
+  const rosterTab = document.createElement('div');
+  rosterTab.id = 'right-panel-roster';
   const policiesTab = document.createElement('div');
   policiesTab.id = 'right-panel-policies';
   const eventsTab = document.createElement('div');
@@ -49,6 +67,7 @@ export function setupRightPanel(state: GameState): {
   logTab.setAttribute('aria-live', 'polite');
 
   const tabs: Record<string, HTMLDivElement> = {
+    Roster: rosterTab,
     Policies: policiesTab,
     Events: eventsTab,
     Log: logTab
@@ -60,6 +79,102 @@ export function setupRightPanel(state: GameState): {
     section.hidden = true;
   }
   logTab.classList.add('panel-section--log');
+
+  const rosterList = document.createElement('div');
+  rosterList.classList.add('panel-roster');
+  rosterTab.appendChild(rosterList);
+
+  let roster: RosterEntry[] = [];
+
+  function renderRoster(): void {
+    rosterList.replaceChildren();
+
+    if (roster.length === 0) {
+      const empty = document.createElement('p');
+      empty.classList.add('panel-roster__empty');
+      empty.textContent = 'No attendants are currently mustered.';
+      rosterList.appendChild(empty);
+      return;
+    }
+
+    for (const entry of roster) {
+      const unit = document.createElement('article');
+      unit.classList.add('panel-roster__unit');
+      unit.setAttribute('data-unit-id', entry.id);
+      unit.setAttribute('aria-label', `${entry.name}: ${entry.status}`);
+      if (entry.active) {
+        unit.classList.add('is-active');
+      }
+      if (entry.selected) {
+        unit.classList.add('is-selected');
+      }
+
+      const header = document.createElement('header');
+      header.classList.add('panel-roster__header');
+
+      const title = document.createElement('h4');
+      title.textContent = entry.name;
+      title.classList.add('panel-roster__name');
+      header.appendChild(title);
+
+      const status = document.createElement('span');
+      status.textContent = entry.status;
+      status.classList.add('panel-roster__status');
+      status.title = entry.status;
+      header.appendChild(status);
+
+      unit.appendChild(header);
+
+      const meter = document.createElement('div');
+      meter.classList.add('panel-roster__health');
+      meter.setAttribute('role', 'progressbar');
+      meter.setAttribute('aria-valuemin', '0');
+      meter.setAttribute('aria-valuemax', String(entry.maxHp));
+      meter.setAttribute('aria-valuenow', String(entry.hp));
+      meter.setAttribute('aria-valuetext', `${entry.hp} of ${entry.maxHp} health`);
+
+      const meterFill = document.createElement('div');
+      meterFill.classList.add('panel-roster__health-fill');
+      meterFill.style.width = `${Math.max(0, Math.min(100, entry.vitalityPercent))}%`;
+      meter.appendChild(meterFill);
+      unit.appendChild(meter);
+
+      const metrics = document.createElement('div');
+      metrics.classList.add('panel-roster__metrics');
+
+      const hpLabel = document.createElement('span');
+      hpLabel.classList.add('panel-roster__metric');
+      hpLabel.textContent = `HP ${entry.hp}/${entry.maxHp}`;
+      metrics.appendChild(hpLabel);
+
+      const upkeep = document.createElement('span');
+      upkeep.classList.add('panel-roster__metric');
+      upkeep.textContent = `Upkeep ${entry.upkeep}`;
+      metrics.appendChild(upkeep);
+
+      unit.appendChild(metrics);
+
+      const traitList = document.createElement('ul');
+      traitList.classList.add('panel-roster__traits');
+
+      if (entry.traits.length === 0) {
+        const item = document.createElement('li');
+        item.classList.add('panel-roster__trait', 'is-empty');
+        item.textContent = 'No notable traits yet';
+        traitList.appendChild(item);
+      } else {
+        for (const trait of entry.traits) {
+          const item = document.createElement('li');
+          item.classList.add('panel-roster__trait');
+          item.textContent = trait;
+          traitList.appendChild(item);
+        }
+      }
+
+      unit.appendChild(traitList);
+      rosterList.appendChild(unit);
+    }
+  }
 
   function show(tab: string): void {
     for (const [name, el] of Object.entries(tabs)) {
@@ -88,6 +203,11 @@ export function setupRightPanel(state: GameState): {
   }
 
   side.appendChild(panel);
+
+  function setRoster(next: RosterEntry[]): void {
+    roster = next;
+    renderRoster();
+  }
 
   // --- Policies ---
   type PolicyDef = {
@@ -239,7 +359,9 @@ export function setupRightPanel(state: GameState): {
     }
   }
 
-  show('Policies');
-  return { log, addEvent };
+  show('Roster');
+  renderRoster();
+
+  return { log, addEvent, setRoster };
 }
 

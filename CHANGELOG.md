@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Mount a dedicated roster tab on the right-hand command board with polished
+  attendant cards, status chips, trait ribbons, and health meters so the HUD
+  surfaces the full battalion alongside policies, events, and the log
+- Forge Finland-flavoured Saunoja names from curated name tables, ensure
+  existing saves receive unique monikers, and thread the identities through
+  the roster UI and combat narration
 - Generate hex tiles lazily upon reveal so the battlefield only materializes
   around explored territory and active frontiers
 - Cull hex tile terrain and fog rendering to the active camera viewport so
