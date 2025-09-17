@@ -727,6 +727,18 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
+  try {
+    state.save();
+  } catch (error) {
+    console.warn('Failed to persist game state during cleanup', error);
+  }
+
+  try {
+    saveUnits();
+  } catch (error) {
+    console.warn('Failed to persist Saunoja roster during cleanup', error);
+  }
+
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
   eventBus.off('unitSpawned', onUnitSpawned);
