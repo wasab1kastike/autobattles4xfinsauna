@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Drive the BattleManager each fixed tick, funnel spawned player/enemy units
+  into the shared roster, and refresh the loop so pathfinding and combat resolve
+  automatically during play
 - Introduce the Saunakunnia prestige track with dedicated HUD formatting, sauna aura
   and victory generation hooks, policy costs, and refreshed log copy
 - Regenerate the GitHub Pages `docs/` mirror from the current production build
