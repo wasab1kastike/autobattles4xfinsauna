@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Sync fog-of-war reveals with each combat tick by updating player vision and
+  limiting enemy scouting before the renderer draws the battlefield
 - Guarantee the battlefield opens with a steadfast sauna guard by auto-spawning a
   player soldier when no active attendants remain, preventing targetless combat
 - Channel sauna heat into rallying allied soldiers, surface player-facing spawn

@@ -374,16 +374,21 @@ eventBus.on('unitSpawned', onUnitSpawned);
 
 const state = new GameState(1000);
 const restoredSave = state.load(map);
-const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
   battleManager.tick(units);
   syncSaunojaRosterWithUnits();
   state.save();
-  // Reveal around all friendly units each tick
+  // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
-    if (!unit.isDead() && unit.faction === 'player') {
-      map.revealAround(unit.coord, VISION_RADIUS);
+    if (unit.isDead()) {
+      continue;
+    }
+
+    if (unit.faction === 'player') {
+      map.revealAround(unit.coord, 2);
+    } else if (unit.faction === 'enemy') {
+      map.revealAround(unit.coord, 1);
     }
   }
   draw();
