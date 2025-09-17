@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Restore the Saunoja roster crest to the public UI asset bundle so production builds
+  stop 404ing when the polished roster icon loads on the hosted HUD
 - Extend Saunoja attendants with trait, upkeep, and experience tracking while
   normalizing stored data and persisting the new fields across sessions
 - Replace the Saunoja roster badge with a dedicated warrior crest and preload
