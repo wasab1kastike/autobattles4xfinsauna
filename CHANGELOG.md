@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Replace every terrain, building, and unit sprite with high-fidelity SVG art
+  tailored to the Autobattles4xFinsauna palette and HUD glow treatments
 - Drive the BattleManager each fixed tick, funnel spawned player/enemy units
   into the shared roster, and refresh the loop so pathfinding and combat resolve
   automatically during play

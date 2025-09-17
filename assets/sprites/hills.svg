@@ -1,5 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#d2b48c" />
-  <polygon points="0,64 20,32 40,64" fill="#c2a070" />
-  <polygon points="24,64 44,28 64,64" fill="#b09060" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="hills-base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0d9aa" />
+      <stop offset="1" stop-color="#b88846" />
+    </linearGradient>
+    <linearGradient id="hill-shadow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff3c9" stop-opacity="0.8" />
+      <stop offset="1" stop-color="#7a4d1d" stop-opacity="0.4" />
+    </linearGradient>
+  </defs>
+  <path d="M64 8 118 64 64 120 10 64z" fill="url(#hills-base)" stroke="#6a3c16" stroke-width="4" stroke-linejoin="round" />
+  <path d="M24 76c16-30 40-46 64-36 14 6 24 18 30 32L64 108z" fill="url(#hill-shadow)" />
+  <g fill="none" stroke-linecap="round" stroke-width="4">
+    <path d="M32 82c12-24 36-40 60-30" stroke="#916432" />
+    <path d="M44 92c10-18 32-32 54-24" stroke="#6a3c16" />
+    <path d="M36 70c14-20 38-28 58-18" stroke="#b37b3f" opacity="0.6" />
+  </g>
+  <g stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.6">
+    <path d="M46 72c4-6 10-10 18-12" />
+    <path d="M70 82c6-4 12-8 18-8" />
+  </g>
+  <g fill="#dcb371" stroke="#7a4d1d" stroke-width="3" stroke-linejoin="round">
+    <path d="M56 96c6-10 16-16 28-18l-12 28z" />
+    <path d="M44 104c12-2 24-2 36 0l-4 12H48z" opacity="0.5" />
+  </g>
 </svg>
