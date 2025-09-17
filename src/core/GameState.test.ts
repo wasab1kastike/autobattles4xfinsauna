@@ -29,6 +29,21 @@ describe('GameState', () => {
     expect(loaded.getResource(Resource.GOLD)).toBe(6); // 1 saved + 5 offline ticks
   });
 
+  it('persists Saunakunnia alongside other resources', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 5);
+    state.save();
+
+    const serialized = localStorage.getItem('gameState');
+    expect(serialized).not.toBeNull();
+    const parsed = JSON.parse(serialized ?? '{}');
+    expect(parsed.resources[Resource.SAUNAKUNNIA]).toBe(5);
+
+    const loaded = new GameState(1000);
+    loaded.load();
+    expect(loaded.getResource(Resource.SAUNAKUNNIA)).toBe(5);
+  });
+
   it('applies policy modifiers via listeners', () => {
     const state = new GameState(1000);
     state.applyPolicy('eco', 0); // free for testing

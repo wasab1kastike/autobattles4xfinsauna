@@ -34,12 +34,34 @@ const uiIcons = {
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
 
+const RESOURCE_LABELS: Record<Resource, string> = {
+  [Resource.GOLD]: 'Gold',
+  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+};
+
+const INITIAL_SAUNAKUNNIA = 3;
+const SAUNAKUNNIA_AURA_INTERVAL = 2000;
+const SAUNAKUNNIA_AURA_GAIN = 1;
+const SAUNAKUNNIA_VICTORY_BONUS = 2;
+
 let canvas: HTMLCanvasElement;
 let resourceBar: HTMLElement;
 let resourceValue: HTMLSpanElement | null = null;
 let saunojas: Saunoja[] = [];
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
+
+function hexDistance(a: AxialCoord, b: AxialCoord): number {
+  const ay = -a.q - a.r;
+  const by = -b.q - b.r;
+  return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
+}
+
+const resourceTotalFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const resourceDeltaLogFormatter = new Intl.NumberFormat('en-US', {
+  signDisplay: 'always',
+  maximumFractionDigits: 0
+});
 
 function getSaunojaStorage(): Storage | null {
   try {
@@ -251,6 +273,7 @@ const updateTopbar = setupTopbar(state, {
   sound: uiIcons.sound
 });
 const { log, addEvent } = setupRightPanel(state);
+let saunaAuraTimer = 0;
 eventBus.on('sisuPulse', () => activateSisuPulse(state, units));
 eventBus.on('sisuPulseStart', () => playSafe('sisu'));
 
@@ -262,7 +285,46 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   }
 }
 
+function handleSaunaAura(deltaMs: number): void {
+  if (deltaMs <= 0) {
+    return;
+  }
+
+  const auraRadius = sauna.auraRadius;
+  const saunaPos = sauna.pos;
+
+  const saunojaInAura = saunojas.some((unit) => hexDistance(unit.coord, saunaPos) <= auraRadius);
+  const unitInAura = units.some(
+    (unit) =>
+      unit.faction === 'player' &&
+      !unit.isDead() &&
+      unit.distanceTo(saunaPos) <= auraRadius
+  );
+
+  if (!saunojaInAura && !unitInAura) {
+    saunaAuraTimer = 0;
+    return;
+  }
+
+  saunaAuraTimer += deltaMs;
+  if (saunaAuraTimer < SAUNAKUNNIA_AURA_INTERVAL) {
+    return;
+  }
+
+  const pulses = Math.floor(saunaAuraTimer / SAUNAKUNNIA_AURA_INTERVAL);
+  saunaAuraTimer -= pulses * SAUNAKUNNIA_AURA_INTERVAL;
+  const honorGain = pulses * SAUNAKUNNIA_AURA_GAIN;
+  if (honorGain <= 0) {
+    return;
+  }
+
+  state.addResource(Resource.SAUNAKUNNIA, honorGain);
+  const magnitude = resourceTotalFormatter.format(honorGain);
+  log(`Sauna aura radiates warmth — gained ${magnitude} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]}.`);
+}
+
 state.addResource(Resource.GOLD, 200);
+state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
 
 let selected: AxialCoord | null = null;
 const storedSelection = saunojas.find((unit) => unit.selected);
@@ -359,9 +421,26 @@ export function draw(): void {
 }
 
 const onResourceChanged = ({ resource, total, amount }) => {
-  updateResourceDisplay(total);
-  const sign = amount > 0 ? '+' : '';
-  log(`${resource}: ${sign}${amount}`);
+  const typedResource = resource as Resource;
+  if (typedResource === Resource.GOLD) {
+    updateResourceDisplay(total);
+  }
+
+  const label = RESOURCE_LABELS[typedResource] ?? resource;
+  const normalizedTotal =
+    typedResource === Resource.GOLD
+      ? Math.max(0, Math.floor(total))
+      : Math.max(0, Math.round(total));
+  const totalText = resourceTotalFormatter.format(normalizedTotal);
+
+  if (amount === 0) {
+    log(`• ${label} steady (total ${totalText})`);
+    return;
+  }
+
+  const glyph = amount > 0 ? '▲' : '▼';
+  const deltaText = resourceDeltaLogFormatter.format(amount);
+  log(`${glyph} ${label} ${deltaText} (total ${totalText})`);
 };
 eventBus.on('resourceChanged', onResourceChanged);
 
@@ -370,11 +449,28 @@ const onPolicyApplied = ({ policy }) => {
 };
 eventBus.on('policyApplied', onPolicyApplied);
 
-const onUnitDied = ({ unitId }: { unitId: string }) => {
+const onUnitDied = ({
+  unitId,
+  attackerFaction,
+  unitFaction
+}: {
+  unitId: string;
+  attackerFaction?: string;
+  unitFaction: string;
+}) => {
   const idx = units.findIndex((u) => u.id === unitId);
   if (idx !== -1) {
     units.splice(idx, 1);
     draw();
+  }
+  if (
+    attackerFaction === 'player' &&
+    unitFaction &&
+    unitFaction !== 'player'
+  ) {
+    state.addResource(Resource.SAUNAKUNNIA, SAUNAKUNNIA_VICTORY_BONUS);
+    const bonusText = resourceTotalFormatter.format(SAUNAKUNNIA_VICTORY_BONUS);
+    log(`Victory secured — gained ${bonusText} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]}.`);
   }
 };
 eventBus.on('unitDied', onUnitDied);
@@ -412,6 +508,7 @@ export async function start(): Promise<void> {
     });
     updateSaunaUI();
     updateTopbar(delta);
+    handleSaunaAura(delta);
     draw();
     requestAnimationFrame(gameLoop);
   }
@@ -421,9 +518,10 @@ export async function start(): Promise<void> {
 export { log };
 
 function updateResourceDisplay(total: number): void {
+  const formatted = resourceTotalFormatter.format(Math.max(0, Math.floor(total)));
   if (resourceValue) {
-    resourceValue.textContent = String(total);
+    resourceValue.textContent = formatted;
   } else if (resourceBar) {
-    resourceBar.textContent = `Resources: ${total}`;
+    resourceBar.textContent = `Resources: ${formatted}`;
   }
 }

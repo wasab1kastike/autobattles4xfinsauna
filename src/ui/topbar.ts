@@ -7,6 +7,13 @@ type Badge = {
   container: HTMLDivElement;
   value: HTMLSpanElement;
   delta: HTMLSpanElement;
+  label: string;
+};
+
+type BadgeOptions = {
+  iconSrc?: string;
+  description?: string;
+  srLabel?: string;
 };
 
 type TopbarIcons = {
@@ -16,9 +23,13 @@ type TopbarIcons = {
   sound?: string;
 };
 
-function createBadge(label: string, iconSrc?: string): Badge {
+function createBadge(label: string, options: BadgeOptions = {}): Badge {
+  const { iconSrc, description, srLabel } = options;
   const container = document.createElement('div');
   container.classList.add('topbar-badge');
+  container.setAttribute('role', 'status');
+  container.setAttribute('aria-live', 'polite');
+  container.setAttribute('aria-atomic', 'true');
 
   if (iconSrc) {
     const icon = document.createElement('img');
@@ -40,6 +51,7 @@ function createBadge(label: string, iconSrc?: string): Badge {
   const valueSpan = document.createElement('span');
   valueSpan.textContent = '0';
   valueSpan.classList.add('badge-value');
+  valueSpan.setAttribute('aria-hidden', 'true');
   textWrapper.appendChild(valueSpan);
 
   const deltaSpan = document.createElement('span');
@@ -47,10 +59,19 @@ function createBadge(label: string, iconSrc?: string): Badge {
   deltaSpan.style.opacity = '0';
   deltaSpan.style.transform = 'translateY(-6px)';
   deltaSpan.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+  deltaSpan.setAttribute('aria-hidden', 'true');
 
   container.append(textWrapper, deltaSpan);
 
-  return { container, value: valueSpan, delta: deltaSpan };
+  if (description) {
+    container.title = description;
+  }
+
+  const accessibleLabel = srLabel ?? label;
+  container.dataset.label = accessibleLabel;
+  container.setAttribute('aria-label', `${accessibleLabel}: 0`);
+
+  return { container, value: valueSpan, delta: deltaSpan, label: accessibleLabel };
 }
 
 export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs: number) => void {
@@ -63,12 +84,29 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
   bar.id = 'topbar';
   actions.prepend(bar);
 
-  const saunakunnia = createBadge('Saunakunnia', icons.saunakunnia);
+  const resourceDescriptions: Record<Resource, string> = {
+    [Resource.GOLD]: 'Gold used for construction and recruitment.',
+    [Resource.SAUNAKUNNIA]:
+      'Saunakunnia—prestige earned from sauna rituals and triumphant battles.'
+  };
+
+  const saunakunnia = createBadge('Saunakunnia', {
+    iconSrc: icons.saunakunnia,
+    description: resourceDescriptions[Resource.SAUNAKUNNIA],
+    srLabel: 'Saunakunnia honor'
+  });
   saunakunnia.container.classList.add('badge-sauna');
-  const sisu = createBadge('SISU🔥', icons.sisu);
+  const sisu = createBadge('SISU🔥', {
+    iconSrc: icons.sisu,
+    srLabel: 'Sisu pulse timer'
+  });
   sisu.container.classList.add('badge-sisu');
   sisu.container.style.display = 'none';
-  const gold = createBadge('Gold', icons.gold);
+  const gold = createBadge('Gold', {
+    iconSrc: icons.gold,
+    description: resourceDescriptions[Resource.GOLD],
+    srLabel: 'Gold reserves'
+  });
   gold.container.classList.add('badge-gold');
   const time = createBadge('Time');
   time.container.classList.add('badge-time');
@@ -134,26 +172,96 @@ export function setupTopbar(state: GameState, icons: TopbarIcons = {}): (deltaMs
     sisuBtn.disabled = false;
   });
 
-  gold.value.textContent = String(state.getResource(Resource.GOLD));
-
-  const badges: Record<string, Badge> = {
-    saunakunnia,
-    sisu,
-    gold
+  const numberFormatter = new Intl.NumberFormat('en-US');
+  const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
+  const resourceNames: Record<Resource, string> = {
+    [Resource.GOLD]: 'Gold',
+    [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+  };
+  const deltaSuffix: Record<Resource, string> = {
+    [Resource.GOLD]: '🪙',
+    [Resource.SAUNAKUNNIA]: '⚜️'
   };
 
-  eventBus.on('resourceChanged', ({ resource, amount, total }) => {
-    const badge = badges[resource];
-    if (!badge) return;
-    badge.value.textContent = String(total);
-    const sign = amount > 0 ? '+' : '';
-    badge.delta.textContent = `${sign}${amount}`;
-    badge.delta.style.opacity = '1';
-    badge.delta.style.transform = 'translateY(0)';
-    setTimeout(() => {
+  const resourceBadges: Record<Resource, Badge> = {
+    [Resource.GOLD]: gold,
+    [Resource.SAUNAKUNNIA]: saunakunnia
+  };
+
+  const deltaTimers: Partial<Record<Resource, ReturnType<typeof setTimeout>>> = {};
+
+  function formatValue(resource: Resource, total: number): string {
+    const safeTotal = Number.isFinite(total) ? total : 0;
+    if (resource === Resource.GOLD) {
+      return numberFormatter.format(Math.max(0, Math.floor(safeTotal)));
+    }
+    return numberFormatter.format(Math.max(0, Math.round(safeTotal)));
+  }
+
+  function formatDelta(resource: Resource, amount: number): string {
+    if (amount === 0) {
+      return '';
+    }
+    return `${deltaFormatter.format(amount)}\u202f${deltaSuffix[resource]}`;
+  }
+
+  function describeDelta(resource: Resource, amount: number): string {
+    if (amount === 0) {
+      return '';
+    }
+    const verb = amount > 0 ? 'gained' : 'spent';
+    const magnitude = numberFormatter.format(Math.abs(amount));
+    return `${verb} ${magnitude} ${resourceNames[resource]}`;
+  }
+
+  function updateResourceBadge(resource: Resource, total: number, amount = 0): void {
+    const badge = resourceBadges[resource];
+    if (!badge) {
+      return;
+    }
+
+    const formattedValue = formatValue(resource, total);
+    badge.value.textContent = formattedValue;
+
+    if (amount !== 0) {
+      badge.delta.textContent = formatDelta(resource, amount);
+      badge.delta.style.opacity = '1';
+      badge.delta.style.transform = 'translateY(0)';
+      const existing = deltaTimers[resource];
+      if (existing) {
+        clearTimeout(existing);
+      }
+      deltaTimers[resource] = setTimeout(() => {
+        badge.delta.style.opacity = '0';
+        badge.delta.style.transform = 'translateY(-6px)';
+        delete deltaTimers[resource];
+      }, 1000);
+    } else {
+      badge.delta.textContent = '';
       badge.delta.style.opacity = '0';
       badge.delta.style.transform = 'translateY(-6px)';
-    }, 1000);
+    }
+
+    const announcement = describeDelta(resource, amount);
+    const labelParts = [
+      `${badge.label} ${formattedValue}`,
+      announcement
+    ].filter(Boolean);
+    badge.container.setAttribute('aria-label', labelParts.join(' — '));
+  }
+
+  updateResourceBadge(Resource.GOLD, state.getResource(Resource.GOLD));
+  updateResourceBadge(
+    Resource.SAUNAKUNNIA,
+    state.getResource(Resource.SAUNAKUNNIA)
+  );
+
+  eventBus.on('resourceChanged', ({ resource, amount, total }) => {
+    const typedResource = resource as Resource;
+    if (!resourceBadges[typedResource]) {
+      return;
+    }
+    updateResourceBadge(typedResource, total, amount);
   });
 
   let elapsed = 0;
