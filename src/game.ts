@@ -22,7 +22,7 @@ import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu.ts';
-import { setupRightPanel, type GameEvent } from './ui/rightPanel.tsx';
+import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja } from './units/saunoja.ts';
@@ -60,9 +60,12 @@ let rosterCardUpkeep: HTMLParagraphElement | null = null;
 let saunojas: Saunoja[] = [];
 const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
+const unitsById = new Map<string, Unit>();
 let selected: AxialCoord | null = null;
 let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
+let renderRosterView: ((entries: RosterEntry[]) => void) | null = null;
+let rosterSignature: string | null = null;
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
 
@@ -371,12 +374,16 @@ function describeUnit(unit: Unit): string {
 }
 
 function registerUnit(unit: Unit): void {
-  if (units.some((existing) => existing.id === unit.id)) {
+  if (unitsById.has(unit.id)) {
     return;
   }
   units.push(unit);
+  unitsById.set(unit.id, unit);
   if (unit.faction === 'player') {
-    syncSaunojaRosterWithUnits();
+    const changed = syncSaunojaRosterWithUnits();
+    if (!changed) {
+      refreshRosterPanel();
+    }
   }
   if (canvas) {
     draw();
@@ -406,7 +413,9 @@ const clock = new GameClock(1000, (deltaMs) => {
     registerUnit(unit);
   });
   battleManager.tick(units);
-  syncSaunojaRosterWithUnits();
+  if (syncSaunojaRosterWithUnits()) {
+    updateRosterDisplay();
+  }
   let upkeepDrain = 0;
   for (const unit of units) {
     if (unit.faction !== 'player' || unit.isDead()) {
@@ -525,9 +534,13 @@ const updateTopbar = setupTopbar(
     }
   }
 );
-const rightPanel = setupRightPanel(state);
+const rightPanel = setupRightPanel(state, {
+  onRosterSelect: focusSaunojaById
+});
 log = rightPanel.log;
 addEvent = rightPanel.addEvent;
+renderRosterView = rightPanel.renderRoster;
+updateRosterDisplay();
 
 
 function spawn(type: UnitType, coord: AxialCoord): void {
@@ -583,44 +596,52 @@ function deselectAllSaunojas(except?: Saunoja): boolean {
   return changed;
 }
 
+function clearSaunojaSelection(): boolean {
+  let changed = false;
+  if (deselectAllSaunojas()) {
+    changed = true;
+  }
+  if (setSelectedCoord(null)) {
+    changed = true;
+  }
+  return changed;
+}
+
+function focusSaunoja(target: Saunoja): boolean {
+  let changed = false;
+  if (!target.selected) {
+    target.selected = true;
+    changed = true;
+  }
+  if (deselectAllSaunojas(target)) {
+    changed = true;
+  }
+  if (setSelectedCoord(target.coord)) {
+    changed = true;
+  }
+  return changed;
+}
+
+function focusSaunojaById(unitId: string): void {
+  const target = saunojas.find((unit) => unit.id === unitId);
+  if (!target) {
+    return;
+  }
+  if (!focusSaunoja(target)) {
+    return;
+  }
+  saveUnits();
+  updateRosterDisplay();
+  draw();
+}
+
 export function handleCanvasClick(world: PixelCoord): void {
   const clicked = pixelToAxial(world.x - map.hexSize, world.y - map.hexSize, map.hexSize);
   const target = saunojas.find(
     (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
   );
 
-  let selectionChanged = false;
-
-  if (!target) {
-    if (deselectAllSaunojas()) {
-      selectionChanged = true;
-    }
-    if (setSelectedCoord(null)) {
-      selectionChanged = true;
-    }
-  } else {
-    const toggledSelected = !target.selected;
-    if (target.selected !== toggledSelected) {
-      target.selected = toggledSelected;
-      selectionChanged = true;
-    }
-
-    if (toggledSelected) {
-      if (deselectAllSaunojas(target)) {
-        selectionChanged = true;
-      }
-      if (setSelectedCoord(target.coord)) {
-        selectionChanged = true;
-      }
-    } else {
-      if (deselectAllSaunojas()) {
-        selectionChanged = true;
-      }
-      if (setSelectedCoord(null)) {
-        selectionChanged = true;
-      }
-    }
-  }
+  const selectionChanged = target ? focusSaunoja(target) : clearSaunojaSelection();
 
   if (!selectionChanged) {
     return;
@@ -665,6 +686,7 @@ const onUnitDied = ({
   const fallenCoord = fallen ? { q: fallen.coord.q, r: fallen.coord.r } : null;
   if (idx !== -1) {
     units.splice(idx, 1);
+    unitsById.delete(unitId);
     detachSaunoja(unitId);
     draw();
   }
@@ -732,6 +754,7 @@ export async function start(): Promise<void> {
     clock.tick(delta);
     updateSaunaUI();
     updateTopbar(delta);
+    refreshRosterPanel();
     draw();
     requestAnimationFrame(gameLoop);
   }
@@ -793,6 +816,64 @@ function renderSaunojaCard(): void {
   rosterCardUpkeep.title = upkeepLabel;
 }
 
+function buildRosterEntries(): RosterEntry[] {
+  const statusRank: Record<RosterEntry['status'], number> = {
+    engaged: 0,
+    reserve: 1,
+    downed: 2
+  };
+
+  const entries = saunojas.map((attendant) => {
+    const attachedUnitId = saunojaToUnit.get(attendant.id);
+    const unit = attachedUnitId ? unitsById.get(attachedUnitId) : undefined;
+    const unitAlive = unit ? !unit.isDead() && unit.stats.health > 0 : false;
+    const hpSource = unit
+      ? Math.round(Math.max(0, unit.stats.health))
+      : Math.round(Math.max(0, attendant.hp));
+    const maxHpSource = unit
+      ? Math.round(Math.max(1, unit.getMaxHealth()))
+      : Math.round(Math.max(1, attendant.maxHp));
+    const upkeep = Math.max(0, Math.round(attendant.upkeep));
+    const status: RosterEntry['status'] = hpSource <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
+
+    return {
+      id: attendant.id,
+      name: attendant.name,
+      hp: hpSource,
+      maxHp: maxHpSource,
+      upkeep,
+      status,
+      selected: Boolean(attendant.selected),
+      traits: [...attendant.traits]
+    } satisfies RosterEntry;
+  });
+
+  entries.sort((a, b) => {
+    const statusDelta = statusRank[a.status] - statusRank[b.status];
+    if (statusDelta !== 0) {
+      return statusDelta;
+    }
+    return a.name.localeCompare(b.name, 'en');
+  });
+
+  return entries;
+}
+
+function refreshRosterPanel(entries?: RosterEntry[]): void {
+  if (!renderRosterView) {
+    return;
+  }
+  const view = entries ?? buildRosterEntries();
+  const signature = `${view.length}|${view
+    .map((entry) => `${entry.id}:${entry.hp}/${entry.maxHp}:${entry.status}:${entry.selected ? 1 : 0}`)
+    .join('|')}`;
+  if (signature === rosterSignature) {
+    return;
+  }
+  rosterSignature = signature;
+  renderRosterView(view);
+}
+
 function updateRosterDisplay(): void {
   const total = Math.max(0, Math.floor(getActiveRosterCount()));
   const formatted = rosterCountFormatter.format(total);
@@ -806,4 +887,5 @@ function updateRosterDisplay(): void {
     rosterBar.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
   }
   renderSaunojaCard();
+  refreshRosterPanel();
 }
