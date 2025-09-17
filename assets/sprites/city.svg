@@ -1,42 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <linearGradient id="city-base" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e2e8f2" />
-      <stop offset="1" stop-color="#a7b3c7" />
-    </linearGradient>
-    <linearGradient id="city-sky" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8fc5ff" stop-opacity="0.9" />
-      <stop offset="1" stop-color="#3b5a96" stop-opacity="0.3" />
-    </linearGradient>
-    <linearGradient id="city-highlight" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.9" />
-      <stop offset="1" stop-color="#8aa1c1" stop-opacity="0.1" />
-    </linearGradient>
-  </defs>
-  <path d="M64 8 118 64 64 120 10 64z" fill="#25314b" stroke="#141b29" stroke-width="4" stroke-linejoin="round" />
-  <path d="M26 66c14-24 42-38 70-34 16 2 26 12 30 28L64 114z" fill="url(#city-sky)" />
-  <g stroke="#1d2533" stroke-width="4" stroke-linejoin="round" fill="url(#city-base)">
-    <path d="M40 90h16V46l-16 8z" />
-    <path d="M62 100h18V34l-18 10z" />
-    <path d="M84 94h14V54l-14 6z" />
-  </g>
-  <g fill="#1c2b44" opacity="0.8">
-    <path d="M46 92h6V70l-6 2z" />
-    <path d="M70 96h8V66l-8 4z" />
-    <path d="M90 90h6V70l-6 2z" />
-  </g>
-  <g fill="#74c0ff" opacity="0.85">
-    <rect x="48" y="70" width="4" height="6" rx="1" />
-    <rect x="72" y="74" width="4" height="6" rx="1" />
-    <rect x="94" y="72" width="4" height="6" rx="1" />
-    <rect x="48" y="82" width="4" height="6" rx="1" />
-    <rect x="72" y="88" width="4" height="6" rx="1" />
-    <rect x="94" y="84" width="4" height="6" rx="1" />
-  </g>
-  <path d="M34 100h60l-12 18H46z" fill="url(#city-highlight)" stroke="#202a3f" stroke-width="3" stroke-linejoin="round" />
-  <g stroke="#ffffff" stroke-opacity="0.6" stroke-width="3" stroke-linecap="round">
-    <path d="M54 58h8" />
-    <path d="M80 52h10" />
-  </g>
-  <path d="M64 32c4-8 10-12 16-12 6 0 12 6 14 14" fill="none" stroke="#7fb6ff" stroke-width="4" stroke-linecap="round" opacity="0.8" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#e0e0e0" />
+  <rect x="10" y="22" width="12" height="30" fill="#a9a9a9" />
+  <rect x="26" y="14" width="12" height="38" fill="#808080" />
+  <rect x="42" y="26" width="12" height="26" fill="#a9a9a9" />
 </svg>
