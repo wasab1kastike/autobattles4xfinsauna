@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Ensure sauna-spawned Avanto Marauders join the enemy faction so they march on
+  player attendants without hesitation
 - Rebrand the Raider unit into the Avanto Marauder with refreshed stats exports,
   spawn identifiers, sauna simulation logs, and sprite mappings
 - Deploy Avanto Marauders from the enemy sauna so they leave the spa and
