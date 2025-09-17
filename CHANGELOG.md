@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Sync stored Saunoja roster coordinates with live friendly unit movement so HUD
+  overlays track attendants as they reposition across the battlefield
 - Retire the sauna aura's passive Saunakunnia trickle so idling near the steam no
   longer grants honor automatically
 - Replace the sauna spawn timer with heat-driven thresholds that escalate after

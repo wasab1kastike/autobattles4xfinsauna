@@ -14,6 +14,7 @@ async function initGame() {
 
 beforeEach(() => {
   vi.resetModules();
+  window.localStorage?.clear?.();
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     value: vi.fn(() => null)
@@ -102,5 +103,34 @@ describe('game logging', () => {
     const casualtyMessage = eventLog.lastElementChild?.textContent ?? '';
     expect(casualtyMessage).toContain('a rival');
     expect(casualtyMessage).toContain(foe.id);
+  });
+
+  it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
+    const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
+
+    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: ally });
+    await flushLogs();
+
+    const beforeMove = loadUnits();
+    const existing = new Set(beforeMove.map((unit) => `${unit.coord.q},${unit.coord.r}`));
+
+    let target = { q: ally.coord.q + 5, r: ally.coord.r - 3 };
+    while (existing.has(`${target.q},${target.r}`)) {
+      target = { q: target.q + 1, r: target.r + 1 };
+    }
+
+    ally.coord = target;
+    const targetKey = `${target.q},${target.r}`;
+    expect(existing.has(targetKey)).toBe(false);
+
+    __syncSaunojaRosterForTest();
+
+    const afterMove = loadUnits();
+    const updatedCoords = afterMove.map((unit) => `${unit.coord.q},${unit.coord.r}`);
+
+    expect(updatedCoords).toContain(targetKey);
   });
 });
