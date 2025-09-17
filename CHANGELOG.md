@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Sync stored Saunoja positions with allied unit movement so roster icons track
+  live battlefield coordinates and persist only when locations change
 - Replace the sauna spawn timer with heat-driven thresholds that escalate after
   each Avanto Marauder emerges from the steam
 - Regenerate the production asset mirrors with the sauna beer build so hashed

@@ -1,5 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../assets/sprites/farm.svg', () => ({ default: 'farm.svg' }));
+vi.mock('../assets/sprites/barracks.svg', () => ({ default: 'barracks.svg' }));
+vi.mock('../assets/sprites/city.svg', () => ({ default: 'city.svg' }));
+vi.mock('../assets/sprites/mine.svg', () => ({ default: 'mine.svg' }));
+vi.mock('../assets/sprites/soldier.svg', () => ({ default: 'soldier.svg' }));
+vi.mock('../assets/sprites/archer.svg', () => ({ default: 'archer.svg' }));
+vi.mock('../assets/sprites/avanto-marauder.svg', () => ({ default: 'marauder.svg' }));
+
 const flushLogs = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
@@ -102,5 +110,41 @@ describe('game logging', () => {
     const casualtyMessage = eventLog.lastElementChild?.textContent ?? '';
     expect(casualtyMessage).toContain('a rival');
     expect(casualtyMessage).toContain(foe.id);
+  });
+
+  it('updates Saunoja coordinates after allied movement', async () => {
+    const game = await initGame();
+    const { eventBus, syncSaunojasFromUnits, getSaunojaRoster } = game;
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 12, attackDamage: 1, attackRange: 1, movementRange: 2 };
+
+    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: ally });
+    await flushLogs();
+
+    const beforeMove = getSaunojaRoster().find((unit) => unit.id === ally.id);
+    expect(beforeMove?.coord).toEqual({ q: 0, r: 0 });
+
+    const saveSpy = vi.spyOn(game, 'saveUnits');
+
+    ally.coord = { q: 1, r: -1 };
+    const moved = syncSaunojasFromUnits();
+    if (moved) {
+      game.saveUnits();
+    }
+
+    expect(moved).toBe(true);
+    const afterMove = getSaunojaRoster().find((unit) => unit.id === ally.id);
+    expect(afterMove?.coord).toEqual({ q: 1, r: -1 });
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+
+    saveSpy.mockClear();
+    const unchanged = syncSaunojasFromUnits();
+    if (unchanged) {
+      game.saveUnits();
+    }
+    expect(unchanged).toBe(false);
+    expect(saveSpy).not.toHaveBeenCalled();
+    saveSpy.mockRestore();
   });
 });

@@ -50,6 +50,7 @@ let canvas: HTMLCanvasElement | null = null;
 let rosterBar: HTMLElement;
 let rosterValue: HTMLSpanElement | null = null;
 let saunojas: Saunoja[] = [];
+const saunojaByUnitId = new Map<string, Saunoja>();
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
 
@@ -209,6 +210,61 @@ resetAutoFrame();
 
 const units: Unit[] = [];
 
+function trackSaunojaForUnit(unit: Unit): Saunoja | null {
+  if (unit.faction !== 'player') {
+    return null;
+  }
+
+  const existing = saunojaByUnitId.get(unit.id);
+  let attendant = existing ?? saunojas.find((candidate) => candidate.id === unit.id) ?? null;
+  if (!attendant) {
+    attendant = makeSaunoja({
+      id: unit.id,
+      coord: { q: unit.coord.q, r: unit.coord.r },
+      maxHp: unit.getMaxHealth(),
+      hp: unit.stats.health
+    });
+    saunojas.push(attendant);
+    saveUnits();
+  } else {
+    attendant.maxHp = unit.getMaxHealth();
+    attendant.hp = Math.max(0, Math.min(attendant.maxHp, unit.stats.health));
+  }
+
+  saunojaByUnitId.set(unit.id, attendant);
+  return attendant;
+}
+
+export function syncSaunojasFromUnits(): boolean {
+  let updated = false;
+
+  for (const unit of units) {
+    if (unit.faction !== 'player' || unit.isDead()) {
+      continue;
+    }
+
+    const attendant = trackSaunojaForUnit(unit);
+    if (!attendant) {
+      continue;
+    }
+
+    const { q, r } = unit.coord;
+    if (attendant.coord.q !== q || attendant.coord.r !== r) {
+      attendant.coord = { q, r };
+      updated = true;
+    }
+  }
+
+  return updated;
+}
+
+export function getSaunojaRoster(): Saunoja[] {
+  return saunojas.map((unit) => ({
+    ...unit,
+    coord: { q: unit.coord.q, r: unit.coord.r }
+  }));
+}
+
 type UnitSpawnedPayload = { unit: Unit };
 
 function describeUnit(unit: Unit): string {
@@ -222,6 +278,9 @@ function registerUnit(unit: Unit): void {
     return;
   }
   units.push(unit);
+  if (unit.faction === 'player') {
+    trackSaunojaForUnit(unit);
+  }
   if (canvas) {
     draw();
   }
@@ -244,6 +303,10 @@ const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
   battleManager.tick(units);
+  const saunojaPositionsChanged = syncSaunojasFromUnits();
+  if (saunojaPositionsChanged) {
+    saveUnits();
+  }
   state.save();
   // Reveal around all friendly units each tick
   for (const unit of units) {
@@ -259,6 +322,9 @@ const sauna = createSauna({
 });
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
+for (const attendant of saunojas) {
+  saunojaByUnitId.set(attendant.id, attendant);
+}
 if (saunojas.length === 0) {
   saunojas.push(
     makeSaunoja({
@@ -480,9 +546,6 @@ const onUnitDied = ({
     units.splice(idx, 1);
     draw();
   }
-  if (unitFaction === 'player') {
-    updateRosterDisplay();
-  }
   if (
     attackerFaction === 'player' &&
     unitFaction &&
@@ -493,6 +556,15 @@ const onUnitDied = ({
   const side = unitFaction === 'player' ? 'our' : 'a rival';
   const label = fallen ? describeUnit(fallen) : `unit ${unitId}`;
   log(`The steam hushes as ${side} ${label} grows still.`);
+  if (unitFaction === 'player') {
+    saunojaByUnitId.delete(unitId);
+    const attendant = saunojas.find((unit) => unit.id === unitId);
+    if (attendant) {
+      attendant.hp = 0;
+      attendant.steam = 0;
+    }
+    updateRosterDisplay();
+  }
 };
 eventBus.on('unitDied', onUnitDied);
 
