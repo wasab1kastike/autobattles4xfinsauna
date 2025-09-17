@@ -466,15 +466,11 @@ const clock = new GameClock(1000, (deltaMs) => {
   state.save();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
-    if (unit.isDead()) {
+    if (unit.isDead() || unit.faction !== 'player') {
       continue;
     }
 
-    if (unit.faction === 'player') {
-      map.revealAround(unit.coord, 2);
-    } else if (unit.faction === 'enemy') {
-      map.revealAround(unit.coord, 1);
-    }
+    map.revealAround(unit.coord, unit.getVisionRange());
   }
   draw();
 });
