@@ -279,9 +279,9 @@ resetAutoFrame();
 
 const units: Unit[] = [];
 
-function pickRandomEdgeFreeTile(currentUnits: Unit[]): AxialCoord | null {
+function pickRandomEdgeFreeTile(): AxialCoord | undefined {
   const occupied = new Set<string>();
-  for (const unit of currentUnits) {
+  for (const unit of units) {
     if (!unit.isDead()) {
       occupied.add(`${unit.coord.q},${unit.coord.r}`);
     }
@@ -311,7 +311,7 @@ function pickRandomEdgeFreeTile(currentUnits: Unit[]): AxialCoord | null {
   }
 
   if (candidates.length === 0) {
-    return null;
+    return undefined;
   }
 
   const index = Math.floor(Math.random() * candidates.length);
@@ -429,8 +429,15 @@ eventBus.on('unitSpawned', onUnitSpawned);
 
 const state = new GameState(1000);
 const restoredSave = state.load(map);
-const clock = new GameClock(1000, () => {
+const clock = new GameClock(1000, (deltaMs) => {
+  const dtSeconds = deltaMs / 1000;
   state.tick();
+  sauna.update(dtSeconds, state, units, (unit) => {
+    registerUnit(unit);
+  });
+  enemySpawner.update(dtSeconds, units, (unit) => {
+    registerUnit(unit);
+  }, pickRandomEdgeFreeTile);
   battleManager.tick(units);
   syncSaunojaRosterWithUnits();
   let upkeepDrain = 0;
@@ -480,7 +487,7 @@ if (!hasActivePlayerUnit) {
     registerUnit(fallbackUnit);
   }
 }
-const enemySpawner = new EnemySpawner(pickRandomEdgeFreeTile);
+const enemySpawner = new EnemySpawner();
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
@@ -746,12 +753,6 @@ export async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     clock.tick(delta);
-    sauna.update(delta / 1000, state, units, (u) => {
-      registerUnit(u);
-    });
-    enemySpawner.update(delta / 1000, units, (u) => {
-      registerUnit(u);
-    });
     updateSaunaUI();
     updateTopbar(delta);
     draw();
