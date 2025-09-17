@@ -1,6 +1,8 @@
 import { Unit } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
+import { getNeighbors } from '../hex/HexUtils.ts';
+import { TerrainId } from '../map/terrain.ts';
 
 function coordKey(c: { q: number; r: number }): string {
   return `${c.q},${c.r}`;
@@ -34,6 +36,19 @@ export class BattleManager {
         const path = unit.moveTowards(target.coord, this.map, occupied);
         if (path.length > 0) {
           unit.coord = path[path.length - 1];
+        } else if (unit.distanceTo(target.coord) > unit.stats.attackRange) {
+          for (const neighbor of getNeighbors(unit.coord)) {
+            const neighborKey = coordKey(neighbor);
+            if (occupied.has(neighborKey)) {
+              continue;
+            }
+            const tile = this.map.getTile(neighbor.q, neighbor.r);
+            if (tile.terrain === TerrainId.Lake) {
+              continue;
+            }
+            unit.coord = neighbor;
+            break;
+          }
         }
       }
       if (unit.distanceTo(target.coord) <= unit.stats.attackRange && !target.isDead()) {

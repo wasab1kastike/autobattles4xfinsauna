@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Let BattleManager nudge stalled units into adjacent free hexes when pathfinding
+  cannot advance them yet keeps targets out of range
 - Sync fog-of-war reveals with each combat tick by updating player vision and
   limiting enemy scouting before the renderer draws the battlefield
 - Guarantee the battlefield opens with a steadfast sauna guard by auto-spawning a
