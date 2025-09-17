@@ -12,16 +12,20 @@ describe('HexMap', () => {
     expect(height).toBe(size * 2);
   });
 
-  it('generates a grid of tiles', () => {
+  it('creates tiles lazily as they are requested', () => {
     const map = new HexMap(3, 3);
+    expect(map.getTile(0, 0)).toBeUndefined();
+    const created = map.ensureTile(0, 0);
+    expect(created).toBeInstanceOf(HexTile);
+    expect(map.getTile(0, 0)).toBe(created);
     let count = 0;
     map.forEachTile(() => count++);
-    expect(count).toBe(9);
-    expect(map.getTile(0, 0)).toBeInstanceOf(HexTile);
+    expect(count).toBe(1);
   });
 
   it('returns neighboring tiles', () => {
     const map = new HexMap(3, 3);
+    map.ensureTile(1, 1);
     const neighbors = map.getNeighbors(1, 1);
     expect(neighbors).toHaveLength(6);
     neighbors.forEach((tile) => expect(tile).toBeInstanceOf(HexTile));
@@ -29,7 +33,7 @@ describe('HexMap', () => {
 
   it('draws a barracks image when tile has a barracks building', () => {
     const map = new HexMap(1, 1);
-    const tile = map.getTile(0, 0)!;
+    const tile = map.ensureTile(0, 0);
     tile.placeBuilding('barracks');
     // stub canvas context
     const gradient = { addColorStop: vi.fn() };
@@ -77,12 +81,13 @@ describe('HexMap', () => {
 
   it('expands bounds when accessing tiles outside initial area', () => {
     const map = new HexMap(1, 1);
-    const tile = map.getTile(2, -1);
+    map.ensureTile(0, 0);
+    const tile = map.ensureTile(2, -1);
     expect(tile).toBeInstanceOf(HexTile);
     let count = 0;
     map.forEachTile(() => count++);
     expect(map.width).toBe(3);
     expect(map.height).toBe(2);
-    expect(count).toBe(6);
+    expect(count).toBe(2);
   });
 });

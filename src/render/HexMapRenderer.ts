@@ -308,7 +308,7 @@ export class HexMapRenderer {
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
     for (let r = bounds.rMin; r <= bounds.rMax; r++) {
       for (let q = bounds.qMin; q <= bounds.qMax; q++) {
-        const tile = this.mapRef.tiles.get(`${q},${r}`);
+        const tile = this.mapRef.getTile(q, r);
         if (!tile) {
           continue;
         }
@@ -412,7 +412,7 @@ export class HexMapRenderer {
   ): void {
     for (let r = bounds.rMin; r <= bounds.rMax; r++) {
       for (let q = bounds.qMin; q <= bounds.qMax; q++) {
-        const tile = this.mapRef.tiles.get(`${q},${r}`);
+        const tile = this.mapRef.getTile(q, r);
         if (!tile || !tile.isFogged) {
           continue;
         }
