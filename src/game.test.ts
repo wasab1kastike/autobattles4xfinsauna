@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SAUNOJA_UPKEEP_MAX } from './units/saunoja.ts';
 
 const flushLogs = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -132,5 +133,47 @@ describe('game logging', () => {
     const updatedCoords = afterMove.map((unit) => `${unit.coord.q},${unit.coord.r}`);
 
     expect(updatedCoords).toContain(targetKey);
+  });
+});
+
+describe('saunoja persistence', () => {
+  it('normalizes and persists extended attendant fields', async () => {
+    window.localStorage?.setItem(
+      'autobattles:saunojas',
+      JSON.stringify([
+        {
+          id: 'legacy-attendant',
+          name: 'Legacy',
+          coord: { q: 3, r: -2 },
+          maxHp: 18,
+          hp: 12,
+          steam: 0.6,
+          traits: ['Brave', '', 'Veteran'],
+          upkeep: 99,
+          xp: -4,
+          selected: true
+        }
+      ])
+    );
+
+    const { loadUnits, saveUnits } = await initGame();
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(1);
+    expect(restored[0].traits).toEqual(['Brave', 'Veteran']);
+    expect(restored[0].upkeep).toBe(SAUNOJA_UPKEEP_MAX);
+    expect(restored[0].xp).toBe(0);
+
+    saveUnits();
+
+    const serialized = window.localStorage?.getItem('autobattles:saunojas');
+    expect(serialized).toBeTypeOf('string');
+    const parsed = JSON.parse(serialized ?? '[]');
+    expect(parsed).toHaveLength(1);
+    expect(parsed[0]).toMatchObject({
+      traits: ['Brave', 'Veteran'],
+      upkeep: SAUNOJA_UPKEEP_MAX,
+      xp: 0
+    });
   });
 });
