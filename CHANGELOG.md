@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Ship the Saunoja roster crest within `docs/assets/ui/` so the published site
+  serves the polished icon bundle without 404 regressions
 - Detect restored save files before granting starting resource windfalls so reloads resume progress without duplicate rewards
 - Mirror the Saunoja roster crest into `public/assets/ui/` so the HUD loads the
   polished icon without 404 warnings
