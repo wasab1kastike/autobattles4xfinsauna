@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Replace the sauna spawn timer with heat-driven thresholds that escalate after
+  each Avanto Marauder emerges from the steam
 - Regenerate the production asset mirrors with the sauna beer build so hashed
   bundles, HUD styling, and SVG art reference the updated resource palette
 - Ensure sauna-spawned Avanto Marauders join the enemy faction so they march on
