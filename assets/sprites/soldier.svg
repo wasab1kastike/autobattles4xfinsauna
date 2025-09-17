@@ -1,5 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#4682b4" />
-  <circle cx="32" cy="24" r="12" fill="#fff" />
-  <rect x="28" y="36" width="8" height="16" fill="#fff" />
-</svg>
+version https://git-lfs.github.com/spec/v1
+oid sha256:57e524ff1272a944f83bf014eea6cda3c00fcf84d77df38d14277e49d5425c2b
+size 1731
