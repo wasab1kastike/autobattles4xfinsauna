@@ -13,7 +13,7 @@ export const SOLDIER_COST = 50;
 
 export class Soldier extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, coord, faction, { ...SOLDIER_STATS });
+    super(id, 'soldier', coord, faction, { ...SOLDIER_STATS });
   }
 }
 

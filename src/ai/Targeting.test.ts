@@ -9,7 +9,7 @@ function createUnit(
   stats: UnitStats,
   priorityFactions: string[] = []
 ): Unit {
-  return new Unit(id, coord, faction, { ...stats }, priorityFactions);
+  return new Unit(id, 'test', coord, faction, { ...stats }, priorityFactions);
 }
 
 describe('Targeting', () => {
