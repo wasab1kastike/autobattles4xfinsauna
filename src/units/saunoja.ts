@@ -1,4 +1,5 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
+import { generateSaunojaName } from '../data/names.ts';
 
 export interface Saunoja {
   /** Unique identifier used to reference the unit. */
@@ -55,10 +56,26 @@ function clamp(value: number, min: number, max: number): number {
  * Construct a Saunoja with defensive defaults while sanitising the provided
  * configuration so downstream combat helpers can rely on consistent data.
  */
+function resolveSaunojaName(source: unknown): string {
+  if (typeof source === 'string') {
+    const trimmed = source.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+
+  try {
+    return generateSaunojaName();
+  } catch (error) {
+    console.warn('Falling back to default Saunoja name', error);
+    return DEFAULT_NAME;
+  }
+}
+
 export function makeSaunoja(init: SaunojaInit): Saunoja {
   const {
     id,
-    name = DEFAULT_NAME,
+    name,
     coord = DEFAULT_COORD,
     maxHp = DEFAULT_MAX_HP,
     hp = maxHp,
@@ -89,9 +106,11 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const normalizedLastHitSource = Number.isFinite(lastHitAt) ? lastHitAt : DEFAULT_LAST_HIT_AT;
   const clampedLastHitAt = Math.max(0, normalizedLastHitSource);
 
+  const resolvedName = resolveSaunojaName(name);
+
   return {
     id,
-    name,
+    name: resolvedName,
     coord: { q: coord.q, r: coord.r },
     maxHp: normalizedMaxHp,
     hp: clampedHp,

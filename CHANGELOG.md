@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Elevate the right panel into a sauna command console with a dedicated roster
+  tab that highlights attendant status, live health bars, polished trait
+  summaries, and direct selection alongside the policies, events, and log panes
+- Generate flavorful Saunoja names when attendants join the roster so every HUD
+  entry reads as a distinct warrior rather than a generic placeholder
 - March enemy spawns along the fog frontier so marauders emerge just beyond
   revealed territory and keep battles focused on the explored sauna perimeter
 - Generate hex tiles lazily upon reveal so the battlefield only materializes

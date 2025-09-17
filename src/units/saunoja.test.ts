@@ -34,6 +34,8 @@ describe('makeSaunoja', () => {
   });
 
   it('falls back to safe defaults for invalid data', () => {
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy.mockReturnValue(0);
     const rawTraits = ['Brash', '  ', 42 as unknown as string, '  Focused  '];
     const saunoja = makeSaunoja({
       id: 's2',
@@ -48,11 +50,12 @@ describe('makeSaunoja', () => {
     expect(saunoja.maxHp).toBe(1);
     expect(saunoja.hp).toBe(0);
     expect(saunoja.steam).toBe(0);
-    expect(saunoja.name).toBe('Saunoja');
+    expect(saunoja.name).toBe('Aino "Emberguard" Aalto');
     expect(saunoja.lastHitAt).toBe(0);
     expect(saunoja.traits).toEqual(['Brash', 'Focused']);
     expect(saunoja.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
     expect(saunoja.xp).toBe(0);
+    randomSpy.mockRestore();
   });
 
   it('clamps upkeep and xp to supported bounds', () => {
@@ -64,6 +67,17 @@ describe('makeSaunoja', () => {
 
     expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(0);
+  });
+
+  it('generates a flavorful name when none is provided', () => {
+    const randomSpy = vi.spyOn(Math, 'random');
+    randomSpy
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(0.2)
+      .mockReturnValueOnce(0.8);
+    const saunoja = makeSaunoja({ id: 's5', name: '   ' });
+    expect(saunoja.name).toBe('Noora "Steamcaller" Tuomi');
+    randomSpy.mockRestore();
   });
 });
 
