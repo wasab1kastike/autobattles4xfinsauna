@@ -51,6 +51,16 @@ describe('GameState', () => {
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(2); // base 1 + eco policy
   });
 
+  it('spends Saunakunnia when applying policies by default', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 10);
+
+    const applied = state.applyPolicy('grand-reveal', 4);
+
+    expect(applied).toBe(true);
+    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(6);
+  });
+
   it('constructs and upgrades buildings when affordable', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);

@@ -19,7 +19,7 @@ const applyTemperance = ({ policy, state }: PolicyPayload): void => {
 
 const applySteamDiplomats = ({ policy, state }: PolicyPayload): void => {
   if (policy !== 'steam-diplomats') return;
-  state.modifyPassiveGeneration(Resource.SAUNAKUNNIA, 1);
+  state.modifyPassiveGeneration(Resource.SAUNA_BEER, 2);
   eventBus.off('policyApplied', applySteamDiplomats);
 };
 

@@ -95,7 +95,7 @@ export function setupRightPanel(state: GameState): {
     name: string;
     description: string;
     cost: number;
-    resource?: Resource;
+    resource: Resource;
     prerequisite: (s: GameState) => boolean;
   };
 
@@ -103,7 +103,7 @@ export function setupRightPanel(state: GameState): {
 
   const resourceLabel: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: 'Sauna Beer Bottles',
-    [Resource.SAUNAKUNNIA]: 'Saunakunnia'
+    [Resource.SAUNAKUNNIA]: 'Saunakunnia Honors'
   };
 
   const policyDefs: PolicyDef[] = [
@@ -112,6 +112,7 @@ export function setupRightPanel(state: GameState): {
       name: 'Eco Policy',
       description: 'Increase passive sauna beer brewing by 1 bottle per tick',
       cost: 15,
+      resource: Resource.SAUNAKUNNIA,
       prerequisite: () => true
     },
     {
@@ -119,12 +120,13 @@ export function setupRightPanel(state: GameState): {
       name: 'Temperance',
       description: '+5% work speed at night',
       cost: 25,
+      resource: Resource.SAUNAKUNNIA,
       prerequisite: () => true
     },
     {
       id: 'steam-diplomats',
       name: 'Steam Diplomats',
-      description: '+1 Saunakunnia honor each tick',
+      description: 'Import +2 sauna beer bottles per tick through diplomatic envoys',
       cost: 8,
       resource: Resource.SAUNAKUNNIA,
       prerequisite: () => true
@@ -137,7 +139,7 @@ export function setupRightPanel(state: GameState): {
     policiesTab.innerHTML = '';
     for (const def of policyDefs) {
       const btn = document.createElement('button');
-      const resource = def.resource ?? Resource.SAUNA_BEER;
+      const resource = def.resource;
       btn.textContent = `${def.name} (${numberFormatter.format(def.cost)} ${resourceLabel[resource]})`;
       btn.title = `${def.description}. Costs ${numberFormatter.format(def.cost)} ${resourceLabel[resource]}.`;
       btn.classList.add('panel-action');
@@ -159,7 +161,7 @@ export function setupRightPanel(state: GameState): {
     for (const def of policyDefs) {
       const btn = policyButtons[def.id];
       if (btn) {
-        const resource = def.resource ?? Resource.SAUNA_BEER;
+        const resource = def.resource;
         btn.disabled =
           !def.prerequisite(state) ||
           state.hasPolicy(def.id) ||
