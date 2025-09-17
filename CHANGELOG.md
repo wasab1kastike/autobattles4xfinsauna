@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Focus the event log on sauna-flavored narratives by muting resource gain spam,
+  echoing right-panel events, and celebrating unit arrivals and farewells
 - Replace every terrain, building, and unit sprite with high-fidelity SVG art
   tailored to the Autobattles4xFinsauna palette and HUD glow treatments
 - Drive the BattleManager each fixed tick, funnel spawned player/enemy units
