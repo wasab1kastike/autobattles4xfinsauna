@@ -28,6 +28,7 @@ import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja } from './units/saunoja.ts';
 import { makeSaunoja } from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
+import { SOLDIER_COST } from './units/Soldier.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -391,6 +392,17 @@ const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
 });
+const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
+if (!hasActivePlayerUnit) {
+  if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
+    state.addResource(Resource.SAUNA_BEER, SOLDIER_COST);
+  }
+  const fallbackId = `u${units.length + 1}`;
+  const fallbackUnit = spawnUnit(state, 'soldier', fallbackId, sauna.pos, 'player');
+  if (fallbackUnit) {
+    registerUnit(fallbackUnit);
+  }
+}
 const enemySpawner = new EnemySpawner(pickRandomEdgeFreeTile);
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
