@@ -31,6 +31,7 @@ import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
   saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
+  saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
@@ -158,7 +159,7 @@ export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElemen
   rosterBar.replaceChildren();
 
   const icon = document.createElement('img');
-  icon.src = uiIcons.saunaBeer;
+  icon.src = uiIcons.saunojaRoster;
   icon.alt = 'Saunoja roster crest';
   icon.decoding = 'async';
   icon.classList.add('sauna-roster__icon');
@@ -191,6 +192,7 @@ export const assetPaths: AssetPaths = {
     'unit-archer': archer,
     'unit-avanto-marauder': avantoMarauder,
     'icon-sauna-beer': uiIcons.saunaBeer,
+    'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,
     'icon-sound': uiIcons.sound
   }
