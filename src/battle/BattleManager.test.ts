@@ -3,6 +3,8 @@ import { BattleManager } from './BattleManager.ts';
 import { Unit, UnitStats } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
+import { TerrainId } from '../map/terrain.ts';
+import { getNeighbors } from '../hex/HexUtils.ts';
 
 function seedTiles(map: HexMap, coords: { q: number; r: number }[]): void {
   for (const coord of coords) {
@@ -106,6 +108,55 @@ describe('BattleManager', () => {
 
     expect(defenderB.stats.health).toBe(0);
     expect(defenderC.stats.health).toBe(5);
+  });
+
+  it('moves idle units toward fog when no enemies are available', () => {
+    const map = new HexMap(5, 5);
+    const origin = map.ensureTile(0, 0);
+    origin.reveal();
+    origin.terrain = TerrainId.Plains;
+    const east = map.ensureTile(1, 0);
+    east.setFogged(true);
+    east.terrain = TerrainId.Plains;
+
+    const unit = createUnit('scout', { q: 0, r: 0 }, 'A', {
+      health: 10,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 1
+    });
+
+    const manager = new BattleManager(map);
+    manager.tick([unit]);
+
+    expect(unit.coord).toEqual({ q: 1, r: 0 });
+    expect((unit as any).cachedPath).toBeUndefined();
+  });
+
+  it('keeps idle units stationary when no reachable fog remains', () => {
+    const map = new HexMap(5, 5);
+    const origin = map.ensureTile(0, 0);
+    origin.reveal();
+    origin.terrain = TerrainId.Plains;
+
+    for (const neighbor of getNeighbors({ q: 0, r: 0 })) {
+      const tile = map.ensureTile(neighbor.q, neighbor.r);
+      tile.terrain = TerrainId.Lake;
+      tile.setFogged(false);
+    }
+
+    const unit = createUnit('blocked', { q: 0, r: 0 }, 'A', {
+      health: 10,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 1
+    });
+
+    const manager = new BattleManager(map);
+    manager.tick([unit]);
+
+    expect(unit.coord).toEqual({ q: 0, r: 0 });
+    expect((unit as any).cachedPath).toBeUndefined();
   });
 });
 
