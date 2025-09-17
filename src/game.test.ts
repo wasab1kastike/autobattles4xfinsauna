@@ -53,12 +53,12 @@ describe('game logging', () => {
 
     expect(rosterValue()).toBe('2');
 
-    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
     expect(rosterValue()).toBe('4');
 
-    const foe = new Unit('steam-foe', { q: 1, r: 0 }, 'enemy', { ...baseStats });
+    const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: foe });
     await flushLogs();
     expect(rosterValue()).toBe('4');
@@ -77,7 +77,7 @@ describe('game logging', () => {
     const { Unit } = await import('./units/Unit.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
 
-    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
 
@@ -87,7 +87,7 @@ describe('game logging', () => {
     expect(allySpawn).toContain('emerges from the steam');
     expect(allySpawn).toContain(ally.id);
 
-    const foe = new Unit('steam-foe', { q: 1, r: 0 }, 'enemy', { ...baseStats });
+    const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: foe });
     await flushLogs();
 
@@ -112,7 +112,7 @@ describe('game logging', () => {
     const { Unit } = await import('./units/Unit.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
 
-    const ally = new Unit('steam-ally', { q: 0, r: 0 }, 'player', { ...baseStats });
+    const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
 

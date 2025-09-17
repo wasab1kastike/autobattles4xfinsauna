@@ -11,7 +11,7 @@ export const AVANTO_MARAUDER_STATS: UnitStats = {
 
 export class AvantoMarauder extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, coord, faction, { ...AVANTO_MARAUDER_STATS });
+    super(id, 'avanto-marauder', coord, faction, { ...AVANTO_MARAUDER_STATS });
   }
 }
 
