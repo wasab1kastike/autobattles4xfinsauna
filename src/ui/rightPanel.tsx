@@ -1,4 +1,4 @@
-import { GameState } from '../core/GameState.ts';
+import { GameState, Resource } from '../core/GameState.ts';
 import { eventBus } from '../events';
 import { ensureHudLayout } from './layout.ts';
 
@@ -95,7 +95,15 @@ export function setupRightPanel(state: GameState): {
     name: string;
     description: string;
     cost: number;
+    resource?: Resource;
     prerequisite: (s: GameState) => boolean;
+  };
+
+  const numberFormatter = new Intl.NumberFormat('en-US');
+
+  const resourceLabel: Record<Resource, string> = {
+    [Resource.GOLD]: 'Gold',
+    [Resource.SAUNAKUNNIA]: 'Saunakunnia'
   };
 
   const policyDefs: PolicyDef[] = [
@@ -112,6 +120,14 @@ export function setupRightPanel(state: GameState): {
       description: '+5% work speed at night',
       cost: 25,
       prerequisite: () => true
+    },
+    {
+      id: 'steam-diplomats',
+      name: 'Steam Diplomats',
+      description: '+1 Saunakunnia passive income',
+      cost: 8,
+      resource: Resource.SAUNAKUNNIA,
+      prerequisite: () => true
     }
   ];
 
@@ -121,12 +137,16 @@ export function setupRightPanel(state: GameState): {
     policiesTab.innerHTML = '';
     for (const def of policyDefs) {
       const btn = document.createElement('button');
-      btn.textContent = `${def.name} (${def.cost}g)`;
-      btn.title = def.description;
+      const resource = def.resource ?? Resource.GOLD;
+      btn.textContent = `${def.name} (${numberFormatter.format(def.cost)} ${resourceLabel[resource]})`;
+      btn.title = `${def.description}. Costs ${numberFormatter.format(def.cost)} ${resourceLabel[resource]}.`;
       btn.classList.add('panel-action');
-      btn.disabled = !def.prerequisite(state) || state.hasPolicy(def.id);
+      btn.disabled =
+        !def.prerequisite(state) ||
+        state.hasPolicy(def.id) ||
+        !state.canAfford(def.cost, resource);
       btn.addEventListener('click', () => {
-        if (state.applyPolicy(def.id, def.cost)) {
+        if (state.applyPolicy(def.id, def.cost, resource)) {
           updatePolicyButtons();
         }
       });
@@ -139,7 +159,11 @@ export function setupRightPanel(state: GameState): {
     for (const def of policyDefs) {
       const btn = policyButtons[def.id];
       if (btn) {
-        btn.disabled = !def.prerequisite(state) || state.hasPolicy(def.id);
+        const resource = def.resource ?? Resource.GOLD;
+        btn.disabled =
+          !def.prerequisite(state) ||
+          state.hasPolicy(def.id) ||
+          !state.canAfford(def.cost, resource);
       }
     }
   }

@@ -54,7 +54,12 @@ describe('BattleManager', () => {
       amount: 5,
       remainingHealth: 0
     });
-    expect(deathEvents[0]).toMatchObject({ unitId: 'b', attackerId: 'a' });
+    expect(deathEvents[0]).toMatchObject({
+      unitId: 'b',
+      attackerId: 'a',
+      unitFaction: 'B',
+      attackerFaction: 'A'
+    });
   });
 
   it('prioritizes targets based on faction when multiple enemies are in range', () => {
