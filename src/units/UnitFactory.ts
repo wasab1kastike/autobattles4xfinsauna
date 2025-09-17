@@ -21,11 +21,11 @@ export function spawnUnit(
   faction: string
 ): Unit | null {
   const cost = UNIT_COST[type];
-  if (!state.canAfford(cost, Resource.GOLD)) {
+  if (!state.canAfford(cost, Resource.SAUNA_BEER)) {
     playSafe('error');
     return null;
   }
-  state.addResource(Resource.GOLD, -cost);
+  state.addResource(Resource.SAUNA_BEER, -cost);
   let unit: Unit | null = null;
   switch (type) {
     case 'soldier':

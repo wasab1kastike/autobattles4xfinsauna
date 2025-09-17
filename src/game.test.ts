@@ -40,10 +40,10 @@ describe('game logging', () => {
     expect(eventLog.firstChild?.textContent).toBe('msg 51');
   });
 
-  it('updates gold HUD without logging resource changes', async () => {
+  it('updates sauna beer HUD without logging resource changes', async () => {
     const { eventBus } = await initGame();
 
-    eventBus.emit('resourceChanged', { resource: 'gold', total: 42, amount: 5 });
+    eventBus.emit('resourceChanged', { resource: 'sauna-beer', total: 42, amount: 5 });
     await flushLogs();
 
     const resourceValue = document.querySelector<HTMLSpanElement>('.resource-value');

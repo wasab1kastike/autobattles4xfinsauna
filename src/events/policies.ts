@@ -6,8 +6,8 @@ type PolicyPayload = { policy: string; state: GameState };
 
 const applyEco = ({ policy, state }: PolicyPayload): void => {
   if (policy !== 'eco') return;
-  // Increase gold generation by 1 when eco policy applied
-  state.modifyPassiveGeneration(Resource.GOLD, 1);
+  // Infuse the sauna beer reserves with +1 passive bottle each tick
+  state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
   eventBus.off('policyApplied', applyEco);
 };
 
