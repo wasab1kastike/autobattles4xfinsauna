@@ -1,10 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { makeSaunoja } from './saunoja.ts';
+import { makeSaunoja, SAUNOJA_DEFAULT_UPKEEP, SAUNOJA_UPKEEP_MAX } from './saunoja.ts';
 import { applyDamage } from './combat.ts';
 
 describe('makeSaunoja', () => {
   it('applies defaults and clamps mutable values', () => {
     const coord = { q: 2, r: -1 };
+    const traits = ['Stoic', 'Swift'];
     const saunoja = makeSaunoja({
       id: 's1',
       name: 'Custom',
@@ -12,10 +13,14 @@ describe('makeSaunoja', () => {
       maxHp: 20,
       hp: 28,
       steam: 1.7,
+      traits,
+      upkeep: 4.5,
+      xp: 27,
       lastHitAt: 1234,
       selected: true
     });
     coord.q = 9;
+    traits.push('Mutable');
     expect(saunoja.name).toBe('Custom');
     expect(saunoja.maxHp).toBe(20);
     expect(saunoja.hp).toBe(20);
@@ -23,14 +28,21 @@ describe('makeSaunoja', () => {
     expect(saunoja.coord).toEqual({ q: 2, r: -1 });
     expect(saunoja.lastHitAt).toBe(1234);
     expect(saunoja.selected).toBe(true);
+    expect(saunoja.traits).toEqual(['Stoic', 'Swift']);
+    expect(saunoja.upkeep).toBe(4.5);
+    expect(saunoja.xp).toBe(27);
   });
 
   it('falls back to safe defaults for invalid data', () => {
+    const rawTraits = ['Brash', '  ', 42 as unknown as string, '  Focused  '];
     const saunoja = makeSaunoja({
       id: 's2',
       maxHp: 0,
       hp: -5,
       steam: -1,
+      traits: rawTraits,
+      upkeep: Number.NaN,
+      xp: -5,
       lastHitAt: Number.NaN
     });
     expect(saunoja.maxHp).toBe(1);
@@ -38,6 +50,20 @@ describe('makeSaunoja', () => {
     expect(saunoja.steam).toBe(0);
     expect(saunoja.name).toBe('Saunoja');
     expect(saunoja.lastHitAt).toBe(0);
+    expect(saunoja.traits).toEqual(['Brash', 'Focused']);
+    expect(saunoja.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
+    expect(saunoja.xp).toBe(0);
+  });
+
+  it('clamps upkeep and xp to supported bounds', () => {
+    const saunoja = makeSaunoja({
+      id: 's3',
+      upkeep: 99,
+      xp: Number.NaN
+    });
+
+    expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
+    expect(saunoja.xp).toBe(0);
   });
 });
 

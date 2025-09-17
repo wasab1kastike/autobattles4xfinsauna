@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Extend Saunoja attendants with trait, upkeep, and experience tracking while
+  normalizing stored data and persisting the new fields across sessions
 - Replace the Saunoja roster badge with a dedicated warrior crest and preload
   the SVG so the HUD reflects the new insignia instantly
 - Redirect policy investments to Saunakunnia honors, refresh Steam Diplomat

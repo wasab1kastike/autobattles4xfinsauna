@@ -107,6 +107,14 @@ export function loadUnits(): Saunoja[] {
           ? { q: coordSource.q, r: coordSource.r }
           : undefined;
 
+      const traitsSource = data.traits;
+      const traits = Array.isArray(traitsSource)
+        ? traitsSource.filter((trait): trait is string => typeof trait === 'string')
+        : undefined;
+
+      const upkeepValue = typeof data.upkeep === 'number' ? data.upkeep : undefined;
+      const xpValue = typeof data.xp === 'number' ? data.xp : undefined;
+
       restored.push(
         makeSaunoja({
           id: idValue,
@@ -115,6 +123,9 @@ export function loadUnits(): Saunoja[] {
           maxHp: typeof data.maxHp === 'number' ? data.maxHp : undefined,
           hp: typeof data.hp === 'number' ? data.hp : undefined,
           steam: typeof data.steam === 'number' ? data.steam : undefined,
+          traits,
+          upkeep: upkeepValue,
+          xp: xpValue,
           selected: Boolean(data.selected)
         })
       );
@@ -141,6 +152,9 @@ export function saveUnits(): void {
       maxHp: unit.maxHp,
       hp: unit.hp,
       steam: unit.steam,
+      traits: [...unit.traits],
+      upkeep: unit.upkeep,
+      xp: unit.xp,
       selected: unit.selected
     }));
     storage.setItem(SAUNOJA_STORAGE_KEY, JSON.stringify(payload));
