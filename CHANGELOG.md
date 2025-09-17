@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Introduce the Saunakunnia prestige track with dedicated HUD formatting, sauna aura
+  and victory generation hooks, policy costs, and refreshed log copy
 - Regenerate the GitHub Pages `docs/` mirror from the current production build
   so the custom domain serves the polished SPA entry point and fallback
 - Update CI asset verification to expect root-relative `/assets/` URLs and confirm hashed bundles exist before publishing

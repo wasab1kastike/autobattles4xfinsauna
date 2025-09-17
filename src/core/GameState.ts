@@ -24,12 +24,14 @@ function createBuilding(type: string): Building | undefined {
 
 /** Available resource types. */
 export enum Resource {
-  GOLD = 'gold'
+  GOLD = 'gold',
+  SAUNAKUNNIA = 'saunakunnia'
 }
 
 /** Default passive generation per tick for each resource. */
 export const PASSIVE_GENERATION: Record<Resource, number> = {
-  [Resource.GOLD]: 1
+  [Resource.GOLD]: 1,
+  [Resource.SAUNAKUNNIA]: 0
 };
 
 // Shape of the serialized game state stored in localStorage.
@@ -43,7 +45,8 @@ type SerializedState = {
 export class GameState {
   /** Current amounts of each resource. */
   resources: Record<Resource, number> = {
-    [Resource.GOLD]: 0
+    [Resource.GOLD]: 0,
+    [Resource.SAUNAKUNNIA]: 0
   };
 
   /** Passive generation applied each tick. */
@@ -99,6 +102,11 @@ export class GameState {
       return;
     }
     this.resources = { ...this.resources, ...data.resources };
+    (Object.keys(this.resources) as Resource[]).forEach((res) => {
+      if (!Number.isFinite(this.resources[res])) {
+        this.resources[res] = 0;
+      }
+    });
     const validBuildings: Record<string, number> = {};
     Object.entries(data.buildings ?? {}).forEach(([type, count]) => {
       if (BUILDING_FACTORIES[type]) {

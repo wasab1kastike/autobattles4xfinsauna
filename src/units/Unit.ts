@@ -132,7 +132,9 @@ export class Unit {
       this.alive = false;
       eventBus.emit('unitDied', {
         unitId: this.id,
-        attackerId: attacker?.id
+        attackerId: attacker?.id,
+        unitFaction: this.faction,
+        attackerFaction: attacker?.faction
       });
       this.emitDeath();
     }
