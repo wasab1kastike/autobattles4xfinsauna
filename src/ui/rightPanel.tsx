@@ -204,6 +204,7 @@ export function setupRightPanel(state: GameState): {
   function addEvent(ev: GameEvent): void {
     events.push(ev);
     renderEvents();
+    log(`Event • ${ev.headline}`);
   }
 
   // --- Log ---
