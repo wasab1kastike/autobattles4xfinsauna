@@ -10,6 +10,9 @@ export interface Sauna {
   auraRadius: number;
   regenPerSec: number;
   rallyToFront: boolean;
+  heat: number;
+  heatPerTick: number;
+  spawnThreshold: number;
   update(dt: number, units: Unit[], addUnit: (u: Unit) => void): void;
 }
 
@@ -22,9 +25,20 @@ export function createSauna(pos: AxialCoord): Sauna {
     auraRadius: 2,
     regenPerSec: 1,
     rallyToFront: false,
+    heat: 0,
+    heatPerTick: 50 / 30,
+    spawnThreshold: 50,
     update(dt: number, units: Unit[], addUnit: (u: Unit) => void): void {
-      this.timer -= dt;
-      if (this.timer > 0) return;
+      this.heat += this.heatPerTick * dt;
+      this.spawnCooldown = this.spawnThreshold / this.heatPerTick;
+
+      if (this.heat < this.spawnThreshold) {
+        this.timer = Math.max(
+          (this.spawnThreshold - this.heat) / this.heatPerTick,
+          0
+        );
+        return;
+      }
 
       const targets: AxialCoord[] = [];
       for (let dq = -2; dq <= 2; dq++) {
@@ -43,14 +57,25 @@ export function createSauna(pos: AxialCoord): Sauna {
         }
       }
 
-      if (targets.length > 0) {
-        const coord = targets[Math.floor(Math.random() * targets.length)];
-        const id = `avantoMarauder${units.length + 1}`;
-        const faction: Unit['faction'] = 'enemy';
-        const avantoMarauder = new AvantoMarauder(id, coord, faction);
-        addUnit(avantoMarauder);
+      if (targets.length === 0) {
+        this.timer = 0;
+        return;
       }
-      this.timer = this.spawnCooldown;
+
+      const coord = targets[Math.floor(Math.random() * targets.length)];
+      const id = `avantoMarauder${units.length + 1}`;
+      const faction: Unit['faction'] = 'enemy';
+      const avantoMarauder = new AvantoMarauder(id, coord, faction);
+      addUnit(avantoMarauder);
+
+      const previousThreshold = this.spawnThreshold;
+      this.heat = Math.max(0, this.heat - previousThreshold);
+      this.spawnThreshold = previousThreshold * 1.05;
+      this.spawnCooldown = this.spawnThreshold / this.heatPerTick;
+      this.timer = Math.max(
+        (this.spawnThreshold - this.heat) / this.heatPerTick,
+        0
+      );
     }
   };
 }
