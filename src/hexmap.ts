@@ -25,11 +25,6 @@ export class HexMap {
     this.minR = 0;
     this.maxQ = width - 1;
     this.maxR = height - 1;
-    for (let r = this.minR; r <= this.maxR; r++) {
-      for (let q = this.minQ; q <= this.maxQ; q++) {
-        this.tiles.set(this.key(q, r), new HexTile(terrainAt(q, r, seed)));
-      }
-    }
   }
 
   /** Current width derived from tracked bounds. */
@@ -64,16 +59,14 @@ export class HexMap {
     return tile;
   }
 
-  getTile(q: number, r: number): HexTile {
-    return this.ensureTile(q, r);
+  getTile(q: number, r: number): HexTile | undefined {
+    return this.tiles.get(this.key(q, r));
   }
 
   forEachTile(cb: (tile: HexTile, coord: AxialCoord) => void): void {
-    for (let r = this.minR; r <= this.maxR; r++) {
-      for (let q = this.minQ; q <= this.maxQ; q++) {
-        const tile = this.ensureTile(q, r);
-        cb(tile, { q, r });
-      }
+    for (const [key, tile] of this.tiles) {
+      const [q, r] = key.split(',').map(Number);
+      cb(tile, { q, r });
     }
   }
 

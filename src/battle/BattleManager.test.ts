@@ -4,6 +4,12 @@ import { Unit, UnitStats } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
 
+function seedTiles(map: HexMap, coords: { q: number; r: number }[]): void {
+  for (const coord of coords) {
+    map.ensureTile(coord.q, coord.r);
+  }
+}
+
 function createUnit(
   id: string,
   coord: { q: number; r: number },
@@ -17,6 +23,11 @@ function createUnit(
 describe('BattleManager', () => {
   it('moves units toward enemies and handles combat events', () => {
     const map = new HexMap(5, 5);
+    seedTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+      { q: 2, r: 0 },
+    ]);
     const attacker = createUnit('a', { q: 0, r: 0 }, 'A', {
       health: 10,
       attackDamage: 5,
@@ -64,6 +75,11 @@ describe('BattleManager', () => {
 
   it('prioritizes targets based on faction when multiple enemies are in range', () => {
     const map = new HexMap(5, 5);
+    seedTiles(map, [
+      { q: 0, r: 0 },
+      { q: 1, r: 0 },
+      { q: 0, r: 1 },
+    ]);
     const attacker = createUnit('a', { q: 0, r: 0 }, 'A', {
       health: 10,
       attackDamage: 5,
