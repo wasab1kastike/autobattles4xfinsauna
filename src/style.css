@@ -488,6 +488,10 @@ body > #game-container {
   min-height: 0;
 }
 
+.panel-section[hidden] {
+  display: none;
+}
+
 .panel-section--scroll {
   flex: 1 1 auto;
   overflow-y: auto;
