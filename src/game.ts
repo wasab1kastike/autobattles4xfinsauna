@@ -332,7 +332,7 @@ const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
 eventBus.on('unitSpawned', onUnitSpawned);
 
 const state = new GameState(1000);
-state.load(map);
+const restoredSave = state.load(map);
 const VISION_RADIUS = 2;
 const clock = new GameClock(1000, () => {
   state.tick();
@@ -411,14 +411,16 @@ function spawn(type: UnitType, coord: AxialCoord): void {
   }
 }
 
-state.addResource(Resource.SAUNA_BEER, INITIAL_SAUNA_BEER);
-log(
-  `Quartermaster stocks ${INITIAL_SAUNA_BEER} bottles of ${RESOURCE_LABELS[Resource.SAUNA_BEER]} to launch your campaign.`
-);
-state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
-log(
-  `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`
-);
+if (!restoredSave) {
+  state.addResource(Resource.SAUNA_BEER, INITIAL_SAUNA_BEER);
+  log(
+    `Quartermaster stocks ${INITIAL_SAUNA_BEER} bottles of ${RESOURCE_LABELS[Resource.SAUNA_BEER]} to launch your campaign.`
+  );
+  state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
+  log(
+    `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`
+  );
+}
 
 const storedSelection = saunojas.find((unit) => unit.selected);
 if (storedSelection) {

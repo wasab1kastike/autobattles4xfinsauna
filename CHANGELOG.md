@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Detect restored save files before granting starting resource windfalls so reloads resume progress without duplicate rewards
 - Mirror the Saunoja roster crest into `public/assets/ui/` so the HUD loads the
   polished icon without 404 warnings
 - Regenerate the GitHub Pages bundle so Steam Diplomats boost sauna beer
