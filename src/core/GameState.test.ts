@@ -29,6 +29,28 @@ describe('GameState', () => {
     expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(6); // 1 saved + 5 offline ticks
   });
 
+  it('reports whether a saved game was restored', () => {
+    const initialBeer = 200;
+    const initialHonor = 3;
+    const fresh = new GameState(1000);
+    expect(fresh.load()).toBe(false);
+    fresh.addResource(Resource.SAUNA_BEER, initialBeer);
+    fresh.addResource(Resource.SAUNAKUNNIA, initialHonor);
+    fresh.save();
+
+    const loaded = new GameState(1000);
+    const restored = loaded.load();
+    expect(restored).toBe(true);
+
+    if (!restored) {
+      loaded.addResource(Resource.SAUNA_BEER, initialBeer);
+      loaded.addResource(Resource.SAUNAKUNNIA, initialHonor);
+    }
+
+    expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(initialBeer);
+    expect(loaded.getResource(Resource.SAUNAKUNNIA)).toBe(initialHonor);
+  });
+
   it('persists Saunakunnia alongside other resources', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNAKUNNIA, 5);

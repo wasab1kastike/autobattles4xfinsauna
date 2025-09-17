@@ -95,13 +95,13 @@ export class GameState {
     localStorage.setItem(this.storageKey, JSON.stringify(serialized));
   }
 
-  load(map?: HexMap): void {
+  load(map?: HexMap): boolean {
     const data = safeLoadJSON<Partial<SerializedState>>(this.storageKey);
     if (!data) {
       this.lastSaved = Date.now();
-      return;
+      return false;
     }
-    this.resources = { ...this.resources, ...data.resources };
+    this.resources = { ...this.resources, ...(data.resources ?? {}) };
     (Object.keys(this.resources) as Resource[]).forEach((res) => {
       if (!Number.isFinite(this.resources[res])) {
         this.resources[res] = 0;
@@ -136,6 +136,7 @@ export class GameState {
     (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
       this.resources[res] += offlineTicks * this.passiveGeneration[res];
     });
+    return true;
   }
 
   /** Current amount of a resource. */
