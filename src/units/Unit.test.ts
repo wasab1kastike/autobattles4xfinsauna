@@ -166,6 +166,32 @@ describe('Unit movement', () => {
     expect(path).toEqual([]);
     expect(unit.coord).toEqual({ q: 0, r: 0 });
   });
+
+  it('caches paths and invalidates when blocked', () => {
+    const map = new HexMap(3, 3);
+    const unit = createUnit('a', { q: 0, r: 0 }, {
+      health: 10,
+      attackDamage: 2,
+      attackRange: 1,
+      movementRange: 2
+    });
+    const target: AxialCoord = { q: 2, r: 0 };
+    const occupied = new Set<string>();
+    const spy = vi.spyOn(unit, 'findPath');
+
+    unit.getPathTo(target, map, occupied);
+    unit.getPathTo(target, map, occupied);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    occupied.add(coordKey({ q: 1, r: 0 }));
+    unit.moveTowards(target, map, occupied);
+    occupied.clear();
+
+    unit.getPathTo(target, map, occupied);
+    expect(spy).toHaveBeenCalledTimes(2);
+
+    spy.mockRestore();
+  });
 });
 
 describe('Unit sauna regeneration', () => {
