@@ -1,79 +1,118 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { GameState } from '../core/GameState.ts';
 import type { Unit } from '../units/Unit.ts';
-import { AvantoMarauder } from '../units/AvantoMarauder.ts';
+import { spawnUnit } from '../units/UnitFactory.ts';
+import { SOLDIER_COST } from '../units/Soldier.ts';
+
+let saunaSpawnCounter = 0;
+
+export function pickFreeTileAround(
+  origin: AxialCoord,
+  radius: number,
+  units: Unit[]
+): AxialCoord | null {
+  const candidates: AxialCoord[] = [];
+  for (let dq = -radius; dq <= radius; dq++) {
+    const rMin = Math.max(-radius, -dq - radius);
+    const rMax = Math.min(radius, -dq + radius);
+    for (let dr = rMin; dr <= rMax; dr++) {
+      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq - dr));
+      if (dist === 0 || dist > radius) continue;
+      const coord = { q: origin.q + dq, r: origin.r + dr };
+      const occupied = units.some(
+        (u) => !u.isDead() && u.coord.q === coord.q && u.coord.r === coord.r
+      );
+      if (!occupied) {
+        candidates.push(coord);
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index];
+}
 
 export interface Sauna {
   id: 'sauna';
   pos: AxialCoord;
-  spawnCooldown: number;
-  timer: number;
   auraRadius: number;
   regenPerSec: number;
   rallyToFront: boolean;
   heat: number;
   heatPerTick: number;
-  spawnThreshold: number;
-  update(dt: number, units: Unit[], addUnit: (u: Unit) => void): void;
+  playerSpawnThreshold: number;
+  playerSpawnCooldown: number;
+  playerSpawnTimer: number;
+  update(
+    dt: number,
+    state: GameState,
+    units: Unit[],
+    addUnit: (u: Unit) => void
+  ): void;
 }
 
 export function createSauna(pos: AxialCoord): Sauna {
   return {
     id: 'sauna',
     pos,
-    spawnCooldown: 30,
-    timer: 30,
     auraRadius: 2,
     regenPerSec: 1,
     rallyToFront: false,
     heat: 0,
     heatPerTick: 50 / 30,
-    spawnThreshold: 50,
-    update(dt: number, units: Unit[], addUnit: (u: Unit) => void): void {
+    playerSpawnThreshold: 50,
+    playerSpawnCooldown: 30,
+    playerSpawnTimer: 30,
+    update(
+      dt: number,
+      state: GameState,
+      units: Unit[],
+      addUnit: (u: Unit) => void
+    ): void {
       this.heat += this.heatPerTick * dt;
-      this.spawnCooldown = this.spawnThreshold / this.heatPerTick;
+      this.playerSpawnCooldown =
+        this.playerSpawnThreshold / this.heatPerTick;
 
-      if (this.heat < this.spawnThreshold) {
-        this.timer = Math.max(
-          (this.spawnThreshold - this.heat) / this.heatPerTick,
+      if (this.heat < this.playerSpawnThreshold) {
+        this.playerSpawnTimer = Math.max(
+          (this.playerSpawnThreshold - this.heat) / this.heatPerTick,
           0
         );
         return;
       }
 
-      const targets: AxialCoord[] = [];
-      for (let dq = -2; dq <= 2; dq++) {
-        const rMin = Math.max(-2, -dq - 2);
-        const rMax = Math.min(2, -dq + 2);
-        for (let dr = rMin; dr <= rMax; dr++) {
-          const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq - dr));
-          if (dist === 0 || dist > 2) continue;
-          const coord = { q: this.pos.q + dq, r: this.pos.r + dr };
-          const occupied = units.some(
-            (u) => !u.isDead() && u.coord.q === coord.q && u.coord.r === coord.r
-          );
-          if (!occupied) {
-            targets.push(coord);
-          }
+      const searchRadius = Math.max(1, Math.round(this.auraRadius));
+      while (this.heat >= this.playerSpawnThreshold) {
+        const spawnCoord = pickFreeTileAround(this.pos, searchRadius, units);
+        if (!spawnCoord) {
+          this.playerSpawnTimer = 0;
+          break;
         }
+
+        if (!state.canAfford(SOLDIER_COST)) {
+          break;
+        }
+
+        const previousThreshold = this.playerSpawnThreshold;
+        const id = `sauna-soldier-${++saunaSpawnCounter}`;
+        const unit = spawnUnit(state, 'soldier', id, spawnCoord, 'player');
+        if (!unit) {
+          break;
+        }
+
+        addUnit(unit);
+        this.heat = Math.max(0, this.heat - previousThreshold);
+        this.playerSpawnThreshold = previousThreshold * 1.05;
+        this.playerSpawnCooldown =
+          this.playerSpawnThreshold / this.heatPerTick;
       }
 
-      if (targets.length === 0) {
-        this.timer = 0;
-        return;
-      }
-
-      const coord = targets[Math.floor(Math.random() * targets.length)];
-      const id = `avantoMarauder${units.length + 1}`;
-      const faction: Unit['faction'] = 'enemy';
-      const avantoMarauder = new AvantoMarauder(id, coord, faction);
-      addUnit(avantoMarauder);
-
-      const previousThreshold = this.spawnThreshold;
-      this.heat = Math.max(0, this.heat - previousThreshold);
-      this.spawnThreshold = previousThreshold * 1.05;
-      this.spawnCooldown = this.spawnThreshold / this.heatPerTick;
-      this.timer = Math.max(
-        (this.spawnThreshold - this.heat) / this.heatPerTick,
+      this.playerSpawnTimer = Math.max(
+        (this.playerSpawnThreshold - this.heat) / this.heatPerTick,
         0
       );
     }

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Channel sauna heat into rallying allied soldiers, surface player-facing spawn
+  thresholds, and reuse the HUD countdown for the friendly reinforcements
 - Retitle the Saunakunnia badge and narration copy to drop the honor suffix while
   keeping accessibility labels polished and concise
 - Shorten the Saunakunnia policy cost label so the right panel references the

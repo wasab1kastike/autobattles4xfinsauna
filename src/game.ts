@@ -582,7 +582,7 @@ export async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     clock.tick(delta);
-    sauna.update(delta / 1000, units, (u) => {
+    sauna.update(delta / 1000, state, units, (u) => {
       registerUnit(u);
     });
     updateSaunaUI();

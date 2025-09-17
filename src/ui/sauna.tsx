@@ -75,7 +75,9 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
   });
 
   return () => {
-    const progress = 1 - sauna.timer / sauna.spawnCooldown;
+    const cooldown =
+      sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
+    const progress = 1 - sauna.playerSpawnTimer / cooldown;
     barFill.style.width = `${Math.max(0, Math.min(progress, 1)) * 100}%`;
     checkbox.checked = sauna.rallyToFront;
   };
