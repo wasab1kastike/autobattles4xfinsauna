@@ -243,7 +243,11 @@ export class GameState {
   }
 
   /** Spend resources to apply a policy. */
-  applyPolicy(policy: string, cost: number, res: Resource = Resource.SAUNA_BEER): boolean {
+  applyPolicy(
+    policy: string,
+    cost: number,
+    res: Resource = Resource.SAUNAKUNNIA
+  ): boolean {
     if (!this.spend(cost, res)) {
       return false;
     }
