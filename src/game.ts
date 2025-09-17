@@ -35,19 +35,14 @@ const uiIcons = {
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
 };
 
-const RESOURCE_LABELS: Record<Resource, string> = {
-  [Resource.SAUNA_BEER]: 'Sauna Beer',
-  [Resource.SAUNAKUNNIA]: 'Saunakunnia'
-};
-
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_AURA_INTERVAL = 2000;
 const SAUNAKUNNIA_AURA_GAIN = 1;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
 let canvas: HTMLCanvasElement | null = null;
-let resourceBar: HTMLElement;
-let resourceValue: HTMLSpanElement | null = null;
+let rosterBar: HTMLElement;
+let rosterValue: HTMLSpanElement | null = null;
 let saunojas: Saunoja[] = [];
 
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
@@ -58,7 +53,7 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
-const resourceTotalFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 function getSaunojaStorage(): Storage | null {
   try {
@@ -148,28 +143,33 @@ export function saveUnits(): void {
 
 export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElement): void {
   canvas = canvasEl;
-  resourceBar = resourceBarEl;
-  resourceBar.classList.add('resource-bar');
-  resourceBar.setAttribute('role', 'status');
-  resourceBar.setAttribute('aria-live', 'polite');
-  resourceBar.replaceChildren();
+  rosterBar = resourceBarEl;
+  rosterBar.classList.add('sauna-roster');
+  rosterBar.setAttribute('role', 'status');
+  rosterBar.setAttribute('aria-live', 'polite');
+  rosterBar.setAttribute('title', 'Active sauna battalion on the field');
+  rosterBar.replaceChildren();
 
   const icon = document.createElement('img');
-  icon.src = uiIcons.resource;
-  icon.alt = `${RESOURCE_LABELS[Resource.SAUNA_BEER]} reserves`;
+  icon.src = uiIcons.saunaBeer;
+  icon.alt = 'Saunoja roster crest';
   icon.decoding = 'async';
-  icon.classList.add('resource-icon');
+  icon.classList.add('sauna-roster__icon');
+
+  const textContainer = document.createElement('span');
+  textContainer.classList.add('sauna-roster__text');
 
   const labelSpan = document.createElement('span');
-  labelSpan.textContent = `${RESOURCE_LABELS[Resource.SAUNA_BEER]} Cellar`;
-  labelSpan.classList.add('resource-label');
+  labelSpan.textContent = 'Saunoja Roster';
+  labelSpan.classList.add('sauna-roster__label');
 
-  resourceValue = document.createElement('span');
-  resourceValue.textContent = '0';
-  resourceValue.classList.add('resource-value');
+  rosterValue = document.createElement('span');
+  rosterValue.textContent = '0';
+  rosterValue.classList.add('sauna-roster__value');
 
-  resourceBar.append(icon, labelSpan, resourceValue);
-  updateResourceDisplay(state.getResource(Resource.SAUNA_BEER));
+  textContainer.append(labelSpan, rosterValue);
+  rosterBar.append(icon, textContainer);
+  updateRosterDisplay();
 }
 
 export const assetPaths: AssetPaths = {
@@ -221,6 +221,9 @@ function registerUnit(unit: Unit): void {
   }
   const steward = unit.faction === 'player' ? 'Our' : 'A rival';
   log(`${steward} ${describeUnit(unit)} emerges from the steam.`);
+  if (unit.faction === 'player') {
+    updateRosterDisplay();
+  }
 }
 
 const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
@@ -445,14 +448,6 @@ export function draw(): void {
   });
 }
 
-const onResourceChanged = ({ resource, total }) => {
-  const typedResource = resource as Resource;
-  if (typedResource === Resource.SAUNA_BEER) {
-    updateResourceDisplay(total);
-  }
-};
-eventBus.on('resourceChanged', onResourceChanged);
-
 const onPolicyApplied = ({ policy }) => {
   log(`Sauna council toasts a fresh keg for policy: ${policy}.`);
 };
@@ -473,6 +468,9 @@ const onUnitDied = ({
     units.splice(idx, 1);
     draw();
   }
+  if (unitFaction === 'player') {
+    updateRosterDisplay();
+  }
   if (
     attackerFaction === 'player' &&
     unitFaction &&
@@ -487,9 +485,9 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
-  eventBus.off('resourceChanged', onResourceChanged);
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
+  eventBus.off('unitSpawned', onUnitSpawned);
 }
 
 export async function start(): Promise<void> {
@@ -497,7 +495,7 @@ export async function start(): Promise<void> {
     console.error('Cannot start game without loaded assets.');
     return;
   }
-  updateResourceDisplay(state.getResource(Resource.SAUNA_BEER));
+  updateRosterDisplay();
   draw();
   try {
     await preloadSaunojaIcon(() => {
@@ -527,11 +525,31 @@ export async function start(): Promise<void> {
 
 export { log };
 
-function updateResourceDisplay(total: number): void {
-  const formatted = resourceTotalFormatter.format(Math.max(0, Math.floor(total)));
-  if (resourceValue) {
-    resourceValue.textContent = formatted;
-  } else if (resourceBar) {
-    resourceBar.textContent = `${RESOURCE_LABELS[Resource.SAUNA_BEER]}: ${formatted}`;
+function getActiveRosterCount(): number {
+  const seen = new Set<string>();
+  for (const unit of units) {
+    if (unit.faction === 'player' && !unit.isDead()) {
+      seen.add(unit.id);
+    }
+  }
+  for (const attendant of saunojas) {
+    if (attendant.hp > 0) {
+      seen.add(attendant.id);
+    }
+  }
+  return seen.size;
+}
+
+function updateRosterDisplay(): void {
+  const total = Math.max(0, Math.floor(getActiveRosterCount()));
+  const formatted = rosterCountFormatter.format(total);
+  if (rosterValue) {
+    rosterValue.textContent = formatted;
+  } else if (rosterBar) {
+    rosterBar.textContent = `Saunoja roster: ${formatted}`;
+  }
+  if (rosterBar) {
+    rosterBar.setAttribute('aria-label', `Saunoja roster: ${formatted} active attendants`);
+    rosterBar.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
   }
 }

@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Rebuild the HUD roster widget with a Saunoja battalion counter, live unit
+  lifecycle updates, refreshed sauna styling, and updated tests
 - Rebrand the HUD gold economy into sauna beer with new resource enums,
   UI strings, polished bottle iconography, and refreshed tests
 - Focus the event log on sauna-flavored narratives by muting resource gain spam,
