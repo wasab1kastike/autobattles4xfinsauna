@@ -57,7 +57,7 @@ export function draw(
   const cachedTerrain = mapRenderer.cachedCanvas;
   if (cachedTerrain) {
     const offset = mapRenderer.cachedOffset;
-    ctx.drawImage(cachedTerrain, -origin.x - offset.x, -origin.y - offset.y);
+    ctx.drawImage(cachedTerrain, -origin.x + offset.x, -origin.y + offset.y);
   }
 
   mapRenderer.draw(ctx, assets, selected ?? undefined);
@@ -87,6 +87,8 @@ export function drawUnits(
   origin: PixelCoord
 ): void {
   const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
+  const halfHexWidth = hexWidth / 2;
+  const halfHexHeight = hexHeight / 2;
   const friendlyVisionSources = units
     .filter((unit) => unit.faction === 'player' && !unit.isDead())
     .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
@@ -103,8 +105,8 @@ export function drawUnits(
       continue;
     }
     const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
-    const drawX = x - origin.x;
-    const drawY = y - origin.y;
+    const drawX = x - origin.x - halfHexWidth;
+    const drawY = y - origin.y - halfHexHeight;
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
     ctx.save();
