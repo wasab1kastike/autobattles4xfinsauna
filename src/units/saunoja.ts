@@ -1,5 +1,6 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { generateSaunojaName } from '../data/names.ts';
+import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
 
 export interface Saunoja {
   /** Unique identifier used to reference the unit. */
@@ -12,6 +13,10 @@ export interface Saunoja {
   maxHp: number;
   /** Current hit points remaining. */
   hp: number;
+  /** Passive damage reduction applied before shields. */
+  defense?: number;
+  /** Temporary damage buffer that absorbs hits before health. */
+  shield: number;
   /** Steam intensity from 0 (idle) to 1 (billowing). */
   steam: number;
   /** Collection of flavorful descriptors applied to the Saunoja. */
@@ -24,6 +29,10 @@ export interface Saunoja {
   lastHitAt: number;
   /** Whether the unit is currently selected in the UI. */
   selected: boolean;
+  /** Optional keyword-driven combat hooks. */
+  combatKeywords?: CombatKeywordRegistry | null;
+  /** Optional direct combat hook bindings. */
+  combatHooks?: CombatHookMap | null;
 }
 
 export interface SaunojaInit {
@@ -32,12 +41,16 @@ export interface SaunojaInit {
   coord?: AxialCoord;
   maxHp?: number;
   hp?: number;
+  defense?: number;
+  shield?: number;
   steam?: number;
   traits?: ReadonlyArray<unknown>;
   upkeep?: number;
   xp?: number;
   lastHitAt?: number;
   selected?: boolean;
+  combatKeywords?: CombatKeywordRegistry | null;
+  combatHooks?: CombatHookMap | null;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
@@ -80,11 +93,15 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     maxHp = DEFAULT_MAX_HP,
     hp = maxHp,
     steam = 0,
+    defense,
+    shield = 0,
     traits = [],
     upkeep = SAUNOJA_DEFAULT_UPKEEP,
     xp = 0,
     lastHitAt = DEFAULT_LAST_HIT_AT,
-    selected = false
+    selected = false,
+    combatKeywords = null,
+    combatHooks = null
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -105,6 +122,11 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const clampedXp = Math.max(0, normalizedXpSource);
   const normalizedLastHitSource = Number.isFinite(lastHitAt) ? lastHitAt : DEFAULT_LAST_HIT_AT;
   const clampedLastHitAt = Math.max(0, normalizedLastHitSource);
+  const normalizedShieldSource = Number.isFinite(shield) ? shield : 0;
+  const clampedShield = Math.max(0, normalizedShieldSource);
+  const normalizedDefenseSource = Number.isFinite(defense) ? (defense as number) : undefined;
+  const clampedDefense =
+    normalizedDefenseSource !== undefined ? Math.max(0, normalizedDefenseSource) : undefined;
 
   const resolvedName = resolveSaunojaName(name);
 
@@ -114,11 +136,15 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     coord: { q: coord.q, r: coord.r },
     maxHp: normalizedMaxHp,
     hp: clampedHp,
+    defense: clampedDefense,
+    shield: clampedShield,
     steam: clampedSteam,
     traits: [...sanitizedTraits],
     upkeep: clampedUpkeep,
     xp: clampedXp,
     lastHitAt: clampedLastHitAt,
-    selected
+    selected,
+    combatKeywords,
+    combatHooks
   };
 }
