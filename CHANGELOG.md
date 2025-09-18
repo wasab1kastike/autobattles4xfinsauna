@@ -5,6 +5,10 @@
 - Note in issue #245 that the `src/unit.ts` barrel must migrate to `src/unit/index.ts`
   (or be removed) and its consumers updated before adding the new `src/unit/`
   directory so the refactor avoids path collisions
+- Amend issue #253 to migrate every SISU import (for example, `useSisuBurst` in
+  `src/game.ts`) from `src/sim/sisu.ts` to the new `src/sisu/burst.ts` module and
+  delete the legacy `src/sim/sisu.ts` once all callers move over so no orphaned
+  implementation remains after the refactor
 - Expand TypeScript and Vitest globs to cover a dedicated `tests/` tree so future
   issue tasks can land spec files outside `src/` without compiler friction
 - Introduce faction loot tables with rarity-weighted rolls, stash new drops in a
