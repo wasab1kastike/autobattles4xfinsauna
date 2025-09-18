@@ -88,6 +88,14 @@ function rollSaunojaUpkeep(random: () => number = Math.random): number {
   return Math.max(SAUNOJA_UPKEEP_MIN, Math.min(SAUNOJA_UPKEEP_MAX, roll));
 }
 
+function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
+  const traits = Array.isArray(saunoja.traits) ? saunoja.traits : [];
+  const hasTraits = traits.length > 0;
+  const upkeepValid = Number.isFinite(saunoja.upkeep);
+  const xpValid = Number.isFinite(saunoja.xp);
+  return !hasTraits || !upkeepValid || !xpValid;
+}
+
 function refreshSaunojaPersona(saunoja: Saunoja): void {
   saunoja.traits = generateTraits();
   saunoja.upkeep = rollSaunojaUpkeep();
@@ -383,7 +391,10 @@ function claimSaunoja(
   unitToSaunoja.set(unit.id, match);
   saunojaToUnit.set(match.id, unit.id);
 
-  refreshSaunojaPersona(match);
+  const personaMissing = isSaunojaPersonaMissing(match);
+  if (created || personaMissing) {
+    refreshSaunojaPersona(match);
+  }
 
   return { saunoja: match, created, attached: true };
 }
