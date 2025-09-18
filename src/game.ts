@@ -264,6 +264,32 @@ function syncSaunojaRosterWithUnits(): boolean {
       changed = true;
     }
 
+    const normalizedHp = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
+    if (saunoja.hp !== normalizedHp) {
+      saunoja.hp = normalizedHp;
+      changed = true;
+    }
+
+    const normalizedMaxHp = Number.isFinite(unit.getMaxHealth()) ? Math.max(1, unit.getMaxHealth()) : 1;
+    if (saunoja.maxHp !== normalizedMaxHp) {
+      saunoja.maxHp = normalizedMaxHp;
+      changed = true;
+    }
+
+    const shieldValue = unit.getShield();
+    const normalizedShield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
+    if (saunoja.shield !== normalizedShield) {
+      saunoja.shield = normalizedShield;
+      changed = true;
+    }
+
+    const unitWithLastHit = unit as unknown as { lastHitAt?: number };
+    const lastHitAt = unitWithLastHit?.lastHitAt;
+    if (Number.isFinite(lastHitAt) && saunoja.lastHitAt !== lastHitAt) {
+      saunoja.lastHitAt = lastHitAt as number;
+      changed = true;
+    }
+
     const { q, r } = unit.coord;
     if (saunoja.coord.q !== q || saunoja.coord.r !== r) {
       saunoja.coord = { q, r };
@@ -690,6 +716,23 @@ const onUnitDied = ({
   const fallen = idx !== -1 ? units[idx] : null;
   const fallenCoord = fallen ? { q: fallen.coord.q, r: fallen.coord.r } : null;
   const persona = unitFaction === 'player' ? unitToSaunoja.get(unitId) ?? null : null;
+  let rosterUpdated = false;
+  if (unitFaction === 'player') {
+    const rosterEntry =
+      persona ??
+      saunojas.find((attendant) => saunojaToUnit.get(attendant.id) === unitId || attendant.id === unitId) ??
+      null;
+    if (rosterEntry) {
+      if (rosterEntry.hp !== 0) {
+        rosterEntry.hp = 0;
+        rosterUpdated = true;
+      }
+      if (rosterEntry.shield !== 0) {
+        rosterEntry.shield = 0;
+        rosterUpdated = true;
+      }
+    }
+  }
   const label = fallen ? describeUnit(fallen, persona) : `unit ${unitId}`;
 
   if (idx !== -1) {
@@ -697,6 +740,9 @@ const onUnitDied = ({
     unitsById.delete(unitId);
     detachSaunoja(unitId);
     draw();
+  }
+  if (rosterUpdated) {
+    saveUnits();
   }
   if (unitFaction === 'player') {
     updateRosterDisplay();
@@ -824,9 +870,7 @@ function getActiveRosterCount(): number {
     }
   }
   for (const attendant of saunojas) {
-    if (attendant.hp > 0) {
-      seen.add(attendant.id);
-    }
+    seen.add(attendant.id);
   }
   return seen.size;
 }

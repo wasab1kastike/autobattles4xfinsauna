@@ -171,6 +171,47 @@ describe('game logging', () => {
     }
   });
 
+  it('marks fallen Saunojas as downed in the roster', async () => {
+    const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
+
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    const baselineDowned = new Set(
+      loadUnits()
+        .filter((unit) => unit.hp <= 0)
+        .map((unit) => unit.id)
+    );
+
+    const ally = new Unit('steam-roster-test', 'soldier', { q: 4, r: -3 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: ally });
+    await flushLogs();
+
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    const lethalDamage = ally.getMaxHealth() * 2;
+    ally.takeDamage(lethalDamage);
+    await flushLogs();
+
+    const updatedRoster = loadUnits();
+    const downedIds = updatedRoster.filter((unit) => unit.hp <= 0).map((unit) => unit.id);
+    const newDowned = downedIds.filter((id) => !baselineDowned.has(id));
+    expect(newDowned.length).toBeGreaterThan(0);
+
+    const personaId = newDowned[0]!;
+    const storedPersona = updatedRoster.find((unit) => unit.id === personaId);
+    expect(storedPersona?.hp).toBe(0);
+
+    const rosterButton = document.querySelector<HTMLButtonElement>(
+      `.panel-roster__item[data-unit-id="${personaId}"]`
+    );
+    expect(rosterButton).toBeTruthy();
+    expect(rosterButton?.dataset.status).toBe('downed');
+  });
+
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
     const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();
     const { Unit } = await import('./units/Unit.ts');
