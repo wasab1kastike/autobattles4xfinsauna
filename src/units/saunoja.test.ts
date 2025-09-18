@@ -24,6 +24,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.name).toBe('Custom');
     expect(saunoja.maxHp).toBe(20);
     expect(saunoja.hp).toBe(20);
+    expect(saunoja.shield).toBe(0);
     expect(saunoja.steam).toBe(1);
     expect(saunoja.coord).toEqual({ q: 2, r: -1 });
     expect(saunoja.lastHitAt).toBe(1234);
@@ -49,6 +50,7 @@ describe('makeSaunoja', () => {
     });
     expect(saunoja.maxHp).toBe(1);
     expect(saunoja.hp).toBe(0);
+    expect(saunoja.shield).toBe(0);
     expect(saunoja.steam).toBe(0);
     expect(saunoja.name).toBe('Aino "Emberguard" Aalto');
     expect(saunoja.lastHitAt).toBe(0);
