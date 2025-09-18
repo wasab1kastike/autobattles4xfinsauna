@@ -27,8 +27,10 @@ describe('Unit combat keywords', () => {
 
     const defender = makeUnit('defender', { health: 14 });
 
-    defender.takeDamage(undefined, attacker);
+    const resolution = defender.takeDamage(undefined, attacker);
 
+    expect(resolution).not.toBeNull();
+    expect(resolution?.attackerRemainingHealth).toBeCloseTo(8, 5);
     expect(attacker.stats.health).toBeCloseTo(8, 5);
     expect(defender.stats.health).toBe(10);
   });
