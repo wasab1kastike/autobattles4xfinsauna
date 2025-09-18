@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Add a modifier runtime that tracks timed effects, routes hook triggers, emits
+  lifecycle events, and exposes helper APIs plus tests so timed buffs expire
+  cleanly during the polished game loop
 - Introduce a shared unit stat model with dedicated types, leveling curves, and
   calculators, replace archetype subclasses with data-driven definitions, route
   factories through the new adapters, and verify deterministic progression
