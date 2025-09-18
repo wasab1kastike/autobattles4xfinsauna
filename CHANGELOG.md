@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Refine battle log narration to greet arriving Saunojas by their roster names
+  while skipping rival spawn callouts for a cleaner feed
 - Collapse the sauna command console by default on sub-960px viewports,
   surface a HUD toggle, and slide the panel off-canvas so the map stays
   interactive on mobile
