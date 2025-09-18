@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameState, Resource } from './GameState';
+import { eventBus } from '../events/EventBus';
 import { HexMap } from '../hexmap.ts';
 import { Farm } from '../buildings/index.ts';
 import '../events';
@@ -69,6 +70,25 @@ describe('GameState', () => {
     const loaded = new GameState(1000);
     loaded.load();
     expect(loaded.getResource(Resource.SAUNAKUNNIA)).toBe(5);
+  });
+
+  it('persists applied policies and derived modifiers when saving', () => {
+    const state = new GameState(1000);
+    (state as any).policies.add('eco');
+    (state as any).policies.add('temperance');
+    state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
+    state.nightWorkSpeedMultiplier = 1.05;
+
+    state.save();
+
+    const serialized = localStorage.getItem('gameState');
+    expect(serialized).not.toBeNull();
+    const parsed = JSON.parse(serialized ?? '{}');
+
+    expect(parsed.policies).toContain('eco');
+    expect(parsed.policies).toContain('temperance');
+    expect(parsed.passiveGeneration[Resource.SAUNA_BEER]).toBe(2);
+    expect(parsed.nightWorkSpeedMultiplier).toBeCloseTo(1.05);
   });
 
   it('applies policy modifiers via listeners', () => {
@@ -186,5 +206,32 @@ describe('GameState', () => {
     expect((state as any).buildings['mystery']).toBeUndefined();
     expect((state as any).buildings['farm']).toBe(2);
     expect(map.getTile(1, 1)?.building).toBe('farm');
+  });
+
+  it('restores policy effects and offline progress after save/load', () => {
+    const state = new GameState(1000);
+    (state as any).policies.add('eco');
+    (state as any).policies.add('temperance');
+    state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
+    state.nightWorkSpeedMultiplier = 1.05;
+    state.save();
+
+    const spy = vi.fn();
+    eventBus.on('policyApplied', spy);
+
+    vi.setSystemTime(5000);
+    const loaded = new GameState(1000);
+    expect(loaded.load()).toBe(true);
+
+    eventBus.off('policyApplied', spy);
+
+    expect(spy.mock.calls.map((call) => call[0]?.policy)).toEqual([
+      'eco',
+      'temperance'
+    ]);
+    expect(loaded.hasPolicy('eco')).toBe(true);
+    expect(loaded.hasPolicy('temperance')).toBe(true);
+    expect(loaded.nightWorkSpeedMultiplier).toBeCloseTo(1.05);
+    expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(10);
   });
 });

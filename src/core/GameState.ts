@@ -42,6 +42,9 @@ type SerializedState = {
   lastSaved: number;
   buildings: Record<string, number>;
   buildingPlacements: Record<string, string>;
+  policies: string[];
+  passiveGeneration: Record<Resource, number>;
+  nightWorkSpeedMultiplier: number;
 };
 
 export class GameState {
@@ -93,7 +96,10 @@ export class GameState {
       resources: this.resources,
       lastSaved: this.lastSaved,
       buildings: this.buildings,
-      buildingPlacements: placements
+      buildingPlacements: placements,
+      policies: Array.from(this.policies),
+      passiveGeneration: { ...this.passiveGeneration },
+      nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier
     };
     localStorage.setItem(this.storageKey, JSON.stringify(serialized));
   }
@@ -134,6 +140,41 @@ export class GameState {
       });
     }
     this.lastSaved = data.lastSaved ?? Date.now();
+
+    // Reset derived policy state and repopulate applied policies from the save.
+    this.policies = new Set();
+    this.passiveGeneration = { ...PASSIVE_GENERATION };
+    this.nightWorkSpeedMultiplier = 1;
+    const savedPolicies = Array.isArray(data.policies)
+      ? data.policies.filter((policy): policy is string => typeof policy === 'string')
+      : [];
+    savedPolicies.forEach((policy) => {
+      this.policies.add(policy);
+    });
+
+    // Replay policy effects so listeners and derived state align with the restored save.
+    this.policies.forEach((policy) => {
+      eventBus.emit('policyApplied', { policy, state: this });
+    });
+
+    if (data.passiveGeneration) {
+      const sanitized: Record<Resource, number> = { ...PASSIVE_GENERATION };
+      (Object.keys(PASSIVE_GENERATION) as Resource[]).forEach((res) => {
+        const value = data.passiveGeneration?.[res];
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          sanitized[res] = value;
+        }
+      });
+      this.passiveGeneration = sanitized;
+    }
+
+    if (
+      typeof data.nightWorkSpeedMultiplier === 'number' &&
+      Number.isFinite(data.nightWorkSpeedMultiplier)
+    ) {
+      this.nightWorkSpeedMultiplier = data.nightWorkSpeedMultiplier;
+    }
+
     const elapsed = Date.now() - this.lastSaved;
     const offlineTicks = Math.floor(elapsed / this.tickInterval);
     (Object.keys(this.passiveGeneration) as Resource[]).forEach((res) => {
