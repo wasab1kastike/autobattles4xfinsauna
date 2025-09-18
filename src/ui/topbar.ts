@@ -227,28 +227,45 @@ export function setupTopbar(
   renderMute();
   bar.appendChild(muteBtn);
 
-  eventBus.on('sisuBurstStart', ({ remaining }: { remaining: number }) => {
+  function renderBurstStatus(remaining: number, status?: string): void {
     const seconds = Math.max(0, Math.ceil(remaining));
     burstTimer.container.style.display = 'block';
     burstTimer.value.textContent = String(seconds);
-    burstTimer.delta.textContent = '';
-    burstTimer.container.setAttribute(
-      'aria-label',
-      `Sisu burst active — ${seconds} seconds remaining`
-    );
-    refreshAbilityButtons();
-  });
-  eventBus.on('sisuBurstTick', ({ remaining }: { remaining: number }) => {
-    const seconds = Math.max(0, Math.ceil(remaining));
-    burstTimer.value.textContent = String(seconds);
-    burstTimer.container.setAttribute(
-      'aria-label',
-      `Sisu burst active — ${seconds} seconds remaining`
-    );
-  });
+    if (status) {
+      burstTimer.delta.style.display = 'block';
+      burstTimer.delta.textContent = status;
+      burstTimer.container.title = `Sisu burst active: ${status}`;
+    } else {
+      burstTimer.delta.style.display = 'none';
+      burstTimer.delta.textContent = '';
+      burstTimer.container.removeAttribute('title');
+    }
+    const ariaParts = [`Sisu burst active — ${seconds} seconds remaining`];
+    if (status) {
+      ariaParts.push(status);
+    }
+    burstTimer.container.setAttribute('aria-label', ariaParts.join(' — '));
+  }
+
+  eventBus.on(
+    'sisuBurstStart',
+    ({ remaining, status }: { remaining: number; status?: string }) => {
+      renderBurstStatus(remaining, status);
+      refreshAbilityButtons();
+    }
+  );
+  eventBus.on(
+    'sisuBurstTick',
+    ({ remaining, status }: { remaining: number; status?: string }) => {
+      renderBurstStatus(remaining, status);
+    }
+  );
   eventBus.on('sisuBurstEnd', () => {
     burstTimer.container.style.display = 'none';
     burstTimer.value.textContent = '0';
+    burstTimer.delta.textContent = '';
+    burstTimer.delta.style.display = 'none';
+    burstTimer.container.removeAttribute('title');
     refreshAbilityButtons();
   });
 
