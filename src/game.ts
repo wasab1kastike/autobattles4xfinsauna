@@ -67,6 +67,11 @@ let addEvent: (event: GameEvent) => void = () => {};
 let renderRosterView: ((entries: RosterEntry[]) => void) | null = null;
 let rosterSignature: string | null = null;
 
+function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
+  rosterSignature = null;
+  renderRosterView = renderer;
+}
+
 const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
 
 function rollSaunojaUpkeep(random: () => number = Math.random): number {
@@ -586,12 +591,17 @@ const updateTopbar = setupTopbar(
     }
   }
 );
-const rightPanel = setupRightPanel(state, {
-  onRosterSelect: focusSaunojaById
-});
-log = rightPanel.log;
-addEvent = rightPanel.addEvent;
-renderRosterView = rightPanel.renderRoster;
+function initializeRightPanel(): void {
+  const rightPanel = setupRightPanel(state, {
+    onRosterSelect: focusSaunojaById,
+    onRosterRendererReady: installRosterRenderer
+  });
+  log = rightPanel.log;
+  addEvent = rightPanel.addEvent;
+  installRosterRenderer(rightPanel.renderRoster);
+}
+
+initializeRightPanel();
 updateRosterDisplay();
 
 
@@ -816,6 +826,11 @@ export async function start(): Promise<void> {
 }
 
 export { log };
+
+export function __rebuildRightPanelForTest(): void {
+  initializeRightPanel();
+  updateRosterDisplay();
+}
 
 export function __syncSaunojaRosterForTest(): boolean {
   return syncSaunojaRosterWithUnits();
