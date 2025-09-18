@@ -37,6 +37,7 @@ export class Unit {
   private cachedPath?: AxialCoord[];
   private movementCooldownSeconds = 0;
   private shield = 0;
+  private immortal = false;
 
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
@@ -149,6 +150,18 @@ export class Unit {
     this.stats.health = result.remainingHealth;
     this.shield = result.remainingShield;
 
+    let finalResult = result;
+
+    if (result.lethal && this.alive && this.immortal) {
+      this.stats.health = Math.max(1, this.stats.health);
+      finalResult = {
+        ...result,
+        lethal: false,
+        remainingHealth: this.stats.health,
+        remainingShield: this.shield
+      };
+    }
+
     if (attacker && result.attackerRemainingHealth !== undefined) {
       const healed = Math.min(attacker.getMaxHealth(), Math.max(0, result.attackerRemainingHealth));
       attacker.stats.health = healed;
@@ -158,16 +171,16 @@ export class Unit {
       attacker.setShield(result.attackerRemainingShield);
     }
 
-    if (result.damage > 0) {
+    if (finalResult.damage > 0) {
       eventBus.emit('unitDamaged', {
         attackerId: attacker?.id,
         targetId: this.id,
-        amount: result.damage,
+        amount: finalResult.damage,
         remainingHealth: this.stats.health
       });
     }
 
-    if (result.lethal && this.alive) {
+    if (finalResult.lethal && this.alive) {
       this.stats.health = 0;
       this.alive = false;
       eventBus.emit('unitDied', {
@@ -179,7 +192,7 @@ export class Unit {
       this.emitDeath();
     }
 
-    return result;
+    return finalResult;
   }
 
   getShield(): number {
@@ -192,6 +205,14 @@ export class Unit {
       return;
     }
     this.shield = value;
+  }
+
+  isImmortal(): boolean {
+    return this.immortal;
+  }
+
+  setImmortal(value: boolean): void {
+    this.immortal = Boolean(value);
   }
 
   private toCombatParticipant(): CombatParticipant {
