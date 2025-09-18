@@ -1,10 +1,3 @@
-import farm from '../assets/sprites/farm.svg';
-import barracks from '../assets/sprites/barracks.svg';
-import city from '../assets/sprites/city.svg';
-import mine from '../assets/sprites/mine.svg';
-import soldier from '../assets/sprites/soldier.svg';
-import archer from '../assets/sprites/archer.svg';
-import avantoMarauder from '../assets/sprites/avanto-marauder.svg';
 import { GameState, Resource } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
@@ -14,7 +7,6 @@ import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
-import type { AssetPaths, LoadedAssets } from './loader.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
@@ -37,15 +29,19 @@ import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats } from './unit/calc.ts';
-
-const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
-const uiIcons = {
-  saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
-  saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
-  resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sisu: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
-};
+import { getAssets, uiIcons } from './game/assets.ts';
+import {
+  getSaunojaStorage,
+  loadUnits as loadRosterFromStorage,
+  saveUnits as persistRosterToStorage,
+  SAUNOJA_STORAGE_KEY
+} from './game/rosterStorage.ts';
+import {
+  setupRosterHUD,
+  type RosterCardViewModel,
+  type RosterHudController,
+  type RosterHudSummary
+} from './ui/rosterHUD.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -58,12 +54,6 @@ const RESOURCE_LABELS: Record<Resource, string> = {
 };
 
 let canvas: HTMLCanvasElement | null = null;
-let rosterBar: HTMLElement;
-let rosterValue: HTMLSpanElement | null = null;
-let rosterCard: HTMLDivElement | null = null;
-let rosterCardName: HTMLHeadingElement | null = null;
-let rosterCardTraits: HTMLParagraphElement | null = null;
-let rosterCardUpkeep: HTMLParagraphElement | null = null;
 let saunojas: Saunoja[] = [];
 const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
@@ -72,16 +62,31 @@ let playerSpawnSequence = 0;
 let selected: AxialCoord | null = null;
 let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
-let renderRosterView: ((entries: RosterEntry[]) => void) | null = null;
-let rosterSignature: string | null = null;
 let disposeRightPanel: (() => void) | null = null;
+let rosterHud: RosterHudController | null = null;
+let pendingRosterSummary: RosterHudSummary | null = null;
+let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
+let pendingRosterEntries: RosterEntry[] | null = null;
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
-  rosterSignature = null;
-  renderRosterView = renderer;
+  pendingRosterRenderer = renderer;
+  if (!rosterHud) {
+    return;
+  }
+  rosterHud.installRenderer(renderer);
+  if (pendingRosterEntries) {
+    rosterHud.renderRoster(pendingRosterEntries);
+    pendingRosterEntries = null;
+  }
 }
 
-const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
+export function loadUnits(): Saunoja[] {
+  return loadRosterFromStorage();
+}
+
+export function saveUnits(): void {
+  persistRosterToStorage(saunojas);
+}
 
 function rollSaunojaUpkeep(random: () => number = Math.random): number {
   if (typeof random !== 'function') {
@@ -117,202 +122,20 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
-const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-const rosterUpkeepFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
-
-function getSaunojaStorage(): Storage | null {
-  try {
-    const globalWithStorage = globalThis as typeof globalThis & { localStorage?: Storage };
-    return globalWithStorage.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function loadUnits(): Saunoja[] {
-  const storage = getSaunojaStorage();
-  if (!storage) {
-    return [];
-  }
-
-  try {
-    const raw = storage.getItem(SAUNOJA_STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
-
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    const restored: Saunoja[] = [];
-    for (const entry of parsed) {
-      if (!entry || typeof entry !== 'object') continue;
-      const data = entry as Record<string, unknown>;
-      const idValue = data.id;
-      if (typeof idValue !== 'string' || idValue.length === 0) continue;
-
-      const coordSource = data.coord as { q?: unknown; r?: unknown } | undefined;
-      const coord =
-        coordSource &&
-        typeof coordSource === 'object' &&
-        typeof coordSource.q === 'number' &&
-        Number.isFinite(coordSource.q) &&
-        typeof coordSource.r === 'number' &&
-        Number.isFinite(coordSource.r)
-          ? { q: coordSource.q, r: coordSource.r }
-          : undefined;
-
-      const traitsSource = data.traits;
-      const traits = Array.isArray(traitsSource)
-        ? traitsSource.filter((trait): trait is string => typeof trait === 'string')
-        : undefined;
-
-      const upkeepValue = typeof data.upkeep === 'number' ? data.upkeep : undefined;
-      const xpValue = typeof data.xp === 'number' ? data.xp : undefined;
-
-      restored.push(
-        makeSaunoja({
-          id: idValue,
-          name: typeof data.name === 'string' ? data.name : undefined,
-          coord,
-          maxHp: typeof data.maxHp === 'number' ? data.maxHp : undefined,
-          hp: typeof data.hp === 'number' ? data.hp : undefined,
-          steam: typeof data.steam === 'number' ? data.steam : undefined,
-          traits,
-          upkeep: upkeepValue,
-          xp: xpValue,
-          selected: Boolean(data.selected),
-          items: Array.isArray(data.items) ? data.items : undefined,
-          modifiers: Array.isArray(data.modifiers) ? data.modifiers : undefined
-        })
-      );
-    }
-
-    return restored;
-  } catch (error) {
-    console.warn('Failed to load Saunoja units from storage', error);
-    return [];
-  }
-}
-
-export function saveUnits(): void {
-  const storage = getSaunojaStorage();
-  if (!storage) {
-    return;
-  }
-
-  try {
-    const payload = saunojas.map((unit) => ({
-      id: unit.id,
-      name: unit.name,
-      coord: { q: unit.coord.q, r: unit.coord.r },
-      maxHp: unit.maxHp,
-      hp: unit.hp,
-      steam: unit.steam,
-      traits: [...unit.traits],
-      upkeep: unit.upkeep,
-      xp: unit.xp,
-      selected: unit.selected,
-      items: unit.items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        icon: item.icon,
-        rarity: item.rarity,
-        quantity: item.quantity
-      })),
-      modifiers: unit.modifiers.map((modifier) => ({
-        id: modifier.id,
-        name: modifier.name,
-        description: modifier.description,
-        remaining: modifier.remaining,
-        duration: modifier.duration,
-        appliedAt: modifier.appliedAt,
-        stacks: modifier.stacks,
-        source: modifier.source
-      }))
-    }));
-    storage.setItem(SAUNOJA_STORAGE_KEY, JSON.stringify(payload));
-  } catch (error) {
-    console.warn('Failed to persist Saunoja units', error);
-  }
-}
-
 export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElement): void {
   canvas = canvasEl;
-  rosterBar = resourceBarEl;
-  rosterBar.classList.add('sauna-roster');
-  rosterBar.setAttribute('role', 'status');
-  rosterBar.setAttribute('aria-live', 'polite');
-  rosterBar.setAttribute('title', 'Active sauna battalion on the field');
-  rosterBar.replaceChildren();
-
-  const summary = document.createElement('div');
-  summary.classList.add('sauna-roster__summary');
-
-  const icon = document.createElement('img');
-  icon.src = uiIcons.saunojaRoster;
-  icon.alt = 'Saunoja roster crest';
-  icon.decoding = 'async';
-  icon.classList.add('sauna-roster__icon');
-
-  const textContainer = document.createElement('div');
-  textContainer.classList.add('sauna-roster__text');
-
-  const labelSpan = document.createElement('span');
-  labelSpan.textContent = 'Saunoja Roster';
-  labelSpan.classList.add('sauna-roster__label');
-
-  rosterValue = document.createElement('span');
-  rosterValue.textContent = '0';
-  rosterValue.classList.add('sauna-roster__value');
-
-  textContainer.append(labelSpan, rosterValue);
-  summary.append(icon, textContainer);
-
-  rosterCard = document.createElement('div');
-  rosterCard.classList.add('saunoja-card');
-  rosterCard.setAttribute('aria-live', 'polite');
-  rosterCard.hidden = true;
-
-  rosterCardName = document.createElement('h3');
-  rosterCardName.classList.add('saunoja-card__name');
-  rosterCardName.textContent = 'Saunoja';
-
-  rosterCardTraits = document.createElement('p');
-  rosterCardTraits.classList.add('saunoja-card__traits');
-
-  rosterCardUpkeep = document.createElement('p');
-  rosterCardUpkeep.classList.add('saunoja-card__upkeep');
-
-  rosterCard.append(rosterCardName, rosterCardTraits, rosterCardUpkeep);
-  rosterBar.append(summary, rosterCard);
-  updateRosterDisplay();
-}
-
-export const assetPaths: AssetPaths = {
-  images: {
-    placeholder:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQImWNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII=',
-    'building-farm': farm,
-    'building-barracks': barracks,
-    'building-city': city,
-    'building-mine': mine,
-    'unit-soldier': soldier,
-    'unit-archer': archer,
-    'unit-avanto-marauder': avantoMarauder,
-    'icon-sauna-beer': uiIcons.saunaBeer,
-    'icon-saunoja-roster': uiIcons.saunojaRoster,
-    'icon-resource': uiIcons.resource,
-    'icon-sound': uiIcons.sound
+  if (rosterHud) {
+    rosterHud.destroy();
   }
-};
-let assets: LoadedAssets | null = null;
-
-export function setAssets(loaded: LoadedAssets): void {
-  assets = loaded;
+  rosterHud = setupRosterHUD(resourceBarEl, { rosterIcon: uiIcons.saunojaRoster });
+  if (pendingRosterRenderer) {
+    rosterHud.installRenderer(pendingRosterRenderer);
+  }
+  if (pendingRosterEntries) {
+    rosterHud.renderRoster(pendingRosterEntries);
+    pendingRosterEntries = null;
+  }
+  updateRosterDisplay();
 }
 
 const map = new HexMap(10, 10, 32);
@@ -838,6 +661,7 @@ export function draw(): void {
     return;
   }
   const ctx = canvas.getContext('2d');
+  const assets = getAssets();
   if (!ctx || !assets) return;
   render(ctx, mapRenderer, assets.images, units, selected, {
     saunojas: {
@@ -941,9 +765,17 @@ export function cleanup(): void {
   }
   inventoryHud.destroy();
   disposeTopbar();
+  if (rosterHud) {
+    rosterHud.destroy();
+    rosterHud = null;
+  }
+  pendingRosterEntries = null;
+  pendingRosterSummary = null;
+  pendingRosterRenderer = null;
 }
 
 export async function start(): Promise<void> {
+  const assets = getAssets();
   if (!assets) {
     console.error('Cannot start game without loaded assets.');
     return;
@@ -997,40 +829,6 @@ function getActiveRosterCount(): number {
     }
   }
   return seen.size;
-}
-
-function renderSaunojaCard(): void {
-  if (!rosterCard || !rosterCardTraits || !rosterCardUpkeep) {
-    return;
-  }
-
-  const preferred =
-    saunojas.find((unit) => unit.selected) ??
-    saunojas.find((unit) => unit.hp > 0) ??
-    saunojas[0];
-
-  if (!preferred) {
-    rosterCard.hidden = true;
-    return;
-  }
-
-  rosterCard.hidden = false;
-  rosterCard.dataset.unitId = preferred.id;
-
-  if (rosterCardName) {
-    rosterCardName.textContent = preferred.name || 'Saunoja';
-  }
-
-  const traitList = preferred.traits?.filter((trait) => trait.length > 0) ?? [];
-  const traitLabel =
-    traitList.length > 0 ? traitList.join(', ') : 'No notable traits yet';
-  rosterCardTraits.textContent = traitLabel;
-  rosterCardTraits.title = traitLabel;
-
-  const upkeepValue = Math.max(0, Math.round(preferred.upkeep));
-  const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
-  rosterCardUpkeep.textContent = upkeepLabel;
-  rosterCardUpkeep.title = upkeepLabel;
 }
 
 function buildRosterEntries(): RosterEntry[] {
@@ -1097,93 +895,48 @@ function buildRosterEntries(): RosterEntry[] {
   return entries;
 }
 
-function encodeTimerValue(value: number | typeof Infinity): string {
-  if (value === Infinity) {
-    return 'inf';
+function pickFeaturedSaunoja(): Saunoja | null {
+  if (saunojas.length === 0) {
+    return null;
   }
-  if (!Number.isFinite(value) || value <= 0) {
-    return '0';
+  return (
+    saunojas.find((unit) => unit.selected) ??
+    saunojas.find((unit) => unit.hp > 0) ??
+    saunojas[0]
+  );
+}
+
+function buildRosterSummary(): RosterHudSummary {
+  const total = getActiveRosterCount();
+  const featured = pickFeaturedSaunoja();
+  let card: RosterCardViewModel | null = null;
+  if (featured) {
+    card = {
+      id: featured.id,
+      name: featured.name || 'Saunoja',
+      traits: [...featured.traits],
+      upkeep: Math.max(0, Math.round(featured.upkeep))
+    } satisfies RosterCardViewModel;
   }
-  return String(Math.ceil(value));
-}
-
-function encodeRosterItem(item: RosterEntry['items'][number]): string {
-  return [
-    item.id,
-    item.name,
-    item.icon ?? '',
-    item.rarity ?? '',
-    item.description ?? '',
-    item.quantity
-  ].join('^');
-}
-
-function encodeRosterModifier(modifier: RosterEntry['modifiers'][number]): string {
-  return [
-    modifier.id,
-    modifier.name,
-    modifier.description ?? '',
-    encodeTimerValue(modifier.duration),
-    encodeTimerValue(modifier.remaining),
-    modifier.appliedAt ?? '',
-    modifier.stacks ?? 1,
-    modifier.source ?? ''
-  ].join('^');
-}
-
-function encodeRosterEntry(entry: RosterEntry): string {
-  const { stats } = entry;
-  const traitSig = entry.traits.join('|');
-  const itemSig = entry.items.map(encodeRosterItem).join('|');
-  const modifierSig = entry.modifiers.map(encodeRosterModifier).join('|');
-  return [
-    entry.id,
-    entry.name,
-    entry.upkeep,
-    entry.status,
-    entry.selected ? 1 : 0,
-    stats.health,
-    stats.maxHealth,
-    stats.attackDamage,
-    stats.attackRange,
-    stats.movementRange,
-    stats.defense ?? 0,
-    stats.shield ?? 0,
-    traitSig,
-    itemSig,
-    modifierSig
-  ].join('~');
-}
-
-function createRosterSignature(entries: readonly RosterEntry[]): string {
-  return `${entries.length}:${entries.map(encodeRosterEntry).join('||')}`;
+  return { count: total, card } satisfies RosterHudSummary;
 }
 
 function refreshRosterPanel(entries?: RosterEntry[]): void {
-  if (!renderRosterView) {
-    return;
-  }
   const view = entries ?? buildRosterEntries();
-  const signature = createRosterSignature(view);
-  if (signature === rosterSignature) {
+  pendingRosterEntries = view;
+  if (!rosterHud) {
     return;
   }
-  rosterSignature = signature;
-  renderRosterView(view);
+  rosterHud.renderRoster(view);
 }
 
 function updateRosterDisplay(): void {
-  const total = Math.max(0, Math.floor(getActiveRosterCount()));
-  const formatted = rosterCountFormatter.format(total);
-  if (rosterValue) {
-    rosterValue.textContent = formatted;
-  } else if (rosterBar) {
-    rosterBar.textContent = `Saunoja roster: ${formatted}`;
+  const summary = buildRosterSummary();
+  if (rosterHud) {
+    rosterHud.updateSummary(summary);
+    pendingRosterSummary = null;
+  } else {
+    pendingRosterSummary = summary;
   }
-  if (rosterBar) {
-    rosterBar.setAttribute('aria-label', `Saunoja roster: ${formatted} active attendants`);
-    rosterBar.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
-  }
-  renderSaunojaCard();
   refreshRosterPanel();
 }

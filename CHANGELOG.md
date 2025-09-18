@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Extract polished roster storage and HUD modules, relocate asset configuration,
+  and add smoke tests so serialization and summary UI updates remain stable
 - Guard `safeLoadJSON` against missing `localStorage` implementations and cover
   the fallback with tests so storage-less environments no longer throw during
   asset loading helpers
