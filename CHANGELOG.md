@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a disposable sauna command console setup that unregisters media-query and
+  event bus listeners while removing the HUD panel during cleanup so repeated
+  game initializations no longer leak toggles or listeners
 - Expose a disposable controller from the HUD topbar so cleanup routines remove
   SISU burst and resource listeners before rebuilding the UI, preventing
   duplicated overlays during restarts
