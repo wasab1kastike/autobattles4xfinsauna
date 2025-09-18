@@ -84,22 +84,49 @@ describe('loadAssets', () => {
 });
 
 describe('safeLoadJSON', () => {
+  const originalLocalStorage: Storage | undefined = globalThis.localStorage;
+
   beforeEach(() => {
-    localStorage.clear();
+    globalThis.localStorage?.clear();
+  });
+
+  afterEach(() => {
+    if (originalLocalStorage) {
+      Reflect.set(globalThis, 'localStorage', originalLocalStorage);
+    } else {
+      Reflect.deleteProperty(globalThis, 'localStorage');
+    }
   });
 
   it('parses valid JSON', () => {
-    localStorage.setItem('test', '{"a":1}');
+    const storage = globalThis.localStorage;
+    expect(storage).toBeDefined();
+    storage!.setItem('test', '{"a":1}');
     expect(safeLoadJSON<{ a: number }>('test')).toEqual({ a: 1 });
   });
 
   it('clears invalid JSON and warns', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    localStorage.setItem('test', '{oops');
+    const storage = globalThis.localStorage;
+    expect(storage).toBeDefined();
+    storage!.setItem('test', '{oops');
     expect(safeLoadJSON('test')).toBeUndefined();
-    expect(localStorage.getItem('test')).toBeNull();
+    expect(storage!.getItem('test')).toBeNull();
     expect(warnSpy).toHaveBeenCalledOnce();
     warnSpy.mockRestore();
+  });
+
+  it('returns undefined when localStorage is unavailable', () => {
+    const original = globalThis.localStorage;
+    Reflect.set(globalThis, 'localStorage', undefined);
+
+    expect(safeLoadJSON('missing')).toBeUndefined();
+
+    if (original) {
+      Reflect.set(globalThis, 'localStorage', original);
+    } else {
+      Reflect.deleteProperty(globalThis, 'localStorage');
+    }
   });
 });
 
