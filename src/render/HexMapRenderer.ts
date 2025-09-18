@@ -186,6 +186,7 @@ export class HexMapRenderer {
   private cachedCanvasElement?: HTMLCanvasElement;
   private cachedCanvasOffset: PixelCoord = { x: 0, y: 0 };
   private cachedHexSize: number | null = null;
+  private cachedPixelBounds: WorldRect | null = null;
   private readonly chunkCanvases = new Map<ChunkKey, ChunkCanvas>();
   private readonly dirtyChunks = new Set<ChunkKey>();
   private readonly tileRenderState = new Map<string, string>();
@@ -215,34 +216,16 @@ export class HexMapRenderer {
       return;
     }
 
-    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const halfHexWidth = hexWidth / 2;
-    const halfHexHeight = hexHeight / 2;
-    const origin = this.getOrigin();
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const [key] of this.mapRef.tiles) {
-      const [q, r] = key.split(',').map(Number);
-      const { x, y } = axialToPixel({ q, r }, this.hexSize);
-      const drawX = x - origin.x - halfHexWidth;
-      const drawY = y - origin.y - halfHexHeight;
-      minX = Math.min(minX, drawX);
-      minY = Math.min(minY, drawY);
-      maxX = Math.max(maxX, drawX + hexWidth);
-      maxY = Math.max(maxY, drawY + hexHeight);
-    }
-
-    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+    const pixelBounds = this.computePixelBoundsFromMap();
+    if (!pixelBounds) {
       this.cachedCanvasElement = undefined;
       this.cachedCanvasOffset = { x: 0, y: 0 };
+      this.cachedPixelBounds = null;
       return;
     }
 
-    const cacheWidth = Math.max(1, Math.ceil(maxX - minX));
-    const cacheHeight = Math.max(1, Math.ceil(maxY - minY));
+    const cacheWidth = pixelBounds.width;
+    const cacheHeight = pixelBounds.height;
     const canvas = document.createElement('canvas');
     canvas.width = cacheWidth;
     canvas.height = cacheHeight;
@@ -254,8 +237,9 @@ export class HexMapRenderer {
     ctx.clearRect(0, 0, cacheWidth, cacheHeight);
 
     this.cachedCanvasElement = canvas;
-    this.cachedCanvasOffset = { x: minX, y: minY };
+    this.cachedCanvasOffset = { x: pixelBounds.x, y: pixelBounds.y };
     this.cachedHexSize = this.hexSize;
+    this.cachedPixelBounds = pixelBounds;
     this.cachedImages = images;
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
@@ -267,6 +251,7 @@ export class HexMapRenderer {
     this.cachedCanvasElement = undefined;
     this.cachedCanvasOffset = { x: 0, y: 0 };
     this.cachedHexSize = null;
+    this.cachedPixelBounds = null;
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.tileRenderState.clear();
@@ -526,6 +511,28 @@ export class HexMapRenderer {
     if (images) {
       this.cachedImages = images;
     }
+
+    const currentBounds = this.computePixelBoundsFromMap();
+    if (currentBounds && this.cachedPixelBounds) {
+      const cachedRight = this.cachedPixelBounds.x + this.cachedPixelBounds.width;
+      const cachedBottom = this.cachedPixelBounds.y + this.cachedPixelBounds.height;
+      const currentRight = currentBounds.x + currentBounds.width;
+      const currentBottom = currentBounds.y + currentBounds.height;
+      const exceedsBounds =
+        currentBounds.x < this.cachedPixelBounds.x ||
+        currentBounds.y < this.cachedPixelBounds.y ||
+        currentRight > cachedRight ||
+        currentBottom > cachedBottom;
+      if (exceedsBounds) {
+        const assets = images ?? this.cachedImages;
+        this.invalidateCache();
+        if (assets) {
+          this.buildCache(assets);
+        }
+        return;
+      }
+    }
+
     this.refreshDirtyChunks();
     if (this.dirtyChunks.size === 0) {
       return;
@@ -659,6 +666,50 @@ export class HexMapRenderer {
     return {
       canvas,
       origin: { x: minX, y: minY },
+    };
+  }
+
+  private computePixelBoundsFromMap(): WorldRect | null {
+    const { minQ, maxQ, minR, maxR } = this.mapRef;
+    if (!Number.isFinite(minQ) || !Number.isFinite(maxQ) || !Number.isFinite(minR) || !Number.isFinite(maxR)) {
+      return null;
+    }
+
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
+    const origin = this.getOrigin();
+
+    const corners: PixelCoord[] = [
+      axialToPixel({ q: minQ, r: minR }, this.hexSize),
+      axialToPixel({ q: minQ, r: maxR }, this.hexSize),
+      axialToPixel({ q: maxQ, r: minR }, this.hexSize),
+      axialToPixel({ q: maxQ, r: maxR }, this.hexSize),
+    ];
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const { x, y } of corners) {
+      const drawX = x - origin.x - halfHexWidth;
+      const drawY = y - origin.y - halfHexHeight;
+      minX = Math.min(minX, drawX);
+      minY = Math.min(minY, drawY);
+      maxX = Math.max(maxX, drawX + hexWidth);
+      maxY = Math.max(maxY, drawY + hexHeight);
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      return null;
+    }
+
+    return {
+      x: minX,
+      y: minY,
+      width: Math.max(1, Math.ceil(maxX - minX)),
+      height: Math.max(1, Math.ceil(maxY - minY)),
     };
   }
 }
