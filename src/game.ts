@@ -25,13 +25,18 @@ import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
-import type { Saunoja } from './units/saunoja.ts';
+import type { Saunoja, SaunojaItem } from './units/saunoja.ts';
 import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
 import { runEconomyTick } from './economy/tick.ts';
+import { InventoryState } from './inventory/state.ts';
+import { setupInventoryHud } from './ui/inventoryHud.ts';
+import { rollLoot } from './loot/roll.ts';
+import { tryGetUnitArchetype } from './unit/archetypes.ts';
+import { computeUnitStats } from './unit/calc.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -519,6 +524,7 @@ function resolveUnitUpkeep(unit: Unit): number {
 }
 
 const state = new GameState(1000);
+const inventory = new InventoryState();
 const restoredSave = state.load(map);
 const sauna = createSauna({
   q: Math.floor(map.width / 2),
@@ -651,6 +657,10 @@ const updateTopbar = setupTopbar(
     }
   }
 );
+const inventoryHud = setupInventoryHud(inventory, {
+  getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
+  onEquip: (unitId, item) => equipItemToSaunoja(unitId, item)
+});
 function initializeRightPanel(): void {
   const rightPanel = setupRightPanel(state, {
     onRosterSelect: focusSaunojaById,
@@ -729,6 +739,24 @@ function clearSaunojaSelection(): boolean {
   return changed;
 }
 
+function isEliteUnit(unit: Unit | null): boolean {
+  if (!unit) {
+    return false;
+  }
+  const archetype = tryGetUnitArchetype(unit.type);
+  if (!archetype) {
+    return false;
+  }
+  const baseline = computeUnitStats(archetype, 1);
+  const stats = unit.stats;
+  return (
+    stats.health > baseline.health ||
+    stats.attackDamage > baseline.attackDamage ||
+    stats.attackRange > baseline.attackRange ||
+    stats.movementRange > baseline.movementRange
+  );
+}
+
 function focusSaunoja(target: Saunoja): boolean {
   let changed = false;
   if (!target.selected) {
@@ -772,6 +800,31 @@ export function handleCanvasClick(world: PixelCoord): void {
   saveUnits();
   updateRosterDisplay();
   draw();
+}
+
+function equipItemToSaunoja(unitId: string, item: SaunojaItem): boolean {
+  const attendant = saunojas.find((unit) => unit.id === unitId);
+  if (!attendant) {
+    return false;
+  }
+  const quantity = Math.max(1, Math.round(item.quantity ?? 1));
+  const existing = attendant.items.find((entry) => entry.id === item.id);
+  if (existing) {
+    existing.quantity = Math.max(1, existing.quantity + quantity);
+  } else {
+    attendant.items.push({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      icon: item.icon,
+      rarity: item.rarity,
+      quantity
+    });
+  }
+  eventBus.emit('inventoryChanged', {});
+  saveUnits();
+  refreshRosterPanel();
+  return true;
 }
 
 export function draw(): void {
@@ -818,6 +871,25 @@ const onUnitDied = ({
   if (unitFaction === 'player') {
     updateRosterDisplay();
   }
+  if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
+    const lootResult = rollLoot({ factionId: unitFaction, elite: isEliteUnit(fallen ?? null) });
+    if (lootResult.rolls.length > 0) {
+      const selectedAttendant = saunojas.find((unit) => unit.selected) ?? null;
+      for (const drop of lootResult.rolls) {
+        const receipt = inventory.addLoot(drop, {
+          unitId: selectedAttendant?.id,
+          sourceTableId: lootResult.tableId,
+          equip: equipItemToSaunoja
+        });
+        if (receipt.equipped) {
+          const ownerName = selectedAttendant?.name ?? 'our champion';
+          log(`Quartermaster fastens ${drop.item.name} to ${ownerName}.`);
+        } else {
+          log(`Quartermaster stores ${drop.item.name} recovered from ${label}.`);
+        }
+      }
+    }
+  }
   if (
     attackerFaction === 'player' &&
     unitFaction &&
@@ -857,6 +929,7 @@ export function cleanup(): void {
   eventBus.off('modifierExpired', onModifierChanged);
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
+  inventoryHud.destroy();
 }
 
 export async function start(): Promise<void> {
