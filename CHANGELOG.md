@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Smooth battlefield workload spikes by rotating unit updates through a
+  round-robin scheduler, reuse cached paths with TTL-aware invalidation when
+  obstacles remain unchanged, and document the optimization with fresh tests
+  to keep combat responsive under heavy unit counts
 - Wire a `npm run simulate` balance harness through `vite-node`, seed 20 deterministic
   maps for 150 ticks, export beer/upkeep/roster/death snapshots to `/tmp/balance.csv`,
   and document the workflow for contributors
