@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Introduce a shared unit stat model with dedicated types, leveling curves, and
+  calculators, replace archetype subclasses with data-driven definitions, route
+  factories through the new adapters, and verify deterministic progression
+  across soldiers, archers, and marauders
 - Preserve stored Saunoja personas when reattaching to new sessions so reloads
   keep their earned traits, upkeep, and experience intact
 - Expand the cached hex terrain canvas whenever exploration pushes map bounds

@@ -4,14 +4,7 @@ import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
-
-export interface UnitStats {
-  health: number;
-  attackDamage: number;
-  attackRange: number;
-  movementRange: number;
-  visionRange?: number;
-}
+import type { UnitStats } from '../unit/types.ts';
 
 export const UNIT_MOVEMENT_STEP_SECONDS = 5;
 
