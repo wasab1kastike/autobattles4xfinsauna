@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add a post-build CI gate that runs the `check:demo` script so pull requests
+  surface broken live demo links or titles while preserving offline-friendly
+  warnings
 - Refactor bootstrap wiring into dedicated input, HUD, and loader modules so the main entrypoint stays a light orchestrator with reusable UI hooks
 - Extract polished roster storage and HUD modules, relocate asset configuration,
   and add smoke tests so serialization and summary UI updates remain stable
