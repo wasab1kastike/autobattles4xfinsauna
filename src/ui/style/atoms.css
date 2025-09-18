@@ -91,3 +91,215 @@
   flex-direction: column;
   gap: var(--gap-md);
 }
+
+.loot-toast-stack {
+  position: absolute;
+  top: var(--gap-lg);
+  right: var(--gap-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--gap-sm);
+  pointer-events: none;
+  z-index: 900;
+}
+
+.loot-toast {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(215, 229, 255, 0.95));
+  color: #152035;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  pointer-events: auto;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  max-width: 18rem;
+}
+
+.loot-toast[data-variant='info'] {
+  background: linear-gradient(135deg, rgba(219, 245, 255, 0.95), rgba(197, 228, 255, 0.95));
+}
+
+.loot-toast[data-variant='warn'] {
+  background: linear-gradient(135deg, rgba(255, 231, 217, 0.95), rgba(255, 214, 196, 0.95));
+  color: #4a1f0e;
+}
+
+.loot-toast--exit {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.inventory-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--gap-sm);
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(135deg, rgba(27, 36, 56, 0.9), rgba(39, 74, 110, 0.9));
+  color: #f7fbff;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.inventory-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.inventory-badge__icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.75rem;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(225, 235, 255, 0.2));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.inventory-badge__text {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+}
+
+.inventory-badge__count {
+  min-width: 1.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.inventory-badge[data-autoequip='off'] {
+  background: linear-gradient(135deg, rgba(56, 44, 25, 0.9), rgba(92, 72, 40, 0.9));
+}
+
+.inventory-stash {
+  position: absolute;
+  top: 4.5rem;
+  right: var(--gap-lg);
+  width: min(22rem, 90vw);
+  background: linear-gradient(145deg, rgba(9, 15, 24, 0.96), rgba(23, 36, 54, 0.94));
+  color: #f7fbff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--gap-lg);
+  backdrop-filter: blur(6px);
+  z-index: 850;
+}
+
+.inventory-stash__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  margin-bottom: var(--gap-md);
+}
+
+.inventory-stash__title {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.inventory-stash__meta {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.inventory-stash__close {
+  border: none;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.inventory-stash__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.inventory-stash__empty {
+  text-align: center;
+  padding: var(--gap-md);
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.inventory-stash__item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--gap-sm);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: var(--gap-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.inventory-stash__item-title {
+  grid-column: 1 / -1;
+  font-weight: 700;
+}
+
+.inventory-stash__item-rarity {
+  justify-self: start;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.8;
+}
+
+.inventory-stash__item-quantity {
+  justify-self: end;
+  font-weight: 600;
+}
+
+.inventory-stash__item-time {
+  grid-column: 1 / -1;
+  font-size: 0.7rem;
+  opacity: 0.6;
+}
+
+.inventory-stash__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--gap-sm);
+}
+
+.inventory-stash__action {
+  flex: 1;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.18);
+  color: inherit;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.inventory-stash__action:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
+.inventory-stash__action--danger {
+  background: rgba(255, 120, 120, 0.18);
+}
+
+.inventory-stash__action--danger:hover {
+  background: rgba(255, 120, 120, 0.28);
+}
