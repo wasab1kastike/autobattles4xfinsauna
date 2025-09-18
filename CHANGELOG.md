@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Remove hashed bundles from `assets/`, add ignore rules to keep future Vite
+  outputs confined to `docs/`, and rebuild to verify only the published mirror
+  receives generated files
 - Compute camera-visible chunk ranges to populate tiles on reveal, move terrain
   drawing into an event-driven chunk cache that reuses offscreen canvases, wire
   the renderer through the new utilities so terrain, fog, and building updates
