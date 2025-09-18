@@ -1,18 +1,3 @@
-import { Unit } from './Unit.ts';
-import type { UnitStats } from './Unit.ts';
-import type { AxialCoord } from '../hex/HexUtils.ts';
-
-export const AVANTO_MARAUDER_STATS: UnitStats = {
-  health: 12,
-  attackDamage: 4,
-  attackRange: 1,
-  movementRange: 1,
-  visionRange: 3
-};
-
-export class AvantoMarauder extends Unit {
-  constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, 'avanto-marauder', coord, faction, { ...AVANTO_MARAUDER_STATS });
-  }
-}
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:46fe87d4bcf64f1fde2fd81304e39e16a2faf5ed9425c13d54ffbd17993b4310
+size 1280
