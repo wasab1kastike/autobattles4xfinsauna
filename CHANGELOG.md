@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expand TypeScript and Vitest globs to cover a dedicated `tests/` tree so future
+  issue tasks can land spec files outside `src/` without compiler friction
 - Introduce faction loot tables with rarity-weighted rolls, stash new drops in a
   persistent inventory that auto-equips selected attendants when possible,
   surface polished HUD toasts and a quartermaster panel for stash management,
