@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Note in issue #245 that the `src/unit.ts` barrel must migrate to `src/unit/index.ts`
+  (or be removed) and its consumers updated before adding the new `src/unit/`
+  directory so the refactor avoids path collisions
 - Expand TypeScript and Vitest globs to cover a dedicated `tests/` tree so future
   issue tasks can land spec files outside `src/` without compiler friction
 - Introduce faction loot tables with rarity-weighted rolls, stash new drops in a
