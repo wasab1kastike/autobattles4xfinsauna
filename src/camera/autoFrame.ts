@@ -42,6 +42,8 @@ export function autoFrame(viewport: ViewportSize): CameraFrame {
 
   const hexWidth = currentHexSize * Math.sqrt(3);
   const hexHeight = currentHexSize * 2;
+  const halfHexWidth = hexWidth / 2;
+  const halfHexHeight = hexHeight / 2;
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -50,10 +52,12 @@ export function autoFrame(viewport: ViewportSize): CameraFrame {
   for (const h of revealedHexes) {
     const [q, r] = h.split(',').map(Number);
     const { x, y } = axialToPixel({ q, r }, currentHexSize);
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x + hexWidth);
-    maxY = Math.max(maxY, y + hexHeight);
+    const topLeftX = x - halfHexWidth;
+    const topLeftY = y - halfHexHeight;
+    minX = Math.min(minX, topLeftX);
+    minY = Math.min(minY, topLeftY);
+    maxX = Math.max(maxX, topLeftX + hexWidth);
+    maxY = Math.max(maxY, topLeftY + hexHeight);
   }
 
   const width = maxX - minX;

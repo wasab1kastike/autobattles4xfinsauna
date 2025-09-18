@@ -688,7 +688,7 @@ function focusSaunojaById(unitId: string): void {
 }
 
 export function handleCanvasClick(world: PixelCoord): void {
-  const clicked = pixelToAxial(world.x - map.hexSize, world.y - map.hexSize, map.hexSize);
+  const clicked = pixelToAxial(world.x, world.y, map.hexSize);
   const target = saunojas.find(
     (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
   );

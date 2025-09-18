@@ -216,6 +216,8 @@ export class HexMapRenderer {
     }
 
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
     const origin = this.getOrigin();
     let minX = Infinity;
     let minY = Infinity;
@@ -225,8 +227,8 @@ export class HexMapRenderer {
     for (const [key] of this.mapRef.tiles) {
       const [q, r] = key.split(',').map(Number);
       const { x, y } = axialToPixel({ q, r }, this.hexSize);
-      const drawX = x - origin.x;
-      const drawY = y - origin.y;
+      const drawX = x - origin.x - halfHexWidth;
+      const drawY = y - origin.y - halfHexHeight;
       minX = Math.min(minX, drawX);
       minY = Math.min(minY, drawY);
       maxX = Math.max(maxX, drawX + hexWidth);
@@ -291,18 +293,18 @@ export class HexMapRenderer {
       return;
     }
 
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
+
     if (bounds) {
       this.drawFogLayer(ctx, origin, bounds);
     }
     if (selected) {
       const { x, y } = axialToPixel(selected, this.hexSize);
-      this.strokeHex(
-        ctx,
-        x - origin.x + this.hexSize,
-        y - origin.y + this.hexSize,
-        this.hexSize,
-        true
-      );
+      const drawX = x - origin.x - halfHexWidth;
+      const drawY = y - origin.y - halfHexHeight;
+      this.strokeHex(ctx, drawX + hexWidth / 2, drawY + hexHeight / 2, this.hexSize, true);
     }
   }
 
@@ -330,6 +332,8 @@ export class HexMapRenderer {
     }
 
     const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
     for (let r = bounds.rMin; r <= bounds.rMax; r++) {
       for (let q = bounds.qMin; q <= bounds.qMax; q++) {
         const tile = this.mapRef.getTile(q, r);
@@ -338,8 +342,8 @@ export class HexMapRenderer {
         }
 
         const { x, y } = axialToPixel({ q, r }, this.hexSize);
-        const drawX = x - origin.x;
-        const drawY = y - origin.y;
+        const drawX = x - origin.x - halfHexWidth;
+        const drawY = y - origin.y - halfHexHeight;
         ctx.save();
         if (tile.isFogged) {
           ctx.globalAlpha = 0.4;
@@ -348,8 +352,8 @@ export class HexMapRenderer {
         const isSelected = selected && q === selected.q && r === selected.r;
         this.strokeHex(
           ctx,
-          drawX + this.hexSize,
-          drawY + this.hexSize,
+          drawX + hexWidth / 2,
+          drawY + hexHeight / 2,
           this.hexSize,
           Boolean(isSelected)
         );
@@ -370,11 +374,11 @@ export class HexMapRenderer {
     const palette = TERRAIN[tile.terrain] ?? TERRAIN[TerrainId.Plains];
     const rgb = toRgb(palette.baseColor);
     const radius = this.hexSize;
-    const centerX = x + radius;
-    const centerY = y + radius;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
 
     ctx.save();
-    this.hexPath(ctx, x + this.hexSize, y + this.hexSize, radius);
+    this.hexPath(ctx, centerX, centerY, radius);
     ctx.clip();
 
     const gradient = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius * 1.05);
@@ -434,6 +438,9 @@ export class HexMapRenderer {
     origin: PixelCoord,
     bounds: AxialBounds
   ): void {
+    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
     for (let r = bounds.rMin; r <= bounds.rMax; r++) {
       for (let q = bounds.qMin; q <= bounds.qMax; q++) {
         const tile = this.mapRef.getTile(q, r);
@@ -442,11 +449,11 @@ export class HexMapRenderer {
         }
 
         const { x, y } = axialToPixel({ q, r }, this.hexSize);
-        const drawX = x - origin.x;
-        const drawY = y - origin.y;
+        const drawX = x - origin.x - halfHexWidth;
+        const drawY = y - origin.y - halfHexHeight;
         const radius = this.hexSize;
-        const centerX = drawX + radius;
-        const centerY = drawY + radius;
+        const centerX = drawX + hexWidth / 2;
+        const centerY = drawY + hexHeight / 2;
         ctx.save();
         this.hexPath(ctx, centerX, centerY, radius);
         const fog = ctx.createRadialGradient(
@@ -590,6 +597,8 @@ export class HexMapRenderer {
     const rStart = chunkR * CHUNK;
     const rEnd = rStart + CHUNK - 1;
     const origin = this.getOrigin();
+    const halfHexWidth = hexWidth / 2;
+    const halfHexHeight = hexHeight / 2;
 
     let minX = Infinity;
     let minY = Infinity;
@@ -606,8 +615,8 @@ export class HexMapRenderer {
         }
 
         const { x, y } = axialToPixel({ q, r }, this.hexSize);
-        const drawX = x - origin.x;
-        const drawY = y - origin.y;
+        const drawX = x - origin.x - halfHexWidth;
+        const drawY = y - origin.y - halfHexHeight;
         minX = Math.min(minX, drawX);
         minY = Math.min(minY, drawY);
         maxX = Math.max(maxX, drawX + hexWidth);
@@ -643,7 +652,7 @@ export class HexMapRenderer {
       const drawY = y - minY;
       ctx.save();
       this.drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight);
-      this.strokeHex(ctx, drawX + this.hexSize, drawY + this.hexSize, this.hexSize, false);
+      this.strokeHex(ctx, drawX + hexWidth / 2, drawY + hexHeight / 2, this.hexSize, false);
       ctx.restore();
     }
 
