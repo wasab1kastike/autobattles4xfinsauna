@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Compute camera-visible chunk ranges to populate tiles on reveal, move terrain
+  drawing into an event-driven chunk cache that reuses offscreen canvases, wire
+  the renderer through the new utilities so terrain, fog, and building updates
+  invalidate the right chunks, and cover the flow with chunk invalidation tests
 - Smooth battlefield workload spikes by rotating unit updates through a
   round-robin scheduler, reuse cached paths with TTL-aware invalidation when
   obstacles remain unchanged, and document the optimization with fresh tests
