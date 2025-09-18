@@ -30,6 +30,7 @@ import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/sau
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
+import { advanceModifiers } from './mods/runtime.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -486,6 +487,7 @@ const clock = new GameClock(1000, (deltaMs) => {
   sauna.update(dtSeconds, state, units, registerUnit);
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
   battleManager.tick(units, dtSeconds);
+  advanceModifiers(dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
   }
