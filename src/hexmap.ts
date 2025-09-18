@@ -1,13 +1,18 @@
 import type { AxialCoord } from './hex/HexUtils.ts';
 import { getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
-import { HexTile } from './hex/HexTile.ts';
+import { HexTile, type TileMutation } from './hex/HexTile.ts';
 import { terrainAt } from './map/terrain.ts';
 import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
+
+export type TileChangeType = TileMutation | 'created';
+export type TileChangeListener = (coord: AxialCoord, tile: HexTile, change: TileChangeType) => void;
 
 /** Simple hex map composed of tiles in axial coordinates. */
 export class HexMap {
   /** Map of serialized "q,r" keys to tiles. */
   readonly tiles = new Map<string, HexTile>();
+  private readonly tileSubscriptions = new Map<string, () => void>();
+  private readonly changeListeners = new Set<TileChangeListener>();
 
   /** Current map bounds. */
   minQ: number;
@@ -41,6 +46,24 @@ export class HexMap {
     return `${q},${r}`;
   }
 
+  addTileChangeListener(listener: TileChangeListener): () => void {
+    this.changeListeners.add(listener);
+    return () => this.changeListeners.delete(listener);
+  }
+
+  private notifyTileChange(coord: AxialCoord, tile: HexTile, change: TileChangeType): void {
+    for (const listener of this.changeListeners) {
+      listener(coord, tile, change);
+    }
+  }
+
+  private attachTileListener(key: string, tile: HexTile, coord: AxialCoord): void {
+    const unsubscribe = tile.addMutationListener((mutation) => {
+      this.notifyTileChange(coord, tile, mutation);
+    });
+    this.tileSubscriptions.set(key, unsubscribe);
+  }
+
   /** Ensure a tile exists at the given coordinate, creating it if missing. */
   ensureTile(q: number, r: number): HexTile {
     const k = this.key(q, r);
@@ -52,6 +75,8 @@ export class HexMap {
       this.maxQ = Math.max(this.maxQ, q);
       this.minR = Math.min(this.minR, r);
       this.maxR = Math.max(this.maxR, r);
+      this.attachTileListener(k, tile, { q, r });
+      this.notifyTileChange({ q, r }, tile, 'created');
       if (!tile.isFogged) {
         markRevealed({ q, r }, this.hexSize);
       }
