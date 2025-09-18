@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Upgrade the command console roster to render shared Saunoja stats, live loadout
+  icons, and modifier timers with polished styling, refresh the panel on
+  inventory and modifier events, and cover the new HUD with Vitest DOM tests
 - Track sauna heat with a dedicated tracker, drive the economy tick to drain
   upkeep and trigger heat-gated player spawns through a shared helper, and
   cover the flow with upkeep and reinforcement tests
