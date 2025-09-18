@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Centralize terrain palette tokens into `src/render/palette.ts`, introduce
+  zoom-aware outline helpers, render fog-of-war through cached Perlin masks
+  with multi-stop gradients, and refresh the README feature callouts to
+  document the upgraded battlefield sheen
 - Remove the unused `src/counter.ts` helper now that the counter demo has
   shipped elsewhere, keeping the Vite starter remnants out of the bundle
 - Remove the unused `src/typescript.svg` asset so no leftover Vite starter

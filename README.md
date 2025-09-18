@@ -23,6 +23,8 @@ with cinematic UI flourishes.
   aria labels.
 - **Hand-painted tactical sprites** render terrain, structures, and units with
   crisp vector art that scales cleanly across every zoom level.
+- **Perlin-sculpted fog-of-war** renders with cached noise masks and multi-stop
+  gradients so frontier edges stay crisp at every zoom level.
 - **Sauna operations** expose a toggleable control card to manage rally
   behavior and visualize spawn progress.
 - **Policies, events, and logs** occupy a dedicated right-hand column with tab
