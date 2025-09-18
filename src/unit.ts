@@ -1,3 +1,7 @@
+export * from './unit/types.ts';
+export * from './unit/level.ts';
+export * from './unit/calc.ts';
+export * from './unit/archetypes.ts';
 export * from './units/Unit.ts';
 export * from './units/Soldier.ts';
 export * from './units/Archer.ts';
