@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Remember the sauna command console log between sessions with polished storage so the right panel rehydrates prior narration on reload
 - Persist applied policy upgrades across saves, replaying their effects on load so eco beer production and temperance night shifts stay active after reloading
 - Pace battle movement with per-unit cooldowns so units only step once every
   five seconds, aligning pathfinding, stats, and tests with the slower cadence
