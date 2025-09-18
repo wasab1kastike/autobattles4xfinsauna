@@ -160,8 +160,8 @@ export class BattleManager {
       }
 
       if (unit.distanceTo(target.coord) <= unit.stats.attackRange && !target.isDead()) {
-        unit.attack(target);
-        if (target.isDead()) {
+        const resolution = unit.attack(target);
+        if ((resolution?.lethal ?? false) || target.isDead()) {
           occupied.delete(currentTargetKey);
           unit.clearPathCache();
         }
