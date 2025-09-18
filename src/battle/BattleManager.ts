@@ -3,6 +3,8 @@ import { getNeighbors } from '../hex/HexUtils.ts';
 import { Unit } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
+import { RoundRobinScheduler } from '../ai/scheduler.ts';
+import { PathCache } from '../ai/path_cache.ts';
 
 export const MAX_ENEMIES = 30;
 
@@ -12,7 +14,8 @@ function coordKey(c: { q: number; r: number }): string {
 
 /** Handles unit movement and combat each game tick. */
 export class BattleManager {
-  private nextUnitIndex = 0;
+  private readonly scheduler = new RoundRobinScheduler();
+  private readonly pathCache = new PathCache();
 
   constructor(private readonly map: HexMap) {}
 
@@ -61,8 +64,12 @@ export class BattleManager {
   /** Process a single game tick for the provided units. */
   tick(units: Unit[], deltaSeconds: number): void {
     const totalUnits = units.length;
+    const now = Date.now();
+
+    this.pathCache.clearExpired(now);
+
     if (totalUnits === 0) {
-      this.nextUnitIndex = 0;
+      this.scheduler.reset();
       return;
     }
 
@@ -71,25 +78,35 @@ export class BattleManager {
     }
 
     const occupied = new Set<string>();
+    const activeUnits: Unit[] = [];
     for (const u of units) {
-      if (!u.isDead()) {
-        occupied.add(coordKey(u.coord));
+      if (u.isDead()) {
+        u.clearPathCache();
+        this.pathCache.invalidateForUnit(u.id);
+        continue;
       }
+      this.pathCache.trackUnit(u);
+      activeUnits.push(u);
+      occupied.add(coordKey(u.coord));
     }
 
-    if (this.nextUnitIndex >= totalUnits) {
-      this.nextUnitIndex = 0;
+    if (activeUnits.length === 0) {
+      this.scheduler.reset();
+      return;
     }
 
-    const chunkSize = Math.max(1, Math.ceil(totalUnits / 2));
-    for (let processed = 0; processed < chunkSize && processed < totalUnits; processed++) {
-      const index = (this.nextUnitIndex + processed) % totalUnits;
-      const unit = units[index];
+    const scheduledUnits = this.scheduler.next(activeUnits);
+    if (scheduledUnits.length === 0) {
+      return;
+    }
+
+    for (const unit of scheduledUnits) {
       const originalKey = coordKey(unit.coord);
       occupied.delete(originalKey);
 
       if (unit.isDead()) {
         unit.clearPathCache();
+        this.pathCache.invalidateForUnit(unit.id);
         continue;
       }
 
@@ -97,7 +114,7 @@ export class BattleManager {
       if (!target) {
         const goal = this.findExplorationGoal(unit, occupied);
         if (goal) {
-          const path = unit.moveTowards(goal, this.map, occupied);
+          const path = this.computeMovementPath(unit, goal, occupied, now);
           if (path.length > 1 && unit.stats.movementRange > 0) {
             const nextCoord = path[1];
             const stepKey = coordKey(nextCoord);
@@ -136,7 +153,10 @@ export class BattleManager {
       }
 
       const targetKey = coordKey(target.coord);
-      const path = unit.getPathTo(target.coord, this.map, occupied);
+      const path = this.pathCache.getPath(unit, target.coord, this.map, occupied, {
+        now,
+        targetId: target.id
+      });
       if (path.length > 1 && unit.stats.movementRange > 0) {
         const nextCoord = path[1];
         const stepKey = coordKey(nextCoord);
@@ -164,11 +184,42 @@ export class BattleManager {
         if ((resolution?.lethal ?? false) || target.isDead()) {
           occupied.delete(currentTargetKey);
           unit.clearPathCache();
+          this.pathCache.invalidateForUnit(target.id);
         }
       }
     }
+  }
 
-    this.nextUnitIndex = (this.nextUnitIndex + chunkSize) % totalUnits;
+  private computeMovementPath(
+    unit: Unit,
+    destination: AxialCoord,
+    occupied: Set<string>,
+    now: number
+  ): AxialCoord[] {
+    const path = this.pathCache.getPath(unit, destination, this.map, occupied, { now });
+    if (path.length < 2) {
+      return [];
+    }
+
+    let endIndex = 0;
+    const destinationKey = coordKey(destination);
+    for (let i = 1; i < path.length; i++) {
+      const key = coordKey(path[i]);
+      if (occupied.has(key)) {
+        if (key !== destinationKey) {
+          unit.clearPathCache();
+        }
+        break;
+      }
+      endIndex = i;
+    }
+
+    if (endIndex === 0) {
+      return [];
+    }
+
+    const steps = Math.min(unit.stats.movementRange, endIndex);
+    return path.slice(0, steps + 1);
   }
 }
 
