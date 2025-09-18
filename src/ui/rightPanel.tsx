@@ -37,11 +37,16 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {} };
   }
 
-  const { side } = ensureHudLayout(overlay);
+  const { actions, side } = ensureHudLayout(overlay);
 
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
     existingPanel.remove();
+  }
+
+  const existingToggle = actions.querySelector<HTMLButtonElement>('#right-panel-toggle');
+  if (existingToggle) {
+    existingToggle.remove();
   }
 
   const panel = document.createElement('div');
@@ -49,6 +54,82 @@ export function setupRightPanel(
   panel.classList.add('hud-card');
   panel.setAttribute('role', 'complementary');
   panel.setAttribute('aria-label', 'Sauna command console');
+  panel.tabIndex = -1;
+
+  const smallViewportQuery = window.matchMedia('(max-width: 960px)');
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.id = 'right-panel-toggle';
+  toggle.classList.add('hud-panel-toggle');
+  toggle.setAttribute('aria-controls', panel.id);
+
+  const toggleIcon = document.createElement('span');
+  toggleIcon.classList.add('hud-panel-toggle__icon');
+  toggleIcon.setAttribute('aria-hidden', 'true');
+  const toggleBars = document.createElement('span');
+  toggleBars.classList.add('hud-panel-toggle__icon-bars');
+  toggleIcon.appendChild(toggleBars);
+
+  const toggleText = document.createElement('span');
+  toggleText.classList.add('hud-panel-toggle__text');
+  const toggleTitle = document.createElement('span');
+  toggleTitle.classList.add('hud-panel-toggle__title');
+  toggleTitle.textContent = 'Command Console';
+  const toggleState = document.createElement('span');
+  toggleState.classList.add('hud-panel-toggle__state');
+  toggleText.append(toggleTitle, toggleState);
+
+  toggle.append(toggleIcon, toggleText);
+
+  const insertToggle = (): void => {
+    const topbar = actions.querySelector<HTMLElement>('#topbar');
+    if (topbar && topbar.parentElement === actions) {
+      topbar.insertAdjacentElement('afterend', toggle);
+    } else {
+      actions.prepend(toggle);
+    }
+  };
+  insertToggle();
+
+  let isCollapsed = smallViewportQuery.matches;
+
+  const applyCollapsedState = (collapsed: boolean, matches = smallViewportQuery.matches): void => {
+    isCollapsed = collapsed;
+    const shouldCollapse = collapsed && matches;
+    panel.classList.toggle('right-panel--collapsed', shouldCollapse);
+    panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
+    toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
+    toggleState.textContent = shouldCollapse ? 'Open' : 'Close';
+    const label = shouldCollapse ? 'Open command console panel' : 'Close command console panel';
+    toggle.setAttribute('aria-label', label);
+    toggle.title = shouldCollapse
+      ? 'Open the sauna command console overlay'
+      : 'Close the sauna command console overlay';
+    if (!shouldCollapse && matches) {
+      panel.focus({ preventScroll: true });
+    }
+  };
+
+  applyCollapsedState(isCollapsed, smallViewportQuery.matches);
+  toggle.hidden = !smallViewportQuery.matches;
+
+  const handleViewportChange = (event: MediaQueryListEvent): void => {
+    const matches = event.matches;
+    toggle.hidden = !matches;
+    applyCollapsedState(matches ? true : false, matches);
+  };
+
+  if (typeof smallViewportQuery.addEventListener === 'function') {
+    smallViewportQuery.addEventListener('change', handleViewportChange);
+  } else {
+    smallViewportQuery.addListener(handleViewportChange);
+  }
+
+  toggle.addEventListener('click', () => {
+    const next = !isCollapsed;
+    applyCollapsedState(next);
+  });
 
   const tabBar = document.createElement('div');
   tabBar.classList.add('panel-tabs');
