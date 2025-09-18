@@ -67,6 +67,8 @@ let rosterHud: RosterHudController | null = null;
 let pendingRosterSummary: RosterHudSummary | null = null;
 let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
 let pendingRosterEntries: RosterEntry[] | null = null;
+let animationFrameId: number | null = null;
+let running = false;
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
   pendingRosterRenderer = renderer;
@@ -784,6 +786,11 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
+  running = false;
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   try {
     state.save();
   } catch (error) {
@@ -821,11 +828,15 @@ export function cleanup(): void {
 }
 
 export async function start(): Promise<void> {
+  if (running) {
+    return;
+  }
   const assets = getAssets();
   if (!assets) {
     console.error('Cannot start game without loaded assets.');
     return;
   }
+  running = true;
   updateRosterDisplay();
   draw();
   try {
@@ -839,6 +850,9 @@ export async function start(): Promise<void> {
   }
   let last = performance.now();
   function gameLoop(now: number) {
+    if (!running) {
+      return;
+    }
     const delta = now - last;
     last = now;
     clock.tick(delta);
@@ -846,9 +860,12 @@ export async function start(): Promise<void> {
     updateTopbar(delta);
     refreshRosterPanel();
     draw();
-    requestAnimationFrame(gameLoop);
+    if (!running) {
+      return;
+    }
+    animationFrameId = requestAnimationFrame(gameLoop);
   }
-  requestAnimationFrame(gameLoop);
+  animationFrameId = requestAnimationFrame(gameLoop);
 }
 
 export { log };

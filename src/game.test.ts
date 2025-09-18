@@ -257,6 +257,91 @@ describe('game logging', () => {
   });
 });
 
+describe('game lifecycle', () => {
+  it('stops scheduling animation frames after cleanup', async () => {
+    const assetsModule = await import('./game/assets.ts');
+    assetsModule.resetAssetsForTest();
+    const fakeImage = document.createElement('img') as HTMLImageElement;
+    const fakeAudio = document.createElement('audio') as HTMLAudioElement;
+    assetsModule.setAssets({
+      images: {
+        placeholder: fakeImage,
+        'unit-soldier': fakeImage
+      },
+      sounds: { silent: fakeAudio }
+    });
+
+    const renderModule = await import('./units/renderSaunoja.ts');
+    const preloadSpy = vi
+      .spyOn(renderModule, 'preloadSaunojaIcon')
+      .mockImplementation(async (onLoad?: (icon: HTMLImageElement) => void) => {
+        const img = document.createElement('img') as HTMLImageElement;
+        if (onLoad) {
+          onLoad(img);
+        }
+        return img;
+      });
+
+    const { GameClock } = await import('./core/GameClock.ts');
+    const tickSpy = vi.spyOn(GameClock.prototype, 'tick');
+
+    const loopFrames: Array<{ id: number; cb: FrameRequestCallback }> = [];
+    let nextFrameId = 1;
+    const rafMock = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        const id = nextFrameId++;
+        if (cb.name === 'gameLoop') {
+          loopFrames.push({ id, cb });
+        }
+        return id;
+      });
+
+    const cancelledLoopIds = new Set<number>();
+    const cancelMock = vi
+      .spyOn(window, 'cancelAnimationFrame')
+      .mockImplementation((id: number) => {
+        cancelledLoopIds.add(id);
+      });
+
+    const { start, cleanup } = await initGame();
+    let cleaned = false;
+
+    try {
+      await start();
+
+      const firstLoop = loopFrames[0];
+      expect(firstLoop).toBeDefined();
+
+      firstLoop.cb(16);
+      expect(tickSpy).toHaveBeenCalledTimes(1);
+
+      const secondLoop = loopFrames[1];
+      expect(secondLoop).toBeDefined();
+
+      cleanup();
+      cleaned = true;
+
+      expect(cancelledLoopIds.has(secondLoop.id)).toBe(true);
+
+      const scheduledCallsAfterCleanup = rafMock.mock.calls.length;
+      secondLoop.cb(32);
+      expect(rafMock.mock.calls.length).toBe(scheduledCallsAfterCleanup);
+      expect(tickSpy).toHaveBeenCalledTimes(1);
+      expect(loopFrames).toHaveLength(2);
+    } finally {
+      if (!cleaned) {
+        cleanup();
+      }
+      rafMock.mockRestore();
+      cancelMock.mockRestore();
+      preloadSpy.mockRestore();
+      tickSpy.mockRestore();
+      assetsModule.resetAssetsForTest();
+    }
+  });
+});
+
 describe('saunoja persistence', () => {
   it('normalizes and persists extended attendant fields', async () => {
     window.localStorage?.setItem(
