@@ -2,6 +2,48 @@ import type { AxialCoord } from '../hex/HexUtils.ts';
 import { generateSaunojaName } from '../data/names.ts';
 import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
 
+export type SaunojaItemRarity =
+  | 'common'
+  | 'uncommon'
+  | 'rare'
+  | 'epic'
+  | 'legendary'
+  | 'mythic';
+
+export interface SaunojaItem {
+  /** Stable identifier for the equipped item. */
+  readonly id: string;
+  /** Readable label displayed in HUD tooltips. */
+  readonly name: string;
+  /** Optional flavorful description surfaced in tooltips. */
+  readonly description?: string;
+  /** Optional relative path to an illustrative icon. */
+  readonly icon?: string;
+  /** Optional rarity tag used for HUD styling. */
+  readonly rarity?: SaunojaItemRarity | string;
+  /** Visible quantity badge when the item stacks. */
+  readonly quantity: number;
+}
+
+export interface SaunojaModifier {
+  /** Unique identifier mapping to runtime modifier registrations. */
+  readonly id: string;
+  /** Polished name surfaced to players. */
+  readonly name: string;
+  /** Optional descriptive copy for tooltips. */
+  readonly description?: string;
+  /** Seconds remaining before the modifier expires. */
+  readonly remaining: number | typeof Infinity;
+  /** Total duration in seconds or Infinity for persistent effects. */
+  readonly duration: number | typeof Infinity;
+  /** Timestamp when the modifier was applied, in milliseconds. */
+  readonly appliedAt?: number;
+  /** Optional stack count for multi-tier effects. */
+  readonly stacks?: number;
+  /** Optional source tag rendered in the tooltip. */
+  readonly source?: string;
+}
+
 export interface Saunoja {
   /** Unique identifier used to reference the unit. */
   id: string;
@@ -29,6 +71,10 @@ export interface Saunoja {
   lastHitAt: number;
   /** Whether the unit is currently selected in the UI. */
   selected: boolean;
+  /** Loadout items currently equipped by the Saunoja. */
+  items: SaunojaItem[];
+  /** Active modifiers applied to the Saunoja. */
+  modifiers: SaunojaModifier[];
   /** Optional keyword-driven combat hooks. */
   combatKeywords?: CombatKeywordRegistry | null;
   /** Optional direct combat hook bindings. */
@@ -49,6 +95,8 @@ export interface SaunojaInit {
   xp?: number;
   lastHitAt?: number;
   selected?: boolean;
+  items?: ReadonlyArray<unknown>;
+  modifiers?: ReadonlyArray<unknown>;
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
 }
@@ -63,6 +111,117 @@ export const SAUNOJA_DEFAULT_UPKEEP = 1;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function sanitizeItem(entry: unknown): SaunojaItem | null {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+  const data = entry as Record<string, unknown>;
+  const idSource = typeof data.id === 'string' ? data.id.trim() : '';
+  const nameSource = typeof data.name === 'string' ? data.name.trim() : '';
+  if (!idSource || !nameSource) {
+    return null;
+  }
+  const description = typeof data.description === 'string' ? data.description.trim() : undefined;
+  const icon = typeof data.icon === 'string' ? data.icon.trim() : undefined;
+  const rarity = typeof data.rarity === 'string' ? data.rarity.trim() : undefined;
+  const quantitySource = typeof data.quantity === 'number' ? data.quantity : Number(data.quantity);
+  const quantity = Number.isFinite(quantitySource) ? Math.max(1, Math.round(quantitySource as number)) : 1;
+  return {
+    id: idSource,
+    name: nameSource,
+    description,
+    icon,
+    rarity,
+    quantity
+  } satisfies SaunojaItem;
+}
+
+function sanitizeItems(entries: ReadonlyArray<unknown> | undefined): SaunojaItem[] {
+  if (!entries || entries.length === 0) {
+    return [];
+  }
+  const sanitized: SaunojaItem[] = [];
+  for (const entry of entries) {
+    const item = sanitizeItem(entry);
+    if (item) {
+      sanitized.push(item);
+    }
+  }
+  return sanitized;
+}
+
+function sanitizeModifier(entry: unknown): SaunojaModifier | null {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+  const data = entry as Record<string, unknown>;
+  const idSource = typeof data.id === 'string' ? data.id.trim() : '';
+  const nameSource = typeof data.name === 'string' ? data.name.trim() : '';
+  if (!idSource || !nameSource) {
+    return null;
+  }
+
+  const durationSource = data.duration;
+  let duration: number | typeof Infinity = Infinity;
+  if (typeof durationSource === 'number' && Number.isFinite(durationSource)) {
+    duration = Math.max(0, durationSource);
+  } else if (durationSource !== Infinity) {
+    duration = Infinity;
+  }
+
+  const remainingSource = data.remaining;
+  let remaining: number | typeof Infinity = duration;
+  if (typeof remainingSource === 'number' && Number.isFinite(remainingSource)) {
+    remaining = Math.max(0, remainingSource);
+  } else if (remainingSource === Infinity) {
+    remaining = Infinity;
+  }
+
+  if (duration !== Infinity && remaining === Infinity) {
+    remaining = duration;
+  }
+
+  const appliedAtSource = data.appliedAt;
+  const appliedAt =
+    typeof appliedAtSource === 'number' && Number.isFinite(appliedAtSource)
+      ? Math.max(0, appliedAtSource)
+      : undefined;
+
+  const stacksSource = data.stacks;
+  const stacks =
+    typeof stacksSource === 'number' && Number.isFinite(stacksSource)
+      ? Math.max(1, Math.round(stacksSource))
+      : undefined;
+
+  const description = typeof data.description === 'string' ? data.description.trim() : undefined;
+  const source = typeof data.source === 'string' ? data.source.trim() : undefined;
+
+  return {
+    id: idSource,
+    name: nameSource,
+    description,
+    duration,
+    remaining,
+    appliedAt,
+    stacks,
+    source
+  } satisfies SaunojaModifier;
+}
+
+function sanitizeModifiers(entries: ReadonlyArray<unknown> | undefined): SaunojaModifier[] {
+  if (!entries || entries.length === 0) {
+    return [];
+  }
+  const sanitized: SaunojaModifier[] = [];
+  for (const entry of entries) {
+    const modifier = sanitizeModifier(entry);
+    if (modifier) {
+      sanitized.push(modifier);
+    }
+  }
+  return sanitized;
 }
 
 /**
@@ -100,6 +259,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     xp = 0,
     lastHitAt = DEFAULT_LAST_HIT_AT,
     selected = false,
+    items,
+    modifiers,
     combatKeywords = null,
     combatHooks = null
   } = init;
@@ -127,6 +288,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const normalizedDefenseSource = Number.isFinite(defense) ? (defense as number) : undefined;
   const clampedDefense =
     normalizedDefenseSource !== undefined ? Math.max(0, normalizedDefenseSource) : undefined;
+  const sanitizedItems = sanitizeItems(items);
+  const sanitizedModifiers = sanitizeModifiers(modifiers);
 
   const resolvedName = resolveSaunojaName(name);
 
@@ -144,6 +307,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     xp: clampedXp,
     lastHitAt: clampedLastHitAt,
     selected,
+    items: sanitizedItems,
+    modifiers: sanitizedModifiers,
     combatKeywords,
     combatHooks
   };

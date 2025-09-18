@@ -1,6 +1,10 @@
 import { GameState, Resource } from '../core/GameState.ts';
 import { eventBus } from '../events';
 import { ensureHudLayout } from './layout.ts';
+import { createRosterPanel } from './panels/RosterPanel.tsx';
+import type { RosterEntry } from './panels/RosterPanel.tsx';
+
+export type { RosterEntry, RosterItem, RosterModifier, RosterStats } from './panels/RosterPanel.tsx';
 
 export type GameEvent = {
   id: string;
@@ -9,16 +13,7 @@ export type GameEvent = {
   buttonText?: string;
 };
 
-export type RosterEntry = {
-  id: string;
-  name: string;
-  hp: number;
-  maxHp: number;
-  upkeep: number;
-  status: 'engaged' | 'reserve' | 'downed';
-  selected: boolean;
-  traits: string[];
-};
+const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 type RightPanelOptions = {
   onRosterSelect?: (unitId: string) => void;
@@ -171,16 +166,6 @@ export function setupRightPanel(
   };
 
   const { onRosterSelect, onRosterRendererReady } = options;
-  const numberFormatter = new Intl.NumberFormat('en-US');
-  const rosterCountFormatter = new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0
-  });
-  const rosterStatusLabels: Record<RosterEntry['status'], string> = {
-    engaged: 'Engaged on the field',
-    reserve: 'On reserve duty',
-    downed: 'Recovering from battle'
-  };
-
   for (const [name, section] of Object.entries(tabs)) {
     section.classList.add('panel-section', 'panel-section--scroll');
     section.dataset.tab = name;
@@ -217,135 +202,11 @@ export function setupRightPanel(
   side.appendChild(panel);
 
   // --- Roster ---
-  const rosterTitleId = 'panel-roster-title';
+  const rosterPanel = createRosterPanel(rosterTab, { onSelect: onRosterSelect });
 
-  function buildMetric(label: string, value: number, status: RosterEntry['status']): HTMLSpanElement {
-    const metric = document.createElement('span');
-    metric.classList.add('panel-roster__metric');
-    metric.dataset.status = status;
-    metric.textContent = `${rosterCountFormatter.format(value)} ${label}`;
-    metric.setAttribute('aria-label', `${rosterCountFormatter.format(value)} ${label}`);
-    return metric;
-  }
-
-  function renderRoster(entries: RosterEntry[]): void {
-    rosterTab.innerHTML = '';
-    rosterTab.dataset.count = String(entries.length);
-    rosterTab.classList.add('panel-roster');
-
-    const header = document.createElement('div');
-    header.classList.add('panel-roster__header');
-
-    const heading = document.createElement('h4');
-    heading.classList.add('panel-roster__title');
-    heading.textContent = 'Battalion Roster';
-    heading.id = rosterTitleId;
-    header.appendChild(heading);
-
-    rosterTab.setAttribute('aria-labelledby', rosterTitleId);
-
-    const totalLabel = entries.length === 0
-      ? 'No attendants mustered yet'
-      : `${rosterCountFormatter.format(entries.length)} attendant${entries.length === 1 ? '' : 's'} enlisted`;
-    const count = document.createElement('span');
-    count.classList.add('panel-roster__count');
-    count.textContent = totalLabel;
-    header.appendChild(count);
-
-    rosterTab.appendChild(header);
-
-    if (entries.length === 0) {
-      const empty = document.createElement('p');
-      empty.classList.add('panel-roster__empty');
-      empty.textContent = 'No attendants have rallied to the sauna yet.';
-      rosterTab.appendChild(empty);
-      return;
-    }
-
-    const engaged = entries.filter((entry) => entry.status === 'engaged').length;
-    const reserve = entries.filter((entry) => entry.status === 'reserve').length;
-    const downed = entries.filter((entry) => entry.status === 'downed').length;
-
-    const metrics = document.createElement('div');
-    metrics.classList.add('panel-roster__metrics');
-    metrics.append(
-      buildMetric('engaged', engaged, 'engaged'),
-      buildMetric('reserve', reserve, 'reserve'),
-      buildMetric('downed', downed, 'downed')
-    );
-    rosterTab.appendChild(metrics);
-
-    const list = document.createElement('ul');
-    list.classList.add('panel-roster__list');
-    list.setAttribute('role', 'list');
-
-    for (const entry of entries) {
-      const item = document.createElement('li');
-      item.classList.add('panel-roster__row');
-
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.classList.add('panel-roster__item');
-      btn.dataset.unitId = entry.id;
-      btn.dataset.status = entry.status;
-      btn.setAttribute('aria-pressed', entry.selected ? 'true' : 'false');
-      btn.setAttribute(
-        'aria-label',
-        `${entry.name}, ${rosterStatusLabels[entry.status]}, health ${entry.hp} of ${entry.maxHp}`
-      );
-      btn.title = `${entry.name} • ${rosterStatusLabels[entry.status]}`;
-      if (entry.selected) {
-        btn.classList.add('is-selected');
-      }
-      if (entry.status === 'downed') {
-        btn.classList.add('is-downed');
-      }
-      if (typeof onRosterSelect === 'function') {
-        btn.addEventListener('click', () => onRosterSelect(entry.id));
-      }
-
-      const nameRow = document.createElement('div');
-      nameRow.classList.add('panel-roster__name-row');
-
-      const nameSpan = document.createElement('span');
-      nameSpan.classList.add('panel-roster__name');
-      nameSpan.textContent = entry.name;
-      nameSpan.title = entry.name;
-      nameRow.appendChild(nameSpan);
-
-      const statusBadge = document.createElement('span');
-      statusBadge.classList.add('panel-roster__status');
-      statusBadge.dataset.status = entry.status;
-      statusBadge.textContent = rosterStatusLabels[entry.status];
-      nameRow.appendChild(statusBadge);
-
-      const meta = document.createElement('div');
-      meta.classList.add('panel-roster__meta');
-      meta.textContent = `HP ${entry.hp}/${entry.maxHp} • Upkeep ${entry.upkeep} beer`;
-      meta.title = `Health ${entry.hp} of ${entry.maxHp}. Upkeep ${entry.upkeep} sauna beer.`;
-
-      const healthBar = document.createElement('div');
-      healthBar.classList.add('panel-roster__health');
-      const healthFill = document.createElement('div');
-      healthFill.classList.add('panel-roster__health-fill');
-      const percent = entry.maxHp > 0 ? Math.max(0, Math.min(100, Math.round((entry.hp / entry.maxHp) * 100))) : 0;
-      healthFill.style.width = `${percent}%`;
-      healthFill.dataset.percent = `${percent}`;
-      healthBar.appendChild(healthFill);
-
-      const traitsLine = document.createElement('div');
-      traitsLine.classList.add('panel-roster__traits');
-      const traitLabel = entry.traits.length > 0 ? entry.traits.join(' • ') : 'No defining traits yet';
-      traitsLine.textContent = traitLabel;
-      traitsLine.title = traitLabel;
-
-      btn.append(nameRow, meta, healthBar, traitsLine);
-      item.appendChild(btn);
-      list.appendChild(item);
-    }
-
-    rosterTab.appendChild(list);
-  }
+  const renderRoster = (entries: RosterEntry[]): void => {
+    rosterPanel.render(entries);
+  };
 
   renderRoster([]);
 

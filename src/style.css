@@ -910,6 +910,133 @@ body > #game-container {
   background: linear-gradient(90deg, rgba(248, 113, 113, 0.85), rgba(239, 68, 68, 0.85));
 }
 
+.panel-roster__loadout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.panel-roster__items,
+.panel-roster__mods {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-roster__mods {
+  gap: 8px;
+}
+
+.item-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, rgba(148, 163, 184, 0.16), rgba(226, 232, 240, 0.04));
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.28), 0 10px 20px rgba(15, 23, 42, 0.28);
+  color: var(--color-foreground);
+  transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
+}
+
+.item-icon:is(:hover, :focus-visible) {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 55%, transparent),
+    0 16px 28px rgba(56, 189, 248, 0.35);
+}
+
+.item-icon__image {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(15, 23, 42, 0.4));
+}
+
+.item-icon__fallback {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.item-icon__quantity {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  padding: 3px 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-accent) 70%, rgba(15, 23, 42, 0.95));
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.35);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.item-icon[data-rarity='uncommon'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, rgb(34 197 94) 55%, transparent),
+    0 16px 28px rgba(34, 197, 94, 0.28);
+}
+
+.item-icon[data-rarity='rare'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, rgb(59 130 246) 55%, transparent),
+    0 16px 28px rgba(59, 130, 246, 0.32);
+}
+
+.item-icon[data-rarity='epic'],
+.item-icon[data-rarity='legendary'],
+.item-icon[data-rarity='mythic'] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, rgb(168 85 247) 55%, transparent),
+    0 18px 32px rgba(168, 85, 247, 0.38);
+}
+
+.mod-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(120deg, rgba(56, 189, 248, 0.22), rgba(59, 130, 246, 0.16));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 48%, transparent);
+  color: var(--color-foreground);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mod-pill[data-urgent='true'] {
+  background: linear-gradient(120deg, rgba(248, 113, 113, 0.26), rgba(239, 68, 68, 0.18));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 42%, transparent);
+  color: color-mix(in srgb, var(--color-danger) 80%, white 20%);
+}
+
+.mod-pill__name {
+  font-weight: 600;
+  letter-spacing: inherit;
+}
+
+.mod-pill__stacks {
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, rgba(148, 163, 184, 0.32) 70%, transparent);
+  font-size: 10px;
+}
+
+.mod-pill__timer {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, rgba(15, 23, 42, 0.75) 80%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+}
+
 .panel-roster__empty {
   margin: 0;
   padding: 16px 18px;
