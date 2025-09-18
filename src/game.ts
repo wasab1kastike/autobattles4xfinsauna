@@ -367,7 +367,15 @@ function syncSaunojaRosterWithUnits(): boolean {
   return changed;
 }
 
-function describeUnit(unit: Unit): string {
+function describeUnit(unit: Unit, attachedSaunoja?: Saunoja | null): string {
+  if (unit.faction === 'player') {
+    const persona = attachedSaunoja ?? unitToSaunoja.get(unit.id) ?? null;
+    const name = persona?.name?.trim();
+    if (name) {
+      return name;
+    }
+  }
+
   const ctorName = unit.constructor?.name ?? 'Unit';
   const spacedName = ctorName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
   return `${spacedName} ${unit.id}`.trim();
@@ -379,18 +387,20 @@ function registerUnit(unit: Unit): void {
   }
   units.push(unit);
   unitsById.set(unit.id, unit);
+  let persona: Saunoja | null = null;
   if (unit.faction === 'player') {
     const changed = syncSaunojaRosterWithUnits();
     if (!changed) {
       refreshRosterPanel();
     }
+    persona = unitToSaunoja.get(unit.id) ?? null;
   }
   if (canvas) {
     draw();
   }
-  const steward = unit.faction === 'player' ? 'Our' : 'A rival';
-  log(`${steward} ${describeUnit(unit)} emerges from the steam.`);
   if (unit.faction === 'player') {
+    const steward = 'Our';
+    log(`${steward} ${describeUnit(unit, persona)} emerges from the steam.`);
     updateRosterDisplay();
   }
 }
@@ -684,6 +694,9 @@ const onUnitDied = ({
   const idx = units.findIndex((u) => u.id === unitId);
   const fallen = idx !== -1 ? units[idx] : null;
   const fallenCoord = fallen ? { q: fallen.coord.q, r: fallen.coord.r } : null;
+  const persona = unitFaction === 'player' ? unitToSaunoja.get(unitId) ?? null : null;
+  const label = fallen ? describeUnit(fallen, persona) : `unit ${unitId}`;
+
   if (idx !== -1) {
     units.splice(idx, 1);
     unitsById.delete(unitId);
@@ -706,7 +719,6 @@ const onUnitDied = ({
     map.revealAround(fallenCoord, 1);
   }
   const side = unitFaction === 'player' ? 'our' : 'a rival';
-  const label = fallen ? describeUnit(fallen) : `unit ${unitId}`;
   log(`The steam hushes as ${side} ${label} grows still.`);
 };
 eventBus.on('unitDied', onUnitDied);
