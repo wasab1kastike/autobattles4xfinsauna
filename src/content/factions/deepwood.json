@@ -1,0 +1,28 @@
+{
+  "id": "deepwood",
+  "name": "Deepwood Wardens",
+  "description": "Reclusive guardians attuned to sauna spirits.",
+  "bundles": [
+    {
+      "id": "warding-circle",
+      "label": "Warding Circle",
+      "weight": 2,
+      "units": [
+        { "unit": "soldier", "level": 1, "quantity": 2 },
+        { "unit": "archer", "level": 1, "quantity": 1 }
+      ],
+      "items": ["spirit-oak-charm", "sauna-incense"],
+      "modifiers": ["barkskin-ritual"]
+    },
+    {
+      "id": "spirit-strike",
+      "label": "Spirit Strike",
+      "weight": 1,
+      "units": [
+        { "unit": "archer", "level": 2, "quantity": 2 }
+      ],
+      "items": ["emberglass-arrow"],
+      "modifiers": ["searing-chant", "windstep"]
+    }
+  ]
+}
