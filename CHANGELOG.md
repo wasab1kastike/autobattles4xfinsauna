@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Refactor bootstrap wiring into dedicated input, HUD, and loader modules so the main entrypoint stays a light orchestrator with reusable UI hooks
 - Extract polished roster storage and HUD modules, relocate asset configuration,
   and add smoke tests so serialization and summary UI updates remain stable
 - Guard `safeLoadJSON` against missing `localStorage` implementations and cover
@@ -299,4 +300,3 @@
 - Defer game initialization until DOMContentLoaded via exported `init()`
 - Add workflow to deploy docs from `dist/` on pushes to `main`
 - Switch deployment workflow to Node.js 18
-
