@@ -1,11 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Execute Bleed, Burn, Shield, and Lifesteal keyword hooks in the combat
-  resolver, applying pre-hit damage ticks, consumable barrier stacks, and
-  post-hit lifesteal while updating unit state with targeted tests
-- Expand combat resolver coverage with lethal bleed ticks, mixed shield pools,
-  and capped lifesteal healing to document the keyword engine pipeline
+
 - Catalog faction spawn bundles in JSON, expose weighted selection helpers, and
   drive enemy wave spawns through the bundle system with cadence and identity
   tests
