@@ -272,4 +272,82 @@ describe('saunoja persistence', () => {
     expect(stored.upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     expect(stored.xp).toBe(0);
   });
+
+  it('preserves stored Saunoja personas across reloads', async () => {
+    const mockSpawnUnit = () =>
+      vi.doMock('./unit.ts', async () => {
+        const actual = await vi.importActual<typeof import('./unit.ts')>('./unit.ts');
+        return {
+          ...actual,
+          spawnUnit: vi.fn(() => null)
+        };
+      });
+
+    const storedPersona = {
+      id: 'saunoja-legacy',
+      name: 'Legacy Guardian',
+      coord: { q: 2, r: -1 },
+      maxHp: 18,
+      hp: 18,
+      steam: 0.2,
+      traits: ['Steam Scholar', 'Sisu-Forged Veteran', 'Rust-Prone Gear'],
+      upkeep: 7,
+      xp: 42,
+      selected: true
+    };
+
+    window.localStorage?.setItem('autobattles:saunojas', JSON.stringify([storedPersona]));
+
+    mockSpawnUnit();
+
+    try {
+      const { eventBus, loadUnits } = await initGame();
+
+      const firstRoster = loadUnits();
+      const first = firstRoster.find((unit) => unit.id === storedPersona.id);
+      expect(first).toBeDefined();
+      expect(first?.traits).toEqual(storedPersona.traits);
+      expect(first?.upkeep).toBe(storedPersona.upkeep);
+      expect(first?.xp).toBe(storedPersona.xp);
+
+      const { Unit } = await import('./units/Unit.ts');
+      const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
+      const ally = new Unit('legacy-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
+      eventBus.emit('unitSpawned', { unit: ally });
+      await flushLogs();
+
+      const afterAttach = loadUnits();
+      const attached = afterAttach.find((unit) => unit.id === storedPersona.id);
+      expect(attached?.traits).toEqual(storedPersona.traits);
+      expect(attached?.upkeep).toBe(storedPersona.upkeep);
+      expect(attached?.xp).toBe(storedPersona.xp);
+
+      vi.resetModules();
+      renderGameShell();
+      mockSpawnUnit();
+
+      const { eventBus: rehydratedBus, loadUnits: loadUnitsAgain } = await initGame();
+      const rehydratedRoster = loadUnitsAgain();
+      const rehydrated = rehydratedRoster.find((unit) => unit.id === storedPersona.id);
+      expect(rehydrated).toBeDefined();
+      expect(rehydrated?.traits).toEqual(storedPersona.traits);
+      expect(rehydrated?.upkeep).toBe(storedPersona.upkeep);
+      expect(rehydrated?.xp).toBe(storedPersona.xp);
+
+      const { Unit: UnitReloaded } = await import('./units/Unit.ts');
+      const reloadAlly = new UnitReloaded('legacy-ally-2', 'soldier', { q: 1, r: 0 }, 'player', {
+        ...baseStats
+      });
+      rehydratedBus.emit('unitSpawned', { unit: reloadAlly });
+      await flushLogs();
+
+      const finalRoster = loadUnitsAgain();
+      const final = finalRoster.find((unit) => unit.id === storedPersona.id);
+      expect(final?.traits).toEqual(storedPersona.traits);
+      expect(final?.upkeep).toBe(storedPersona.upkeep);
+      expect(final?.xp).toBe(storedPersona.xp);
+    } finally {
+      vi.doUnmock('./unit.ts');
+    }
+  });
 });

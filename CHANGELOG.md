@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Preserve stored Saunoja personas when reattaching to new sessions so reloads
+  keep their earned traits, upkeep, and experience intact
 - Expand the cached hex terrain canvas whenever exploration pushes map bounds
   beyond the last render rectangle so fog clearing immediately reveals freshly
   rendered tiles
