@@ -5,6 +5,14 @@ import { NEG, POS } from './data/traits.ts';
 const flushLogs = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
+const renderGameShell = () => {
+  document.body.innerHTML = `
+    <canvas id="game-canvas"></canvas>
+    <div id="resource-bar"></div>
+    <div id="ui-overlay"></div>
+  `;
+};
+
 async function initGame() {
   const { eventBus } = await import('./events');
   const game = await import('./game.ts');
@@ -21,11 +29,7 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn(() => null)
   });
-  document.body.innerHTML = `
-    <canvas id="game-canvas"></canvas>
-    <div id="resource-bar"></div>
-    <div id="ui-overlay"></div>
-  `;
+  renderGameShell();
 });
 
 describe('game logging', () => {
@@ -41,6 +45,43 @@ describe('game logging', () => {
     const eventLog = document.getElementById('event-log')!;
     expect(eventLog.childElementCount).toBe(100);
     expect(eventLog.firstChild?.textContent).toBe('msg 51');
+  });
+
+  it('persists event log history across reloads', async () => {
+    const { log } = await initGame();
+
+    const logMessages = () =>
+      Array.from(document.getElementById('event-log')?.children ?? []).map(
+        (child) => child.textContent ?? ''
+      );
+
+    await flushLogs();
+    const baseline = logMessages();
+
+    log('prelude 1');
+    log('prelude 2');
+
+    await flushLogs();
+
+    const firstSessionLog = logMessages();
+    expect(firstSessionLog.slice(-2)).toEqual(['prelude 1', 'prelude 2']);
+    expect(firstSessionLog.length).toBe(baseline.length + 2);
+
+    vi.resetModules();
+    renderGameShell();
+
+    const { log: logAgain } = await initGame();
+    const rehydratedLog = logMessages();
+    expect(rehydratedLog.slice(-2)).toEqual(['prelude 1', 'prelude 2']);
+
+    logAgain('prelude 3');
+    await flushLogs();
+
+    const finalMessages = logMessages();
+    const lastPrelude3 = finalMessages.lastIndexOf('prelude 3');
+    expect(lastPrelude3).toBe(finalMessages.length - 1);
+    expect(finalMessages.lastIndexOf('prelude 1')).toBeLessThan(lastPrelude3);
+    expect(finalMessages.lastIndexOf('prelude 2')).toBeLessThan(lastPrelude3);
   });
 
   it('tracks the active Saunoja roster as units rally and fall', async () => {

@@ -377,23 +377,94 @@ export function setupRightPanel(
   }
 
   // --- Log ---
+  const LOG_STORAGE_KEY = 'autobattles:panel-log';
   const MAX_LOG_MESSAGES = 100;
   const pending: string[] = [];
   let scheduled = false;
+  const logHistory: string[] = [];
+
+  const readStoredLogs = (): string[] => {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      return [];
+    }
+    try {
+      const serialized = window.localStorage.getItem(LOG_STORAGE_KEY);
+      if (!serialized) {
+        return [];
+      }
+      const parsed = JSON.parse(serialized);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      const sanitized = parsed.filter((msg) => typeof msg === 'string');
+      if (sanitized.length > MAX_LOG_MESSAGES) {
+        return sanitized.slice(-MAX_LOG_MESSAGES);
+      }
+      return sanitized;
+    } catch {
+      return [];
+    }
+  };
+
+  const persistLogs = (messages: string[]): void => {
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      return;
+    }
+    try {
+      const bounded = messages.length > MAX_LOG_MESSAGES
+        ? messages.slice(-MAX_LOG_MESSAGES)
+        : messages;
+      window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(bounded));
+    } catch {
+      // Best effort persistence; ignore storage errors.
+    }
+  };
+
+  const appendLogEntry = (msg: string): void => {
+    const div = document.createElement('div');
+    div.textContent = msg;
+    div.classList.add('panel-log-entry');
+    logTab.appendChild(div);
+  };
+
+  const hydrateStoredLogs = (): void => {
+    const stored = readStoredLogs();
+    if (stored.length === 0) {
+      return;
+    }
+    for (const msg of stored) {
+      appendLogEntry(msg);
+      logHistory.push(msg);
+    }
+    logTab.scrollTop = logTab.scrollHeight;
+  };
+
+  hydrateStoredLogs();
 
   function flush(): void {
     for (const msg of pending) {
-      const div = document.createElement('div');
-      div.textContent = msg;
-      div.classList.add('panel-log-entry');
-      logTab.appendChild(div);
+      appendLogEntry(msg);
     }
-    while (logTab.childElementCount > MAX_LOG_MESSAGES) {
-      logTab.removeChild(logTab.firstChild!);
+    if (pending.length > 0) {
+      logHistory.push(...pending);
+      if (logHistory.length > MAX_LOG_MESSAGES) {
+        const overflow = logHistory.length - MAX_LOG_MESSAGES;
+        logHistory.splice(0, overflow);
+        for (let i = 0; i < overflow; i += 1) {
+          if (logTab.firstChild) {
+            logTab.removeChild(logTab.firstChild);
+          }
+        }
+      }
     }
     logTab.scrollTop = logTab.scrollHeight;
     pending.length = 0;
     scheduled = false;
+    if (logHistory.length > 0) {
+      persistLogs(logHistory);
+    } else {
+      persistLogs([]);
+    }
   }
 
   function log(msg: string): void {
