@@ -1,20 +1,3 @@
-import { Unit } from './Unit.ts';
-import type { UnitStats } from './Unit.ts';
-import type { AxialCoord } from '../hex/HexUtils.ts';
-
-export const ARCHER_STATS: UnitStats = {
-  health: 15,
-  attackDamage: 3,
-  attackRange: 3,
-  movementRange: 1,
-  visionRange: 3
-};
-
-export const ARCHER_COST = 75;
-
-export class Archer extends Unit {
-  constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, 'archer', coord, faction, { ...ARCHER_STATS });
-  }
-}
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:b14dc6c1eb29bc6169a551409f1bf3751ca3fb7679bff0e2d6911fd6b50162b4
+size 1193

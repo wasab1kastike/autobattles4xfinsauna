@@ -1,20 +1,3 @@
-import { Unit } from './Unit.ts';
-import type { UnitStats } from './Unit.ts';
-import type { AxialCoord } from '../hex/HexUtils.ts';
-
-export const SOLDIER_STATS: UnitStats = {
-  health: 20,
-  attackDamage: 5,
-  attackRange: 1,
-  movementRange: 1,
-  visionRange: 3
-};
-
-export const SOLDIER_COST = 50;
-
-export class Soldier extends Unit {
-  constructor(id: string, coord: AxialCoord, faction: string) {
-    super(id, 'soldier', coord, faction, { ...SOLDIER_STATS });
-  }
-}
-
+version https://git-lfs.github.com/spec/v1
+oid sha256:cfa24c7d95da42b878d13db9c3940dd7ad72162b27a2d0c3ad79a194ce558cc1
+size 1211
