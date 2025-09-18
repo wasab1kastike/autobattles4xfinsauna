@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Targeting } from './Targeting.ts';
-import { Unit, UnitStats } from '../units/Unit.ts';
+import { Unit } from '../units/Unit.ts';
+import type { UnitStats } from '../unit/types.ts';
 
 function createUnit(
   id: string,

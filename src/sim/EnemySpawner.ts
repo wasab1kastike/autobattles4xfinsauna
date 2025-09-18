@@ -1,7 +1,7 @@
-import { AvantoMarauder } from '../units/AvantoMarauder.ts';
 import type { Unit } from '../units/Unit.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { MAX_ENEMIES } from '../battle/BattleManager.ts';
+import { createUnit } from '../units/UnitFactory.ts';
 
 export class EnemySpawner {
   private timer = 30; // seconds
@@ -22,7 +22,10 @@ export class EnemySpawner {
     if (enemyCount < MAX_ENEMIES) {
       const at = pickEdge();
       if (at) {
-        addUnit(new AvantoMarauder(`e${Date.now()}`, at, 'enemy'));
+        const unit = createUnit('avanto-marauder', `e${Date.now()}`, at, 'enemy');
+        if (unit) {
+          addUnit(unit);
+        }
       }
     }
 

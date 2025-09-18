@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Unit, UnitStats } from './Unit.ts';
+import { Unit } from './Unit.ts';
+import type { UnitStats } from '../unit/types.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
