@@ -5,7 +5,12 @@ import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
 import type { UnitStats } from '../unit/types.ts';
-import type { CombatParticipant, CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
+import type {
+  CombatParticipant,
+  CombatHookMap,
+  CombatKeywordRegistry,
+  CombatResolution
+} from '../combat/resolve.ts';
 import { resolveCombat } from '../combat/resolve.ts';
 
 export const UNIT_MOVEMENT_STEP_SECONDS = 5;
@@ -77,10 +82,12 @@ export class Unit {
     return Number.isFinite(visionRange) ? (visionRange as number) : 3;
   }
 
-  attack(target: Unit): void {
-    if (this.distanceTo(target.coord) <= this.stats.attackRange) {
-      target.takeDamage(this.stats.attackDamage, this);
+  attack(target: Unit): CombatResolution | null {
+    if (this.distanceTo(target.coord) > this.stats.attackRange) {
+      return null;
     }
+
+    return target.takeDamage(this.stats.attackDamage, this);
   }
 
   update(dt: number, sauna?: Sauna): void {
@@ -122,13 +129,13 @@ export class Unit {
     setTimeout(() => marker.remove(), 1000);
   }
 
-  takeDamage(amount?: number, attacker?: Unit): void {
+  takeDamage(amount?: number, attacker?: Unit): CombatResolution | null {
     const hasDirectAmount = Number.isFinite(amount);
     if (hasDirectAmount && (amount as number) <= 0) {
-      return;
+      return null;
     }
     if (!hasDirectAmount && !attacker) {
-      return;
+      return null;
     }
 
     const attackerParticipant = attacker ? attacker.toCombatParticipant() : null;
@@ -151,16 +158,14 @@ export class Unit {
       attacker.setShield(result.attackerRemainingShield);
     }
 
-    if (result.damage <= 0) {
-      return;
+    if (result.damage > 0) {
+      eventBus.emit('unitDamaged', {
+        attackerId: attacker?.id,
+        targetId: this.id,
+        amount: result.damage,
+        remainingHealth: this.stats.health
+      });
     }
-
-    eventBus.emit('unitDamaged', {
-      attackerId: attacker?.id,
-      targetId: this.id,
-      amount: result.damage,
-      remainingHealth: this.stats.health
-    });
 
     if (result.lethal && this.alive) {
       this.stats.health = 0;
@@ -173,6 +178,8 @@ export class Unit {
       });
       this.emitDeath();
     }
+
+    return result;
   }
 
   getShield(): number {
