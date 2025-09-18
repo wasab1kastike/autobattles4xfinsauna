@@ -5,18 +5,31 @@ import type { HexMap } from '../hexmap.ts';
 import type { Unit } from '../units/Unit.ts';
 import { pickFreeTileAround } from './sauna.ts';
 import { eventBus } from '../events';
+import type { CombatHookPayload } from '../combat/resolve.ts';
+import { addModifier, removeModifier } from '../mods/runtime.ts';
 
 const SISU_BURST_DURATION_SECONDS = 10;
-const SISU_BURST_ATTACK_MULTIPLIER = 1.25;
+const SISU_BURST_ATTACK_MULTIPLIER = 1.5;
 const SISU_BURST_MOVEMENT_MULTIPLIER = 1.5;
 const TORILLE_HEAL_RATIO = 0.6;
+const SISU_BURST_STATUS_MESSAGE = '⚔️ +50% attack · 🛡️ Barrier · ♾️ Immortal';
 
 export const SISU_BURST_COST = 5;
 export const TORILLE_COST = 3;
 
+type SisuBurstModifierState = {
+  unit: Unit;
+  baseAttack: number;
+  baseMovement: number;
+  baseShield: number;
+  shieldBonusRemaining: number;
+  wasImmortal: boolean;
+};
+
 type BurstState = {
   endTime: number;
-  affected: Array<{ unit: Unit; attack: number; movement: number }>;
+  status: string;
+  affected: Array<{ unit: Unit; modifierId: string; state: SisuBurstModifierState }>;
   tickTimer: ReturnType<typeof setInterval> | null;
   timeout: ReturnType<typeof setTimeout> | null;
 };
@@ -61,28 +74,78 @@ export function useSisuBurst(state: GameState, units: Unit[]): boolean {
     if (unit.faction !== 'player' || unit.isDead()) {
       continue;
     }
-    affected.push({
+    const modifierId = `sisu-burst-${unit.id}`;
+    const state: SisuBurstModifierState = {
       unit,
-      attack: unit.stats.attackDamage,
-      movement: unit.stats.movementRange
+      baseAttack: unit.stats.attackDamage,
+      baseMovement: unit.stats.movementRange,
+      baseShield: unit.getShield(),
+      shieldBonusRemaining: 1,
+      wasImmortal: unit.isImmortal()
+    };
+
+    addModifier({
+      id: modifierId,
+      duration: SISU_BURST_DURATION_SECONDS,
+      data: state,
+      onApply: () => {
+        unit.stats.attackDamage = Math.round(
+          state.baseAttack * SISU_BURST_ATTACK_MULTIPLIER
+        );
+        unit.stats.movementRange = Math.max(
+          1,
+          Math.round(state.baseMovement * SISU_BURST_MOVEMENT_MULTIPLIER)
+        );
+        unit.setShield(state.baseShield + state.shieldBonusRemaining);
+        unit.setImmortal(true);
+        (unit as Record<string, unknown>).fearless = true;
+      },
+      onExpire: () => {
+        unit.stats.attackDamage = state.baseAttack;
+        unit.stats.movementRange = state.baseMovement;
+        unit.setImmortal(state.wasImmortal);
+        const leftover = Math.max(0, state.shieldBonusRemaining);
+        if (leftover > 0) {
+          unit.setShield(Math.max(0, unit.getShield() - leftover));
+        }
+        delete (unit as Record<string, unknown>).fearless;
+        if (burstState) {
+          burstState.affected = burstState.affected.filter((entry) => entry.modifierId !== modifierId);
+        }
+      },
+      hooks: {
+        'combat:onHit': (payload: unknown) => {
+          const data = payload as CombatHookPayload;
+          if (
+            data.source !== 'defender' ||
+            data.defender.id !== unit.id ||
+            data.shieldDamage <= 0 ||
+            state.shieldBonusRemaining <= 0
+          ) {
+            return;
+          }
+          const consumed = Math.min(state.shieldBonusRemaining, data.shieldDamage);
+          state.shieldBonusRemaining = Math.max(0, state.shieldBonusRemaining - consumed);
+        }
+      }
     });
-    unit.stats.attackDamage = Math.round(unit.stats.attackDamage * SISU_BURST_ATTACK_MULTIPLIER);
-    unit.stats.movementRange = Math.max(
-      1,
-      Math.round(unit.stats.movementRange * SISU_BURST_MOVEMENT_MULTIPLIER)
-    );
-    (unit as Record<string, unknown>).fearless = true;
+
+    affected.push({ unit, modifierId, state });
   }
 
   const endTime = performance.now() + SISU_BURST_DURATION_SECONDS * 1000;
   burstState = {
     endTime,
+    status: SISU_BURST_STATUS_MESSAGE,
     affected,
     tickTimer: null,
     timeout: null
   };
 
-  eventBus.emit('sisuBurstStart', { remaining: SISU_BURST_DURATION_SECONDS });
+  eventBus.emit('sisuBurstStart', {
+    remaining: SISU_BURST_DURATION_SECONDS,
+    status: SISU_BURST_STATUS_MESSAGE
+  });
 
   burstState.tickTimer = setInterval(() => {
     if (!burstState) {
@@ -90,7 +153,10 @@ export function useSisuBurst(state: GameState, units: Unit[]): boolean {
     }
     const remaining = Math.max(0, Math.ceil(getSisuBurstRemaining()));
     if (remaining > 0) {
-      eventBus.emit('sisuBurstTick', { remaining });
+      eventBus.emit('sisuBurstTick', {
+        remaining,
+        status: burstState.status
+      });
     }
   }, 1000);
 
@@ -107,9 +173,7 @@ export function endSisuBurst(): void {
   }
 
   for (const entry of burstState.affected) {
-    entry.unit.stats.attackDamage = entry.attack;
-    entry.unit.stats.movementRange = entry.movement;
-    delete (entry.unit as Record<string, unknown>).fearless;
+    removeModifier(entry.modifierId);
   }
 
   clearBurstState();

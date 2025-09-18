@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Amplify SISU Burst with +50% attack, a one-charge shield, and temporary
+  immortality tracked through the modifier runtime, emit polished HUD status
+  messaging, and cover the surge with regression tests to ensure buffs expire
+  on schedule
 - Upgrade the command console roster to render shared Saunoja stats, live loadout
   icons, and modifier timers with polished styling, refresh the panel on
   inventory and modifier events, and cover the new HUD with Vitest DOM tests
