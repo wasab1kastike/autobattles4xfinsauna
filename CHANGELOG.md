@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Expand the cached hex terrain canvas whenever exploration pushes map bounds
+  beyond the last render rectangle so fog clearing immediately reveals freshly
+  rendered tiles
 - Reset the command console roster renderer whenever the panel rebuilds so the
   Saunoja list repopulates after DOM swaps, and lock the behavior with a
   regression test that rebuilds the UI shell
