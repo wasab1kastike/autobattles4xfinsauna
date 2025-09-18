@@ -142,6 +142,15 @@ export class Unit {
     this.stats.health = result.remainingHealth;
     this.shield = result.remainingShield;
 
+    if (attacker && result.attackerRemainingHealth !== undefined) {
+      const healed = Math.min(attacker.getMaxHealth(), Math.max(0, result.attackerRemainingHealth));
+      attacker.stats.health = healed;
+    }
+
+    if (attacker && result.attackerRemainingShield !== undefined) {
+      attacker.setShield(result.attackerRemainingShield);
+    }
+
     if (result.damage <= 0) {
       return;
     }
