@@ -51,15 +51,6 @@ export function draw(
   const origin = mapRenderer.getOrigin();
   ctx.translate(-(camera.x - origin.x), -(camera.y - origin.y));
 
-  if (!mapRenderer.cachedCanvas) {
-    mapRenderer.buildCache(assets);
-  }
-  const cachedTerrain = mapRenderer.cachedCanvas;
-  if (cachedTerrain) {
-    const offset = mapRenderer.cachedOffset;
-    ctx.drawImage(cachedTerrain, -origin.x + offset.x, -origin.y + offset.y);
-  }
-
   mapRenderer.draw(ctx, assets, selected ?? undefined);
   const saunojaLayer = options?.saunojas;
   if (saunojaLayer && Array.isArray(saunojaLayer.units) && saunojaLayer.units.length > 0) {
