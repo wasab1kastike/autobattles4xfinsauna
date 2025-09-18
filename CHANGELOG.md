@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce faction loot tables with rarity-weighted rolls, stash new drops in a
+  persistent inventory that auto-equips selected attendants when possible,
+  surface polished HUD toasts and a quartermaster panel for stash management,
+  and cover loot generation plus inventory persistence with Vitest suites
 - Amplify SISU Burst with +50% attack, a one-charge shield, and temporary
   immortality tracked through the modifier runtime, emit polished HUD status
   messaging, and cover the surge with regression tests to ensure buffs expire
