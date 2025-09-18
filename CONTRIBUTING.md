@@ -24,11 +24,14 @@ Run the full workflow locally before pushing:
 1. `npm test`
 2. `npm run build`
 3. `npm run check:demo`
+4. `npm run simulate`
 
 The test script already runs the live demo availability check; the dedicated
 `check:demo` command is listed separately so you can mirror the post-build CI
 gate when triaging demo link issues or re-running the check after network
-failures.
+failures. The balance sweep documents `/tmp/balance.csv` with deterministic
+20-seed battle samples so regressions in upkeep or deaths remain easy to
+compare over time.
 
 ## Opening a pull request
 
