@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Halt the main animation loop during teardown by tracking the active frame ID,
+  cancelling it in `cleanup()`, guarding the callback against post-shutdown
+  ticks, and covering the lifecycle with a Vitest regression so repeated
+  restarts stay polished and leak-free
 - Centralize terrain palette tokens into `src/render/palette.ts`, introduce
   zoom-aware outline helpers, render fog-of-war through cached Perlin masks
   with multi-stop gradients, and refresh the README feature callouts to
