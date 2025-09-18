@@ -1,7 +1,7 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { GameState, Resource } from '../core/GameState.ts';
 import { Unit } from './Unit.ts';
-import { playSafe } from '../sfx.ts';
+import { playSafe } from '../audio/sfx.ts';
 import { eventBus } from '../events/EventBus.ts';
 import { computeUnitStats } from '../unit/calc.ts';
 import { normalizeLevel } from '../unit/level.ts';
