@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Collapse the sauna command console by default on sub-960px viewports,
+  surface a HUD toggle, and slide the panel off-canvas so the map stays
+  interactive on mobile
 - Remember the sauna command console log between sessions with polished storage so the right panel rehydrates prior narration on reload
 - Persist applied policy upgrades across saves, replaying their effects on load so eco beer production and temperance night shifts stay active after reloading
 - Pace battle movement with per-unit cooldowns so units only step once every
