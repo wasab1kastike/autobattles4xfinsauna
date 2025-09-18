@@ -1,13 +1,6 @@
 import './style.css';
-import {
-  setupGame,
-  start,
-  handleCanvasClick,
-  draw,
-  cleanup,
-  assetPaths,
-  setAssets,
-} from './game.ts';
+import { setupGame, start, handleCanvasClick, draw, cleanup } from './game.ts';
+import { assetPaths, setAssets } from './game/assets.ts';
 import { camera } from './camera/autoFrame.ts';
 import type { PixelCoord } from './hex/HexUtils.ts';
 import { loadResources } from './lib/loadResources.ts';
