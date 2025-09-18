@@ -29,6 +29,20 @@ beforeEach(() => {
     configurable: true,
     value: vi.fn(() => null)
   });
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn()
+    }))
+  });
   renderGameShell();
 });
 
@@ -116,36 +130,45 @@ describe('game logging', () => {
   it('records spawn and casualty events with sauna flavor', async () => {
     const { eventBus } = await initGame();
     const { Unit } = await import('./units/Unit.ts');
+    const namesModule = await import('./data/names.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
 
-    const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
-    eventBus.emit('unitSpawned', { unit: ally });
-    await flushLogs();
+    const nameSpy = vi
+      .spyOn(namesModule, 'generateSaunojaName')
+      .mockReturnValue('Legacy "Frostward" Aalto');
 
-    const eventLog = document.getElementById('event-log')!;
-    const allySpawn = eventLog.lastElementChild?.textContent ?? '';
-    expect(allySpawn).toContain('Our');
-    expect(allySpawn).toContain('emerges from the steam');
-    expect(allySpawn).toContain(ally.id);
+    try {
+      const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
+      eventBus.emit('unitSpawned', { unit: ally });
+      await flushLogs();
 
-    const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
-    eventBus.emit('unitSpawned', { unit: foe });
-    await flushLogs();
+      const eventLog = document.getElementById('event-log')!;
+      const allySpawn = eventLog.lastElementChild?.textContent ?? '';
+      expect(allySpawn).toContain('Our');
+      expect(allySpawn).toContain('emerges from the steam');
+      expect(allySpawn).toContain('Legacy "Frostward" Aalto');
 
-    const foeSpawn = eventLog.lastElementChild?.textContent ?? '';
-    expect(foeSpawn).toContain('A rival');
-    expect(foeSpawn).toContain(foe.id);
+      const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
+      const beforeFoeSpawn = eventLog.childElementCount;
+      eventBus.emit('unitSpawned', { unit: foe });
+      await flushLogs();
 
-    eventBus.emit('unitDied', {
-      unitId: foe.id,
-      unitFaction: 'enemy',
-      attackerFaction: 'player'
-    });
-    await flushLogs();
+      expect(eventLog.childElementCount).toBe(beforeFoeSpawn);
+      expect(eventLog.lastElementChild?.textContent ?? '').toBe(allySpawn);
 
-    const casualtyMessage = eventLog.lastElementChild?.textContent ?? '';
-    expect(casualtyMessage).toContain('a rival');
-    expect(casualtyMessage).toContain(foe.id);
+      eventBus.emit('unitDied', {
+        unitId: foe.id,
+        unitFaction: 'enemy',
+        attackerFaction: 'player'
+      });
+      await flushLogs();
+
+      const casualtyMessage = eventLog.lastElementChild?.textContent ?? '';
+      expect(casualtyMessage).toContain('a rival');
+      expect(casualtyMessage).toContain(foe.id);
+    } finally {
+      nameSpy.mockRestore();
+    }
   });
 
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
