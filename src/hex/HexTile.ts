@@ -1,28 +1,3 @@
-import { TerrainId } from '../map/terrain.ts';
-
-export type TerrainType = TerrainId;
-export type BuildingType = 'city' | 'farm' | 'barracks' | 'mine' | null;
-
-/** Represents a single hex tile on the map. */
-export class HexTile {
-  constructor(
-    public terrain: TerrainType = TerrainId.Plains,
-    public building: BuildingType = null,
-    public isFogged: boolean = true
-  ) {}
-
-  /** Reveal the tile by removing fog. */
-  reveal(): void {
-    this.isFogged = false;
-  }
-
-  /** Place or replace a building on this tile. */
-  placeBuilding(building: BuildingType): void {
-    this.building = building;
-  }
-
-  /** Toggle fog of war state. */
-  setFogged(value: boolean): void {
-    this.isFogged = value;
-  }
-}
+version https://git-lfs.github.com/spec/v1
+oid sha256:d39fcfa6f2168300ea5307d9d2336121da9404545f5db9214205e8859eea0552
+size 2006
