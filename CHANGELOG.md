@@ -4,6 +4,8 @@
 
 - Remove the unused `src/counter.ts` helper now that the counter demo has
   shipped elsewhere, keeping the Vite starter remnants out of the bundle
+- Remove the unused `src/typescript.svg` asset so no leftover Vite starter
+  icons ship with the build
 - Remove hashed bundles from `assets/`, add ignore rules to keep future Vite
   outputs confined to `docs/`, and rebuild to verify only the published mirror
   receives generated files
