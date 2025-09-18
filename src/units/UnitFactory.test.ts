@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
-import { spawnUnit } from './UnitFactory.ts';
-import { SOLDIER_STATS, SOLDIER_COST } from './Soldier.ts';
+import { createUnit, spawnUnit } from './UnitFactory.ts';
+import { SOLDIER_STATS, SOLDIER_COST, getSoldierStats } from './Soldier.ts';
 import { ARCHER_STATS, ARCHER_COST } from './Archer.ts';
+import { getAvantoMarauderStats } from './AvantoMarauder.ts';
 import { eventBus } from '../events/EventBus.ts';
 
 const origin = { q: 0, r: 0 };
@@ -52,6 +53,20 @@ describe('UnitFactory', () => {
     }
     expect(unit).not.toBeNull();
     expect(received).toEqual(['s1']);
+  });
+
+  it('creates leveled stats deterministically', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 500);
+    const unit = spawnUnit(state, 'soldier', 's2', origin, 'player', { level: 4 });
+    expect(unit).not.toBeNull();
+    expect(unit!.stats).toEqual(getSoldierStats(4));
+  });
+
+  it('creates archetype instances without spending resources', () => {
+    const unit = createUnit('avanto-marauder', 'enemy1', origin, 'enemy', { level: 3 });
+    expect(unit).not.toBeNull();
+    expect(unit!.stats).toEqual(getAvantoMarauderStats(3));
   });
 });
 
