@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Introduce a shared combat resolver that applies the max(1, atk - def) formula,
+  tracks shield absorption, fires keyword hooks for both sides, and routes
+  modifier callbacks so Saunoja and battlefield units share consistent
+  damage/kill events
 - Add a modifier runtime that tracks timed effects, routes hook triggers, emits
   lifecycle events, and exposes helper APIs plus tests so timed buffs expire
   cleanly during the polished game loop

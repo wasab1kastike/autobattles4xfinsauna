@@ -4,6 +4,7 @@ export interface UnitStats {
   attackRange: number;
   movementRange: number;
   visionRange?: number;
+  defense?: number;
 }
 
 export type LevelCurve = 'linear' | 'accelerating' | 'diminishing';
