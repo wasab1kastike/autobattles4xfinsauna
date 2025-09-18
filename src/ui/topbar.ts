@@ -84,13 +84,23 @@ function createBadge(label: string, options: BadgeOptions = {}): Badge {
   return { container, value: valueSpan, delta: deltaSpan, label: accessibleLabel };
 }
 
+export type TopbarControls = {
+  update(deltaMs: number): void;
+  dispose(): void;
+};
+
 export function setupTopbar(
   state: GameState,
   icons: TopbarIcons = {},
   abilities: TopbarAbilities = {}
-): (deltaMs: number) => void {
+): TopbarControls {
   const overlay = document.getElementById('ui-overlay');
-  if (!overlay) return () => {};
+  if (!overlay) {
+    return {
+      update: () => {},
+      dispose: () => {}
+    };
+  }
 
   const { actions } = ensureHudLayout(overlay);
 
@@ -247,27 +257,24 @@ export function setupTopbar(
     burstTimer.container.setAttribute('aria-label', ariaParts.join(' — '));
   }
 
-  eventBus.on(
-    'sisuBurstStart',
-    ({ remaining, status }: { remaining: number; status?: string }) => {
-      renderBurstStatus(remaining, status);
-      refreshAbilityButtons();
-    }
-  );
-  eventBus.on(
-    'sisuBurstTick',
-    ({ remaining, status }: { remaining: number; status?: string }) => {
-      renderBurstStatus(remaining, status);
-    }
-  );
-  eventBus.on('sisuBurstEnd', () => {
+  const sisuBurstStart = ({ remaining, status }: { remaining: number; status?: string }) => {
+    renderBurstStatus(remaining, status);
+    refreshAbilityButtons();
+  };
+  const sisuBurstTick = ({ remaining, status }: { remaining: number; status?: string }) => {
+    renderBurstStatus(remaining, status);
+  };
+  const sisuBurstEnd = () => {
     burstTimer.container.style.display = 'none';
     burstTimer.value.textContent = '0';
     burstTimer.delta.textContent = '';
     burstTimer.delta.style.display = 'none';
     burstTimer.container.removeAttribute('title');
     refreshAbilityButtons();
-  });
+  };
+  eventBus.on('sisuBurstStart', sisuBurstStart);
+  eventBus.on('sisuBurstTick', sisuBurstTick);
+  eventBus.on('sisuBurstEnd', sisuBurstEnd);
 
   const numberFormatter = new Intl.NumberFormat('en-US');
   const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
@@ -374,23 +381,45 @@ export function setupTopbar(
   );
   updateResourceBadge(Resource.SISU, state.getResource(Resource.SISU));
 
-  eventBus.on('resourceChanged', ({ resource, amount, total }) => {
-    const typedResource = resource as Resource;
-    if (!resourceBadges[typedResource]) {
+  const resourceChanged = ({
+    resource,
+    amount,
+    total
+  }: {
+    resource: Resource;
+    amount: number;
+    total: number;
+  }) => {
+    if (!resourceBadges[resource]) {
       return;
     }
-    updateResourceBadge(typedResource, total, amount);
-    if (typedResource === Resource.SISU) {
+    updateResourceBadge(resource, total, amount);
+    if (resource === Resource.SISU) {
       refreshAbilityButtons();
     }
-  });
+  };
+  eventBus.on('resourceChanged', resourceChanged);
 
   let elapsed = 0;
-  return (deltaMs: number) => {
-    elapsed += deltaMs;
-    const totalSeconds = Math.floor(elapsed / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    time.value.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  return {
+    update(deltaMs: number) {
+      elapsed += deltaMs;
+      const totalSeconds = Math.floor(elapsed / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      time.value.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    },
+    dispose() {
+      eventBus.off('sisuBurstStart', sisuBurstStart);
+      eventBus.off('sisuBurstTick', sisuBurstTick);
+      eventBus.off('sisuBurstEnd', sisuBurstEnd);
+      eventBus.off('resourceChanged', resourceChanged);
+      Object.values(deltaTimers).forEach((timer) => {
+        if (timer) {
+          clearTimeout(timer);
+        }
+      });
+      bar.remove();
+    }
   };
 }
