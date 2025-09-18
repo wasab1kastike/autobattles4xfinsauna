@@ -625,7 +625,7 @@ if (import.meta.env.DEV) {
   });
 }
 const updateSaunaUI = setupSaunaUI(sauna);
-const updateTopbar = setupTopbar(
+const { update: updateTopbar, dispose: disposeTopbar } = setupTopbar(
   state,
   {
     saunakunnia: uiIcons.resource,
@@ -930,6 +930,7 @@ export function cleanup(): void {
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
   inventoryHud.destroy();
+  disposeTopbar();
 }
 
 export async function start(): Promise<void> {
