@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Decouple frontier raiders into a dedicated edge spawner that honors the 30-unit
+  cap while sauna heat now summons only allied reinforcements with escalating
+  thresholds
 - Refine battle log narration to greet arriving Saunojas by their roster names
   while skipping rival spawn callouts for a cleaner feed
 - Collapse the sauna command console by default on sub-960px viewports,

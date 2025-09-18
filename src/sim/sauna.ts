@@ -77,22 +77,14 @@ export function createSauna(pos: AxialCoord): Sauna {
       }
 
       this.heat += this.heatPerTick * dt;
-
-      const spawnRadius = Math.max(1, Math.round(this.auraRadius));
       while (this.heat >= this.playerSpawnThreshold) {
-        const coord =
-          pickFreeTileAround(this.pos, spawnRadius, units) ??
-          pickFreeTileAround(this.pos, units);
-        if (!coord) {
-          break;
+        const coord = pickFreeTileAround(this.pos, units);
+        if (coord) {
+          const unit = spawnUnit(state, 'soldier', `p${Date.now()}`, coord, 'player');
+          if (unit) {
+            addUnit(unit);
+          }
         }
-
-        const unit = spawnUnit(state, 'soldier', `p${Date.now()}`, coord, 'player');
-        if (!unit) {
-          break;
-        }
-
-        addUnit(unit);
         this.heat -= this.playerSpawnThreshold;
         this.playerSpawnThreshold *= 1.05;
       }
@@ -105,4 +97,3 @@ export function createSauna(pos: AxialCoord): Sauna {
     }
   };
 }
-

@@ -288,6 +288,52 @@ resetAutoFrame();
 
 const units: Unit[] = [];
 
+function coordKey(coord: AxialCoord): string {
+  return `${coord.q},${coord.r}`;
+}
+
+function pickRandomEdgeFreeTile(): AxialCoord | undefined {
+  const occupied = new Set<string>();
+  for (const unit of units) {
+    if (!unit.isDead()) {
+      occupied.add(coordKey(unit.coord));
+    }
+  }
+
+  const candidates: AxialCoord[] = [];
+  const { minQ, maxQ, minR, maxR } = map;
+
+  const addCandidate = (coord: AxialCoord): void => {
+    const key = coordKey(coord);
+    if (occupied.has(key)) {
+      return;
+    }
+    map.ensureTile(coord.q, coord.r);
+    candidates.push(coord);
+  };
+
+  for (let q = minQ; q <= maxQ; q++) {
+    addCandidate({ q, r: minR });
+    if (maxR !== minR) {
+      addCandidate({ q, r: maxR });
+    }
+  }
+
+  for (let r = minR + 1; r <= maxR - 1; r++) {
+    addCandidate({ q: minQ, r });
+    if (maxQ !== minQ) {
+      addCandidate({ q: maxQ, r });
+    }
+  }
+
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index];
+}
+
 type UnitSpawnedPayload = { unit: Unit };
 
 function detachSaunoja(unitId: string): void {
@@ -413,15 +459,16 @@ eventBus.on('unitSpawned', onUnitSpawned);
 
 const state = new GameState(1000);
 const restoredSave = state.load(map);
+const sauna = createSauna({
+  q: Math.floor(map.width / 2),
+  r: Math.floor(map.height / 2)
+});
+const enemySpawner = new EnemySpawner();
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
-  sauna.update(dtSeconds, state, units, (unit) => {
-    registerUnit(unit);
-  });
-  enemySpawner.update(dtSeconds, units, (unit) => {
-    registerUnit(unit);
-  });
+  sauna.update(dtSeconds, state, units, registerUnit);
+  enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
   battleManager.tick(units, dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
@@ -454,10 +501,6 @@ const clock = new GameClock(1000, (deltaMs) => {
   }
   draw();
 });
-const sauna = createSauna({
-  q: Math.floor(map.width / 2),
-  r: Math.floor(map.height / 2)
-});
 const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
 if (!hasActivePlayerUnit) {
   if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
@@ -469,7 +512,6 @@ if (!hasActivePlayerUnit) {
     registerUnit(fallbackUnit);
   }
 }
-const enemySpawner = new EnemySpawner(map);
 map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
