@@ -5,6 +5,8 @@ import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
 import type { UnitStats } from '../unit/types.ts';
+import type { CombatParticipant, CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
+import { resolveCombat } from '../combat/resolve.ts';
 
 export const UNIT_MOVEMENT_STEP_SECONDS = 5;
 
@@ -29,6 +31,10 @@ export class Unit {
   private cachedStartKey?: string;
   private cachedPath?: AxialCoord[];
   private movementCooldownSeconds = 0;
+  private shield = 0;
+
+  public combatHooks: CombatHookMap | null = null;
+  public combatKeywords: CombatKeywordRegistry | null = null;
 
   constructor(
     public readonly id: string,
@@ -116,15 +122,38 @@ export class Unit {
     setTimeout(() => marker.remove(), 1000);
   }
 
-  takeDamage(amount: number, attacker?: Unit): void {
-    this.stats.health -= amount;
+  takeDamage(amount?: number, attacker?: Unit): void {
+    const hasDirectAmount = Number.isFinite(amount);
+    if (hasDirectAmount && (amount as number) <= 0) {
+      return;
+    }
+    if (!hasDirectAmount && !attacker) {
+      return;
+    }
+
+    const attackerParticipant = attacker ? attacker.toCombatParticipant() : null;
+    const defenderParticipant = this.toCombatParticipant();
+    const result = resolveCombat({
+      attacker: attackerParticipant,
+      defender: defenderParticipant,
+      baseDamage: hasDirectAmount ? (amount as number) : undefined
+    });
+
+    this.stats.health = result.remainingHealth;
+    this.shield = result.remainingShield;
+
+    if (result.damage <= 0) {
+      return;
+    }
+
     eventBus.emit('unitDamaged', {
       attackerId: attacker?.id,
       targetId: this.id,
-      amount,
+      amount: result.damage,
       remainingHealth: this.stats.health
     });
-    if (this.stats.health <= 0 && this.alive) {
+
+    if (result.lethal && this.alive) {
       this.stats.health = 0;
       this.alive = false;
       eventBus.emit('unitDied', {
@@ -135,6 +164,32 @@ export class Unit {
       });
       this.emitDeath();
     }
+  }
+
+  getShield(): number {
+    return this.shield;
+  }
+
+  setShield(value: number): void {
+    if (!Number.isFinite(value) || value <= 0) {
+      this.shield = 0;
+      return;
+    }
+    this.shield = value;
+  }
+
+  private toCombatParticipant(): CombatParticipant {
+    return {
+      id: this.id,
+      faction: this.faction,
+      attack: this.stats.attackDamage,
+      defense: this.stats.defense,
+      health: this.stats.health,
+      maxHealth: this.maxHealth,
+      shield: this.shield,
+      hooks: this.combatHooks,
+      keywords: this.combatKeywords
+    };
   }
 
   addMovementTime(delta: number): void {
