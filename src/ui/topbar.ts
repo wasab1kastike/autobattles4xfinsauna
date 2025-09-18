@@ -1,5 +1,5 @@
 import { eventBus } from '../events';
-import { setMuted, isMuted } from '../sfx.ts';
+import { setMuted, isMuted } from '../audio/sfx.ts';
 import { GameState, Resource } from '../core/GameState.ts';
 import {
   isSisuBurstActive,

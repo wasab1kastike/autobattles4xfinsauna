@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce an `src/audio` suite with registry-driven SFX playback, hook combat
+  hits, kills, and SISU bursts into the event bus so polished cues fire while
+  honoring the shared mute toggle, and document the procedurally generated WAV
+  payloads plus licensing for contributors
 - Halt the main animation loop during teardown by tracking the active frame ID,
   cancelling it in `cleanup()`, guarding the callback against post-shutdown
   ticks, and covering the lifecycle with a Vitest regression so repeated

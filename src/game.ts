@@ -12,7 +12,7 @@ import { EnemySpawner } from './sim/EnemySpawner.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar } from './ui/topbar.ts';
-import { playSafe } from './sfx.ts';
+import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
