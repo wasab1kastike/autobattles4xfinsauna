@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Catalog faction spawn bundles in JSON, expose weighted selection helpers, and
+  drive enemy wave spawns through the bundle system with cadence and identity
+  tests
 - Introduce a shared combat resolver that applies the max(1, atk - def) formula,
   tracks shield absorption, fires keyword hooks for both sides, and routes
   modifier callbacks so Saunoja and battlefield units share consistent
