@@ -15,7 +15,7 @@ import { Unit, spawnUnit } from './unit.ts';
 import type { UnitType } from './unit.ts';
 import { eventBus } from './events';
 import type { AssetPaths, LoadedAssets } from './loader.ts';
-import { createSauna } from './sim/sauna.ts';
+import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
 import { setupSaunaUI } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
@@ -31,6 +31,7 @@ import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
+import { runEconomyTick } from './economy/tick.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL;
 const uiIcons = {
@@ -62,6 +63,7 @@ let saunojas: Saunoja[] = [];
 const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
+let playerSpawnSequence = 0;
 let selected: AxialCoord | null = null;
 let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
@@ -474,39 +476,51 @@ const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
 
 eventBus.on('unitSpawned', onUnitSpawned);
 
+function resolveUnitUpkeep(unit: Unit): number {
+  const attendant = unitToSaunoja.get(unit.id);
+  if (!attendant) {
+    return 0;
+  }
+  const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
+  return upkeep > 0 ? upkeep : 0;
+}
+
 const state = new GameState(1000);
 const restoredSave = state.load(map);
 const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
 });
+
+const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
+  playerSpawnSequence += 1;
+  const id = `p${Date.now()}-${playerSpawnSequence}`;
+  const unit = spawnUnit(state, 'soldier', id, coord, 'player');
+  if (unit) {
+    registerUnit(unit);
+  }
+  return unit ?? null;
+};
 const enemySpawner = new EnemySpawner();
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
-  sauna.update(dtSeconds, state, units, registerUnit);
+  runEconomyTick({
+    dt: dtSeconds,
+    state,
+    sauna,
+    heat: sauna.heatTracker,
+    units,
+    getUnitUpkeep: resolveUnitUpkeep,
+    pickSpawnTile: () => pickFreeTileAround(sauna.pos, units),
+    spawnBaseUnit: spawnPlayerReinforcement,
+    minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN)
+  });
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
   battleManager.tick(units, dtSeconds);
   advanceModifiers(dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
-  }
-  let upkeepDrain = 0;
-  for (const unit of units) {
-    if (unit.faction !== 'player' || unit.isDead()) {
-      continue;
-    }
-    const attendant = unitToSaunoja.get(unit.id);
-    if (!attendant) {
-      continue;
-    }
-    const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
-    if (upkeep > 0) {
-      upkeepDrain += upkeep;
-    }
-  }
-  if (upkeepDrain > 0) {
-    state.addResource(Resource.SAUNA_BEER, -upkeepDrain);
   }
   state.save();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat

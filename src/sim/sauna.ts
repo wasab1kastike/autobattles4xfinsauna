@@ -1,7 +1,6 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
-import type { GameState } from '../core/GameState.ts';
 import type { Unit } from '../units/Unit.ts';
-import { spawnUnit } from '../units/UnitFactory.ts';
+import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/heat.ts';
 
 export function pickFreeTileAround(
   origin: AxialCoord,
@@ -46,54 +45,26 @@ export interface Sauna {
   playerSpawnThreshold: number;
   playerSpawnCooldown: number;
   playerSpawnTimer: number;
-  update(
-    dt: number,
-    state: GameState,
-    units: Unit[],
-    addUnit: (u: Unit) => void
-  ): void;
+  heatTracker: SaunaHeat;
 }
 
-export function createSauna(pos: AxialCoord): Sauna {
+export function createSauna(pos: AxialCoord, heatConfig?: SaunaHeatInit): Sauna {
+  const tracker = createSaunaHeat(heatConfig);
+  const heatPerTick = tracker.getBuildRate();
+  const cooldown = tracker.getCooldownSeconds();
+  const timer = tracker.timeUntilNextTrigger();
+
   return {
     id: 'sauna',
     pos,
     auraRadius: 2,
     regenPerSec: 1,
     rallyToFront: false,
-    heat: 0,
-    heatPerTick: 50 / 30,
-    playerSpawnThreshold: 50,
-    playerSpawnCooldown: 30,
-    playerSpawnTimer: 30,
-    update(
-      dt: number,
-      state: GameState,
-      units: Unit[],
-      addUnit: (u: Unit) => void
-    ): void {
-      if (dt <= 0) {
-        return;
-      }
-
-      this.heat += this.heatPerTick * dt;
-      while (this.heat >= this.playerSpawnThreshold) {
-        const coord = pickFreeTileAround(this.pos, units);
-        if (coord) {
-          const unit = spawnUnit(state, 'soldier', `p${Date.now()}`, coord, 'player');
-          if (unit) {
-            addUnit(unit);
-          }
-        }
-        this.heat -= this.playerSpawnThreshold;
-        this.playerSpawnThreshold *= 1.05;
-      }
-
-      this.playerSpawnCooldown = this.playerSpawnThreshold / this.heatPerTick;
-      this.playerSpawnTimer = Math.max(
-        (this.playerSpawnThreshold - this.heat) / this.heatPerTick,
-        0
-      );
-    }
+    heat: tracker.getHeat(),
+    heatPerTick,
+    playerSpawnThreshold: tracker.getThreshold(),
+    playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown : 0,
+    playerSpawnTimer: Number.isFinite(timer) ? timer : 0,
+    heatTracker: tracker
   };
 }
