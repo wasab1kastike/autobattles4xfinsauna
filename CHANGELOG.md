@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Track sauna heat with a dedicated tracker, drive the economy tick to drain
+  upkeep and trigger heat-gated player spawns through a shared helper, and
+  cover the flow with upkeep and reinforcement tests
 - Catalog faction spawn bundles in JSON, expose weighted selection helpers, and
   drive enemy wave spawns through the bundle system with cadence and identity
   tests
