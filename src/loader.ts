@@ -63,7 +63,11 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
  * the key is absent or invalid.
  */
 export function safeLoadJSON<T>(key: string): T | undefined {
-  const raw = localStorage.getItem(key);
+  if (typeof globalThis.localStorage === 'undefined') {
+    return undefined;
+  }
+
+  const raw = globalThis.localStorage.getItem(key);
   if (!raw) {
     return undefined;
   }
@@ -71,7 +75,7 @@ export function safeLoadJSON<T>(key: string): T | undefined {
     return JSON.parse(raw) as T;
   } catch (err) {
     console.warn(`Failed to parse data for "${key}", clearing`, err);
-    localStorage.removeItem(key);
+    globalThis.localStorage.removeItem(key);
     return undefined;
   }
 }
