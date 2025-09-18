@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expose a disposable controller from the HUD topbar so cleanup routines remove
+  SISU burst and resource listeners before rebuilding the UI, preventing
+  duplicated overlays during restarts
 - Note in issue #245 that the `src/unit.ts` barrel must migrate to `src/unit/index.ts`
   (or be removed) and its consumers updated before adding the new `src/unit/`
   directory so the refactor avoids path collisions
