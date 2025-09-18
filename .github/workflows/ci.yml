@@ -15,6 +15,8 @@ jobs:
         with: { node-version: 20, cache: 'npm' }
       - run: npm ci
       - run: npm run build
+      - name: Verify live demo link
+        run: npm run check:demo
 
       # Sanity checks: dist exists and has required files
       - name: Sanity checks
