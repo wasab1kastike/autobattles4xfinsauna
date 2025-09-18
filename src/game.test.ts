@@ -199,6 +199,21 @@ describe('game logging', () => {
 
     expect(updatedCoords).toContain(targetKey);
   });
+
+  it('re-renders the roster after rebuilding the right panel UI', async () => {
+    const { __rebuildRightPanelForTest } = await initGame();
+
+    const rosterRows = () =>
+      Array.from(document.querySelectorAll<HTMLLIElement>('.panel-roster__row'));
+
+    await flushLogs();
+    expect(rosterRows().length).toBeGreaterThan(0);
+
+    __rebuildRightPanelForTest();
+
+    await flushLogs();
+    expect(rosterRows().length).toBeGreaterThan(0);
+  });
 });
 
 describe('saunoja persistence', () => {

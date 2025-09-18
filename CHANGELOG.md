@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Reset the command console roster renderer whenever the panel rebuilds so the
+  Saunoja list repopulates after DOM swaps, and lock the behavior with a
+  regression test that rebuilds the UI shell
 - Decouple frontier raiders into a dedicated edge spawner that honors the 30-unit
   cap while sauna heat now summons only allied reinforcements with escalating
   thresholds

@@ -22,6 +22,7 @@ export type RosterEntry = {
 
 type RightPanelOptions = {
   onRosterSelect?: (unitId: string) => void;
+  onRosterRendererReady?: (renderer: (entries: RosterEntry[]) => void) => void;
 };
 
 export function setupRightPanel(
@@ -160,7 +161,7 @@ export function setupRightPanel(
     Log: logTab
   };
 
-  const { onRosterSelect } = options;
+  const { onRosterSelect, onRosterRendererReady } = options;
   const numberFormatter = new Intl.NumberFormat('en-US');
   const rosterCountFormatter = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 0
@@ -338,6 +339,10 @@ export function setupRightPanel(
   }
 
   renderRoster([]);
+
+  if (typeof onRosterRendererReady === 'function') {
+    onRosterRendererReady(renderRoster);
+  }
 
   // --- Policies ---
   type PolicyDef = {
