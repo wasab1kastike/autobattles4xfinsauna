@@ -81,6 +81,79 @@ describe('makeSaunoja', () => {
     expect(saunoja.name).toBe('Noora "Steamcaller" Tuomi');
     randomSpy.mockRestore();
   });
+
+  it('sanitises loadout items and active modifiers', () => {
+    const loadout = [
+      {
+        id: ' emberglass-arrow ',
+        name: '  Emberglass Arrow ',
+        description: 'Ignites targets on hit',
+        icon: '/assets/items/emberglass.svg',
+        rarity: 'rare',
+        quantity: 2.6
+      },
+      {
+        id: '',
+        name: 'Missing id'
+      },
+      42 as unknown as { id: string; name: string }
+    ];
+
+    const modifiers = [
+      {
+        id: 'barkskin-ritual',
+        name: 'Barkskin Ritual',
+        description: 'Gain +3 defense for a short time',
+        duration: 19.9,
+        remaining: 7.3,
+        stacks: 0,
+        appliedAt: -50
+      },
+      {
+        id: 'eternal-steam',
+        name: 'Eternal Steam',
+        duration: Infinity,
+        remaining: Infinity,
+        source: 'Sauna Core'
+      },
+      {
+        id: '',
+        name: 'Unnamed'
+      }
+    ];
+
+    const saunoja = makeSaunoja({ id: 'loadout-test', items: loadout, modifiers });
+
+    expect(saunoja.items).toEqual([
+      {
+        id: 'emberglass-arrow',
+        name: 'Emberglass Arrow',
+        description: 'Ignites targets on hit',
+        icon: '/assets/items/emberglass.svg',
+        rarity: 'rare',
+        quantity: 3
+      }
+    ]);
+    expect(saunoja.modifiers).toEqual([
+      {
+        id: 'barkskin-ritual',
+        name: 'Barkskin Ritual',
+        description: 'Gain +3 defense for a short time',
+        duration: 19.9,
+        remaining: 7.3,
+        stacks: 1,
+        appliedAt: 0
+      },
+      {
+        id: 'eternal-steam',
+        name: 'Eternal Steam',
+        description: undefined,
+        duration: Infinity,
+        remaining: Infinity,
+        source: 'Sauna Core'
+      }
+    ]);
+  });
 });
 
 describe('applyDamage', () => {

@@ -177,7 +177,9 @@ export function loadUnits(): Saunoja[] {
           traits,
           upkeep: upkeepValue,
           xp: xpValue,
-          selected: Boolean(data.selected)
+          selected: Boolean(data.selected),
+          items: Array.isArray(data.items) ? data.items : undefined,
+          modifiers: Array.isArray(data.modifiers) ? data.modifiers : undefined
         })
       );
     }
@@ -206,7 +208,25 @@ export function saveUnits(): void {
       traits: [...unit.traits],
       upkeep: unit.upkeep,
       xp: unit.xp,
-      selected: unit.selected
+      selected: unit.selected,
+      items: unit.items.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        icon: item.icon,
+        rarity: item.rarity,
+        quantity: item.quantity
+      })),
+      modifiers: unit.modifiers.map((modifier) => ({
+        id: modifier.id,
+        name: modifier.name,
+        description: modifier.description,
+        remaining: modifier.remaining,
+        duration: modifier.duration,
+        appliedAt: modifier.appliedAt,
+        stacks: modifier.stacks,
+        source: modifier.source
+      }))
     }));
     storage.setItem(SAUNOJA_STORAGE_KEY, JSON.stringify(payload));
   } catch (error) {
@@ -475,6 +495,19 @@ const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
 };
 
 eventBus.on('unitSpawned', onUnitSpawned);
+
+const onInventoryChanged = (): void => {
+  refreshRosterPanel();
+};
+
+const onModifierChanged = (): void => {
+  refreshRosterPanel();
+};
+
+eventBus.on('inventoryChanged', onInventoryChanged);
+eventBus.on('modifierAdded', onModifierChanged);
+eventBus.on('modifierRemoved', onModifierChanged);
+eventBus.on('modifierExpired', onModifierChanged);
 
 function resolveUnitUpkeep(unit: Unit): number {
   const attendant = unitToSaunoja.get(unit.id);
@@ -818,6 +851,10 @@ export function cleanup(): void {
   eventBus.off('policyApplied', onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
   eventBus.off('unitSpawned', onUnitSpawned);
+  eventBus.off('inventoryChanged', onInventoryChanged);
+  eventBus.off('modifierAdded', onModifierChanged);
+  eventBus.off('modifierRemoved', onModifierChanged);
+  eventBus.off('modifierExpired', onModifierChanged);
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
 }
@@ -923,24 +960,45 @@ function buildRosterEntries(): RosterEntry[] {
     const attachedUnitId = saunojaToUnit.get(attendant.id);
     const unit = attachedUnitId ? unitsById.get(attachedUnitId) : undefined;
     const unitAlive = unit ? !unit.isDead() && unit.stats.health > 0 : false;
-    const hpSource = unit
+
+    const currentHealth = unit
       ? Math.round(Math.max(0, unit.stats.health))
       : Math.round(Math.max(0, attendant.hp));
-    const maxHpSource = unit
+    const maxHealth = unit
       ? Math.round(Math.max(1, unit.getMaxHealth()))
       : Math.round(Math.max(1, attendant.maxHp));
+    const attackDamage = unit ? Math.round(Math.max(0, unit.stats.attackDamage)) : 0;
+    const attackRange = unit ? Math.round(Math.max(0, unit.stats.attackRange)) : 0;
+    const movementRange = unit ? Math.round(Math.max(0, unit.stats.movementRange)) : 0;
+    const defenseSource = unit?.stats.defense ?? attendant.defense ?? 0;
+    const defense = Math.round(Math.max(0, defenseSource));
+    const shieldSource = unit ? unit.getShield() : attendant.shield;
+    const shield = Math.round(Math.max(0, shieldSource));
     const upkeep = Math.max(0, Math.round(attendant.upkeep));
-    const status: RosterEntry['status'] = hpSource <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
+    const status: RosterEntry['status'] =
+      currentHealth <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
+
+    const items = attendant.items.map((item) => ({ ...item }));
+    const modifiers = attendant.modifiers.map((modifier) => ({ ...modifier }));
 
     return {
       id: attendant.id,
       name: attendant.name,
-      hp: hpSource,
-      maxHp: maxHpSource,
       upkeep,
       status,
       selected: Boolean(attendant.selected),
-      traits: [...attendant.traits]
+      traits: [...attendant.traits],
+      stats: {
+        health: currentHealth,
+        maxHealth,
+        attackDamage,
+        attackRange,
+        movementRange,
+        defense: defense > 0 ? defense : undefined,
+        shield: shield > 0 ? shield : undefined
+      },
+      items,
+      modifiers
     } satisfies RosterEntry;
   });
 
@@ -955,14 +1013,74 @@ function buildRosterEntries(): RosterEntry[] {
   return entries;
 }
 
+function encodeTimerValue(value: number | typeof Infinity): string {
+  if (value === Infinity) {
+    return 'inf';
+  }
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0';
+  }
+  return String(Math.ceil(value));
+}
+
+function encodeRosterItem(item: RosterEntry['items'][number]): string {
+  return [
+    item.id,
+    item.name,
+    item.icon ?? '',
+    item.rarity ?? '',
+    item.description ?? '',
+    item.quantity
+  ].join('^');
+}
+
+function encodeRosterModifier(modifier: RosterEntry['modifiers'][number]): string {
+  return [
+    modifier.id,
+    modifier.name,
+    modifier.description ?? '',
+    encodeTimerValue(modifier.duration),
+    encodeTimerValue(modifier.remaining),
+    modifier.appliedAt ?? '',
+    modifier.stacks ?? 1,
+    modifier.source ?? ''
+  ].join('^');
+}
+
+function encodeRosterEntry(entry: RosterEntry): string {
+  const { stats } = entry;
+  const traitSig = entry.traits.join('|');
+  const itemSig = entry.items.map(encodeRosterItem).join('|');
+  const modifierSig = entry.modifiers.map(encodeRosterModifier).join('|');
+  return [
+    entry.id,
+    entry.name,
+    entry.upkeep,
+    entry.status,
+    entry.selected ? 1 : 0,
+    stats.health,
+    stats.maxHealth,
+    stats.attackDamage,
+    stats.attackRange,
+    stats.movementRange,
+    stats.defense ?? 0,
+    stats.shield ?? 0,
+    traitSig,
+    itemSig,
+    modifierSig
+  ].join('~');
+}
+
+function createRosterSignature(entries: readonly RosterEntry[]): string {
+  return `${entries.length}:${entries.map(encodeRosterEntry).join('||')}`;
+}
+
 function refreshRosterPanel(entries?: RosterEntry[]): void {
   if (!renderRosterView) {
     return;
   }
   const view = entries ?? buildRosterEntries();
-  const signature = `${view.length}|${view
-    .map((entry) => `${entry.id}:${entry.hp}/${entry.maxHp}:${entry.status}:${entry.selected ? 1 : 0}`)
-    .join('|')}`;
+  const signature = createRosterSignature(view);
   if (signature === rosterSignature) {
     return;
   }
