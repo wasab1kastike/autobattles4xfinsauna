@@ -1,8 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Restore the sauna command console roster on handheld layouts by keeping the
-  panel open until players collapse it manually so the roster is visible again
+
 - Catalog faction spawn bundles in JSON, expose weighted selection helpers, and
   drive enemy wave spawns through the bundle system with cadence and identity
   tests

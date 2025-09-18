@@ -1,4 +1,11 @@
 import { triggerModifierHook } from '../mods/runtime.ts';
+import {
+  createKeywordEffectsLog,
+  createKeywordEngine,
+  type KeywordCombatantState,
+  type KeywordEffectSummary,
+  type KeywordState
+} from '../keywords/index.ts';
 
 export type CombatHookEvent = 'onHit' | 'onKill';
 
@@ -6,9 +13,11 @@ export type CombatHook = (payload: CombatHookPayload) => void;
 
 export type CombatHookMap = Partial<Record<CombatHookEvent, CombatHook | CombatHook[]>>;
 
+export type CombatKeywordEntry = CombatHookMap | KeywordState;
+
 export type CombatKeywordRegistry =
-  | Iterable<CombatHookMap | null | undefined>
-  | Record<string, CombatHookMap | null | undefined>;
+  | Iterable<CombatKeywordEntry | null | undefined>
+  | Record<string, CombatKeywordEntry | null | undefined>;
 
 export interface CombatParticipant {
   readonly id: string;
@@ -47,6 +56,10 @@ export interface CombatResolution {
   readonly lethal: boolean;
   readonly remainingHealth: number;
   readonly remainingShield: number;
+  readonly attackerHealing: number;
+  readonly attackerRemainingHealth?: number;
+  readonly attackerRemainingShield?: number;
+  readonly keywordEffects: KeywordEffectSummary;
 }
 
 export interface ResolveCombatArgs {
@@ -79,6 +92,19 @@ function toSnapshot(
   };
 }
 
+function isHookMap(entry: CombatKeywordEntry | null | undefined): entry is CombatHookMap {
+  if (!entry) {
+    return false;
+  }
+  const hookEntry = entry as CombatHookMap;
+  return (
+    typeof hookEntry.onHit === 'function' ||
+    typeof hookEntry.onKill === 'function' ||
+    Array.isArray(hookEntry.onHit) ||
+    Array.isArray(hookEntry.onKill)
+  );
+}
+
 function normalizeHooks(entry: CombatHook | CombatHook[] | null | undefined): CombatHook[] {
   if (!entry) {
     return [];
@@ -96,17 +122,17 @@ function collectKeywordHooks(registry: CombatKeywordRegistry | null | undefined)
   if (!registry) {
     return [];
   }
-  if (typeof (registry as Iterable<CombatHookMap | null | undefined>)[Symbol.iterator] === 'function') {
+  if (typeof (registry as Iterable<CombatKeywordEntry | null | undefined>)[Symbol.iterator] === 'function') {
     const hooks: CombatHookMap[] = [];
-    for (const entry of registry as Iterable<CombatHookMap | null | undefined>) {
-      if (entry) {
+    for (const entry of registry as Iterable<CombatKeywordEntry | null | undefined>) {
+      if (isHookMap(entry)) {
         hooks.push(entry);
       }
     }
     return hooks;
   }
-  const record = registry as Record<string, CombatHookMap | null | undefined>;
-  return Object.values(record).filter((entry): entry is CombatHookMap => Boolean(entry));
+  const record = registry as Record<string, CombatKeywordEntry | null | undefined>;
+  return Object.values(record).filter((entry): entry is CombatHookMap => isHookMap(entry));
 }
 
 function fireParticipantHooks(
@@ -131,6 +157,20 @@ function fireParticipantHooks(
   }
 }
 
+function toCombatantState(participant: CombatParticipant | null | undefined): KeywordCombatantState {
+  const health = clampNonNegative(participant?.health ?? 0);
+  const maxHealthSource = clampNonNegative(participant?.maxHealth ?? health);
+  return {
+    health,
+    maxHealth: Math.max(maxHealthSource, health),
+    shield: clampNonNegative(participant?.shield ?? 0)
+  };
+}
+
+function emptyCombatantState(): KeywordCombatantState {
+  return { health: 0, maxHealth: 0, shield: 0 };
+}
+
 export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
   const attacker = args.attacker ?? null;
   const defender = args.defender;
@@ -143,19 +183,68 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     : clampNonNegative(attacker?.attack ?? 0);
   const defenseValue = clampNonNegative(defender.defense ?? 0);
 
-  const rawDamage = Math.max(minDamage, attackValue - defenseValue);
-  const shieldBefore = clampNonNegative(defender.shield ?? 0);
-  const shieldDamage = Math.min(shieldBefore, rawDamage);
-  const hpDamage = Math.max(0, rawDamage - shieldDamage);
-  const healthBefore = clampNonNegative(defender.health);
-  const remainingHealth = Math.max(0, healthBefore - hpDamage);
-  const remainingShield = Math.max(0, shieldBefore - shieldDamage);
-  const lethal = hpDamage > 0 && remainingHealth <= 0;
+  const keywordEffects = createKeywordEffectsLog();
 
-  const attackerSnapshot = toSnapshot(attacker);
+  const defenderState = toCombatantState(defender);
+  const attackerState = attacker ? toCombatantState(attacker) : null;
+
+  const defenderEngine = createKeywordEngine(defender.keywords ?? null, 'defender', keywordEffects.defender);
+  const attackerEngine = attacker
+    ? createKeywordEngine(attacker.keywords ?? null, 'attacker', keywordEffects.attacker)
+    : null;
+
+  const defenderOpponent = attackerState ?? emptyCombatantState();
+  if (defenderEngine) {
+    defenderEngine.runTick(defenderState, defenderOpponent);
+  }
+
+  if (attackerEngine && attackerState) {
+    attackerEngine.runTick(attackerState, defenderState);
+  }
+
+  const defenderAliveBefore = defenderState.health > 0;
+  const baseShieldBeforeGrant = clampNonNegative(defenderState.shield);
+  if (defenderEngine) {
+    defenderEngine.grantShield(defenderState, defenderOpponent);
+  }
+  const totalShieldBefore = clampNonNegative(defenderState.shield);
+
+  const rawDamage = defenderAliveBefore ? Math.max(minDamage, attackValue - defenseValue) : 0;
+  const shieldDamage = defenderAliveBefore ? Math.min(totalShieldBefore, rawDamage) : 0;
+  const hpDamage = defenderAliveBefore ? Math.max(0, rawDamage - shieldDamage) : 0;
+
+  defenderState.shield = Math.max(0, totalShieldBefore - shieldDamage);
+
+  const baseShieldDamage = Math.min(baseShieldBeforeGrant, shieldDamage);
+  const keywordShieldDamage = Math.max(0, shieldDamage - baseShieldDamage);
+
+  if (defenderEngine && keywordShieldDamage > 0) {
+    defenderEngine.consumeShield(keywordShieldDamage, defenderState, defenderOpponent);
+  }
+
+  const keywordShieldRemaining = defenderEngine ? defenderEngine.getShieldValue() : 0;
+  keywordEffects.defender.keywordShieldRemaining = keywordShieldRemaining;
+
+  const remainingBaseShield = Math.max(0, baseShieldBeforeGrant - baseShieldDamage);
+  defenderState.shield = remainingBaseShield + keywordShieldRemaining;
+
+  const healthBeforeDamage = defenderState.health;
+  defenderState.health = Math.max(0, healthBeforeDamage - hpDamage);
+  const remainingHealth = defenderState.health;
+  const lethal = remainingHealth <= 0;
+
+  let attackerHealing = 0;
+  if (attackerEngine && attackerState) {
+    attackerHealing = attackerEngine.applyHit(hpDamage, attackerState, defenderState);
+    keywordEffects.attacker.keywordShieldRemaining = attackerEngine.getShieldValue();
+  } else {
+    keywordEffects.attacker.keywordShieldRemaining = 0;
+  }
+
+  const attackerSnapshot = toSnapshot(attacker, attackerState ?? undefined);
   const defenderSnapshot = toSnapshot(defender, {
     health: remainingHealth,
-    shield: remainingShield
+    shield: remainingBaseShield + keywordShieldRemaining
   });
 
   const payloadBase = {
@@ -199,6 +288,10 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     hpDamage,
     lethal,
     remainingHealth,
-    remainingShield
+    remainingShield: remainingBaseShield,
+    attackerHealing,
+    attackerRemainingHealth: attackerState?.health,
+    attackerRemainingShield: attackerState?.shield,
+    keywordEffects
   };
 }
