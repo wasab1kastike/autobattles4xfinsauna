@@ -93,11 +93,19 @@ export function setupRightPanel(
   };
   insertToggle();
 
-  let isCollapsed = smallViewportQuery.matches;
+  let isCollapsed = false;
+  let narrowLayoutCollapsed = false;
 
-  const applyCollapsedState = (collapsed: boolean, matches = smallViewportQuery.matches): void => {
-    isCollapsed = collapsed;
+  const applyCollapsedState = (
+    collapsed: boolean,
+    matches = smallViewportQuery.matches
+  ): void => {
+    const wasCollapsed = isCollapsed;
+    if (matches) {
+      narrowLayoutCollapsed = collapsed;
+    }
     const shouldCollapse = collapsed && matches;
+    isCollapsed = shouldCollapse;
     panel.classList.toggle('right-panel--collapsed', shouldCollapse);
     panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
     toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
@@ -107,18 +115,19 @@ export function setupRightPanel(
     toggle.title = shouldCollapse
       ? 'Open the sauna command console overlay'
       : 'Close the sauna command console overlay';
-    if (!shouldCollapse && matches) {
+    if (wasCollapsed && !shouldCollapse && matches) {
       panel.focus({ preventScroll: true });
     }
   };
 
-  applyCollapsedState(isCollapsed, smallViewportQuery.matches);
+  applyCollapsedState(narrowLayoutCollapsed, smallViewportQuery.matches);
   toggle.hidden = !smallViewportQuery.matches;
 
   const handleViewportChange = (event: MediaQueryListEvent): void => {
     const matches = event.matches;
     toggle.hidden = !matches;
-    applyCollapsedState(matches ? true : false, matches);
+    const collapsed = matches ? narrowLayoutCollapsed : false;
+    applyCollapsedState(collapsed, matches);
   };
 
   if (typeof smallViewportQuery.addEventListener === 'function') {
