@@ -68,6 +68,8 @@ npm install
 - `npm test` – run the Vitest suite and the live demo availability check.
 - `npm run check:demo` – verify the README demo link resolves the Pages build
   and still advertises `<title>Autobattles4xFinsauna</title>`.
+- `npm run simulate` – execute the deterministic balance sweep described below
+  and write `/tmp/balance.csv` with 20 seeded battle snapshots.
 
 ### Build Output
 
@@ -87,6 +89,18 @@ repository, keeping the default branch clean.
 ```bash
 npm test
 ```
+
+## Balance Simulation
+
+```bash
+npm run simulate
+```
+
+The simulation script runs via `vite-node` so Vite-specific modules (such as
+`import.meta.glob`-powered faction bundles) execute unchanged. Each run seeds 20
+maps and advances 150 ticks per seed while tracking sauna beer, upkeep drain,
+active roster size, and total deaths. The aggregated samples are exported to
+`/tmp/balance.csv` for further analysis or dashboarding.
 
 ## Contributing
 

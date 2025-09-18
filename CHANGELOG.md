@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Wire a `npm run simulate` balance harness through `vite-node`, seed 20 deterministic
+  maps for 150 ticks, export beer/upkeep/roster/death snapshots to `/tmp/balance.csv`,
+  and document the workflow for contributors
 - Add a post-build CI gate that runs the `check:demo` script so pull requests
   surface broken live demo links or titles while preserving offline-friendly
   warnings
