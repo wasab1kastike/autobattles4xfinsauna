@@ -74,6 +74,7 @@ let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
 let renderRosterView: ((entries: RosterEntry[]) => void) | null = null;
 let rosterSignature: string | null = null;
+let disposeRightPanel: (() => void) | null = null;
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
   rosterSignature = null;
@@ -662,6 +663,10 @@ const inventoryHud = setupInventoryHud(inventory, {
   onEquip: (unitId, item) => equipItemToSaunoja(unitId, item)
 });
 function initializeRightPanel(): void {
+  if (disposeRightPanel) {
+    disposeRightPanel();
+    disposeRightPanel = null;
+  }
   const rightPanel = setupRightPanel(state, {
     onRosterSelect: focusSaunojaById,
     onRosterRendererReady: installRosterRenderer
@@ -669,6 +674,7 @@ function initializeRightPanel(): void {
   log = rightPanel.log;
   addEvent = rightPanel.addEvent;
   installRosterRenderer(rightPanel.renderRoster);
+  disposeRightPanel = rightPanel.dispose;
 }
 
 initializeRightPanel();
@@ -929,6 +935,10 @@ export function cleanup(): void {
   eventBus.off('modifierExpired', onModifierChanged);
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
+  if (disposeRightPanel) {
+    disposeRightPanel();
+    disposeRightPanel = null;
+  }
   inventoryHud.destroy();
   disposeTopbar();
 }

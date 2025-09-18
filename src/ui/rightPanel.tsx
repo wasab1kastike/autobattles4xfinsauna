@@ -27,10 +27,11 @@ export function setupRightPanel(
   log: (msg: string) => void;
   addEvent: (ev: GameEvent) => void;
   renderRoster: (entries: RosterEntry[]) => void;
+  dispose: () => void;
 } {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) {
-    return { log: () => {}, addEvent: () => {}, renderRoster: () => {} };
+    return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
   const { actions, side } = ensureHudLayout(overlay);
@@ -53,6 +54,7 @@ export function setupRightPanel(
   panel.tabIndex = -1;
 
   const smallViewportQuery = window.matchMedia('(max-width: 960px)');
+  const disposers: Array<() => void> = [];
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
@@ -127,14 +129,18 @@ export function setupRightPanel(
 
   if (typeof smallViewportQuery.addEventListener === 'function') {
     smallViewportQuery.addEventListener('change', handleViewportChange);
+    disposers.push(() => smallViewportQuery.removeEventListener('change', handleViewportChange));
   } else {
     smallViewportQuery.addListener(handleViewportChange);
+    disposers.push(() => smallViewportQuery.removeListener(handleViewportChange));
   }
 
-  toggle.addEventListener('click', () => {
+  const handleToggleClick = (): void => {
     const next = !isCollapsed;
     applyCollapsedState(next);
-  });
+  };
+  toggle.addEventListener('click', handleToggleClick);
+  disposers.push(() => toggle.removeEventListener('click', handleToggleClick));
 
   const tabBar = document.createElement('div');
   tabBar.classList.add('panel-tabs');
@@ -194,7 +200,9 @@ export function setupRightPanel(
       btn.setAttribute('aria-controls', section.id);
     }
     btn.setAttribute('aria-pressed', 'false');
-    btn.addEventListener('click', () => show(name));
+    const handleClick = (): void => show(name);
+    btn.addEventListener('click', handleClick);
+    disposers.push(() => btn.removeEventListener('click', handleClick));
     tabBar.appendChild(btn);
     content.appendChild(tabs[name]);
   }
@@ -270,11 +278,13 @@ export function setupRightPanel(
         !def.prerequisite(state) ||
         state.hasPolicy(def.id) ||
         !state.canAfford(def.cost, resource);
-      btn.addEventListener('click', () => {
+      const handleClick = (): void => {
         if (state.applyPolicy(def.id, def.cost, resource)) {
           updatePolicyButtons();
         }
-      });
+      };
+      btn.addEventListener('click', handleClick);
+      disposers.push(() => btn.removeEventListener('click', handleClick));
       policiesTab.appendChild(btn);
       policyButtons[def.id] = btn;
     }
@@ -296,6 +306,10 @@ export function setupRightPanel(
   renderPolicies();
   eventBus.on('resourceChanged', updatePolicyButtons);
   eventBus.on('policyApplied', updatePolicyButtons);
+  disposers.push(() => {
+    eventBus.off('resourceChanged', updatePolicyButtons);
+    eventBus.off('policyApplied', updatePolicyButtons);
+  });
 
   // --- Events ---
   const events: GameEvent[] = [];
@@ -434,6 +448,18 @@ export function setupRightPanel(
   }
 
   show('Roster');
-  return { log, addEvent, renderRoster };
+  const dispose = (): void => {
+    for (const cleanup of disposers.splice(0)) {
+      try {
+        cleanup();
+      } catch (error) {
+        console.warn('Failed to dispose HUD listener', error);
+      }
+    }
+    toggle.remove();
+    panel.remove();
+  };
+
+  return { log, addEvent, renderRoster, dispose };
 }
 
