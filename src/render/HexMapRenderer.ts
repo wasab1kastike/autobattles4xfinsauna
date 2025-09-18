@@ -11,31 +11,13 @@ import {
   type AxialBounds,
 } from '../map/hex/chunking.ts';
 import { TerrainCache, type ChunkCanvas } from './terrain_cache.ts';
-
-const DEFAULT_HIGHLIGHT = 'rgba(56, 189, 248, 0.85)';
-const DEFAULT_HIGHLIGHT_GLOW = 'rgba(56, 189, 248, 0.45)';
-
-let highlightStroke: string | null = null;
-let highlightGlow: string | null = null;
-
-function getHighlightTokens(): { stroke: string; glow: string } {
-  if (highlightStroke && highlightGlow) {
-    return { stroke: highlightStroke, glow: highlightGlow };
-  }
-
-  if (typeof window !== 'undefined') {
-    const styles = getComputedStyle(document.documentElement);
-    const stroke = styles.getPropertyValue('--tile-highlight-ring').trim();
-    const glow = styles.getPropertyValue('--tile-highlight-glow').trim();
-    highlightStroke = stroke || DEFAULT_HIGHLIGHT;
-    highlightGlow = glow || DEFAULT_HIGHLIGHT_GLOW;
-  } else {
-    highlightStroke = DEFAULT_HIGHLIGHT;
-    highlightGlow = DEFAULT_HIGHLIGHT_GLOW;
-  }
-
-  return { stroke: highlightStroke, glow: highlightGlow };
-}
+import {
+  getHighlightTokens,
+  getOutlineWidth,
+  lightenNeutral,
+  darkenNeutral,
+} from './palette.ts';
+import { drawFogHex } from './fog.ts';
 
 export class HexMapRenderer {
   private readonly terrainCache: TerrainCache;
@@ -145,21 +127,7 @@ export class HexMapRenderer {
         const radius = this.hexSize;
         const centerX = drawX + hexWidth / 2;
         const centerY = drawY + hexHeight / 2;
-        ctx.save();
-        this.hexPath(ctx, centerX, centerY, radius);
-        const fog = ctx.createRadialGradient(
-          centerX,
-          centerY,
-          radius * 0.15,
-          centerX,
-          centerY,
-          radius * 1.1
-        );
-        fog.addColorStop(0, 'rgba(24, 34, 48, 0.5)');
-        fog.addColorStop(1, 'rgba(8, 12, 20, 0.82)');
-        ctx.fillStyle = fog;
-        ctx.fill();
-        ctx.restore();
+        drawFogHex(ctx, centerX, centerY, radius, camera.zoom);
       }
     }
   }
@@ -178,13 +146,15 @@ export class HexMapRenderer {
     ctx.lineCap = 'round';
     if (selected) {
       ctx.shadowColor = glow;
-      ctx.shadowBlur = size * 0.65;
-      ctx.lineWidth = Math.max(2, size * 0.08);
+      ctx.shadowBlur = Math.max(6, (size * 0.65) / Math.max(camera.zoom, 0.1));
+      ctx.lineWidth = getOutlineWidth(size, camera.zoom, 'selection');
       ctx.strokeStyle = stroke;
       ctx.stroke();
     } else {
-      ctx.lineWidth = Math.max(1, size * 0.05);
-      ctx.strokeStyle = 'rgba(12, 18, 28, 0.55)';
+      ctx.lineWidth = getOutlineWidth(size, camera.zoom, 'hover');
+      ctx.shadowColor = lightenNeutral(0.1, 0.45);
+      ctx.shadowBlur = Math.max(2, (size * 0.4) / Math.max(camera.zoom, 0.1));
+      ctx.strokeStyle = darkenNeutral(0.1, 0.72);
       ctx.stroke();
     }
     ctx.restore();

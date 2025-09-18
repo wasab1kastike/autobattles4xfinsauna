@@ -4,7 +4,16 @@ import type { HexMap } from '../hexmap.ts';
 import type { LoadedAssets } from '../loader.ts';
 import { TerrainId } from '../map/terrain.ts';
 import type { PixelCoord } from '../hex/HexUtils.ts';
-import { TERRAIN } from './TerrainPalette.ts';
+import {
+  TERRAIN,
+  NEUTRAL_BASE_RGB,
+  hexToRgb,
+  mixRgb,
+  rgbString,
+  rgbaString,
+  lightenNeutral,
+  getOutlineWidth,
+} from './palette.ts';
 import type { HexPatternOptions } from '../map/hexPatterns.ts';
 import { drawForest, drawHills, drawPlains, drawWater } from '../map/hexPatterns.ts';
 import {
@@ -33,29 +42,6 @@ interface ChunkCanvas {
   height: number;
 }
 
-function toRgb(color: string): [number, number, number] {
-  const hex = color.replace('#', '');
-  const value = Number.parseInt(hex, 16);
-  const r = (value >> 16) & 0xff;
-  const g = (value >> 8) & 0xff;
-  const b = value & 0xff;
-  return [r, g, b];
-}
-
-function mixColor(
-  [r, g, b]: [number, number, number],
-  [tr, tg, tb]: [number, number, number],
-  amount: number
-): string {
-  const clamped = Math.min(1, Math.max(0, amount));
-  const mix = (channel: number, target: number) => Math.round(channel + (target - channel) * clamped);
-  return `rgb(${mix(r, tr)}, ${mix(g, tg)}, ${mix(b, tb)})`;
-}
-
-function withAlpha([r, g, b]: [number, number, number], alpha: number): string {
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 function hexPath(ctx: CanvasRenderingContext2D, x: number, y: number, size: number): void {
   ctx.beginPath();
   for (let i = 0; i < 6; i++) {
@@ -81,8 +67,8 @@ function strokeHex(
   ctx.save();
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(1, size * 0.05);
-  ctx.strokeStyle = 'rgba(12, 18, 28, 0.55)';
+  ctx.lineWidth = getOutlineWidth(size, 1, 'terrain');
+  ctx.strokeStyle = lightenNeutral(0.16, 0.6);
   ctx.stroke();
   ctx.restore();
 }
@@ -98,7 +84,7 @@ function drawTerrainAndBuilding(
   radius: number
 ): void {
   const palette = TERRAIN[tile.terrain] ?? TERRAIN[TerrainId.Plains];
-  const rgb = toRgb(palette.baseColor);
+  const rgb = hexToRgb(palette.baseColor);
   const centerX = x + width / 2;
   const centerY = y + height / 2;
 
@@ -107,12 +93,12 @@ function drawTerrainAndBuilding(
   ctx.clip();
 
   const gradient = ctx.createRadialGradient(centerX, centerY, radius * 0.2, centerX, centerY, radius * 1.05);
-  gradient.addColorStop(0, mixColor(rgb, [255, 255, 255], 0.3));
+  gradient.addColorStop(0, rgbString(mixRgb(rgb, [255, 255, 255] as const, 0.3)));
   gradient.addColorStop(0.7, palette.baseColor);
-  gradient.addColorStop(1, mixColor(rgb, [12, 18, 28], 0.4));
+  gradient.addColorStop(1, rgbString(mixRgb(rgb, NEUTRAL_BASE_RGB, 0.4)));
 
   ctx.fillStyle = gradient;
-  ctx.shadowColor = withAlpha(rgb, 0.35);
+  ctx.shadowColor = rgbaString(rgb, 0.35);
   ctx.shadowBlur = radius * 0.9;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
@@ -135,7 +121,7 @@ function drawTerrainAndBuilding(
   ctx.globalCompositeOperation = 'lighter';
   const rim = ctx.createRadialGradient(centerX, centerY, radius * 0.85, centerX, centerY, radius * 1.18);
   rim.addColorStop(0, 'rgba(255, 255, 255, 0)');
-  rim.addColorStop(1, withAlpha(rgb, 0.18));
+  rim.addColorStop(1, rgbaString(rgb, 0.18));
   ctx.fillStyle = rim;
   ctx.fillRect(x - radius * 0.1, y - radius * 0.1, width + radius * 0.2, height + radius * 0.2);
   ctx.globalCompositeOperation = 'source-over';
