@@ -9,6 +9,9 @@
   tracks shield absorption, fires keyword hooks for both sides, and routes
   modifier callbacks so Saunoja and battlefield units share consistent
   damage/kill events
+- Return combat resolutions from battlefield attacks so BattleManager can react
+  to lethal blows, and ensure zero-damage keyword kills still mark units dead
+  while emitting the polished death events
 - Add a modifier runtime that tracks timed effects, routes hook triggers, emits
   lifecycle events, and exposes helper APIs plus tests so timed buffs expire
   cleanly during the polished game loop
