@@ -1725,6 +1725,138 @@ body > #game-container {
   transition: width 240ms ease;
 }
 
+.sauna-roster {
+  display: grid;
+  gap: 12px;
+  padding: clamp(12px, 2.2vw, 18px);
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 18%, transparent);
+  background: linear-gradient(135deg, rgba(17, 26, 46, 0.78), rgba(11, 19, 35, 0.62));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 18px 40px rgba(4, 14, 31, 0.45);
+}
+
+.sauna-roster__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.sauna-roster__title {
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--color-foreground);
+}
+
+.sauna-roster__value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: color-mix(in srgb, var(--color-accent) 45%, rgba(15, 23, 42, 0.7));
+  color: var(--color-foreground);
+  box-shadow: 0 10px 24px rgba(6, 14, 31, 0.52);
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.sauna-roster__value[data-state='paused'] {
+  background: color-mix(in srgb, var(--color-muted) 70%, rgba(11, 19, 35, 0.9));
+  color: color-mix(in srgb, var(--color-muted) 80%, white 20%);
+}
+
+.sauna-roster__description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--color-muted) 86%, white 8%);
+}
+
+.sauna-roster__controls {
+  display: grid;
+  gap: 10px;
+}
+
+.sauna-roster__label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-muted) 82%, white 6%);
+}
+
+.sauna-roster__slider {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 35%, rgba(10, 20, 36, 0.8)), rgba(9, 17, 30, 0.65));
+  outline: none;
+  transition: box-shadow 180ms ease;
+}
+
+.sauna-roster__slider:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+.sauna-roster__slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 35%, rgba(10, 20, 36, 0.8)), rgba(9, 17, 30, 0.65));
+}
+
+.sauna-roster__slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, white 12%, var(--color-accent));
+  border: 2px solid color-mix(in srgb, var(--color-accent) 60%, white 15%);
+  box-shadow: 0 8px 16px rgba(11, 22, 43, 0.45);
+  margin-top: -6px;
+}
+
+.sauna-roster__slider::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--color-accent) 35%, rgba(10, 20, 36, 0.8)), rgba(9, 17, 30, 0.65));
+}
+
+.sauna-roster__slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--color-accent) 60%, white 15%);
+  background: radial-gradient(circle at 30% 30%, white 12%, var(--color-accent));
+  box-shadow: 0 8px 16px rgba(11, 22, 43, 0.45);
+}
+
+.sauna-roster__number {
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-muted) 70%, transparent);
+  background: rgba(12, 20, 36, 0.72);
+  color: var(--color-foreground);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  letter-spacing: 0.12em;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.sauna-roster__number:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  background: rgba(16, 26, 46, 0.82);
+}
+
 .sauna-option {
   display: inline-flex;
   align-items: center;

@@ -69,6 +69,7 @@ import {
   saveUnits as persistRosterToStorage,
   SAUNOJA_STORAGE_KEY
 } from './game/rosterStorage.ts';
+import { loadSaunaSettings, saveSaunaSettings } from './game/saunaSettings.ts';
 import {
   setupRosterHUD,
   type RosterCardViewModel,
@@ -87,6 +88,15 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNAKUNNIA]: 'Saunakunnia',
   [Resource.SISU]: 'Sisu'
 };
+
+function clampRosterCap(value: number, limit: number): number {
+  const maxCap = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
+  if (!Number.isFinite(value)) {
+    return maxCap;
+  }
+  const sanitized = Math.max(0, Math.floor(value));
+  return Math.max(0, Math.min(maxCap, sanitized));
+}
 
 let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
 let ngPlusUpkeepMultiplier = 1;
@@ -622,10 +632,37 @@ if (!restoredSave && currentNgPlusState.ngPlusLevel > 0) {
     state.addResource(Resource.SAUNA_BEER, bonusBeer);
   }
 }
-const sauna = createSauna({
-  q: Math.floor(map.width / 2),
-  r: Math.floor(map.height / 2)
-});
+const saunaSettings = loadSaunaSettings(ngPlusSpawnLimit);
+const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, ngPlusSpawnLimit);
+if (initialRosterCap !== saunaSettings.maxRosterSize) {
+  saveSaunaSettings({ maxRosterSize: initialRosterCap });
+}
+const sauna = createSauna(
+  {
+    q: Math.floor(map.width / 2),
+    r: Math.floor(map.height / 2)
+  },
+  undefined,
+  { maxRosterSize: initialRosterCap }
+);
+
+let lastPersistedRosterCap = initialRosterCap;
+
+const updateRosterCap = (
+  value: number,
+  options: { persist?: boolean } = {}
+): number => {
+  const sanitized = clampRosterCap(value, ngPlusSpawnLimit);
+  const changed = sanitized !== sauna.maxRosterSize;
+  if (changed) {
+    sauna.maxRosterSize = sanitized;
+  }
+  if (options.persist && sanitized !== lastPersistedRosterCap) {
+    saveSaunaSettings({ maxRosterSize: sanitized });
+    lastPersistedRosterCap = sanitized;
+  }
+  return sanitized;
+};
 
 const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
   playerSpawnSequence += 1;
@@ -644,6 +681,7 @@ const enemySpawner = new EnemySpawner({
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
+  const rosterCap = updateRosterCap(sauna.maxRosterSize);
   runEconomyTick({
     dt: dtSeconds,
     state,
@@ -654,7 +692,9 @@ const clock = new GameClock(1000, (deltaMs) => {
     pickSpawnTile: () => pickFreeTileAround(sauna.pos, units),
     spawnBaseUnit: spawnPlayerReinforcement,
     minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN),
-    maxSpawns: ngPlusSpawnLimit
+    maxSpawns: ngPlusSpawnLimit,
+    rosterCap,
+    getRosterCount: getActiveRosterCount
   });
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
   battleManager.tick(units, dtSeconds);
@@ -791,7 +831,10 @@ objectiveTracker = createObjectiveTracker({
   bankruptcyGraceMs: 12000
 });
 objectiveTracker.onResolution(handleObjectiveResolution);
-const updateSaunaUI = setupSaunaUI(sauna);
+const updateSaunaUI = setupSaunaUI(sauna, {
+  getRosterCapLimit: () => ngPlusSpawnLimit,
+  updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist })
+});
 const { update: updateTopbar, dispose: disposeTopbar } = setupTopbar(
   state,
   {

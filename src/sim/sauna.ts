@@ -40,6 +40,8 @@ export interface Sauna {
   auraRadius: number;
   regenPerSec: number;
   rallyToFront: boolean;
+  /** Player-selected maximum number of active attendants allowed on the field. */
+  maxRosterSize: number;
   heat: number;
   heatPerTick: number;
   playerSpawnThreshold: number;
@@ -48,11 +50,23 @@ export interface Sauna {
   heatTracker: SaunaHeat;
 }
 
-export function createSauna(pos: AxialCoord, heatConfig?: SaunaHeatInit): Sauna {
+export interface SaunaInitOptions {
+  /** Initial roster cap to seed onto the sauna. */
+  maxRosterSize?: number;
+}
+
+export function createSauna(
+  pos: AxialCoord,
+  heatConfig?: SaunaHeatInit,
+  options: SaunaInitOptions = {}
+): Sauna {
   const tracker = createSaunaHeat(heatConfig);
   const heatPerTick = tracker.getBuildRate();
   const cooldown = tracker.getCooldownSeconds();
   const timer = tracker.timeUntilNextTrigger();
+  const initialRosterCap = Number.isFinite(options.maxRosterSize)
+    ? Math.max(0, Math.floor(options.maxRosterSize ?? 0))
+    : 0;
 
   return {
     id: 'sauna',
@@ -60,6 +74,7 @@ export function createSauna(pos: AxialCoord, heatConfig?: SaunaHeatInit): Sauna 
     auraRadius: 2,
     regenPerSec: 1,
     rallyToFront: false,
+    maxRosterSize: initialRosterCap,
     heat: tracker.getHeat(),
     heatPerTick,
     playerSpawnThreshold: tracker.getThreshold(),
