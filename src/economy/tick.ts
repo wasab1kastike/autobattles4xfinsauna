@@ -41,16 +41,34 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
 
   const { addedHeat, cooledHeat } = options.heat.advance(dt);
 
-  let upkeepDrain = 0;
+  let upkeepPerCycle = 0;
   for (const unit of options.units) {
     if (unit.isDead() || unit.faction !== 'player') {
       continue;
     }
     const upkeep = Math.max(0, sanitize(options.getUnitUpkeep(unit), 0));
     if (upkeep > 0) {
-      upkeepDrain += upkeep;
+      upkeepPerCycle += upkeep;
     }
   }
+
+  const upkeepIntervalSeconds = 5;
+  const previousAccumulator = Math.max(0, sanitize(options.sauna.beerUpkeepAccumulator, 0));
+  let accumulator = previousAccumulator;
+  let upkeepDrain = 0;
+
+  if (upkeepPerCycle > 0) {
+    accumulator += dt;
+    if (accumulator >= upkeepIntervalSeconds) {
+      const ticks = Math.floor(accumulator / upkeepIntervalSeconds);
+      upkeepDrain = upkeepPerCycle * ticks;
+      accumulator -= ticks * upkeepIntervalSeconds;
+    }
+  } else {
+    accumulator = 0;
+  }
+
+  options.sauna.beerUpkeepAccumulator = accumulator;
 
   if (upkeepDrain > 0) {
     options.state.addResource(Resource.SAUNA_BEER, -upkeepDrain);

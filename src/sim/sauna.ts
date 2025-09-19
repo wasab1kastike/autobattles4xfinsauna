@@ -47,6 +47,11 @@ export interface Sauna {
   playerSpawnThreshold: number;
   playerSpawnCooldown: number;
   playerSpawnTimer: number;
+  /**
+   * Accumulates elapsed seconds between upkeep drains so beer only ticks down
+   * at the intended cadence.
+   */
+  beerUpkeepAccumulator: number;
   heatTracker: SaunaHeat;
 }
 
@@ -80,6 +85,7 @@ export function createSauna(
     playerSpawnThreshold: tracker.getThreshold(),
     playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown : 0,
     playerSpawnTimer: Number.isFinite(timer) ? timer : 0,
+    beerUpkeepAccumulator: 0,
     heatTracker: tracker
   };
 }

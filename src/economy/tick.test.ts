@@ -49,39 +49,71 @@ describe('runEconomyTick', () => {
     expect(sauna.playerSpawnTimer).toBeGreaterThan(0);
   });
 
-  it('drains upkeep from active player units', () => {
-    const state = new GameState(1000);
-    state.addResource(Resource.SAUNA_BEER, 100);
-    const sauna = createSauna(
-      { q: 0, r: 0 },
-      { baseThreshold: 20, heatPerSecond: 0, initialHeat: 0 }
-    );
-    const units: Unit[] = [makeUnit('u1', 'player'), makeUnit('u2', 'player'), makeUnit('e1', 'enemy')];
-    const upkeep = new Map(
-      units.map((unit, index) => {
-        if (unit.faction !== 'player') {
-          return [unit.id, 0];
-        }
-        return [unit.id, index + 2];
-      })
-    );
+  it('drains upkeep from active player units on the five-second cadence', () => {
+    const createContext = () => {
+      const state = new GameState(1000);
+      state.addResource(Resource.SAUNA_BEER, 100);
+      const sauna = createSauna(
+        { q: 0, r: 0 },
+        { baseThreshold: 20, heatPerSecond: 0, initialHeat: 0 }
+      );
+      const units: Unit[] = [
+        makeUnit('u1', 'player'),
+        makeUnit('u2', 'player'),
+        makeUnit('e1', 'enemy')
+      ];
+      const upkeep = new Map(
+        units.map((unit, index) => {
+          if (unit.faction !== 'player') {
+            return [unit.id, 0];
+          }
+          return [unit.id, index + 2];
+        })
+      );
 
-    const result = runEconomyTick({
-      dt: 1,
-      state,
-      sauna,
-      heat: sauna.heatTracker,
-      units,
-      getUnitUpkeep: (unit) => upkeep.get(unit.id) ?? 0,
-      pickSpawnTile: () => null,
-      spawnBaseUnit: () => null,
-      minUpkeepReserve: 1
-    });
+      const runTick = (dt: number) =>
+        runEconomyTick({
+          dt,
+          state,
+          sauna,
+          heat: sauna.heatTracker,
+          units,
+          getUnitUpkeep: (unit) => upkeep.get(unit.id) ?? 0,
+          pickSpawnTile: () => null,
+          spawnBaseUnit: () => null,
+          minUpkeepReserve: 1
+        });
 
-    expect(result.upkeepDrain).toBe(5);
-    expect(state.getResource(Resource.SAUNA_BEER)).toBe(95);
-    expect(result.spawn.spawned).toBe(0);
-    expect(result.spawn.blockedByRoster).toBe(0);
+      return { state, sauna, runTick };
+    };
+
+    const primary = createContext();
+
+    for (let i = 0; i < 4; i++) {
+      const result = primary.runTick(1);
+      expect(result.upkeepDrain).toBe(0);
+      expect(primary.state.getResource(Resource.SAUNA_BEER)).toBe(100);
+    }
+
+    const fifth = primary.runTick(1);
+    expect(fifth.upkeepDrain).toBe(5);
+    expect(primary.state.getResource(Resource.SAUNA_BEER)).toBe(95);
+
+    const partial = primary.runTick(0.5);
+    expect(partial.upkeepDrain).toBe(0);
+    expect(primary.state.getResource(Resource.SAUNA_BEER)).toBe(95);
+
+    const long = primary.runTick(5);
+    expect(long.upkeepDrain).toBe(5);
+    expect(primary.state.getResource(Resource.SAUNA_BEER)).toBe(90);
+
+    const immediate = createContext();
+    const bigStep = immediate.runTick(6);
+    expect(bigStep.upkeepDrain).toBe(5);
+    expect(immediate.state.getResource(Resource.SAUNA_BEER)).toBe(95);
+
+    expect(long.spawn.spawned).toBe(0);
+    expect(long.spawn.blockedByRoster).toBe(0);
   });
 
   it('honours roster caps and resumes spawning when the limit increases', () => {
