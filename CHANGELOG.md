@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Guard ambience preference reads behind a resilient storage helper so startup
+  falls back to defaults when `localStorage` is unavailable, and cover the
+  regression with a Vitest stubbed-storage test.
 - Move the unit module barrel exports into `src/unit/index.ts`, refreshing
   import paths across the game and renderer to keep the public unit surface
   stable while aligning with directory conventions.
