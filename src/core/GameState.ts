@@ -111,7 +111,18 @@ export class GameState {
       nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
       ngPlus: this.ngPlus
     };
-    localStorage.setItem(this.storageKey, JSON.stringify(serialized));
+    const storage =
+      typeof localStorage !== 'undefined' && localStorage ? localStorage : undefined;
+    if (!storage) {
+      console.warn('GameState.save: localStorage is unavailable, skipping persistence.');
+      return;
+    }
+
+    try {
+      storage.setItem(this.storageKey, JSON.stringify(serialized));
+    } catch (error) {
+      console.warn('GameState.save: Failed to persist state to localStorage.', error);
+    }
   }
 
   load(map?: HexMap): boolean {
