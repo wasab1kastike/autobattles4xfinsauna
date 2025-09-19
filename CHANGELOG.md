@@ -7,6 +7,11 @@
   `src/game.ts`, refreshes roster storage plus calculations, polishes the
   roster panel UI with per-slot controls, and covers the flow with Vitest
   suites.
+- Rebuild the inventory HUD with a responsive stash panel suite in
+  `src/ui/stash/`, derived selectors from `src/state/inventory.ts`, expanded
+  `InventoryState` transfer/equip events, comparison-driven quick actions,
+  polished CSS modules, and Vitest coverage for selectors and the panel
+  behaviour.
 - Rebuild the GitHub Pages mirror from commit 8f618f4 so the hashed Vite
   bundle, published HTML, and build badge all advertise the latest deploy.
 - Introduce a guided HUD tutorial with spotlight tooltips, keyboard navigation,
