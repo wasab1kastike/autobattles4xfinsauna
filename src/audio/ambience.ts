@@ -25,11 +25,23 @@ let bufferPromise: Promise<AudioBuffer> | null = null;
 let masterGain: GainNode | null = null;
 let nextStartTimer: ReturnType<typeof setTimeout> | null = null;
 
-const storedEnabled = typeof localStorage !== 'undefined' ? localStorage.getItem(ENABLED_KEY) : null;
+function readStoredPreference(key: string): string | null {
+  if (typeof localStorage === 'undefined') {
+    return null;
+  }
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn('Unable to read ambience preference', key, error);
+    return null;
+  }
+}
+
+const storedEnabled = readStoredPreference(ENABLED_KEY);
 let enabled = storedEnabled === 'true';
 let hasExplicitPreference = storedEnabled !== null;
 
-const storedVolume = typeof localStorage !== 'undefined' ? localStorage.getItem(VOLUME_KEY) : null;
+const storedVolume = readStoredPreference(VOLUME_KEY);
 let volume = clampNumber(storedVolume ? Number(storedVolume) : NaN, 0.65);
 
 let playing = false;
