@@ -709,7 +709,7 @@ const clock = new GameClock(1000, (deltaMs) => {
       continue;
     }
 
-    map.revealAround(unit.coord, unit.getVisionRange());
+    map.revealAround(unit.coord, unit.getVisionRange(), { autoFrame: false });
   }
   draw();
 });
@@ -1202,7 +1202,7 @@ const onUnitDied = ({
     log('Our grit surges — +1 SISU earned for the vanquished foe.');
   }
   if (fallenCoord) {
-    map.revealAround(fallenCoord, 1);
+    map.revealAround(fallenCoord, 1, { autoFrame: false });
   }
   const side = unitFaction === 'player' ? 'our' : 'a rival';
   log(`The steam hushes as ${side} ${label} grows still.`);
