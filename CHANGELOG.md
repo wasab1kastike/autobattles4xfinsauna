@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Teach the balance simulator to resolve its CSV output inside the active OS
+  temp directory instead of hard-coding `/tmp`, and log the resolved path so
+  contributors can spot the destination.
 - Migrate SISU burst APIs into `src/sisu/burst.ts`, retarget the game, renderer,
   and HUD imports, and remove the legacy `src/sim/sisu.ts` implementation after
   the move.
