@@ -1,4 +1,6 @@
 import fs from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { AxialCoord } from '../src/hex/HexUtils.ts';
 import { HexMap } from '../src/hexmap.ts';
@@ -243,8 +245,9 @@ async function main(): Promise<void> {
   );
   const csv = [header, ...lines].join('\n');
 
-  await fs.writeFile('/tmp/balance.csv', csv, 'utf8');
-  console.log('Balance snapshot saved to /tmp/balance.csv');
+  const balancePath = join(tmpdir(), 'balance.csv');
+  await fs.writeFile(balancePath, csv, 'utf8');
+  console.log(`Balance snapshot saved to ${balancePath}`);
 }
 
 void main().catch((error) => {
