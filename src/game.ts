@@ -27,6 +27,14 @@ import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
 import { runEconomyTick } from './economy/tick.ts';
 import { InventoryState } from './inventory/state.ts';
+import type { InventoryComparisonContext } from './state/inventory.ts';
+import type {
+  EquipAttemptResult,
+  InventoryComparison,
+  InventoryItemSummary,
+  InventoryStatDelta,
+  InventoryStatId
+} from './inventory/state.ts';
 import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
@@ -164,6 +172,51 @@ function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly Equipped
   const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
   applyEffectiveStats(attendant, effective);
   return effective;
+}
+
+const INVENTORY_STAT_KEYS: readonly InventoryStatId[] = Object.freeze([
+  'health',
+  'attackDamage',
+  'attackRange',
+  'movementRange',
+  'defense',
+  'shield'
+]);
+
+function summarizeEquippedItem(item: EquippedItem | null | undefined): InventoryItemSummary | null {
+  if (!item) {
+    return null;
+  }
+  return {
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    rarity: item.rarity
+  } satisfies InventoryItemSummary;
+}
+
+function resolveStatValue(block: SaunojaStatBlock, key: InventoryStatId): number {
+  const value = block[key as keyof SaunojaStatBlock];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.round(value as number);
+  }
+  return 0;
+}
+
+function computeInventoryStatDeltas(
+  before: SaunojaStatBlock,
+  after: SaunojaStatBlock
+): InventoryStatDelta[] {
+  const deltas: InventoryStatDelta[] = [];
+  for (const key of INVENTORY_STAT_KEYS) {
+    const next = resolveStatValue(after, key);
+    const prev = resolveStatValue(before, key);
+    const delta = next - prev;
+    if (delta !== 0) {
+      deltas.push({ stat: key, delta });
+    }
+  }
+  return deltas;
 }
 
 function updateBaseStatsFromUnit(attendant: Saunoja, unit: Unit | null): void {
@@ -771,9 +824,22 @@ const { update: updateTopbar, dispose: disposeTopbar } = setupTopbar(
     }
   }
 );
+function getSelectedInventoryContext(): InventoryComparisonContext | null {
+  const selected = saunojas.find((unit) => unit.selected) ?? null;
+  if (!selected) {
+    return null;
+  }
+  return {
+    baseStats: { ...selected.baseStats },
+    loadout: loadoutItems(selected.equipment),
+    currentStats: { ...selected.effectiveStats }
+  } satisfies InventoryComparisonContext;
+}
+
 const inventoryHud = setupInventoryHud(inventory, {
   getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-  onEquip: (unitId, item) => equipItemToSaunoja(unitId, item)
+  getComparisonContext: () => getSelectedInventoryContext(),
+  onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item)
 });
 function initializeRightPanel(): void {
   if (disposeRightPanel) {
@@ -924,21 +990,30 @@ export function handleCanvasClick(world: PixelCoord): void {
   draw();
 }
 
-function equipItemToSaunoja(unitId: string, item: SaunojaItem): boolean {
+function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
   const attendant = saunojas.find((unit) => unit.id === unitId);
   if (!attendant) {
-    return false;
+    return { success: false, reason: 'unit-missing' } satisfies EquipAttemptResult;
   }
+  const beforeLoadout = loadoutItems(attendant.equipment);
+  const beforeStats = applyEquipment(attendant.baseStats, beforeLoadout);
   const outcome = equipLoadout(attendant, item);
   if (!outcome.success) {
-    return false;
+    return { success: false, reason: outcome.reason } satisfies EquipAttemptResult;
   }
   const effective = recomputeEffectiveStats(attendant, outcome.loadout);
   eventBus.emit('unit:stats:changed', { unitId: attendant.id, stats: effective });
   eventBus.emit('inventoryChanged', {});
   saveUnits();
   updateRosterDisplay();
-  return true;
+  const previous = beforeLoadout.find((entry) => entry.slot === outcome.slot) ?? null;
+  const comparison: InventoryComparison = {
+    slot: outcome.slot,
+    previous: summarizeEquippedItem(previous),
+    next: summarizeEquippedItem(outcome.item ?? null),
+    deltas: computeInventoryStatDeltas(beforeStats, effective)
+  } satisfies InventoryComparison;
+  return { success: true, comparison } satisfies EquipAttemptResult;
 }
 
 function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaItem | null {
