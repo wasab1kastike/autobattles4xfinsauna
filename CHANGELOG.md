@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Redeploy the GitHub Pages mirror from commit `23cc93a` so `docs/index.html`
+  references the freshly generated hashed bundle and the live build badge stays
+  aligned with the latest production assets.
 - Encapsulate NG+ progression in `src/progression/ngplus.ts`, persist run seeds,
   levels, and unlock slots through `GameState`, wire the modifiers into economy
   upkeep, reinforcement slots, enemy aggression, and elite loot odds, and cover
