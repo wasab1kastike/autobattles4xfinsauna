@@ -449,12 +449,16 @@ export function setupTopbar(
 
   const deltaTimers: Partial<Record<Resource, ReturnType<typeof setTimeout>>> = {};
 
-  function formatValue(resource: Resource, total: number): string {
+  function normalizeResourceTotal(resource: Resource, total: number): number {
     const safeTotal = Number.isFinite(total) ? total : 0;
     if (resource === Resource.SAUNA_BEER) {
-      return numberFormatter.format(Math.max(0, Math.floor(safeTotal)));
+      return Math.trunc(safeTotal);
     }
-    return numberFormatter.format(Math.max(0, Math.round(safeTotal)));
+    return Math.max(0, Math.round(safeTotal));
+  }
+
+  function formatValue(resource: Resource, total: number): string {
+    return numberFormatter.format(normalizeResourceTotal(resource, total));
   }
 
   function formatDelta(resource: Resource, amount: number): string {
@@ -491,8 +495,12 @@ export function setupTopbar(
       return;
     }
 
+    const normalizedTotal = normalizeResourceTotal(resource, total);
     const formattedValue = formatValue(resource, total);
     badge.value.textContent = formattedValue;
+
+    const isNegativeBalance = resource === Resource.SAUNA_BEER && normalizedTotal < 0;
+    badge.container.classList.toggle('topbar-badge--debt', isNegativeBalance);
 
     if (amount !== 0) {
       badge.delta.textContent = formatDelta(resource, amount);
@@ -514,10 +522,25 @@ export function setupTopbar(
     }
 
     const announcement = describeDelta(resource, amount);
-    const labelParts = [
-      `${badge.label} ${formattedValue}`,
-      announcement
-    ].filter(Boolean);
+    const labelParts = [`${badge.label} ${formattedValue}`];
+
+    if (isNegativeBalance) {
+      const magnitude = numberFormatter.format(Math.abs(normalizedTotal));
+      const units = resourceUnits[resource];
+      if (units) {
+        const unitLabel = Math.abs(normalizedTotal) === 1 ? units.singular : units.plural;
+        const needsUnit = unitLabel && unitLabel !== resourceNames[resource];
+        labelParts.push(
+          needsUnit ? `Debt of ${magnitude} ${unitLabel}` : `Debt of ${magnitude}`
+        );
+      } else {
+        labelParts.push(`Debt of ${magnitude}`);
+      }
+    }
+
+    if (announcement) {
+      labelParts.push(announcement);
+    }
     badge.container.setAttribute('aria-label', labelParts.join(' — '));
   }
 

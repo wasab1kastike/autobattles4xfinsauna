@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Surface sauna beer debt in the HUD by letting negative totals render, tagging
+  the resource badge for debt styling, enriching the aria-label messaging, and
+  covering the regression with a Vitest DOM test.
 - Polish battlefield unit rendering by cataloguing sprite metadata in
   `src/render/units/sprite_map.ts`, introducing snapped placement helpers and
   zoom utilities, wiring the renderer and Saunoja portraits through them, and
