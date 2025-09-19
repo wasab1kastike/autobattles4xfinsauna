@@ -2,12 +2,8 @@
 
 ## Unreleased
 
-- Add a polished sauna roster cap control that persists player preferences,
-  respects NG+ unlock ceilings down to a zero-cap option, threads the limit
-  through the economy tick and spawn helper, and covers the behaviour with
-  new Vitest suites plus storage sanitation tests.
-- Surface sauna beer debt in the HUD by letting negative totals render, tagging
-  the resource badge for debt styling, enriching the aria-label messaging, and
+p resolution with new Vitest assertions.
+
 - Surface sauna beer debt in the HUD by letting negative totals render, tagging
   the resource badge for debt styling, enriching the aria-label messaging, and
   covering the regression with a Vitest DOM test.
