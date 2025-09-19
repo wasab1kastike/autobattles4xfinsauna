@@ -1,6 +1,8 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import { generateSaunojaName } from '../data/names.ts';
 import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
+import { createLoadoutFromItems, loadoutToItems } from '../items/equip.ts';
+import type { EquipmentMap } from '../items/types.ts';
 
 export type SaunojaItemRarity =
   | 'common'
@@ -44,6 +46,16 @@ export interface SaunojaModifier {
   readonly source?: string;
 }
 
+export interface SaunojaStatBlock {
+  health: number;
+  attackDamage: number;
+  attackRange: number;
+  movementRange: number;
+  defense?: number;
+  shield?: number;
+  visionRange?: number;
+}
+
 export interface Saunoja {
   /** Unique identifier used to reference the unit. */
   id: string;
@@ -73,6 +85,12 @@ export interface Saunoja {
   selected: boolean;
   /** Loadout items currently equipped by the Saunoja. */
   items: SaunojaItem[];
+  /** Base combat stats without equipment modifiers applied. */
+  baseStats: SaunojaStatBlock;
+  /** Effective combat stats including equipment modifiers. */
+  effectiveStats: SaunojaStatBlock;
+  /** Mapping of equipment slots to their current items. */
+  equipment: EquipmentMap;
   /** Active modifiers applied to the Saunoja. */
   modifiers: SaunojaModifier[];
   /** Optional keyword-driven combat hooks. */
@@ -96,6 +114,9 @@ export interface SaunojaInit {
   lastHitAt?: number;
   selected?: boolean;
   items?: ReadonlyArray<unknown>;
+  baseStats?: unknown;
+  effectiveStats?: unknown;
+  equipment?: unknown;
   modifiers?: ReadonlyArray<unknown>;
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
@@ -109,8 +130,77 @@ export const SAUNOJA_UPKEEP_MIN = 0;
 export const SAUNOJA_UPKEEP_MAX = 10;
 export const SAUNOJA_DEFAULT_UPKEEP = 1;
 
+const DEFAULT_STATS: SaunojaStatBlock = {
+  health: DEFAULT_MAX_HP,
+  attackDamage: 4,
+  attackRange: 1,
+  movementRange: 1,
+  defense: 0,
+  shield: 0
+};
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function resolveStatValue(source: unknown, fallback: number, min: number): number {
+  const value = typeof source === 'number' && Number.isFinite(source) ? source : fallback;
+  return Math.max(min, value);
+}
+
+function resolveOptionalStat(
+  source: unknown,
+  fallback?: number,
+  min = 0
+): number | undefined {
+  if (typeof source === 'number' && Number.isFinite(source)) {
+    return Math.max(min, source);
+  }
+  if (typeof fallback === 'number' && Number.isFinite(fallback)) {
+    return Math.max(min, fallback);
+  }
+  return undefined;
+}
+
+function sanitizeStatBlock(source: unknown, fallback: SaunojaStatBlock): SaunojaStatBlock {
+  if (!source || typeof source !== 'object') {
+    return { ...fallback } satisfies SaunojaStatBlock;
+  }
+  const data = source as Record<string, unknown>;
+  const health = resolveStatValue(data.health, fallback.health, 1);
+  const attackDamage = resolveStatValue(data.attackDamage, fallback.attackDamage, 0);
+  const attackRange = resolveStatValue(data.attackRange, fallback.attackRange, 0);
+  const movementRange = resolveStatValue(data.movementRange, fallback.movementRange, 0);
+  const defense = resolveOptionalStat(data.defense, fallback.defense, 0);
+  const shield = resolveOptionalStat(data.shield, fallback.shield, 0);
+  const visionRange = resolveOptionalStat(data.visionRange, fallback.visionRange, 0);
+  return {
+    health,
+    attackDamage,
+    attackRange,
+    movementRange,
+    defense,
+    shield,
+    visionRange
+  } satisfies SaunojaStatBlock;
+}
+
+function sanitizeEquipment(source: unknown, fallbackItems: SaunojaItem[]): EquipmentMap {
+  if (!source || typeof source !== 'object') {
+    return createLoadoutFromItems(fallbackItems);
+  }
+  const entries = source as Record<string, unknown>;
+  const items: SaunojaItem[] = [];
+  for (const value of Object.values(entries)) {
+    const item = sanitizeItem(value);
+    if (item) {
+      items.push(item);
+    }
+  }
+  if (items.length === 0) {
+    return createLoadoutFromItems(fallbackItems);
+  }
+  return createLoadoutFromItems(items);
 }
 
 function sanitizeItem(entry: unknown): SaunojaItem | null {
@@ -291,23 +381,74 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const sanitizedItems = sanitizeItems(items);
   const sanitizedModifiers = sanitizeModifiers(modifiers);
 
+  const equipment = sanitizeEquipment(init.equipment, sanitizedItems);
+  const normalizedItems = loadoutToItems(equipment);
+
+  const baseFallback: SaunojaStatBlock = {
+    ...DEFAULT_STATS,
+    health: normalizedMaxHp,
+    defense: clampedDefense ?? DEFAULT_STATS.defense,
+    shield: DEFAULT_STATS.shield
+  } satisfies SaunojaStatBlock;
+  const baseStats = sanitizeStatBlock(init.baseStats, baseFallback);
+
+  const effectiveFallback: SaunojaStatBlock = {
+    ...baseStats,
+    health: normalizedMaxHp,
+    defense: clampedDefense ?? baseStats.defense,
+    shield: clampedShield
+  } satisfies SaunojaStatBlock;
+  const effectiveStats = sanitizeStatBlock(init.effectiveStats, effectiveFallback);
+
+  const resolvedMaxHp = Math.max(1, effectiveStats.health);
+  const resolvedHp = clamp(clampedHp, 0, resolvedMaxHp);
+  const resolvedDefense =
+    typeof effectiveStats.defense === 'number'
+      ? Math.max(0, effectiveStats.defense)
+      : clampedDefense ?? undefined;
+  const resolvedShield =
+    typeof effectiveStats.shield === 'number'
+      ? Math.max(0, effectiveStats.shield)
+      : clampedShield;
+
+  const resolvedBase: SaunojaStatBlock = {
+    ...baseStats,
+    health: Math.max(1, baseStats.health),
+    defense:
+      typeof baseStats.defense === 'number'
+        ? Math.max(0, baseStats.defense)
+        : clampedDefense ?? undefined,
+    shield:
+      typeof baseStats.shield === 'number' ? Math.max(0, baseStats.shield) : DEFAULT_STATS.shield
+  } satisfies SaunojaStatBlock;
+
+  const resolvedEffective: SaunojaStatBlock = {
+    ...effectiveStats,
+    health: resolvedMaxHp,
+    defense: resolvedDefense,
+    shield: resolvedShield
+  } satisfies SaunojaStatBlock;
+
   const resolvedName = resolveSaunojaName(name);
 
   return {
     id,
     name: resolvedName,
     coord: { q: coord.q, r: coord.r },
-    maxHp: normalizedMaxHp,
-    hp: clampedHp,
-    defense: clampedDefense,
-    shield: clampedShield,
+    maxHp: resolvedMaxHp,
+    hp: resolvedHp,
+    defense: resolvedDefense,
+    shield: resolvedShield,
     steam: clampedSteam,
     traits: [...sanitizedTraits],
     upkeep: clampedUpkeep,
     xp: clampedXp,
     lastHitAt: clampedLastHitAt,
     selected,
-    items: sanitizedItems,
+    items: normalizedItems,
+    baseStats: resolvedBase,
+    effectiveStats: resolvedEffective,
+    equipment,
     modifiers: sanitizedModifiers,
     combatKeywords,
     combatHooks
