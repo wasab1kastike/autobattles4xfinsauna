@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Ensure the seeded sauna attendant starts with zero upkeep by explicitly
+  setting the roster seed cost to free, exporting test helpers, and covering the
+  persistence plus upkeep resolution with new Vitest assertions.
 - Surface sauna beer debt in the HUD by letting negative totals render, tagging
   the resource badge for debt styling, enriching the aria-label messaging, and
   covering the regression with a Vitest DOM test.
