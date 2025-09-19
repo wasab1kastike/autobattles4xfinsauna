@@ -21,6 +21,8 @@ with cinematic UI flourishes.
 - **Glass HUD overlays** (resource bar, build badge, and right-panel cards)
   are layered over the canvas with high-end gradients, blur, and accessible
   aria labels.
+- **NG+ progression end screen** tallies liberated strongholds, roster attrition,
+  and resource rewards in a glassmorphism overlay that invites the next prestige run.
 - **Immersive ambience** crossfades a sauna-and-forest soundscape through Web
   Audio, with top-bar controls that remember volume, honor the mute toggle, and
   respect reduced-motion preferences.
@@ -56,6 +58,8 @@ with cinematic UI flourishes.
 6. **Review events and policies** from the right panel. Apply policies when you
    have the gold, acknowledge events to clear the queue, and scan the log for a
    curated history of recent actions.
+7. **Break the siege** to trigger the end screen—inspect stronghold progress,
+   harvest your rewards, and launch straight into the next NG+ run.
 
 ## Local Development
 

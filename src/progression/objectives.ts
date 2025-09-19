@@ -1,0 +1,548 @@
+import { GameState, Resource } from '../core/GameState.ts';
+import type { HexMap } from '../hexmap.ts';
+import type { BuildingType } from '../hex/HexTile.ts';
+import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { HexTile } from '../hex/HexTile.ts';
+import { eventBus } from '../events';
+
+export type ObjectiveOutcome = 'win' | 'lose';
+
+export type ObjectiveCause = 'strongholds' | 'rosterWipe' | 'bankruptcy';
+
+export interface StrongholdProgress {
+  total: number;
+  destroyed: number;
+  remaining: number;
+}
+
+export interface RosterProgress {
+  active: number;
+  totalDeaths: number;
+  wipeSince: number | null;
+  wipeDurationMs: number;
+}
+
+export interface EconomyProgress {
+  beer: number;
+  worstBeer: number;
+  bankruptSince: number | null;
+  bankruptDurationMs: number;
+}
+
+export interface ObjectiveProgress {
+  strongholds: StrongholdProgress;
+  roster: RosterProgress;
+  economy: EconomyProgress;
+  startedAt: number;
+}
+
+export interface ResourceSummary {
+  readonly final: number;
+  readonly delta: number;
+}
+
+export interface ObjectiveRewards {
+  resources: Record<Resource, ResourceSummary>;
+}
+
+export interface ObjectiveResolution {
+  outcome: ObjectiveOutcome;
+  cause: ObjectiveCause;
+  timestamp: number;
+  durationMs: number;
+  summary: ObjectiveProgress;
+  rewards: ObjectiveRewards;
+}
+
+export type ObjectiveProgressListener = (progress: ObjectiveProgress) => void;
+export type ObjectiveResolutionListener = (resolution: ObjectiveResolution) => void;
+
+export interface ObjectiveTracker {
+  onProgress(listener: ObjectiveProgressListener): void;
+  offProgress(listener: ObjectiveProgressListener): void;
+  onResolution(listener: ObjectiveResolutionListener): void;
+  offResolution(listener: ObjectiveResolutionListener): void;
+  getProgress(): ObjectiveProgress;
+  dispose(): void;
+}
+
+export interface ObjectiveTrackerOptions {
+  state: GameState;
+  map: HexMap;
+  /**
+   * Function that returns the current roster count, including benched attendants.
+   * The tracker calls this lazily when roster-affecting events fire.
+   */
+  getRosterCount: () => number;
+  /** Override the building types considered strongholds (defaults to `city`). */
+  strongholdTypes?: readonly BuildingType[];
+  /** Delay (ms) before a roster wipe causes defeat. */
+  rosterWipeGraceMs?: number;
+  /** Delay (ms) before upkeep bankruptcy causes defeat. */
+  bankruptcyGraceMs?: number;
+  /** Custom time source for testing. Defaults to `performance.now` / `Date.now`. */
+  timeSource?: () => number;
+}
+
+const DEFAULT_STRONGHOLDS: readonly BuildingType[] = ['city'];
+const DEFAULT_ROSTER_WIPE_GRACE_MS = 10_000;
+const DEFAULT_BANKRUPTCY_GRACE_MS = 12_000;
+const NG_PLUS_STORAGE_KEY = 'progression:ngPlusLevel';
+
+function now(): number {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
+}
+
+function cloneProgress(progress: ObjectiveProgress): ObjectiveProgress {
+  return Object.freeze({
+    strongholds: { ...progress.strongholds },
+    roster: { ...progress.roster },
+    economy: { ...progress.economy },
+    startedAt: progress.startedAt
+  });
+}
+
+function captureResources(state: GameState): Record<Resource, number> {
+  const snapshot: Record<Resource, number> = {
+    [Resource.SAUNA_BEER]: 0,
+    [Resource.SAUNAKUNNIA]: 0,
+    [Resource.SISU]: 0
+  };
+  (Object.values(Resource) as Resource[]).forEach((res) => {
+    snapshot[res] = state.getResource(res);
+  });
+  return snapshot;
+}
+
+function storageOrNull(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return window.localStorage ?? null;
+  } catch (error) {
+    console.warn('Local storage unavailable for NG+ progression', error);
+    return null;
+  }
+}
+
+class ObjectiveTrackerImpl implements ObjectiveTracker {
+  private readonly timeSource: () => number;
+  private readonly state: GameState;
+  private readonly map: HexMap;
+  private readonly getRosterCount: () => number;
+  private readonly strongholdTypes: Set<BuildingType>;
+  private readonly rosterGraceMs: number;
+  private readonly bankruptcyGraceMs: number;
+  private readonly progress: ObjectiveProgress;
+  private readonly startResources: Record<Resource, number>;
+  private readonly strongholds = new Map<string, { alive: boolean }>();
+  private readonly progressListeners = new Set<ObjectiveProgressListener>();
+  private readonly resolutionListeners = new Set<ObjectiveResolutionListener>();
+  private mapDisposer: (() => void) | null = null;
+  private rosterTimeout: ReturnType<typeof setTimeout> | null = null;
+  private bankruptcyTimeout: ReturnType<typeof setTimeout> | null = null;
+  private bankruptSince: number | null = null;
+  private wipeSince: number | null = null;
+  private resolution: ObjectiveResolution | null = null;
+  private disposed = false;
+
+  constructor(options: ObjectiveTrackerOptions) {
+    this.timeSource = typeof options.timeSource === 'function' ? options.timeSource : now;
+    this.state = options.state;
+    this.map = options.map;
+    this.getRosterCount = options.getRosterCount;
+    const strongholdTypes = options.strongholdTypes?.length
+      ? options.strongholdTypes
+      : DEFAULT_STRONGHOLDS;
+    this.strongholdTypes = new Set(strongholdTypes);
+    this.rosterGraceMs = Math.max(0, options.rosterWipeGraceMs ?? DEFAULT_ROSTER_WIPE_GRACE_MS);
+    this.bankruptcyGraceMs = Math.max(
+      0,
+      options.bankruptcyGraceMs ?? DEFAULT_BANKRUPTCY_GRACE_MS
+    );
+    this.startResources = captureResources(this.state);
+
+    const initialBeer = this.state.getResource(Resource.SAUNA_BEER);
+    const rosterCount = Math.max(0, Math.round(this.getRosterCount())) || 0;
+
+    this.progress = {
+      strongholds: { total: 0, destroyed: 0, remaining: 0 },
+      roster: { active: rosterCount, totalDeaths: 0, wipeSince: null, wipeDurationMs: 0 },
+      economy: {
+        beer: initialBeer,
+        worstBeer: initialBeer,
+        bankruptSince: null,
+        bankruptDurationMs: 0
+      },
+      startedAt: this.timeSource()
+    } satisfies ObjectiveProgress;
+
+    this.bootstrapStrongholds();
+    this.attachMapListener();
+    this.attachEventListeners();
+    this.emitProgress();
+  }
+
+  onProgress(listener: ObjectiveProgressListener): void {
+    this.progressListeners.add(listener);
+  }
+
+  offProgress(listener: ObjectiveProgressListener): void {
+    this.progressListeners.delete(listener);
+  }
+
+  onResolution(listener: ObjectiveResolutionListener): void {
+    if (this.resolution) {
+      listener(this.resolution);
+      return;
+    }
+    this.resolutionListeners.add(listener);
+  }
+
+  offResolution(listener: ObjectiveResolutionListener): void {
+    this.resolutionListeners.delete(listener);
+  }
+
+  getProgress(): ObjectiveProgress {
+    return cloneProgress(this.progress);
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.clearRosterTimer();
+    this.clearBankruptcyTimer();
+    if (this.mapDisposer) {
+      try {
+        this.mapDisposer();
+      } catch (error) {
+        console.warn('Failed to detach map listener', error);
+      }
+      this.mapDisposer = null;
+    }
+    eventBus.off('unitDied', this.handleUnitDied);
+    eventBus.off('unitSpawned', this.handleUnitSpawned);
+    eventBus.off('resourceChanged', this.handleResourceChanged);
+  }
+
+  private bootstrapStrongholds(): void {
+    this.map.forEachTile((tile, coord) => {
+      if (this.isStronghold(tile.building)) {
+        const key = this.coordKey(coord);
+        this.strongholds.set(key, { alive: true });
+      }
+    });
+    this.updateStrongholdTotals();
+  }
+
+  private attachMapListener(): void {
+    this.mapDisposer = this.map.addTileChangeListener((coord: AxialCoord, tile: HexTile, change) => {
+      if (change !== 'building' && change !== 'created') {
+        return;
+      }
+      const key = this.coordKey(coord);
+      const entry = this.strongholds.get(key);
+      const isStrongholdNow = this.isStronghold(tile.building);
+      if (isStrongholdNow) {
+        if (!entry) {
+          this.strongholds.set(key, { alive: true });
+        } else if (!entry.alive) {
+          entry.alive = true;
+        }
+      } else if (entry?.alive) {
+        entry.alive = false;
+      }
+      this.updateStrongholdTotals();
+      this.emitProgress();
+      this.evaluateResolution();
+    });
+  }
+
+  private attachEventListeners(): void {
+    eventBus.on('unitDied', this.handleUnitDied);
+    eventBus.on('unitSpawned', this.handleUnitSpawned);
+    eventBus.on('resourceChanged', this.handleResourceChanged);
+  }
+
+  private readonly handleUnitDied = ({ unitFaction }: { unitFaction: string }): void => {
+    if (unitFaction !== 'player') {
+      return;
+    }
+    this.progress.roster.totalDeaths += 1;
+    this.refreshRosterStatus();
+    this.emitProgress();
+    this.evaluateResolution();
+  };
+
+  private readonly handleUnitSpawned = ({ unit }: { unit: Unit }): void => {
+    if (unit.faction !== 'player') {
+      return;
+    }
+    this.refreshRosterStatus();
+    this.emitProgress();
+  };
+
+  private readonly handleResourceChanged = ({
+    resource,
+    total
+  }: {
+    resource: Resource;
+    amount: number;
+    total: number;
+  }): void => {
+    if (resource !== Resource.SAUNA_BEER) {
+      return;
+    }
+    this.progress.economy.beer = total;
+    if (total < this.progress.economy.worstBeer) {
+      this.progress.economy.worstBeer = total;
+    }
+    if (total < 0) {
+      if (this.bankruptSince === null) {
+        this.bankruptSince = this.timeSource();
+        this.progress.economy.bankruptSince = this.bankruptSince;
+        this.startBankruptcyTimer();
+      }
+    } else {
+      this.updateBankruptcyDuration();
+      this.bankruptSince = null;
+      this.progress.economy.bankruptSince = null;
+      this.clearBankruptcyTimer();
+    }
+    this.emitProgress();
+  };
+
+  private startBankruptcyTimer(): void {
+    if (this.bankruptcyTimeout !== null) {
+      return;
+    }
+    if (this.bankruptcyGraceMs <= 0) {
+      this.resolve('lose', 'bankruptcy');
+      return;
+    }
+    this.bankruptcyTimeout = setTimeout(() => {
+      this.updateBankruptcyDuration();
+      this.resolve('lose', 'bankruptcy');
+    }, this.bankruptcyGraceMs);
+  }
+
+  private clearBankruptcyTimer(): void {
+    if (this.bankruptcyTimeout !== null) {
+      clearTimeout(this.bankruptcyTimeout);
+      this.bankruptcyTimeout = null;
+    }
+  }
+
+  private startRosterTimer(): void {
+    if (this.rosterTimeout !== null) {
+      return;
+    }
+    if (this.rosterGraceMs <= 0) {
+      this.resolve('lose', 'rosterWipe');
+      return;
+    }
+    this.rosterTimeout = setTimeout(() => {
+      this.updateRosterDuration();
+      this.resolve('lose', 'rosterWipe');
+    }, this.rosterGraceMs);
+  }
+
+  private clearRosterTimer(): void {
+    if (this.rosterTimeout !== null) {
+      clearTimeout(this.rosterTimeout);
+      this.rosterTimeout = null;
+    }
+  }
+
+  private updateStrongholdTotals(): void {
+    const total = this.strongholds.size;
+    let alive = 0;
+    for (const entry of this.strongholds.values()) {
+      if (entry.alive) {
+        alive += 1;
+      }
+    }
+    this.progress.strongholds.total = total;
+    this.progress.strongholds.remaining = alive;
+    this.progress.strongholds.destroyed = Math.max(0, total - alive);
+  }
+
+  private refreshRosterStatus(): void {
+    const count = Math.max(0, Math.round(this.getRosterCount()));
+    this.progress.roster.active = count;
+    if (count <= 0) {
+      if (this.wipeSince === null) {
+        this.wipeSince = this.timeSource();
+        this.progress.roster.wipeSince = this.wipeSince;
+      }
+      this.startRosterTimer();
+    } else {
+      this.updateRosterDuration();
+      this.wipeSince = null;
+      this.progress.roster.wipeSince = null;
+      this.clearRosterTimer();
+    }
+  }
+
+  private updateBankruptcyDuration(): void {
+    if (this.bankruptSince === null) {
+      return;
+    }
+    const duration = this.timeSource() - this.bankruptSince;
+    if (duration > this.progress.economy.bankruptDurationMs) {
+      this.progress.economy.bankruptDurationMs = duration;
+    }
+  }
+
+  private updateRosterDuration(): void {
+    if (this.wipeSince === null) {
+      return;
+    }
+    const duration = this.timeSource() - this.wipeSince;
+    if (duration > this.progress.roster.wipeDurationMs) {
+      this.progress.roster.wipeDurationMs = duration;
+    }
+  }
+
+  private evaluateResolution(): void {
+    if (this.resolution) {
+      return;
+    }
+    if (
+      this.progress.strongholds.total > 0 &&
+      this.progress.strongholds.remaining === 0
+    ) {
+      this.resolve('win', 'strongholds');
+      return;
+    }
+    if (this.wipeSince !== null && this.rosterGraceMs <= 0) {
+      this.resolve('lose', 'rosterWipe');
+      return;
+    }
+    if (this.bankruptSince !== null && this.bankruptcyGraceMs <= 0) {
+      this.resolve('lose', 'bankruptcy');
+    }
+  }
+
+  private resolve(outcome: ObjectiveOutcome, cause: ObjectiveCause): void {
+    if (this.resolution) {
+      return;
+    }
+    this.updateRosterDuration();
+    this.updateBankruptcyDuration();
+    const timestamp = this.timeSource();
+    const durationMs = Math.max(0, timestamp - this.progress.startedAt);
+    const summary = cloneProgress({
+      ...this.progress,
+      roster: { ...this.progress.roster, wipeSince: this.wipeSince },
+      economy: { ...this.progress.economy, bankruptSince: this.bankruptSince }
+    });
+    const rewards = this.computeRewards();
+    this.resolution = Object.freeze({
+      outcome,
+      cause,
+      timestamp,
+      durationMs,
+      summary,
+      rewards
+    });
+    this.emitResolution();
+    this.dispose();
+  }
+
+  private emitProgress(): void {
+    const snapshot = this.getProgress();
+    for (const listener of this.progressListeners) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        console.error('Objective progress listener failed', error);
+      }
+    }
+  }
+
+  private emitResolution(): void {
+    if (!this.resolution) {
+      return;
+    }
+    const snapshot = this.resolution;
+    for (const listener of this.resolutionListeners) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        console.error('Objective resolution listener failed', error);
+      }
+    }
+    this.resolutionListeners.clear();
+  }
+
+  private computeRewards(): ObjectiveRewards {
+    const finalResources = captureResources(this.state);
+    const resources: Record<Resource, ResourceSummary> = {
+      [Resource.SAUNA_BEER]: {
+        final: finalResources[Resource.SAUNA_BEER],
+        delta: finalResources[Resource.SAUNA_BEER] - this.startResources[Resource.SAUNA_BEER]
+      },
+      [Resource.SAUNAKUNNIA]: {
+        final: finalResources[Resource.SAUNAKUNNIA],
+        delta:
+          finalResources[Resource.SAUNAKUNNIA] - this.startResources[Resource.SAUNAKUNNIA]
+      },
+      [Resource.SISU]: {
+        final: finalResources[Resource.SISU],
+        delta: finalResources[Resource.SISU] - this.startResources[Resource.SISU]
+      }
+    };
+    return { resources } satisfies ObjectiveRewards;
+  }
+
+  private coordKey(coord: AxialCoord): string {
+    return `${coord.q},${coord.r}`;
+  }
+
+  private isStronghold(building: BuildingType | null): boolean {
+    if (!building) {
+      return false;
+    }
+    return this.strongholdTypes.has(building);
+  }
+}
+
+export function createObjectiveTracker(options: ObjectiveTrackerOptions): ObjectiveTracker {
+  return new ObjectiveTrackerImpl(options);
+}
+
+export function getNgPlusLevel(): number {
+  const storage = storageOrNull();
+  if (!storage) {
+    return 0;
+  }
+  const raw = storage.getItem(NG_PLUS_STORAGE_KEY);
+  if (!raw) {
+    return 0;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+export function advanceNgPlusLevel(): number {
+  const storage = storageOrNull();
+  if (!storage) {
+    return 0;
+  }
+  const next = getNgPlusLevel() + 1;
+  storage.setItem(NG_PLUS_STORAGE_KEY, String(next));
+  return next;
+}
+
+export function resetNgPlusLevel(): void {
+  const storage = storageOrNull();
+  storage?.removeItem(NG_PLUS_STORAGE_KEY);
+}
+
