@@ -18,7 +18,8 @@ async function initGame() {
   const game = await import('./game.ts');
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
   const resourceBar = document.getElementById('resource-bar') as HTMLElement;
-  game.setupGame(canvas, resourceBar);
+  const overlay = document.getElementById('ui-overlay') as HTMLElement;
+  game.setupGame(canvas, resourceBar, overlay);
   return { eventBus, ...game };
 }
 

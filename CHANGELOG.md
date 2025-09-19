@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Launch a battlefield feedback suite that emits glassy damage/heal floaters,
+  eases fatal fades, and jostles the canvas on major hits via
+  `src/ui/fx/Floater.tsx`, `src/render/unit_fx.ts`, and updated `game.ts`
+  wiring, all while honoring reduced-motion preferences and documenting the
+  new overlays
 - Layer a Web Audio sauna-and-forest ambience loop with seamless crossfades,
   surface a top-bar ambience toggle and volume slider that persist
   `audio_enabled`, sync with the master mute, honor reduced-motion
