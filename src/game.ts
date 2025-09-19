@@ -32,6 +32,12 @@ import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
 import {
+  createObjectiveTracker,
+  getNgPlusLevel,
+  advanceNgPlusLevel
+} from './progression/objectives.ts';
+import type { ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
+import {
   getSaunojaStorage,
   loadUnits as loadRosterFromStorage,
   saveUnits as persistRosterToStorage,
@@ -43,6 +49,7 @@ import {
   type RosterHudController,
   type RosterHudSummary
 } from './ui/rosterHUD.ts';
+import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -53,6 +60,8 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNAKUNNIA]: 'Saunakunnia',
   [Resource.SISU]: 'Sisu'
 };
+
+const currentNgPlusLevel = getNgPlusLevel();
 
 let canvas: HTMLCanvasElement | null = null;
 let saunojas: Saunoja[] = [];
@@ -71,6 +80,8 @@ let pendingRosterEntries: RosterEntry[] | null = null;
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
+let objectiveTracker: ObjectiveTracker | null = null;
+let endScreen: EndScreenController | null = null;
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
   pendingRosterRenderer = renderer;
@@ -397,6 +408,12 @@ function resolveUnitUpkeep(unit: Unit): number {
 const state = new GameState(1000);
 const inventory = new InventoryState();
 const restoredSave = state.load(map);
+if (!restoredSave && currentNgPlusLevel > 0) {
+  const bonusBeer = Math.round(75 * currentNgPlusLevel);
+  if (bonusBeer > 0) {
+    state.addResource(Resource.SAUNA_BEER, bonusBeer);
+  }
+}
 const sauna = createSauna({
   q: Math.floor(map.width / 2),
   r: Math.floor(map.height / 2)
@@ -411,7 +428,8 @@ const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
   }
   return unit ?? null;
 };
-const enemySpawner = new EnemySpawner();
+const enemySpawnerDifficulty = 1 + Math.max(0, currentNgPlusLevel) * 0.25;
+const enemySpawner = new EnemySpawner({ difficulty: enemySpawnerDifficulty });
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
@@ -443,6 +461,55 @@ const clock = new GameClock(1000, (deltaMs) => {
   }
   draw();
 });
+
+const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
+  if (running) {
+    running = false;
+  }
+  clock.stop();
+  if (animationFrameId !== null) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  draw();
+  const overlay = document.getElementById('ui-overlay');
+  if (!overlay) {
+    return;
+  }
+  if (endScreen) {
+    endScreen.destroy();
+    endScreen = null;
+  }
+  const controller = showEndScreen({
+    container: overlay,
+    resolution,
+    currentNgPlusLevel,
+    resourceLabels: RESOURCE_LABELS,
+    onNewRun: () => {
+      const nextLevel = advanceNgPlusLevel();
+      if (import.meta.env.DEV) {
+        console.debug('Advancing to NG+ run', { level: nextLevel });
+      }
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage?.removeItem?.('gameState');
+        }
+      } catch (error) {
+        console.warn('Failed to reset saved game state for NG+', error);
+      }
+      if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+        window.setTimeout(() => window.location.reload(), 75);
+      }
+    },
+    onDismiss: () => {
+      if (endScreen) {
+        endScreen.destroy();
+        endScreen = null;
+      }
+    }
+  });
+  endScreen = controller;
+};
 const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
 if (!hasActivePlayerUnit) {
   if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
@@ -495,6 +562,14 @@ if (import.meta.env.DEV) {
     coordinates: saunojas.map((unit) => ({ q: unit.coord.q, r: unit.coord.r }))
   });
 }
+objectiveTracker = createObjectiveTracker({
+  state,
+  map,
+  getRosterCount: getActiveRosterCount,
+  rosterWipeGraceMs: 8000,
+  bankruptcyGraceMs: 12000
+});
+objectiveTracker.onResolution(handleObjectiveResolution);
 const updateSaunaUI = setupSaunaUI(sauna);
 const { update: updateTopbar, dispose: disposeTopbar } = setupTopbar(
   state,
@@ -821,6 +896,12 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   running = false;
+  objectiveTracker?.dispose();
+  objectiveTracker = null;
+  if (endScreen) {
+    endScreen.destroy();
+    endScreen = null;
+  }
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
