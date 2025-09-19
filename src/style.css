@@ -393,6 +393,25 @@ body > #game-container {
   color: var(--color-warning);
 }
 
+.topbar-badge--debt {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-danger) 18%, transparent),
+      transparent
+    );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-danger) 32%, transparent);
+}
+
+.topbar-badge--debt .badge-label {
+  color: color-mix(in srgb, var(--color-danger) 58%, white 18%);
+}
+
+.topbar-badge--debt .badge-value {
+  color: color-mix(in srgb, var(--color-danger) 82%, white 12%);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--color-danger) 46%, transparent);
+}
+
 .badge-delta {
   position: absolute;
   top: -14px;
