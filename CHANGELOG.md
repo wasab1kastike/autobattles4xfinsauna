@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Move the unit module barrel exports into `src/unit/index.ts`, refreshing
+  import paths across the game and renderer to keep the public unit surface
+  stable while aligning with directory conventions.
 - Pace unit beer upkeep so the economy only deducts reserves every five
   seconds, matching the new simulation cadence and communicating the change to
   players.
