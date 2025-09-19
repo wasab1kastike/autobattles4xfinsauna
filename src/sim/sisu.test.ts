@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
-import { useSisuBurst, endSisuBurst, isSisuBurstActive } from './sisu.ts';
+import { useSisuBurst, endSisuBurst, isSisuBurstActive } from '../sisu/burst.ts';
 import { modifierRuntime } from '../mods/runtime.ts';
 import { Unit } from '../units/Unit.ts';
 import type { UnitStats } from '../unit/types.ts';
