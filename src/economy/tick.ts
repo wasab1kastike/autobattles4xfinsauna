@@ -23,6 +23,8 @@ export interface EconomyTickOptions {
   spawnBaseUnit: (coord: AxialCoord) => Unit | null;
   minUpkeepReserve?: number;
   maxSpawns?: number;
+  rosterCap?: number;
+  getRosterCount?: () => number;
 }
 
 export interface EconomyTickResult {
@@ -62,7 +64,9 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
     pickSpawnTile: options.pickSpawnTile,
     spawnUnit: options.spawnBaseUnit,
     minUpkeepReserve: options.minUpkeepReserve,
-    maxSpawns: options.maxSpawns
+    maxSpawns: options.maxSpawns,
+    rosterCap: options.rosterCap,
+    getRosterCount: options.getRosterCount
   });
 
   const cooldown = options.heat.getCooldownSeconds();

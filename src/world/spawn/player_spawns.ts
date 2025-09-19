@@ -18,6 +18,10 @@ export interface PlayerSpawnOptions {
   minUpkeepReserve?: number;
   /** Hard cap on spawns processed in a single tick. */
   maxSpawns?: number;
+  /** Active roster limit configured by the player and NG+ unlocks. */
+  rosterCap?: number;
+  /** Callback to read the number of active attendants on the field. */
+  getRosterCount?: () => number;
 }
 
 export interface PlayerSpawnResult {
@@ -27,6 +31,8 @@ export interface PlayerSpawnResult {
   blockedByUpkeep: number;
   /** Spawn attempts skipped because no valid tile was available. */
   blockedByPosition: number;
+  /** Spawn attempts skipped because the roster cap was reached. */
+  blockedByRoster: number;
   /** Spawn attempts that failed after acquiring a tile. */
   failedSpawns: number;
   /** Total heat vented because spawns were blocked. */
@@ -50,17 +56,33 @@ export function processPlayerSpawns(options: PlayerSpawnOptions): PlayerSpawnRes
   const reserveFallback = Math.max(FALLBACK_UPKEEP_RESERVE, SAUNOJA_UPKEEP_MIN);
   const minReserve = Math.max(0, sanitize(options.minUpkeepReserve ?? reserveFallback, reserveFallback));
   let available = Math.max(0, sanitize(options.availableUpkeep, 0));
-  const spawnLimit = Math.max(1, Math.floor(sanitize(maxSpawns ?? Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY)));
+  const spawnLimit = Math.max(
+    0,
+    Math.floor(sanitize(maxSpawns ?? Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY))
+  );
+  const rawRosterCap = sanitize(options.rosterCap ?? Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+  const rosterLimit = Number.isFinite(rawRosterCap)
+    ? Math.max(0, Math.floor(rawRosterCap))
+    : Number.POSITIVE_INFINITY;
+  const getRosterCount = typeof options.getRosterCount === 'function' ? options.getRosterCount : () => 0;
 
   let processed = 0;
   let ventedHeat = 0;
   let spawned = 0;
   let blockedByUpkeep = 0;
   let blockedByPosition = 0;
+  let blockedByRoster = 0;
   let failedSpawns = 0;
 
   while (heat.hasTriggerReady() && processed < spawnLimit) {
     processed += 1;
+
+    const rosterCount = Math.max(0, Math.floor(sanitize(getRosterCount() ?? 0, 0)));
+    if (rosterCount >= rosterLimit) {
+      blockedByRoster += 1;
+      ventedHeat += heat.vent(0.25);
+      break;
+    }
 
     if (available < minReserve) {
       blockedByUpkeep += 1;
@@ -97,6 +119,7 @@ export function processPlayerSpawns(options: PlayerSpawnOptions): PlayerSpawnRes
     spawned,
     blockedByUpkeep,
     blockedByPosition,
+    blockedByRoster,
     failedSpawns,
     ventedHeat,
     remainingUpkeep: available
