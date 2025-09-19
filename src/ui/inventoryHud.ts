@@ -227,6 +227,9 @@ export function setupInventoryHud(
       case 'item-equipped':
         showToast(`${event.item.name} equipped to the selected attendant.`, 'info');
         break;
+      case 'item-unequipped':
+        showToast(`${event.item.name} returned to the stash.`, 'info');
+        break;
       case 'item-discarded':
         showToast(`${event.item.name} discarded from the stash.`, 'warn');
         break;

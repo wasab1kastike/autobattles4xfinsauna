@@ -214,6 +214,23 @@ export class Unit {
     this.shield = value;
   }
 
+  updateStats(stats: UnitStats): void {
+    this.stats.attackDamage = stats.attackDamage;
+    this.stats.attackRange = stats.attackRange;
+    this.stats.movementRange = stats.movementRange;
+    if (typeof stats.defense === 'number' && Number.isFinite(stats.defense)) {
+      this.stats.defense = stats.defense;
+    } else {
+      delete this.stats.defense;
+    }
+    if (typeof stats.visionRange === 'number' && Number.isFinite(stats.visionRange)) {
+      this.stats.visionRange = stats.visionRange;
+    }
+    const newMax = Math.max(1, Math.round(stats.health));
+    this.maxHealth = newMax;
+    this.stats.health = Math.min(newMax, Math.max(0, this.stats.health));
+  }
+
   isImmortal(): boolean {
     return this.immortal;
   }

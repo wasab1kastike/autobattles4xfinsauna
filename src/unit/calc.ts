@@ -1,5 +1,7 @@
 import type { StatProgression, UnitArchetypeDefinition, UnitStats } from './types.ts';
 import type { RoundingMode } from './types.ts';
+import type { EquippedItem } from '../items/types.ts';
+import type { SaunojaStatBlock } from '../units/saunoja.ts';
 import { curveProgress, normalizeLevel } from './level.ts';
 
 function applyRounding(value: number, mode: RoundingMode = 'round'): number {
@@ -49,5 +51,66 @@ export function computeUnitStats(definition: UnitArchetypeDefinition, level?: nu
     base.visionRange = evaluateProgression(stats.visionRange, resolvedLevel);
   }
   return base;
+}
+
+function resolveBaseNumber(value?: number): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  return undefined;
+}
+
+export function applyEquipment(
+  base: SaunojaStatBlock,
+  loadout: readonly EquippedItem[]
+): SaunojaStatBlock {
+  let health = base.health;
+  let attackDamage = base.attackDamage;
+  let attackRange = base.attackRange;
+  let movementRange = base.movementRange;
+  let defense = resolveBaseNumber(base.defense);
+  let shield = resolveBaseNumber(base.shield);
+
+  for (const item of loadout) {
+    const stacks = Math.max(1, Math.round(item.quantity));
+    const mods = item.modifiers;
+    if (typeof mods.health === 'number') {
+      health += mods.health * stacks;
+    }
+    if (typeof mods.attackDamage === 'number') {
+      attackDamage += mods.attackDamage * stacks;
+    }
+    if (typeof mods.attackRange === 'number') {
+      attackRange += mods.attackRange * stacks;
+    }
+    if (typeof mods.movementRange === 'number') {
+      movementRange += mods.movementRange * stacks;
+    }
+    if (typeof mods.defense === 'number') {
+      defense = (defense ?? 0) + mods.defense * stacks;
+    }
+    if (typeof mods.shield === 'number') {
+      shield = (shield ?? 0) + mods.shield * stacks;
+    }
+  }
+
+  const result: SaunojaStatBlock = {
+    health: Math.max(1, Math.round(health)),
+    attackDamage: Math.max(0, Math.round(attackDamage)),
+    attackRange: Math.max(0, Math.round(attackRange)),
+    movementRange: Math.max(0, Math.round(movementRange))
+  } satisfies SaunojaStatBlock;
+
+  if (defense !== undefined) {
+    result.defense = Math.max(0, Math.round(defense));
+  }
+  if (shield !== undefined) {
+    result.shield = Math.max(0, Math.round(shield));
+  }
+  if (typeof base.visionRange === 'number' && Number.isFinite(base.visionRange)) {
+    result.visionRange = Math.max(0, Math.round(base.visionRange));
+  }
+
+  return result;
 }
 

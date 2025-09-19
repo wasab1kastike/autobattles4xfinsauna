@@ -32,6 +32,9 @@ describe('makeSaunoja', () => {
     expect(saunoja.traits).toEqual(['Stoic', 'Swift']);
     expect(saunoja.upkeep).toBe(4.5);
     expect(saunoja.xp).toBe(27);
+    expect(saunoja.baseStats.health).toBe(20);
+    expect(saunoja.effectiveStats.health).toBe(20);
+    expect(saunoja.equipment.weapon).toBeNull();
   });
 
   it('falls back to safe defaults for invalid data', () => {
@@ -57,6 +60,8 @@ describe('makeSaunoja', () => {
     expect(saunoja.traits).toEqual(['Brash', 'Focused']);
     expect(saunoja.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
     expect(saunoja.xp).toBe(0);
+    expect(saunoja.baseStats.health).toBe(1);
+    expect(saunoja.equipment.weapon).toBeNull();
     randomSpy.mockRestore();
   });
 
@@ -131,9 +136,10 @@ describe('makeSaunoja', () => {
         description: 'Ignites targets on hit',
         icon: '/assets/items/emberglass.svg',
         rarity: 'rare',
-        quantity: 3
+        quantity: 1
       }
     ]);
+    expect(saunoja.equipment.weapon?.id).toBe('emberglass-arrow');
     expect(saunoja.modifiers).toEqual([
       {
         id: 'barkskin-ritual',

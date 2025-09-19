@@ -1,5 +1,6 @@
 import type { Saunoja } from '../units/saunoja.ts';
 import { makeSaunoja } from '../units/saunoja.ts';
+import { EQUIPMENT_SLOT_IDS } from '../items/types.ts';
 
 export const SAUNOJA_STORAGE_KEY = 'autobattles:saunojas';
 
@@ -68,6 +69,9 @@ export function loadUnits(): Saunoja[] {
           xp: xpValue,
           selected: Boolean(data.selected),
           items: Array.isArray(data.items) ? data.items : undefined,
+          baseStats: data.baseStats,
+          effectiveStats: data.effectiveStats,
+          equipment: data.equipment,
           modifiers: Array.isArray(data.modifiers) ? data.modifiers : undefined
         })
       );
@@ -98,6 +102,52 @@ export function saveUnits(units: readonly Saunoja[]): void {
       upkeep: unit.upkeep,
       xp: unit.xp,
       selected: unit.selected,
+      baseStats: {
+        health: unit.baseStats.health,
+        attackDamage: unit.baseStats.attackDamage,
+        attackRange: unit.baseStats.attackRange,
+        movementRange: unit.baseStats.movementRange,
+        ...(typeof unit.baseStats.defense === 'number' && Number.isFinite(unit.baseStats.defense)
+          ? { defense: unit.baseStats.defense }
+          : {}),
+        ...(typeof unit.baseStats.shield === 'number' && Number.isFinite(unit.baseStats.shield)
+          ? { shield: unit.baseStats.shield }
+          : {}),
+        ...(typeof unit.baseStats.visionRange === 'number' && Number.isFinite(unit.baseStats.visionRange)
+          ? { visionRange: unit.baseStats.visionRange }
+          : {})
+      },
+      effectiveStats: {
+        health: unit.effectiveStats.health,
+        attackDamage: unit.effectiveStats.attackDamage,
+        attackRange: unit.effectiveStats.attackRange,
+        movementRange: unit.effectiveStats.movementRange,
+        ...(typeof unit.effectiveStats.defense === 'number' && Number.isFinite(unit.effectiveStats.defense)
+          ? { defense: unit.effectiveStats.defense }
+          : {}),
+        ...(typeof unit.effectiveStats.shield === 'number' && Number.isFinite(unit.effectiveStats.shield)
+          ? { shield: unit.effectiveStats.shield }
+          : {}),
+        ...(typeof unit.effectiveStats.visionRange === 'number' &&
+        Number.isFinite(unit.effectiveStats.visionRange)
+          ? { visionRange: unit.effectiveStats.visionRange }
+          : {})
+      },
+      equipment: EQUIPMENT_SLOT_IDS.reduce<Record<string, unknown>>((acc, slot) => {
+        const equipped = unit.equipment?.[slot] ?? null;
+        acc[slot] = equipped
+          ? {
+              id: equipped.id,
+              name: equipped.name,
+              description: equipped.description,
+              icon: equipped.icon,
+              rarity: equipped.rarity,
+              quantity: equipped.quantity,
+              slot: equipped.slot
+            }
+          : null;
+        return acc;
+      }, {}),
       items: unit.items.map((item) => ({
         id: item.id,
         name: item.name,

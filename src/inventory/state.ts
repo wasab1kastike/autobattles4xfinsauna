@@ -1,5 +1,6 @@
 import type { RolledLootItem } from '../loot/roll.ts';
 import type { SaunojaItem } from '../units/saunoja.ts';
+import type { EquipmentSlotId } from '../items/types.ts';
 
 export interface InventoryItem extends SaunojaItem {
   readonly acquiredAt: number;
@@ -20,6 +21,13 @@ export type InventoryEvent =
       readonly item: InventoryItem;
       readonly unitId: string;
       readonly fromStash: boolean;
+      readonly stashSize: number;
+    }
+  | {
+      readonly type: 'item-unequipped';
+      readonly item: InventoryItem;
+      readonly unitId: string;
+      readonly slot: EquipmentSlotId;
       readonly stashSize: number;
     }
   | {
@@ -298,6 +306,43 @@ export class InventoryState {
       item: removed,
       unitId,
       fromStash: true,
+      stashSize: this.stash.length
+    });
+    return true;
+  }
+
+  unequipToStash(
+    unitId: string,
+    slot: EquipmentSlotId,
+    unequip: (unitId: string, slot: EquipmentSlotId) => SaunojaItem | null | undefined
+  ): boolean {
+    if (this.stash.length >= this.maxStashSize) {
+      return false;
+    }
+    let removed: SaunojaItem | null = null;
+    try {
+      const result = unequip(unitId, slot);
+      removed = result ?? null;
+    } catch (error) {
+      console.warn('Failed to unequip item', { unitId, slot, error });
+      removed = null;
+    }
+    if (!removed) {
+      return false;
+    }
+    const timestamp = Math.max(0, Math.round(this.now()));
+    const entry = sanitizeItem(removed, timestamp);
+    this.stash.push(entry);
+    if (this.stash.length > this.maxStashSize) {
+      this.stash.splice(0, this.stash.length - this.maxStashSize);
+    }
+    this.persist();
+    this.emit({ type: 'stash-updated', stash: this.getStash() });
+    this.emit({
+      type: 'item-unequipped',
+      item: entry,
+      unitId,
+      slot,
       stashSize: this.stash.length
     });
     return true;

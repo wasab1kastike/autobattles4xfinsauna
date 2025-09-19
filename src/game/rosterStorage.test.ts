@@ -43,10 +43,10 @@ describe('rosterStorage', () => {
         upkeep: 9,
         items: [
           {
-            id: 'artifact-1',
-            name: 'Polished Banner',
-            description: 'A radiant standard gleaming with sauna steam.',
-            icon: 'icon-banner',
+            id: 'emberglass-arrow',
+            name: 'Emberglass Arrow',
+            description: 'Ignites targets on hit',
+            icon: '/assets/items/emberglass.svg',
             rarity: 'rare',
             quantity: 1
           }
@@ -79,7 +79,14 @@ describe('rosterStorage', () => {
     expect(unit.traits).toEqual(expect.arrayContaining(['Bold', 'Veteran']));
     expect(unit.upkeep).toBe(9);
     expect(unit.items).toHaveLength(1);
+    expect(unit.items[0]?.id).toBe('emberglass-arrow');
     expect(unit.modifiers).toHaveLength(1);
+    expect(unit.baseStats.health).toBeGreaterThan(0);
+    expect(unit.effectiveStats.health).toBeGreaterThan(0);
+    expect(Object.keys(unit.equipment)).toEqual(
+      expect.arrayContaining(['weapon', 'supply', 'focus', 'relic'])
+    );
+    expect(unit.equipment.weapon?.id).toBe('emberglass-arrow');
   });
 
   it('handles malformed storage payloads gracefully', () => {

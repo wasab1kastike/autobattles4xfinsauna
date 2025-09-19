@@ -4,6 +4,7 @@ import { ensureHudLayout } from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
+import type { EquipmentSlotId } from '../items/types.ts';
 
 export type { RosterEntry, RosterItem, RosterModifier, RosterStats } from './panels/RosterPanel.tsx';
 
@@ -19,6 +20,8 @@ const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 
 type RightPanelOptions = {
   onRosterSelect?: (unitId: string) => void;
   onRosterRendererReady?: (renderer: (entries: RosterEntry[]) => void) => void;
+  onRosterEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  onRosterUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
 };
 
 export function setupRightPanel(
@@ -393,7 +396,7 @@ export function setupRightPanel(
     Log: logTab
   };
 
-  const { onRosterSelect, onRosterRendererReady } = options;
+  const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
   for (const [name, section] of Object.entries(tabs)) {
     section.classList.add('panel-section', 'panel-section--scroll');
     section.dataset.tab = name;
@@ -430,7 +433,11 @@ export function setupRightPanel(
   }
 
   // --- Roster ---
-  const rosterPanel = createRosterPanel(rosterTab, { onSelect: onRosterSelect });
+  const rosterPanel = createRosterPanel(rosterTab, {
+    onSelect: onRosterSelect,
+    onEquipSlot: onRosterEquipSlot,
+    onUnequipSlot: onRosterUnequipSlot
+  });
 
   const renderRoster = (entries: RosterEntry[]): void => {
     rosterPanel.render(entries);

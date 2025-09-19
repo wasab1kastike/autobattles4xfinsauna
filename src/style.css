@@ -1445,6 +1445,93 @@ body > #game-container {
   border-top: 1px solid rgba(148, 163, 184, 0.16);
 }
 
+.panel-roster__slots {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-roster__slot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.65), rgba(15, 23, 42, 0.95));
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2), 0 18px 28px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(12px);
+}
+
+.panel-roster__slot-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel-roster__slot-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.78);
+}
+
+.panel-roster__slot-summary {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.panel-roster__slot-icons {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-roster__slot-modifiers {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.panel-roster__slot-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-roster__slot-action {
+  appearance: none;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(30, 41, 59, 0.6);
+  color: rgba(226, 232, 240, 0.92);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background var(--transition-snappy), transform var(--transition-snappy),
+    border-color var(--transition-snappy);
+}
+
+.panel-roster__slot-action:is(:hover, :focus-visible) {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.55);
+  transform: translateY(-1px);
+}
+
+.panel-roster__slot-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
+}
+
 .panel-roster__items,
 .panel-roster__mods {
   display: flex;
