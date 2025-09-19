@@ -1,5 +1,12 @@
 import { eventBus } from '../events';
 import { setMuted, isMuted } from '../audio/sfx.ts';
+import {
+  getState as getAmbienceState,
+  onStateChange as onAmbienceStateChange,
+  play as playAmbience,
+  setEnabled as setAmbienceEnabled,
+  setVolume as setAmbienceVolume
+} from '../audio/ambience.ts';
 import { GameState, Resource } from '../core/GameState.ts';
 import {
   isSisuBurstActive,
@@ -237,6 +244,120 @@ export function setupTopbar(
   renderMute();
   bar.appendChild(muteBtn);
 
+  const ambienceContainer = document.createElement('div');
+  ambienceContainer.className = 'topbar-ambience';
+
+  const ambienceHeader = document.createElement('div');
+  ambienceHeader.className = 'topbar-ambience__header';
+
+  const ambienceIcon = document.createElement('span');
+  ambienceIcon.className = 'topbar-ambience__icon';
+  ambienceIcon.textContent = '🌲';
+  ambienceIcon.setAttribute('aria-hidden', 'true');
+
+  const ambienceTitle = document.createElement('span');
+  ambienceTitle.className = 'topbar-ambience__title';
+  ambienceTitle.textContent = 'Sauna ambience';
+
+  const ambienceToggle = document.createElement('button');
+  ambienceToggle.type = 'button';
+  ambienceToggle.className = 'ambience-toggle';
+  ambienceToggle.setAttribute('role', 'switch');
+  ambienceToggle.setAttribute('aria-label', 'Toggle sauna ambience soundscape');
+
+  const ambienceToggleTrack = document.createElement('span');
+  ambienceToggleTrack.className = 'ambience-toggle__track';
+  const ambienceToggleThumb = document.createElement('span');
+  ambienceToggleThumb.className = 'ambience-toggle__thumb';
+  const ambienceToggleText = document.createElement('span');
+  ambienceToggleText.className = 'ambience-toggle__label';
+  ambienceToggle.append(ambienceToggleTrack, ambienceToggleThumb, ambienceToggleText);
+
+  ambienceHeader.append(ambienceIcon, ambienceTitle, ambienceToggle);
+
+  const sliderWrapper = document.createElement('div');
+  sliderWrapper.className = 'topbar-ambience__slider';
+
+  const sliderLabel = document.createElement('span');
+  sliderLabel.className = 'topbar-ambience__caption';
+  sliderLabel.textContent = 'Volume';
+
+  const sliderValue = document.createElement('span');
+  sliderValue.className = 'topbar-ambience__value';
+
+  const slider = document.createElement('input');
+  slider.type = 'range';
+  slider.min = '0';
+  slider.max = '100';
+  slider.step = '1';
+  slider.className = 'topbar-ambience__range';
+  slider.setAttribute('aria-label', 'Ambient volume');
+
+  sliderWrapper.append(sliderLabel, slider, sliderValue);
+
+  const ambienceStatus = document.createElement('p');
+  ambienceStatus.className = 'topbar-ambience__status';
+  ambienceStatus.setAttribute('aria-live', 'polite');
+
+  ambienceContainer.append(ambienceHeader, sliderWrapper, ambienceStatus);
+  bar.appendChild(ambienceContainer);
+
+  let ambienceState = getAmbienceState();
+
+  const renderAmbience = (state = ambienceState) => {
+    ambienceState = state;
+    const percent = Math.round(state.volume * 100);
+    slider.value = String(percent);
+    slider.title = `Ambient volume ${percent}%`;
+    slider.style.setProperty('--value', `${percent}`);
+    sliderValue.textContent = `${percent}%`;
+    slider.disabled = !state.enabled || state.globallyMuted;
+
+    ambienceToggle.setAttribute('aria-checked', state.enabled ? 'true' : 'false');
+    ambienceToggle.classList.toggle('is-on', state.enabled);
+    ambienceToggle.classList.toggle('is-muted', state.globallyMuted);
+    ambienceToggleText.textContent = state.enabled ? 'On' : 'Off';
+    ambienceToggle.title = state.enabled ? 'Disable sauna ambience' : 'Enable sauna ambience';
+
+    ambienceContainer.classList.toggle('is-off', !state.enabled);
+    ambienceContainer.classList.toggle('is-globally-muted', state.globallyMuted);
+
+    if (state.globallyMuted) {
+      ambienceStatus.textContent = 'Muted by master toggle';
+    } else if (!state.enabled) {
+      ambienceStatus.textContent = 'Ambience paused';
+    } else if (state.playing) {
+      ambienceStatus.textContent = 'Forest loop playing';
+    } else {
+      ambienceStatus.textContent = 'Ambience ready';
+    }
+  };
+
+  ambienceToggle.addEventListener('click', () => {
+    const nextEnabled = !ambienceState.enabled;
+    setAmbienceEnabled(nextEnabled);
+    ambienceState = getAmbienceState();
+    if (nextEnabled && !ambienceState.globallyMuted) {
+      void playAmbience();
+    }
+    renderAmbience(ambienceState);
+  });
+
+  slider.addEventListener('input', () => {
+    const value = slider.valueAsNumber / 100;
+    setAmbienceVolume(value);
+    ambienceState = getAmbienceState();
+    if (ambienceState.enabled && !ambienceState.globallyMuted) {
+      void playAmbience();
+    }
+    renderAmbience(ambienceState);
+  });
+
+  renderAmbience(ambienceState);
+  const disposeAmbienceListener = onAmbienceStateChange((state) => {
+    renderAmbience(state);
+  });
+
   function renderBurstStatus(remaining: number, status?: string): void {
     const seconds = Math.max(0, Math.ceil(remaining));
     burstTimer.container.style.display = 'block';
@@ -419,6 +540,7 @@ export function setupTopbar(
           clearTimeout(timer);
         }
       });
+      disposeAmbienceListener();
       bar.remove();
     }
   };
