@@ -2,6 +2,7 @@ export type HudLayout = {
   container: HTMLDivElement;
   actions: HTMLDivElement;
   side: HTMLDivElement;
+  mobileBar: HTMLDivElement;
 };
 
 export function ensureHudLayout(overlay: HTMLElement): HudLayout {
@@ -36,5 +37,15 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     actions.appendChild(buildMenu);
   }
 
-  return { container, actions, side };
+  let mobileBar = overlay.querySelector<HTMLDivElement>('.hud-mobile-bar__tray');
+  if (!mobileBar) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'hud-mobile-bar';
+    mobileBar = document.createElement('div');
+    mobileBar.className = 'hud-mobile-bar__tray';
+    wrapper.appendChild(mobileBar);
+    overlay.appendChild(wrapper);
+  }
+
+  return { container, actions, side, mobileBar };
 }
