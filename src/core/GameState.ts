@@ -8,6 +8,11 @@ import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
 import { markRevealed } from '../camera/autoFrame.ts';
 import { safeLoadJSON } from '../loader.ts';
+import {
+  createNgPlusState,
+  ensureNgPlusRunState,
+  type NgPlusState
+} from '../progression/ngplus.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -45,6 +50,7 @@ type SerializedState = {
   policies: string[];
   passiveGeneration: Record<Resource, number>;
   nightWorkSpeedMultiplier: number;
+  ngPlus?: NgPlusState;
 };
 
 export class GameState {
@@ -74,6 +80,9 @@ export class GameState {
   /** Modifier for work speed during night, affected by policies. */
   nightWorkSpeedMultiplier = 1;
 
+  /** Prestige modifiers for the current run. */
+  private ngPlus: NgPlusState = createNgPlusState();
+
   constructor(
     private readonly tickInterval: number,
     private readonly storageKey = 'gameState'
@@ -99,7 +108,8 @@ export class GameState {
       buildingPlacements: placements,
       policies: Array.from(this.policies),
       passiveGeneration: { ...this.passiveGeneration },
-      nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier
+      nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
+      ngPlus: this.ngPlus
     };
     localStorage.setItem(this.storageKey, JSON.stringify(serialized));
   }
@@ -140,6 +150,9 @@ export class GameState {
       });
     }
     this.lastSaved = data.lastSaved ?? Date.now();
+
+    const savedNgPlus = data.ngPlus ? createNgPlusState(data.ngPlus) : this.ngPlus;
+    this.ngPlus = ensureNgPlusRunState(savedNgPlus);
 
     // Reset derived policy state and repopulate applied policies from the save.
     this.policies = new Set();
@@ -309,5 +322,20 @@ export class GameState {
   /** Check if a policy has been applied. */
   hasPolicy(policy: string): boolean {
     return this.policies.has(policy);
+  }
+
+  /** Retrieve the sanitized NG+ state for the current run. */
+  getNgPlusState(): NgPlusState {
+    return { ...this.ngPlus };
+  }
+
+  /**
+   * Update the persisted NG+ state. The provided partial will be sanitized and
+   * merged with the current value before storage.
+   */
+  setNgPlusState(next: Partial<NgPlusState>): NgPlusState {
+    const merged = createNgPlusState({ ...this.ngPlus, ...next });
+    this.ngPlus = ensureNgPlusRunState(merged);
+    return this.ngPlus;
   }
 }

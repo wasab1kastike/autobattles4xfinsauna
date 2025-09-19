@@ -10,6 +10,8 @@ export interface SpawnBundleOptions {
   readonly addUnit: (unit: Unit) => void;
   readonly makeId?: () => string;
   readonly availableSlots: number;
+  readonly eliteOdds?: number;
+  readonly random?: () => number;
 }
 
 export interface SpawnBundleResult {
@@ -38,12 +40,18 @@ export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult
   }
 
   const makeId = options.makeId ?? defaultIdFactory;
+  const random = typeof options.random === 'function' ? options.random : Math.random;
+  const eliteOdds = Math.max(
+    0,
+    Math.min(0.95, typeof options.eliteOdds === 'number' ? options.eliteOdds : 0)
+  );
 
   for (const spec of options.bundle.units) {
     const iterations = Math.min(spec.quantity, slots);
     const unitType = spec.unit as UnitType;
-    const spawnOptions = buildSpawnOptions(spec.level);
     for (let index = 0; index < iterations; index += 1) {
+      const levelBoost = random() < eliteOdds ? 1 : 0;
+      const spawnOptions = buildSpawnOptions(Math.max(1, spec.level + levelBoost));
       const coord = options.pickEdge();
       if (!coord) {
         return {
