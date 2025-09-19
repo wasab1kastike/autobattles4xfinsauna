@@ -3,7 +3,7 @@ import type { GameState } from '../core/GameState.ts';
 import { Resource } from '../core/GameState.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { Unit } from '../units/Unit.ts';
-import { pickFreeTileAround } from './sauna.ts';
+import { pickFreeTileAround } from '../sim/sauna.ts';
 import { eventBus } from '../events';
 import type { CombatHookPayload } from '../combat/resolve.ts';
 import { addModifier, removeModifier } from '../mods/runtime.ts';
