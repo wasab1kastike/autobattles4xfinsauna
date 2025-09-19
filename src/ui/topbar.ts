@@ -124,6 +124,7 @@ export function setupTopbar(
   actionTray.className = 'topbar-action-tray';
   actionTray.setAttribute('role', 'group');
   actionTray.setAttribute('aria-label', 'Combat and audio controls');
+  actionTray.dataset.tutorialTarget = 'combat';
 
   const resourceDescriptions: Record<Resource, string> = {
     [Resource.SAUNA_BEER]:
@@ -146,12 +147,14 @@ export function setupTopbar(
     srLabel: 'Sisu reserves'
   });
   sisuResource.container.classList.add('badge-sisu');
+  sisuResource.container.dataset.tutorialTarget = 'sisu';
   const saunakunnia = createBadge('Saunakunnia', {
     iconSrc: icons.saunakunnia,
     description: resourceDescriptions[Resource.SAUNAKUNNIA],
     srLabel: 'Saunakunnia'
   });
   saunakunnia.container.classList.add('badge-sauna');
+  saunakunnia.container.dataset.tutorialTarget = 'victory';
   const burstTimer = createBadge('Burst 🔥', {
     srLabel: 'Sisu burst countdown'
   });

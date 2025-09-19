@@ -4,6 +4,9 @@
 
 - Rebuild the GitHub Pages mirror from commit 8f618f4 so the hashed Vite
   bundle, published HTML, and build badge all advertise the latest deploy.
+- Introduce a guided HUD tutorial with spotlight tooltips, keyboard navigation,
+  and a persistent skip flag, wire it into bootstrap, and document the
+  onboarding flow for contributors.
 
 
 - Document the `docs/` mirror refresh workflow in the README deployment section,
