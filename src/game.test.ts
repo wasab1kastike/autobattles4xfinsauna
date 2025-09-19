@@ -437,8 +437,8 @@ describe('saunoja persistence', () => {
 
   it('preserves stored Saunoja personas across reloads', async () => {
     const mockSpawnUnit = () =>
-      vi.doMock('./unit.ts', async () => {
-        const actual = await vi.importActual<typeof import('./unit.ts')>('./unit.ts');
+      vi.doMock('./unit/index.ts', async () => {
+        const actual = await vi.importActual<typeof import('./unit/index.ts')>('./unit/index.ts');
         return {
           ...actual,
           spawnUnit: vi.fn(() => null)
@@ -509,7 +509,7 @@ describe('saunoja persistence', () => {
       expect(final?.upkeep).toBe(storedPersona.upkeep);
       expect(final?.xp).toBe(storedPersona.xp);
     } finally {
-      vi.doUnmock('./unit.ts');
+      vi.doUnmock('./unit/index.ts');
     }
   });
 });

@@ -1,7 +1,7 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
 import { hexDistance } from '../hex/HexUtils.ts';
 import type { LoadedAssets } from '../loader.ts';
-import type { Unit } from '../unit.ts';
+import type { Unit } from '../unit/index.ts';
 import { isSisuBurstActive } from '../sim/sisu.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import { HexMapRenderer } from './HexMapRenderer.ts';
