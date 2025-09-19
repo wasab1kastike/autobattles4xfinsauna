@@ -4,6 +4,7 @@ import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { createHud, type HudController, type LoadingHandle, type BannerOptions } from './ui/hud.ts';
+import { useIsMobile } from './ui/hooks/useIsMobile.ts';
 import { createBootstrapLoader, type LoaderStatusEvent } from './bootstrap/loader.ts';
 import { attachPointerPan } from './input/pointerPan.ts';
 import { attachTouchGestures } from './input/touchGestures.ts';
@@ -262,6 +263,9 @@ export function init(): void {
 
   canvasRef = canvas;
   hud = createHud(overlay);
+
+  const mobileViewport = useIsMobile();
+  addCleanup(() => mobileViewport.dispose());
 
   setupGame(canvas, resourceBar, overlay);
   attachCanvasInputs(canvas);
