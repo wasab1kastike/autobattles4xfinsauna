@@ -288,7 +288,7 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     hpDamage,
     lethal,
     remainingHealth,
-    remainingShield: remainingBaseShield,
+    remainingShield: remainingBaseShield + keywordShieldRemaining,
     attackerHealing,
     attackerRemainingHealth: attackerState?.health,
     attackerRemainingShield: attackerState?.shield,

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fix combat resolution so `remainingShield` includes both base and keyword
+  barriers, and extend the resolve tests to cover leftover keyword stacks after
+  a hit.
+
 - Restrain fog-of-war reveals from re-triggering camera auto-framing after the
   opening reveal by adding an `autoFrame` toggle to `HexMap.revealAround` and
   opting recurring gameplay calls out so manual camera adjustments stay intact.
