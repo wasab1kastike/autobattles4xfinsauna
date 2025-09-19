@@ -1,16 +1,135 @@
-import type { InventoryEvent, InventoryItem, InventoryState } from '../inventory/state.ts';
+import type {
+  EquipAttemptResult,
+  InventoryCollection,
+  InventoryEvent,
+  InventoryItem,
+  InventoryState
+} from '../inventory/state.ts';
 import { ensureHudLayout } from './layout.ts';
+import {
+  createDefaultFilterState,
+  selectInventoryView,
+  type InventoryComparisonContext,
+  type InventoryPanelView,
+  type InventorySort,
+  type InventoryListItemView
+} from '../state/inventory.ts';
+import { createStashPanel } from './stash/StashPanel.tsx';
+import type { StashPanelCallbacks } from './stash/StashPanel.tsx';
 
 export interface InventoryHudOptions {
   readonly getSelectedUnitId?: () => string | null;
-  readonly onEquip?: (unitId: string, item: InventoryItem) => boolean;
+  readonly getComparisonContext?: () => InventoryComparisonContext | null;
+  readonly onEquip?: (
+    unitId: string,
+    item: InventoryItem,
+    source: InventoryCollection
+  ) => EquipAttemptResult;
 }
 
+const PAGE_SIZE = 24;
 const TOAST_LIFETIME_MS = 4500;
+const TOAST_EXIT_MS = 400;
 
-function formatTimestamp(value: number): string {
-  const date = new Date(value);
-  return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+const STAT_LABELS: Record<string, string> = {
+  health: 'HP',
+  attackDamage: 'ATK',
+  attackRange: 'RNG',
+  movementRange: 'MOV',
+  defense: 'DEF',
+  shield: 'Shield'
+};
+
+function ensureToastStack(overlay: HTMLElement): HTMLDivElement {
+  const existing = overlay.querySelector<HTMLDivElement>('.loot-toast-stack');
+  if (existing) {
+    return existing;
+  }
+  const stack = document.createElement('div');
+  stack.classList.add('loot-toast-stack');
+  stack.setAttribute('aria-live', 'polite');
+  stack.setAttribute('role', 'status');
+  overlay.appendChild(stack);
+  return stack;
+}
+
+function showToast(stack: HTMLDivElement, message: string, variant: 'loot' | 'info' | 'warn'): void {
+  const toast = document.createElement('div');
+  toast.classList.add('loot-toast');
+  toast.dataset.variant = variant;
+  toast.textContent = message;
+  stack.appendChild(toast);
+  const timeout = window.setTimeout(() => {
+    toast.classList.add('loot-toast--exit');
+    window.setTimeout(() => toast.remove(), TOAST_EXIT_MS);
+  }, TOAST_LIFETIME_MS);
+  toast.addEventListener('click', () => {
+    window.clearTimeout(timeout);
+    toast.remove();
+  });
+}
+
+function toggleFilterValue(set: Set<string>, value: string): void {
+  if (set.has(value)) {
+    set.delete(value);
+  } else {
+    set.add(value);
+  }
+}
+
+function formatComparisonDelta(comparison: InventoryEvent & { type: 'item-equipped' }): string | null {
+  const deltas = comparison.comparison?.deltas ?? [];
+  if (deltas.length === 0) {
+    return null;
+  }
+  const segments = deltas.map((entry) => {
+    const label = STAT_LABELS[entry.stat] ?? entry.stat;
+    const sign = entry.delta > 0 ? '+' : '';
+    return `${sign}${entry.delta} ${label}`;
+  });
+  return segments.join(', ');
+}
+
+function formatLocation(location: InventoryCollection | 'equipped'): string {
+  switch (location) {
+    case 'inventory':
+      return 'ready inventory';
+    case 'stash':
+      return 'stash';
+    case 'equipped':
+    default:
+      return 'loadout';
+  }
+}
+
+function createBadge(): {
+  button: HTMLButtonElement;
+  count: HTMLSpanElement;
+} {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.classList.add('inventory-badge');
+  button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-controls', 'inventory-stash-panel');
+  button.setAttribute('aria-label', 'Open quartermaster stash');
+
+  const icon = document.createElement('span');
+  icon.classList.add('inventory-badge__icon');
+  icon.setAttribute('aria-hidden', 'true');
+  button.appendChild(icon);
+
+  const label = document.createElement('span');
+  label.classList.add('inventory-badge__text');
+  label.textContent = 'Stash';
+  button.appendChild(label);
+
+  const count = document.createElement('span');
+  count.classList.add('inventory-badge__count');
+  count.textContent = '0';
+  count.setAttribute('aria-hidden', 'true');
+  button.appendChild(count);
+
+  return { button, count };
 }
 
 export function setupInventoryHud(
@@ -23,231 +142,257 @@ export function setupInventoryHud(
   }
 
   const { actions } = ensureHudLayout(overlay);
-
-  const existingStack = overlay.querySelector<HTMLDivElement>('.loot-toast-stack');
-  const toastStack = existingStack ?? document.createElement('div');
-  if (!existingStack) {
-    toastStack.classList.add('loot-toast-stack');
-    toastStack.setAttribute('aria-live', 'polite');
-    toastStack.setAttribute('role', 'status');
-    overlay.appendChild(toastStack);
-  }
+  const toastStack = ensureToastStack(overlay);
 
   overlay.querySelectorAll('.inventory-badge').forEach((el) => el.remove());
-  const badgeButton = document.createElement('button');
-  badgeButton.type = 'button';
-  badgeButton.classList.add('inventory-badge');
-  badgeButton.setAttribute('aria-expanded', 'false');
-  badgeButton.setAttribute('aria-controls', 'inventory-stash-panel');
-  badgeButton.setAttribute('aria-label', 'Open quartermaster stash');
-
-  const badgeIcon = document.createElement('span');
-  badgeIcon.classList.add('inventory-badge__icon');
-  badgeIcon.setAttribute('aria-hidden', 'true');
-
-  const badgeText = document.createElement('span');
-  badgeText.classList.add('inventory-badge__text');
-  badgeText.textContent = 'Stash';
-
-  const badgeCount = document.createElement('span');
-  badgeCount.classList.add('inventory-badge__count');
-  badgeCount.textContent = '0';
-  badgeCount.setAttribute('aria-hidden', 'true');
-
-  badgeButton.append(badgeIcon, badgeText, badgeCount);
+  const { button: badgeButton, count: badgeCount } = createBadge();
+  badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
+  actions.appendChild(badgeButton);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
-  const panel = document.createElement('section');
-  panel.id = 'inventory-stash-panel';
-  panel.classList.add('inventory-stash');
-  panel.hidden = true;
-  panel.tabIndex = -1;
-  panel.setAttribute('aria-label', 'Quartermaster stash');
 
-  const panelHeader = document.createElement('header');
-  panelHeader.classList.add('inventory-stash__header');
-
-  const panelTitle = document.createElement('h3');
-  panelTitle.classList.add('inventory-stash__title');
-  panelTitle.textContent = 'Quartermaster Stash';
-  panelHeader.appendChild(panelTitle);
-
-  const panelMeta = document.createElement('span');
-  panelMeta.classList.add('inventory-stash__meta');
-  panelHeader.appendChild(panelMeta);
-
-  const closeBtn = document.createElement('button');
-  closeBtn.type = 'button';
-  closeBtn.classList.add('inventory-stash__close');
-  closeBtn.textContent = 'Close';
-  closeBtn.addEventListener('click', () => {
-    panel.hidden = true;
-    badgeButton.setAttribute('aria-expanded', 'false');
-    badgeButton.focus({ preventScroll: true });
-  });
-  panelHeader.appendChild(closeBtn);
-
-  const list = document.createElement('ul');
-  list.classList.add('inventory-stash__list');
-  list.setAttribute('role', 'list');
-
-  panel.append(panelHeader, list);
-  actions.appendChild(badgeButton);
-  overlay.appendChild(panel);
-
-  function togglePanel(): void {
-    const willOpen = panel.hidden;
-    panel.hidden = !willOpen;
-    badgeButton.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    badgeButton.setAttribute(
-      'aria-label',
-      willOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
-    );
-    if (willOpen) {
-      panel.focus({ preventScroll: true });
+  const panelCallbacks: StashPanelCallbacks = {
+    onClose: () => setOpen(false),
+    onCollectionChange: (next) => {
+      if (collection !== next) {
+        collection = next;
+        page = 1;
+        refresh();
+      }
+    },
+    onFilterToggle: (category, value) => {
+      const target = filters[category] as Set<string>;
+      toggleFilterValue(target, value);
+      page = 1;
+      refresh();
+    },
+    onSearchChange: (value) => {
+      search = value;
+      page = 1;
+      refresh();
+    },
+    onSortChange: (value) => {
+      sort = value;
+      page = 1;
+      refresh();
+    },
+    onLoadMore: () => {
+      page += 1;
+      refresh();
+    },
+    onItemEquip: (item) => {
+      handleEquip(item);
+    },
+    onItemTransfer: (item) => {
+      handleTransfer(item);
+    },
+    onItemTrash: (item) => {
+      handleTrash(item);
     }
-  }
+  };
 
-  badgeButton.addEventListener('click', () => {
-    togglePanel();
-  });
+  const panel = createStashPanel(panelCallbacks);
+  panel.element.id = 'inventory-stash-panel';
+  overlay.appendChild(panel.element);
 
-  function renderEmptyState(): void {
-    list.innerHTML = '';
-    const empty = document.createElement('li');
-    empty.classList.add('inventory-stash__empty');
-    empty.textContent = 'No items are waiting in the stash.';
-    list.appendChild(empty);
-  }
+  let isOpen = false;
+  let collection: InventoryCollection = 'stash';
+  const filters = createDefaultFilterState();
+  let search = '';
+  let sort: InventorySort = 'newest';
+  let page = 1;
 
-  function showToast(message: string, emphasis: 'loot' | 'info' | 'warn' = 'loot'): void {
-    const toast = document.createElement('div');
-    toast.classList.add('loot-toast');
-    toast.dataset.variant = emphasis;
-    toast.textContent = message;
-    toastStack.appendChild(toast);
-    const timeout = window.setTimeout(() => {
-      toast.classList.add('loot-toast--exit');
-      window.setTimeout(() => toast.remove(), 400);
-    }, TOAST_LIFETIME_MS);
-    toast.addEventListener('click', () => {
-      window.clearTimeout(timeout);
-      toast.remove();
-    });
-  }
-
-  function renderStash(stash: readonly InventoryItem[]): void {
-    badgeCount.textContent = String(stash.length);
-    badgeButton.dataset.count = String(stash.length);
-    panelMeta.textContent = stash.length === 0 ? 'Empty' : `${stash.length} item(s)`;
-    if (stash.length === 0) {
-      renderEmptyState();
+  function setOpen(next: boolean): void {
+    if (isOpen === next) {
       return;
     }
-    list.innerHTML = '';
-    stash.forEach((item, index) => {
-      const entry = document.createElement('li');
-      entry.classList.add('inventory-stash__item');
-      entry.dataset.rarity = item.rarity ?? 'common';
-
-      const title = document.createElement('div');
-      title.classList.add('inventory-stash__item-title');
-      title.textContent = item.name;
-      entry.appendChild(title);
-
-      if (item.rarity) {
-        const rarity = document.createElement('span');
-        rarity.classList.add('inventory-stash__item-rarity');
-        rarity.textContent = item.rarity;
-        entry.appendChild(rarity);
-      }
-
-      const quantity = document.createElement('span');
-      quantity.classList.add('inventory-stash__item-quantity');
-      quantity.textContent = `×${item.quantity}`;
-      entry.appendChild(quantity);
-
-      const acquired = document.createElement('span');
-      acquired.classList.add('inventory-stash__item-time');
-      acquired.textContent = formatTimestamp(item.acquiredAt);
-      entry.appendChild(acquired);
-
-      const actionRow = document.createElement('div');
-      actionRow.classList.add('inventory-stash__actions');
-
-      const equipBtn = document.createElement('button');
-      equipBtn.type = 'button';
-      equipBtn.classList.add('inventory-stash__action');
-      equipBtn.textContent = 'Equip to selected';
-      equipBtn.addEventListener('click', () => {
-        const selectedId = options.getSelectedUnitId?.() ?? null;
-        if (!selectedId) {
-          showToast('Select an attendant before equipping an item.', 'warn');
-          return;
-        }
-        const handler = options.onEquip ?? (() => false);
-        const equipped = inventory.equipFromStash(index, selectedId, handler);
-        if (!equipped) {
-          showToast('Unable to equip that item right now.', 'warn');
-          return;
-        }
-        showToast(`Equipped ${item.name} to the selected attendant.`, 'info');
-      });
-      actionRow.appendChild(equipBtn);
-
-      const discardBtn = document.createElement('button');
-      discardBtn.type = 'button';
-      discardBtn.classList.add('inventory-stash__action', 'inventory-stash__action--danger');
-      discardBtn.textContent = 'Discard';
-      discardBtn.addEventListener('click', () => {
-        const removed = inventory.discardFromStash(index);
-        if (removed) {
-          showToast(`${removed.name} was discarded from the stash.`, 'warn');
-        }
-      });
-      actionRow.appendChild(discardBtn);
-
-      entry.appendChild(actionRow);
-      list.appendChild(entry);
-    });
+    isOpen = next;
+    panel.setOpen(isOpen);
+    badgeButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    badgeButton.setAttribute(
+      'aria-label',
+      isOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
+    );
+    if (isOpen) {
+      panel.focus();
+      overlay.classList.add('inventory-panel-open');
+    } else {
+      overlay.classList.remove('inventory-panel-open');
+    }
   }
 
-  badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
-  renderStash(inventory.getStash());
+  function computeView(): InventoryPanelView {
+    const comparisonContext = options.getComparisonContext?.() ?? null;
+    let view = selectInventoryView({
+      stash: inventory.getStash(),
+      inventory: inventory.getInventory(),
+      filters,
+      search,
+      sort,
+      page,
+      pageSize: PAGE_SIZE,
+      collection,
+      comparisonContext
+    });
+    if (view.filteredTotal > 0) {
+      const maxPage = Math.max(1, Math.ceil(view.filteredTotal / PAGE_SIZE));
+      if (page > maxPage) {
+        page = maxPage;
+        view = selectInventoryView({
+          stash: inventory.getStash(),
+          inventory: inventory.getInventory(),
+          filters,
+          search,
+          sort,
+          page,
+          pageSize: PAGE_SIZE,
+          collection,
+          comparisonContext
+        });
+      }
+    }
+    return view;
+  }
 
-  const unsubscribe = inventory.on((event: InventoryEvent) => {
+  function refresh(): void {
+    const view = computeView();
+    const stashSummary = view.collections.find((entry) => entry.id === 'stash');
+    const stashCount = stashSummary?.count ?? 0;
+    badgeCount.textContent = String(stashCount);
+    badgeButton.dataset.count = String(stashCount);
+    panel.render(view);
+  }
+
+  function ensureSelectedUnit(): string | null {
+    const selected = options.getSelectedUnitId?.() ?? null;
+    if (!selected) {
+      showToast(toastStack, 'Select an attendant before equipping an item.', 'warn');
+      return null;
+    }
+    return selected;
+  }
+
+  function handleEquip(item: InventoryListItemView): void {
+    const unitId = ensureSelectedUnit();
+    if (!unitId) {
+      return;
+    }
+    const equipHandler = options.onEquip ?? (() => ({ success: false }));
+    const source = item.location;
+    const result =
+      source === 'stash'
+        ? inventory.equipFromStash(item.index, unitId, (id, entry) =>
+            equipHandler(id, entry, 'stash')
+          )
+        : inventory.equipFromInventory(item.index, unitId, (id, entry) =>
+            equipHandler(id, entry, 'inventory')
+          );
+    if (!result) {
+      showToast(toastStack, 'Unable to equip that item right now.', 'warn');
+    }
+  }
+
+  function handleTransfer(item: InventoryListItemView): void {
+    const moved =
+      item.location === 'stash'
+        ? inventory.moveToInventory(item.index)
+        : inventory.moveToStash(item.index);
+    if (!moved) {
+      showToast(toastStack, 'Unable to move that item right now.', 'warn');
+      return;
+    }
+    const destination = item.location === 'stash' ? 'ready inventory' : 'stash';
+    showToast(toastStack, `Moved ${moved.name} to the ${destination}.`, 'info');
+    page = 1;
+    refresh();
+  }
+
+  function handleTrash(item: InventoryListItemView): void {
+    const removed =
+      item.location === 'stash'
+        ? inventory.discardFromStash(item.index)
+        : inventory.discardFromInventory(item.index);
+    if (!removed) {
+      showToast(toastStack, 'That item was already removed.', 'warn');
+      return;
+    }
+    const locationLabel = item.location === 'stash' ? 'stash' : 'ready inventory';
+    showToast(toastStack, `${removed.name} discarded from the ${locationLabel}.`, 'warn');
+    refresh();
+  }
+
+  function handleInventoryEvent(event: InventoryEvent): void {
     switch (event.type) {
+      case 'stash-updated':
+      case 'inventory-updated':
+        refresh();
+        break;
       case 'item-acquired':
         if (event.equipped) {
-          showToast(`${event.item.name} auto-equipped successfully.`, 'info');
+          showToast(toastStack, `${event.item.name} auto-equipped successfully.`, 'info');
         } else {
-          showToast(`New item secured: ${event.item.name}`);
+          const stored = formatLocation(event.location);
+          showToast(toastStack, `New item secured: ${event.item.name} (${stored}).`, 'loot');
         }
         break;
-      case 'item-equipped':
-        showToast(`${event.item.name} equipped to the selected attendant.`, 'info');
+      case 'item-equipped': {
+        const deltaSummary = formatComparisonDelta(event);
+        const suffix = deltaSummary ? ` (${deltaSummary})` : '';
+        showToast(toastStack, `Equipped ${event.item.name}${suffix}.`, 'info');
         break;
+      }
       case 'item-unequipped':
-        showToast(`${event.item.name} returned to the stash.`, 'info');
+        showToast(
+          toastStack,
+          `${event.item.name} returned to the stash from slot ${event.slot}.`,
+          'info'
+        );
         break;
-      case 'item-discarded':
-        showToast(`${event.item.name} discarded from the stash.`, 'warn');
+      case 'item-moved': {
+        const target = formatLocation(event.to);
+        showToast(toastStack, `Moved ${event.item.name} to the ${target}.`, 'info');
         break;
-      case 'stash-updated':
-        renderStash(event.stash);
+      }
+      case 'item-discarded': {
+        const location = formatLocation(event.location);
+        showToast(toastStack, `${event.item.name} discarded from the ${location}.`, 'warn');
         break;
+      }
       case 'settings-updated':
         badgeButton.dataset.autoequip = event.autoEquip ? 'on' : 'off';
         break;
       default:
         break;
     }
-  });
+  }
+
+  const unsubscribe = inventory.on((event) => handleInventoryEvent(event));
+
+  const onBadgeClick = () => {
+    setOpen(!isOpen);
+  };
+  badgeButton.addEventListener('click', onBadgeClick);
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+    if (event.code === 'KeyI' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+      event.preventDefault();
+      setOpen(!isOpen);
+    }
+  };
+  window.addEventListener('keydown', onKeyDown);
+
+  refresh();
 
   const destroy = (): void => {
     unsubscribe();
+    badgeButton.removeEventListener('click', onBadgeClick);
+    window.removeEventListener('keydown', onKeyDown);
     badgeButton.remove();
-    panel.remove();
+    panel.destroy();
+    overlay.classList.remove('inventory-panel-open');
     if (!toastStack.hasChildNodes()) {
       toastStack.remove();
     }

@@ -1,0 +1,59 @@
+.group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.group + .group {
+  margin-top: 0.35rem;
+}
+
+.label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 248, 255, 0.58);
+  margin-bottom: 0.35rem;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(244, 248, 255, 0.08);
+  color: rgba(244, 248, 255, 0.72);
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: transform 160ms ease, box-shadow 200ms ease, background 180ms ease;
+}
+
+.chip[data-active='true'] {
+  background: linear-gradient(110deg, rgba(82, 154, 255, 0.36), rgba(114, 188, 255, 0.52));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(48, 128, 238, 0.35);
+}
+
+.chip:hover,
+.chip:focus-visible {
+  background: rgba(244, 248, 255, 0.16);
+}
+
+.chip:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(244, 248, 255, 0.58);
+}
