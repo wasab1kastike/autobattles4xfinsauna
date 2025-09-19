@@ -2,14 +2,27 @@ import { describe, it, expect } from 'vitest';
 import { createRosterPanel, type RosterEntry } from './RosterPanel.tsx';
 
 function buildEntry(
-  overrides: Partial<Omit<RosterEntry, 'stats' | 'items' | 'modifiers' | 'traits'>> & {
+  overrides: Partial<
+    Omit<RosterEntry, 'stats' | 'baseStats' | 'equipment' | 'items' | 'modifiers' | 'traits'>
+  > & {
     stats?: Partial<RosterEntry['stats']>;
+    baseStats?: Partial<RosterEntry['baseStats']>;
+    equipment?: RosterEntry['equipment'];
     items?: RosterEntry['items'];
     modifiers?: RosterEntry['modifiers'];
     traits?: readonly string[];
   } = {}
 ): RosterEntry {
-  const baseStats: RosterEntry['stats'] = {
+  const baseStatsDefault: RosterEntry['stats'] = {
+    health: 18,
+    maxHealth: 24,
+    attackDamage: 3,
+    attackRange: 1,
+    movementRange: 3,
+    defense: 0,
+    shield: 0
+  };
+  const statsDefault: RosterEntry['stats'] = {
     health: 18,
     maxHealth: 30,
     attackDamage: 4,
@@ -19,7 +32,30 @@ function buildEntry(
     shield: undefined
   };
 
-  const stats = { ...baseStats, ...overrides.stats } as RosterEntry['stats'];
+  const stats = { ...statsDefault, ...overrides.stats } as RosterEntry['stats'];
+  const baseStats = {
+    ...baseStatsDefault,
+    ...overrides.baseStats
+  } as RosterEntry['baseStats'];
+  const defaultEquipment: RosterEntry['equipment'] = [
+    {
+      id: 'weapon',
+      label: 'Primary Armament',
+      description: 'Main weapon slot',
+      maxStacks: 1,
+      item: null,
+      modifiers: null
+    },
+    {
+      id: 'supply',
+      label: 'Supply Satchel',
+      description: 'Consumable provisions',
+      maxStacks: 3,
+      item: null,
+      modifiers: null
+    }
+  ];
+  const equipment = overrides.equipment ? [...overrides.equipment] : defaultEquipment;
   const items = overrides.items ? [...overrides.items] : ([] as RosterEntry['items']);
   const modifiers = overrides.modifiers
     ? [...overrides.modifiers]
@@ -34,6 +70,8 @@ function buildEntry(
     selected: false,
     traits,
     stats,
+    baseStats,
+    equipment,
     items,
     modifiers,
     ...overrides
@@ -50,12 +88,12 @@ describe('createRosterPanel', () => {
 
     expect(container.dataset.count).toBe('1');
     const metaInitial = container.querySelector('.panel-roster__meta');
-    expect(metaInitial?.textContent).toContain('HP 18/30');
-    expect(metaInitial?.textContent).toContain('ATK 4');
-    expect(metaInitial?.textContent).toContain('RNG 2');
+    expect(metaInitial?.textContent).toContain('HP 18/30 (+6)');
+    expect(metaInitial?.textContent).toContain('ATK 4 (+1)');
+    expect(metaInitial?.textContent).toContain('RNG 2 (+1)');
     expect(metaInitial?.textContent).toContain('MOV 3');
     expect(metaInitial?.textContent).toContain('Upkeep 3 beer');
-    expect(container.querySelector('.panel-roster__items')).toBeNull();
+    expect(container.querySelectorAll('.panel-roster__slot')).toHaveLength(2);
     expect(container.querySelector('.panel-roster__mods')).toBeNull();
 
     const updatedEntry = buildEntry({
@@ -71,6 +109,47 @@ describe('createRosterPanel', () => {
         defense: 3,
         shield: 6
       },
+      baseStats: {
+        health: 18,
+        maxHealth: 24,
+        attackDamage: 3,
+        attackRange: 1,
+        movementRange: 3,
+        defense: 0,
+        shield: 0
+      },
+      equipment: [
+        {
+          id: 'weapon',
+          label: 'Primary Armament',
+          description: 'Main weapon slot',
+          maxStacks: 1,
+          item: {
+            id: 'emberglass-arrow',
+            slot: 'weapon',
+            name: 'Emberglass Arrow',
+            description: 'Ignites targets on impact',
+            icon: '/assets/items/emberglass.svg',
+            rarity: 'rare',
+            quantity: 2
+          },
+          modifiers: { attackDamage: 2, attackRange: 1 }
+        },
+        {
+          id: 'supply',
+          label: 'Supply Satchel',
+          description: 'Consumable provisions',
+          maxStacks: 3,
+          item: {
+            id: 'sauna-towel',
+            slot: 'supply',
+            name: 'Sauna Towel',
+            description: 'Always ready for the steam room',
+            quantity: 1
+          },
+          modifiers: { health: 3 }
+        }
+      ],
       items: [
         {
           id: 'emberglass-arrow',
@@ -120,7 +199,13 @@ describe('createRosterPanel', () => {
     const loadout = container.querySelector('.panel-roster__loadout');
     expect(loadout).not.toBeNull();
 
-    const items = container.querySelectorAll<HTMLElement>('.item-icon');
+    const slotSummaries = Array.from(
+      container.querySelectorAll<HTMLSpanElement>('.panel-roster__slot-summary')
+    ).map((node) => node.textContent?.trim());
+    expect(slotSummaries).toContain('Emberglass Arrow');
+    expect(slotSummaries).toContain('Sauna Towel');
+
+    const items = container.querySelectorAll<HTMLElement>('.panel-roster__slot-icons .item-icon');
     expect(items).toHaveLength(2);
     expect(items[0].dataset.itemId).toBe('emberglass-arrow');
     expect(items[0].dataset.rarity).toBe('rare');
@@ -134,6 +219,12 @@ describe('createRosterPanel', () => {
     expect(modifier.dataset.modifierId).toBe('barkskin-ritual');
     expect(modifier.querySelector('.mod-pill__stacks')?.textContent).toBe('×2');
     expect(modifier.querySelector('.mod-pill__timer')?.textContent).toBe('12s');
+
+    const slotModifiers = Array.from(
+      container.querySelectorAll<HTMLSpanElement>('.panel-roster__slot-modifiers')
+    ).map((el) => el.textContent ?? '');
+    expect(slotModifiers.some((text) => text.includes('ATK +2'))).toBe(true);
+    expect(slotModifiers.some((text) => text.includes('HP +3'))).toBe(true);
 
     const ariaLabel = button?.getAttribute('aria-label') ?? '';
     expect(ariaLabel).toContain('attack range 4');

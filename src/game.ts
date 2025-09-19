@@ -5,7 +5,7 @@ import { BattleManager } from './battle/BattleManager.ts';
 import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit.ts';
-import type { UnitType } from './unit.ts';
+import type { UnitStats, UnitType } from './unit.ts';
 import { eventBus } from './events';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
@@ -19,7 +19,7 @@ import { createTutorialController, type TutorialController } from './ui/tutorial
 import { draw as render } from './render/renderer.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
-import type { Saunoja, SaunojaItem } from './units/saunoja.ts';
+import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
 import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
@@ -30,7 +30,7 @@ import { InventoryState } from './inventory/state.ts';
 import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
-import { computeUnitStats } from './unit/calc.ts';
+import { computeUnitStats, applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
@@ -46,6 +46,15 @@ import {
   saveNgPlusState,
   type NgPlusState
 } from './progression/ngplus.ts';
+import {
+  equip as equipLoadout,
+  unequip as unequipLoadout,
+  loadoutItems,
+  matchesSlot,
+  getSlotDefinition
+} from './items/equip.ts';
+import { EQUIPMENT_SLOT_IDS } from './items/types.ts';
+import type { EquipmentSlotId, EquippedItem, EquipmentModifier } from './items/types.ts';
 import {
   getSaunojaStorage,
   loadUnits as loadRosterFromStorage,
@@ -111,6 +120,78 @@ let unitFx: UnitFxManager | null = null;
 let objectiveTracker: ObjectiveTracker | null = null;
 let endScreen: EndScreenController | null = null;
 let tutorial: TutorialController | null = null;
+
+function getAttachedUnitFor(attendant: Saunoja): Unit | null {
+  const attachedUnitId = saunojaToUnit.get(attendant.id);
+  if (!attachedUnitId) {
+    return null;
+  }
+  return unitsById.get(attachedUnitId) ?? null;
+}
+
+function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void {
+  attendant.effectiveStats = { ...stats };
+  attendant.maxHp = Math.max(1, Math.round(stats.health));
+  attendant.hp = Math.min(attendant.maxHp, Math.max(0, Math.round(attendant.hp)));
+  attendant.defense = typeof stats.defense === 'number' ? Math.max(0, stats.defense) : undefined;
+  attendant.shield = typeof stats.shield === 'number' ? Math.max(0, stats.shield) : 0;
+
+  const unit = getAttachedUnitFor(attendant);
+  if (unit) {
+    const nextStats: UnitStats = {
+      health: attendant.effectiveStats.health,
+      attackDamage: attendant.effectiveStats.attackDamage,
+      attackRange: attendant.effectiveStats.attackRange,
+      movementRange: attendant.effectiveStats.movementRange
+    } satisfies UnitStats;
+    if (typeof attendant.effectiveStats.defense === 'number') {
+      nextStats.defense = attendant.effectiveStats.defense;
+    }
+    if (typeof attendant.effectiveStats.visionRange === 'number') {
+      nextStats.visionRange = attendant.effectiveStats.visionRange;
+    }
+    unit.updateStats(nextStats);
+    if (typeof attendant.effectiveStats.shield === 'number') {
+      unit.setShield(attendant.effectiveStats.shield);
+    } else if (attendant.shield <= 0) {
+      unit.setShield(0);
+    }
+  }
+}
+
+function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly EquippedItem[]): SaunojaStatBlock {
+  const resolvedLoadout = loadout ?? loadoutItems(attendant.equipment);
+  const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
+  applyEffectiveStats(attendant, effective);
+  return effective;
+}
+
+function updateBaseStatsFromUnit(attendant: Saunoja, unit: Unit | null): void {
+  if (!unit) {
+    return;
+  }
+  const hasEquipment = loadoutItems(attendant.equipment).length > 0;
+  if (hasEquipment) {
+    return;
+  }
+  const base: SaunojaStatBlock = {
+    health: Math.max(1, Math.round(unit.getMaxHealth())),
+    attackDamage: Math.max(0, Math.round(unit.stats.attackDamage)),
+    attackRange: Math.max(0, Math.round(unit.stats.attackRange)),
+    movementRange: Math.max(0, Math.round(unit.stats.movementRange)),
+    defense:
+      typeof unit.stats.defense === 'number' && Number.isFinite(unit.stats.defense)
+        ? Math.max(0, unit.stats.defense)
+        : attendant.baseStats.defense,
+    shield: attendant.baseStats.shield ?? 0,
+    visionRange:
+      typeof unit.stats.visionRange === 'number' && Number.isFinite(unit.stats.visionRange)
+        ? Math.max(0, unit.stats.visionRange)
+        : attendant.baseStats.visionRange
+  } satisfies SaunojaStatBlock;
+  attendant.baseStats = base;
+  recomputeEffectiveStats(attendant);
+}
 
 function disposeTutorial(): void {
   if (!tutorial) {
@@ -331,6 +412,9 @@ function claimSaunoja(
   unitToSaunoja.set(unit.id, match);
   saunojaToUnit.set(match.id, unit.id);
 
+  updateBaseStatsFromUnit(match, unit);
+  applyEffectiveStats(match, match.effectiveStats);
+
   const personaMissing = isSaunojaPersonaMissing(match);
   if (created || personaMissing) {
     refreshSaunojaPersona(match);
@@ -451,6 +535,12 @@ eventBus.on('inventoryChanged', onInventoryChanged);
 eventBus.on('modifierAdded', onModifierChanged);
 eventBus.on('modifierRemoved', onModifierChanged);
 eventBus.on('modifierExpired', onModifierChanged);
+
+const onUnitStatsChanged = (): void => {
+  updateRosterDisplay();
+};
+
+eventBus.on('unit:stats:changed', onUnitStatsChanged);
 
 function resolveUnitUpkeep(unit: Unit): number {
   const attendant = unitToSaunoja.get(unit.id);
@@ -690,10 +780,12 @@ function initializeRightPanel(): void {
     disposeRightPanel();
     disposeRightPanel = null;
   }
-  const rightPanel = setupRightPanel(state, {
-    onRosterSelect: focusSaunojaById,
-    onRosterRendererReady: installRosterRenderer
-  });
+const rightPanel = setupRightPanel(state, {
+  onRosterSelect: focusSaunojaById,
+  onRosterRendererReady: installRosterRenderer,
+  onRosterEquipSlot: equipSlotFromStash,
+  onRosterUnequipSlot: unequipSlotToStash
+});
   log = rightPanel.log;
   addEvent = rightPanel.addEvent;
   installRosterRenderer(rightPanel.renderRoster);
@@ -837,24 +929,47 @@ function equipItemToSaunoja(unitId: string, item: SaunojaItem): boolean {
   if (!attendant) {
     return false;
   }
-  const quantity = Math.max(1, Math.round(item.quantity ?? 1));
-  const existing = attendant.items.find((entry) => entry.id === item.id);
-  if (existing) {
-    existing.quantity = Math.max(1, existing.quantity + quantity);
-  } else {
-    attendant.items.push({
-      id: item.id,
-      name: item.name,
-      description: item.description,
-      icon: item.icon,
-      rarity: item.rarity,
-      quantity
-    });
+  const outcome = equipLoadout(attendant, item);
+  if (!outcome.success) {
+    return false;
   }
+  const effective = recomputeEffectiveStats(attendant, outcome.loadout);
+  eventBus.emit('unit:stats:changed', { unitId: attendant.id, stats: effective });
   eventBus.emit('inventoryChanged', {});
   saveUnits();
-  refreshRosterPanel();
+  updateRosterDisplay();
   return true;
+}
+
+function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaItem | null {
+  const attendant = saunojas.find((unit) => unit.id === unitId);
+  if (!attendant) {
+    return null;
+  }
+  const outcome = unequipLoadout(attendant, slot);
+  if (!outcome.success || !outcome.removed) {
+    return null;
+  }
+  const effective = recomputeEffectiveStats(attendant, outcome.loadout);
+  eventBus.emit('unit:stats:changed', { unitId: attendant.id, stats: effective });
+  eventBus.emit('inventoryChanged', {});
+  saveUnits();
+  updateRosterDisplay();
+  const { id, name, description, icon, rarity, quantity } = outcome.removed;
+  return { id, name, description, icon, rarity, quantity } satisfies SaunojaItem;
+}
+
+function equipSlotFromStash(unitId: string, slot: EquipmentSlotId): boolean {
+  const stash = inventory.getStash();
+  const index = stash.findIndex((entry) => matchesSlot(entry.id, slot));
+  if (index === -1) {
+    return false;
+  }
+  return inventory.equipFromStash(index, unitId, equipItemToSaunoja);
+}
+
+function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
+  return inventory.unequipToStash(unitId, slot, unequipItemFromSaunoja);
 }
 
 export function draw(): void {
@@ -1010,6 +1125,7 @@ export function cleanup(): void {
   eventBus.off('modifierAdded', onModifierChanged);
   eventBus.off('modifierRemoved', onModifierChanged);
   eventBus.off('modifierExpired', onModifierChanged);
+  eventBus.off('unit:stats:changed', onUnitStatsChanged);
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
   if (disposeRightPanel) {
@@ -1105,18 +1221,26 @@ function buildRosterEntries(): RosterEntry[] {
     const unit = attachedUnitId ? unitsById.get(attachedUnitId) : undefined;
     const unitAlive = unit ? !unit.isDead() && unit.stats.health > 0 : false;
 
+    const effectiveStats = attendant.effectiveStats;
+    const baseStats = attendant.baseStats;
     const currentHealth = unit
       ? Math.round(Math.max(0, unit.stats.health))
       : Math.round(Math.max(0, attendant.hp));
     const maxHealth = unit
       ? Math.round(Math.max(1, unit.getMaxHealth()))
-      : Math.round(Math.max(1, attendant.maxHp));
-    const attackDamage = unit ? Math.round(Math.max(0, unit.stats.attackDamage)) : 0;
-    const attackRange = unit ? Math.round(Math.max(0, unit.stats.attackRange)) : 0;
-    const movementRange = unit ? Math.round(Math.max(0, unit.stats.movementRange)) : 0;
-    const defenseSource = unit?.stats.defense ?? attendant.defense ?? 0;
+      : Math.round(Math.max(1, effectiveStats.health));
+    const attackDamage = unit
+      ? Math.round(Math.max(0, unit.stats.attackDamage))
+      : Math.round(Math.max(0, effectiveStats.attackDamage));
+    const attackRange = unit
+      ? Math.round(Math.max(0, unit.stats.attackRange))
+      : Math.round(Math.max(0, effectiveStats.attackRange));
+    const movementRange = unit
+      ? Math.round(Math.max(0, unit.stats.movementRange))
+      : Math.round(Math.max(0, effectiveStats.movementRange));
+    const defenseSource = unit?.stats.defense ?? effectiveStats.defense ?? 0;
     const defense = Math.round(Math.max(0, defenseSource));
-    const shieldSource = unit ? unit.getShield() : attendant.shield;
+    const shieldSource = unit ? unit.getShield() : effectiveStats.shield ?? attendant.shield;
     const shield = Math.round(Math.max(0, shieldSource));
     const upkeep = Math.max(0, Math.round(attendant.upkeep));
     const status: RosterEntry['status'] =
@@ -1124,6 +1248,47 @@ function buildRosterEntries(): RosterEntry[] {
 
     const items = attendant.items.map((item) => ({ ...item }));
     const modifiers = attendant.modifiers.map((modifier) => ({ ...modifier }));
+
+    const equipmentSlots = EQUIPMENT_SLOT_IDS.map((slotId) => {
+      const slotDefinition = getSlotDefinition(slotId);
+      const equipped = attendant.equipment[slotId];
+      const rosterItem = equipped
+        ? {
+            id: equipped.id,
+            name: equipped.name,
+            description: equipped.description,
+            icon: equipped.icon,
+            rarity: equipped.rarity,
+            quantity: equipped.quantity,
+            slot: slotId
+          }
+        : null;
+      const aggregated = equipped ? scaleModifiers(equipped.modifiers, equipped.quantity) : null;
+      return {
+        id: slotId,
+        label: slotDefinition.label,
+        description: slotDefinition.description,
+        maxStacks: slotDefinition.maxStacks,
+        item: rosterItem,
+        modifiers: aggregated
+      };
+    });
+
+    const rosterBase: RosterStats = {
+      health: Math.round(Math.max(0, baseStats.health)),
+      maxHealth: Math.round(Math.max(1, baseStats.health)),
+      attackDamage: Math.round(Math.max(0, baseStats.attackDamage)),
+      attackRange: Math.round(Math.max(0, baseStats.attackRange)),
+      movementRange: Math.round(Math.max(0, baseStats.movementRange)),
+      defense:
+        typeof baseStats.defense === 'number' && baseStats.defense > 0
+          ? Math.round(baseStats.defense)
+          : undefined,
+      shield:
+        typeof baseStats.shield === 'number' && baseStats.shield > 0
+          ? Math.round(baseStats.shield)
+          : undefined
+    } satisfies RosterStats;
 
     return {
       id: attendant.id,
@@ -1141,6 +1306,8 @@ function buildRosterEntries(): RosterEntry[] {
         defense: defense > 0 ? defense : undefined,
         shield: shield > 0 ? shield : undefined
       },
+      baseStats: rosterBase,
+      equipment: equipmentSlots,
       items,
       modifiers
     } satisfies RosterEntry;
@@ -1166,6 +1333,30 @@ function pickFeaturedSaunoja(): Saunoja | null {
     saunojas.find((unit) => unit.hp > 0) ??
     saunojas[0]
   );
+}
+
+function scaleModifiers(modifiers: EquipmentModifier, quantity: number): EquipmentModifier {
+  const stacks = Math.max(1, Math.round(quantity));
+  const scaled: EquipmentModifier = {};
+  if (typeof modifiers.health === 'number') {
+    scaled.health = modifiers.health * stacks;
+  }
+  if (typeof modifiers.attackDamage === 'number') {
+    scaled.attackDamage = modifiers.attackDamage * stacks;
+  }
+  if (typeof modifiers.attackRange === 'number') {
+    scaled.attackRange = modifiers.attackRange * stacks;
+  }
+  if (typeof modifiers.movementRange === 'number') {
+    scaled.movementRange = modifiers.movementRange * stacks;
+  }
+  if (typeof modifiers.defense === 'number') {
+    scaled.defense = modifiers.defense * stacks;
+  }
+  if (typeof modifiers.shield === 'number') {
+    scaled.shield = modifiers.shield * stacks;
+  }
+  return scaled;
 }
 
 function buildRosterSummary(): RosterHudSummary {

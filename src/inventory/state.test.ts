@@ -69,4 +69,22 @@ describe('InventoryState', () => {
     expect(removed?.id).toBe('emberglass-arrow');
     expect(inventory.getStashSize()).toBe(0);
   });
+
+  it('moves unequipped items back into the stash', () => {
+    const inventory = new InventoryState({ now: () => 1000 });
+    const unequip = vi
+      .fn()
+      .mockReturnValue({ id: 'glacier-brand', name: 'Glacier Brand', quantity: 1 });
+    const events: string[] = [];
+    const stop = inventory.on((event) => {
+      events.push(event.type);
+    });
+
+    const success = inventory.unequipToStash('unit-1', 'weapon', unequip);
+    expect(success).toBe(true);
+    expect(unequip).toHaveBeenCalledWith('unit-1', 'weapon');
+    expect(inventory.getStashSize()).toBe(1);
+    expect(events).toContain('item-unequipped');
+    stop();
+  });
 });
