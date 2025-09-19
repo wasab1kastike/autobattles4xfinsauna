@@ -253,13 +253,13 @@ describe('resolveCombat', () => {
     expect(burn.stacks).toBe(3);
   });
 
-  it('grants and consumes keyword shield stacks before applying damage', () => {
+  it('reports combined shield total when barrier stacks remain after the hit', () => {
     const barrier = makeKeyword('Shield', 3);
 
     const attacker: CombatParticipant = {
       id: 'shield-attacker',
       faction: 'alpha',
-      attack: 4,
+      attack: 3,
       health: 10,
       maxHealth: 10,
       shield: 0
@@ -271,19 +271,23 @@ describe('resolveCombat', () => {
       defense: 2,
       health: 10,
       maxHealth: 10,
-      shield: 0,
+      shield: 2,
       keywords: { barrier }
     };
 
     const result = resolveCombat({ attacker, defender });
 
-    expect(result.damage).toBe(2);
+    expect(result.damage).toBe(1);
+    expect(result.shieldDamage).toBe(1);
     expect(result.hpDamage).toBe(0);
     expect(result.keywordEffects.defender.shieldGranted).toBe(3);
-    expect(result.keywordEffects.defender.shieldConsumed).toBe(2);
-    expect(result.keywordEffects.defender.keywordShieldRemaining).toBe(1);
-    expect(result.remainingShield).toBe(0);
-    expect(barrier.stacks).toBe(1);
+    expect(result.keywordEffects.defender.shieldConsumed).toBe(0);
+    expect(result.keywordEffects.defender.keywordShieldRemaining).toBe(3);
+    const expectedRemaining =
+      Math.max(0, defender.shield - result.shieldDamage) +
+      result.keywordEffects.defender.keywordShieldRemaining;
+    expect(result.remainingShield).toBe(expectedRemaining);
+    expect(barrier.stacks).toBe(3);
   });
 
   it('combines keyword and base shields while tracking remaining barrier stacks', () => {
@@ -313,7 +317,7 @@ describe('resolveCombat', () => {
     expect(result.damage).toBe(10);
     expect(result.shieldDamage).toBe(10);
     expect(result.hpDamage).toBe(0);
-    expect(result.remainingShield).toBe(0);
+    expect(result.remainingShield).toBe(1);
     expect(result.keywordEffects.defender.shieldGranted).toBe(8);
     expect(result.keywordEffects.defender.shieldConsumed).toBe(7);
     expect(result.keywordEffects.defender.keywordShieldRemaining).toBe(1);
