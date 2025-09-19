@@ -1,0 +1,19 @@
+export interface UnitDamagedPayload {
+  attackerId?: string;
+  targetId: string;
+  amount: number;
+  remainingHealth: number;
+}
+
+export interface UnitHealedPayload {
+  unitId: string;
+  amount: number;
+  remainingHealth: number;
+}
+
+export interface UnitDiedPayload {
+  unitId: string;
+  attackerId?: string;
+  unitFaction: string;
+  attackerFaction?: string;
+}
