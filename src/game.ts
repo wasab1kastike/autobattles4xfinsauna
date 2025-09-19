@@ -309,7 +309,7 @@ function rollSaunojaUpkeep(random: () => number = Math.random): number {
 
 function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
   const traits = Array.isArray(saunoja.traits) ? saunoja.traits : [];
-  const hasTraits = traits.length > 0;
+  const hasTraits = traits.length >= 3;
   const upkeepValid = Number.isFinite(saunoja.upkeep);
   const xpValid = Number.isFinite(saunoja.xp);
   return !hasTraits || !upkeepValid || !xpValid;
@@ -731,26 +731,16 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   });
   endScreen = controller;
 };
-const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
-if (!hasActivePlayerUnit) {
-  if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
-    state.addResource(Resource.SAUNA_BEER, SOLDIER_COST);
-  }
-  const fallbackId = `u${units.length + 1}`;
-  const fallbackUnit = spawnUnit(state, 'soldier', fallbackId, sauna.pos, 'player');
-  if (fallbackUnit) {
-    registerUnit(fallbackUnit);
-  }
-}
-map.revealAround(sauna.pos, 3);
 saunojas = loadUnits();
 if (saunojas.length === 0) {
   const seeded = makeSaunoja({
     id: 'saunoja-1',
     coord: sauna.pos,
-    selected: true
+    selected: true,
+    upkeep: 0
   });
   refreshSaunojaPersona(seeded);
+  seeded.upkeep = 0;
   saunojas.push(seeded);
   saveUnits();
   if (import.meta.env.DEV) {
@@ -777,6 +767,18 @@ if (saunojas.length === 0) {
     saveUnits();
   }
 }
+const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
+if (!hasActivePlayerUnit) {
+  if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
+    state.addResource(Resource.SAUNA_BEER, SOLDIER_COST);
+  }
+  const fallbackId = `u${units.length + 1}`;
+  const fallbackUnit = spawnUnit(state, 'soldier', fallbackId, sauna.pos, 'player');
+  if (fallbackUnit) {
+    registerUnit(fallbackUnit);
+  }
+}
+map.revealAround(sauna.pos, 3);
 if (import.meta.env.DEV) {
   console.debug('Saunoja roster restored', {
     count: saunojas.length,
@@ -1269,6 +1271,14 @@ export function __rebuildRightPanelForTest(): void {
 
 export function __syncSaunojaRosterForTest(): boolean {
   return syncSaunojaRosterWithUnits();
+}
+
+export function __getUnitUpkeepForTest(unit: Unit): number {
+  return resolveUnitUpkeep(unit);
+}
+
+export function __getAttachedUnitIdForTest(attendantId: string): string | undefined {
+  return saunojaToUnit.get(attendantId);
 }
 
 function getActiveRosterCount(): number {
