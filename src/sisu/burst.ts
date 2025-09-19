@@ -201,7 +201,7 @@ export function torille(
     unit.stats.health = Math.min(unit.getMaxHealth(), Math.max(unit.stats.health, healAmount));
   }
 
-  map.revealAround(saunaPos, 3);
+  map.revealAround(saunaPos, 3, { autoFrame: false });
   eventBus.emit('torilleRecalled', { count: living.length });
   return true;
 }

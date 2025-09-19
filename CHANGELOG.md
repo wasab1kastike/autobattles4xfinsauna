@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restrain fog-of-war reveals from re-triggering camera auto-framing after the
+  opening reveal by adding an `autoFrame` toggle to `HexMap.revealAround` and
+  opting recurring gameplay calls out so manual camera adjustments stay intact.
+
 - Teach the balance simulator to resolve its CSV output inside the active OS
   temp directory instead of hard-coding `/tmp`, and log the resolved path so
   contributors can spot the destination.
