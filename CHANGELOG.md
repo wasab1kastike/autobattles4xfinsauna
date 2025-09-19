@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Migrate SISU burst APIs into `src/sisu/burst.ts`, retarget the game, renderer,
+  and HUD imports, and remove the legacy `src/sim/sisu.ts` implementation after
+  the move.
 - Rebuild the GitHub Pages mirror from commit ce40f24 so the hashed Vite
   bundle, published HTML, and build badge all advertise the latest deploy.
 - Add a `verify:docs` guard that checks the docs bundle commit hash against the
