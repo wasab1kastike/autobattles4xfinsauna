@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Polish battlefield unit rendering by cataloguing sprite metadata in
+  `src/render/units/sprite_map.ts`, introducing snapped placement helpers and
+  zoom utilities, wiring the renderer and Saunoja portraits through them, and
+  covering the anchor math with new Vitest suites across zoom levels.
 - Introduce a dedicated equipment system that maps item slots and stat
   modifiers through `src/items/`, threads equip/unequip guards into
   `src/game.ts`, refreshes roster storage plus calculations, polishes the

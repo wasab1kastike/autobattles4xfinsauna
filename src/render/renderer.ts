@@ -1,6 +1,5 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
-import { axialToPixel, hexDistance } from '../hex/HexUtils.ts';
-import { getHexDimensions } from '../hex/HexDimensions.ts';
+import { hexDistance } from '../hex/HexUtils.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit.ts';
 import { isSisuBurstActive } from '../sim/sisu.ts';
@@ -10,6 +9,7 @@ import { camera } from '../camera/autoFrame.ts';
 import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
+import { getSpritePlacement } from './units/draw.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -62,7 +62,8 @@ export function draw(
     saunojaLayer.draw(ctx, saunojaLayer.units, {
       originX: origin.x,
       originY: origin.y,
-      hexRadius: mapRenderer.hexSize
+      hexRadius: mapRenderer.hexSize,
+      zoom: camera.zoom
     });
   }
   drawUnits(ctx, mapRenderer, assets, units, origin, options?.fx);
@@ -83,9 +84,6 @@ export function drawUnits(
   origin: PixelCoord,
   fx?: FxLayerOptions
 ): void {
-  const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
-  const halfHexWidth = hexWidth / 2;
-  const halfHexHeight = hexHeight / 2;
   const friendlyVisionSources = units
     .filter((unit) => unit.faction === 'player' && !unit.isDead())
     .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
@@ -101,9 +99,6 @@ export function drawUnits(
     ) {
       continue;
     }
-    const { x, y } = axialToPixel(unit.coord, mapRenderer.hexSize);
-    const drawX = x - origin.x - halfHexWidth;
-    const drawY = y - origin.y - halfHexHeight;
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
     ctx.save();
@@ -119,11 +114,18 @@ export function drawUnits(
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }
-    ctx.drawImage(img, drawX, drawY, hexWidth, hexHeight);
+    const placement = getSpritePlacement({
+      coord: unit.coord,
+      hexSize: mapRenderer.hexSize,
+      origin,
+      zoom: camera.zoom,
+      type: unit.type
+    });
+    ctx.drawImage(img, placement.drawX, placement.drawY, placement.width, placement.height);
     if (isSisuBurstActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(drawX, drawY, hexWidth, hexHeight);
+      ctx.strokeRect(placement.drawX, placement.drawY, placement.width, placement.height);
     }
     ctx.restore();
   }

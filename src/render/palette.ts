@@ -3,6 +3,7 @@ import plainsIcon from '../../assets/tiles/plains.svg';
 import forestIcon from '../../assets/tiles/forest.svg';
 import hillsIcon from '../../assets/tiles/mountain.svg';
 import lakeIcon from '../../assets/tiles/water.svg';
+import { scaleForZoom } from './zoom.ts';
 
 export type TerrainVisual = {
   /** Base color used to paint the underlying hex. */
@@ -109,8 +110,7 @@ export function getOutlineWidth(
   weight: OutlineWeight = 'terrain'
 ): number {
   const base = hexSize * OUTLINE_BASE[weight];
-  const zoomSafe = zoom > 0 ? zoom : 1;
-  const adjusted = base / zoomSafe;
+  const adjusted = scaleForZoom(base, zoom);
   return Math.max(OUTLINE_MIN[weight], adjusted);
 }
 
