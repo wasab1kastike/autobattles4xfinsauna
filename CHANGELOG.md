@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Encapsulate NG+ progression in `src/progression/ngplus.ts`, persist run seeds,
+  levels, and unlock slots through `GameState`, wire the modifiers into economy
+  upkeep, reinforcement slots, enemy aggression, and elite loot odds, and cover
+  the new math with focused Vitest suites plus README documentation.
 - Add a progression tracker in `src/progression/objectives.ts` to monitor strongholds,
   roster wipes, and upkeep debt, surface a glassmorphism NG+ end screen via
   `src/ui/overlays/EndScreen.tsx`, escalate enemy spawn cadence each prestige, and

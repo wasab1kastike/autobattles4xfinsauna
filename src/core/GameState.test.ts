@@ -234,4 +234,44 @@ describe('GameState', () => {
     expect(loaded.nightWorkSpeedMultiplier).toBeCloseTo(1.05);
     expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(10);
   });
+
+  it('persists NG+ metadata alongside resources', () => {
+    const state = new GameState(1000);
+    state.setNgPlusState({ runSeed: 37, ngPlusLevel: 2, unlockSlots: 3 });
+    state.addResource(Resource.SAUNAKUNNIA, 4);
+    state.save();
+
+    const raw = localStorage.getItem('gameState');
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw ?? '{}');
+    expect(parsed.ngPlus).toEqual({ runSeed: 37, ngPlusLevel: 2, unlockSlots: 3 });
+
+    const loaded = new GameState(1000);
+    expect(loaded.load()).toBe(true);
+    const ngPlus = loaded.getNgPlusState();
+    expect(ngPlus.ngPlusLevel).toBe(2);
+    expect(ngPlus.unlockSlots).toBe(3);
+    expect(ngPlus.runSeed).toBe(37);
+  });
+
+  it('retains NG+ metadata when offline ticks apply', () => {
+    const state = new GameState(1000);
+    state.setNgPlusState({ runSeed: 12, ngPlusLevel: 1, unlockSlots: 1 });
+    state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
+    state.save();
+
+    const stored = localStorage.getItem('gameState');
+    expect(stored).not.toBeNull();
+    const parsed = JSON.parse(stored ?? '{}');
+    parsed.lastSaved = -5000;
+    localStorage.setItem('gameState', JSON.stringify(parsed));
+
+    vi.setSystemTime(5000);
+    const loaded = new GameState(1000);
+    expect(loaded.load()).toBe(true);
+    const ngPlus = loaded.getNgPlusState();
+    expect(ngPlus.ngPlusLevel).toBe(1);
+    expect(ngPlus.unlockSlots).toBe(1);
+    expect(ngPlus.runSeed).toBe(12);
+  });
 });

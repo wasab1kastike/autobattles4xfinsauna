@@ -87,8 +87,6 @@ export interface ObjectiveTrackerOptions {
 const DEFAULT_STRONGHOLDS: readonly BuildingType[] = ['city'];
 const DEFAULT_ROSTER_WIPE_GRACE_MS = 10_000;
 const DEFAULT_BANKRUPTCY_GRACE_MS = 12_000;
-const NG_PLUS_STORAGE_KEY = 'progression:ngPlusLevel';
-
 function now(): number {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
     return performance.now();
@@ -115,18 +113,6 @@ function captureResources(state: GameState): Record<Resource, number> {
     snapshot[res] = state.getResource(res);
   });
   return snapshot;
-}
-
-function storageOrNull(): Storage | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  try {
-    return window.localStorage ?? null;
-  } catch (error) {
-    console.warn('Local storage unavailable for NG+ progression', error);
-    return null;
-  }
 }
 
 class ObjectiveTrackerImpl implements ObjectiveTracker {
@@ -516,33 +502,5 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
 
 export function createObjectiveTracker(options: ObjectiveTrackerOptions): ObjectiveTracker {
   return new ObjectiveTrackerImpl(options);
-}
-
-export function getNgPlusLevel(): number {
-  const storage = storageOrNull();
-  if (!storage) {
-    return 0;
-  }
-  const raw = storage.getItem(NG_PLUS_STORAGE_KEY);
-  if (!raw) {
-    return 0;
-  }
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-export function advanceNgPlusLevel(): number {
-  const storage = storageOrNull();
-  if (!storage) {
-    return 0;
-  }
-  const next = getNgPlusLevel() + 1;
-  storage.setItem(NG_PLUS_STORAGE_KEY, String(next));
-  return next;
-}
-
-export function resetNgPlusLevel(): void {
-  const storage = storageOrNull();
-  storage?.removeItem(NG_PLUS_STORAGE_KEY);
 }
 

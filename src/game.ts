@@ -31,12 +31,20 @@ import { rollLoot } from './loot/roll.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
-import {
-  createObjectiveTracker,
-  getNgPlusLevel,
-  advanceNgPlusLevel
-} from './progression/objectives.ts';
+import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
+import {
+  createNgPlusRng,
+  ensureNgPlusRunState,
+  getAiAggressionModifier,
+  getEliteOdds,
+  getUnlockSpawnLimit,
+  getUpkeepMultiplier,
+  loadNgPlusState,
+  planNextNgPlusRun,
+  saveNgPlusState,
+  type NgPlusState
+} from './progression/ngplus.ts';
 import {
   getSaunojaStorage,
   loadUnits as loadRosterFromStorage,
@@ -61,7 +69,25 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SISU]: 'Sisu'
 };
 
-const currentNgPlusLevel = getNgPlusLevel();
+let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
+let ngPlusUpkeepMultiplier = 1;
+let ngPlusEliteOdds = 0;
+let ngPlusSpawnLimit = 1;
+let enemyAggressionModifier = 1;
+let enemyRandom: () => number = Math.random;
+let lootRandom: () => number = Math.random;
+
+function applyNgPlusState(next: NgPlusState): void {
+  currentNgPlusState = ensureNgPlusRunState(next);
+  ngPlusUpkeepMultiplier = getUpkeepMultiplier(currentNgPlusState);
+  ngPlusEliteOdds = getEliteOdds(currentNgPlusState);
+  ngPlusSpawnLimit = getUnlockSpawnLimit(currentNgPlusState);
+  enemyAggressionModifier = getAiAggressionModifier(currentNgPlusState);
+  enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
+  lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
+}
+
+applyNgPlusState(currentNgPlusState);
 
 let canvas: HTMLCanvasElement | null = null;
 let saunojas: Saunoja[] = [];
@@ -402,14 +428,23 @@ function resolveUnitUpkeep(unit: Unit): number {
     return 0;
   }
   const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
-  return upkeep > 0 ? upkeep : 0;
+  return upkeep > 0 ? upkeep * ngPlusUpkeepMultiplier : 0;
 }
 
 const state = new GameState(1000);
 const inventory = new InventoryState();
 const restoredSave = state.load(map);
-if (!restoredSave && currentNgPlusLevel > 0) {
-  const bonusBeer = Math.round(75 * currentNgPlusLevel);
+if (restoredSave) {
+  const hydratedNgPlus = state.getNgPlusState();
+  applyNgPlusState(hydratedNgPlus);
+  saveNgPlusState(hydratedNgPlus);
+} else {
+  const seededNgPlus = state.setNgPlusState(currentNgPlusState);
+  applyNgPlusState(seededNgPlus);
+  saveNgPlusState(seededNgPlus);
+}
+if (!restoredSave && currentNgPlusState.ngPlusLevel > 0) {
+  const bonusBeer = Math.round(75 * currentNgPlusState.ngPlusLevel);
   if (bonusBeer > 0) {
     state.addResource(Resource.SAUNA_BEER, bonusBeer);
   }
@@ -428,8 +463,11 @@ const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
   }
   return unit ?? null;
 };
-const enemySpawnerDifficulty = 1 + Math.max(0, currentNgPlusLevel) * 0.25;
-const enemySpawner = new EnemySpawner({ difficulty: enemySpawnerDifficulty });
+const enemySpawner = new EnemySpawner({
+  difficulty: enemyAggressionModifier,
+  random: enemyRandom,
+  eliteOdds: ngPlusEliteOdds
+});
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
@@ -442,7 +480,8 @@ const clock = new GameClock(1000, (deltaMs) => {
     getUnitUpkeep: resolveUnitUpkeep,
     pickSpawnTile: () => pickFreeTileAround(sauna.pos, units),
     spawnBaseUnit: spawnPlayerReinforcement,
-    minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN)
+    minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN),
+    maxSpawns: ngPlusSpawnLimit
   });
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
   battleManager.tick(units, dtSeconds);
@@ -480,15 +519,24 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
     endScreen.destroy();
     endScreen = null;
   }
+  const completedNgPlusLevel = currentNgPlusState.ngPlusLevel;
+  const nextRunNgPlusState = planNextNgPlusRun(currentNgPlusState, {
+    outcome: resolution.outcome
+  });
+  saveNgPlusState(nextRunNgPlusState);
+  state.setNgPlusState(nextRunNgPlusState);
+  applyNgPlusState(nextRunNgPlusState);
   const controller = showEndScreen({
     container: overlay,
     resolution,
-    currentNgPlusLevel,
+    currentNgPlusLevel: completedNgPlusLevel,
     resourceLabels: RESOURCE_LABELS,
     onNewRun: () => {
-      const nextLevel = advanceNgPlusLevel();
       if (import.meta.env.DEV) {
-        console.debug('Advancing to NG+ run', { level: nextLevel });
+        console.debug('Advancing to NG+ run', {
+          level: nextRunNgPlusState.ngPlusLevel,
+          unlockSlots: nextRunNgPlusState.unlockSlots
+        });
       }
       try {
         if (typeof window !== 'undefined') {
@@ -859,7 +907,8 @@ const onUnitDied = ({
     updateRosterDisplay();
   }
   if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
-    const lootResult = rollLoot({ factionId: unitFaction, elite: isEliteUnit(fallen ?? null) });
+    const treatAsElite = isEliteUnit(fallen ?? null) || lootRandom() < ngPlusEliteOdds;
+    const lootResult = rollLoot({ factionId: unitFaction, elite: treatAsElite });
     if (lootResult.rolls.length > 0) {
       const selectedAttendant = saunojas.find((unit) => unit.selected) ?? null;
       for (const drop of lootResult.rolls) {
