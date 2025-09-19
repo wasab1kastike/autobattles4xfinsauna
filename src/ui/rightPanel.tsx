@@ -1,6 +1,7 @@
 import { GameState, Resource } from '../core/GameState.ts';
 import { eventBus } from '../events';
 import { ensureHudLayout } from './layout.ts';
+import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
 
@@ -34,14 +35,18 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
-  const { actions, side } = ensureHudLayout(overlay);
+  const { actions, side, mobileBar } = ensureHudLayout(overlay);
 
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
     existingPanel.remove();
   }
+  const existingSlide = overlay.querySelector<HTMLDivElement>('.right-panel-slide');
+  if (existingSlide) {
+    existingSlide.remove();
+  }
 
-  const existingToggle = actions.querySelector<HTMLButtonElement>('#right-panel-toggle');
+  const existingToggle = overlay.querySelector<HTMLButtonElement>('#right-panel-toggle');
   if (existingToggle) {
     existingToggle.remove();
   }
@@ -53,7 +58,20 @@ export function setupRightPanel(
   panel.setAttribute('aria-label', 'Sauna command console');
   panel.tabIndex = -1;
 
-  const smallViewportQuery = window.matchMedia('(max-width: 960px)');
+  const slideOver = document.createElement('div');
+  slideOver.className = 'right-panel-slide';
+  slideOver.setAttribute('aria-hidden', 'true');
+
+  const slideBackdrop = document.createElement('div');
+  slideBackdrop.className = 'right-panel-slide__backdrop';
+  slideBackdrop.setAttribute('aria-hidden', 'true');
+
+  const slideSheet = document.createElement('div');
+  slideSheet.className = 'right-panel-slide__sheet';
+  slideSheet.appendChild(panel);
+  slideOver.append(slideBackdrop, slideSheet);
+
+  const smallViewportQuery = window.matchMedia('(max-width: 1040px)');
   const disposers: Array<() => void> = [];
 
   const toggle = document.createElement('button');
@@ -88,15 +106,52 @@ export function setupRightPanel(
       actions.prepend(toggle);
     }
   };
-  insertToggle();
 
   let isCollapsed = false;
   let narrowLayoutCollapsed = false;
+  let isMobileViewport = false;
+  let isMobilePanelOpen = false;
+
+  const scrollLockClass = 'is-mobile-panel-open';
+
+  const updateToggleStateText = () => {
+    if (isMobileViewport) {
+      toggleState.textContent = isMobilePanelOpen ? 'Close' : 'Menu';
+    } else {
+      toggleState.textContent = isCollapsed ? 'Open' : 'Close';
+    }
+  };
+
+  const updateToggleAccessibility = () => {
+    if (isMobileViewport) {
+      toggle.setAttribute('aria-expanded', isMobilePanelOpen ? 'true' : 'false');
+      const label = isMobilePanelOpen ? 'Close command console panel' : 'Open command console panel';
+      toggle.setAttribute('aria-label', label);
+      toggle.title = isMobilePanelOpen
+        ? 'Close the sauna command console overlay'
+        : 'Open the sauna command console overlay';
+    } else {
+      toggle.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      const label = isCollapsed ? 'Open command console panel' : 'Close command console panel';
+      toggle.setAttribute('aria-label', label);
+      toggle.title = isCollapsed
+        ? 'Open the sauna command console overlay'
+        : 'Close the sauna command console overlay';
+    }
+  };
+
+  const refreshTogglePresentation = () => {
+    updateToggleStateText();
+    updateToggleAccessibility();
+  };
 
   const applyCollapsedState = (
     collapsed: boolean,
     matches = smallViewportQuery.matches
   ): void => {
+    if (isMobileViewport) {
+      return;
+    }
     const wasCollapsed = isCollapsed;
     if (matches) {
       narrowLayoutCollapsed = collapsed;
@@ -105,22 +160,75 @@ export function setupRightPanel(
     isCollapsed = shouldCollapse;
     panel.classList.toggle('right-panel--collapsed', shouldCollapse);
     panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
-    toggle.setAttribute('aria-expanded', shouldCollapse ? 'false' : 'true');
-    toggleState.textContent = shouldCollapse ? 'Open' : 'Close';
-    const label = shouldCollapse ? 'Open command console panel' : 'Close command console panel';
-    toggle.setAttribute('aria-label', label);
-    toggle.title = shouldCollapse
-      ? 'Open the sauna command console overlay'
-      : 'Close the sauna command console overlay';
+    refreshTogglePresentation();
     if (wasCollapsed && !shouldCollapse && matches) {
       panel.focus({ preventScroll: true });
     }
   };
 
-  applyCollapsedState(narrowLayoutCollapsed, smallViewportQuery.matches);
-  toggle.hidden = !smallViewportQuery.matches;
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (!isMobileViewport || !isMobilePanelOpen) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMobilePanel();
+    }
+  };
+
+  let keydownBound = false;
+  const bindMobileKeydown = () => {
+    if (!keydownBound) {
+      document.addEventListener('keydown', handleKeydown);
+      keydownBound = true;
+    }
+  };
+  const unbindMobileKeydown = () => {
+    if (keydownBound) {
+      document.removeEventListener('keydown', handleKeydown);
+      keydownBound = false;
+    }
+  };
+
+  const openMobilePanel = () => {
+    if (!isMobileViewport || isMobilePanelOpen) {
+      return;
+    }
+    isMobilePanelOpen = true;
+    slideOver.classList.add('right-panel-slide--open');
+    slideOver.setAttribute('aria-hidden', 'false');
+    panel.setAttribute('aria-hidden', 'false');
+    document.body.classList.add(scrollLockClass);
+    slideOver.style.setProperty('--panel-drag-progress', '1');
+    refreshTogglePresentation();
+    bindMobileKeydown();
+    requestAnimationFrame(() => {
+      panel.focus({ preventScroll: true });
+    });
+  };
+
+  const closeMobilePanel = ({ skipFocus = false }: { skipFocus?: boolean } = {}) => {
+    if (!isMobileViewport || !isMobilePanelOpen) {
+      return;
+    }
+    resetDrag();
+    isMobilePanelOpen = false;
+    slideOver.classList.remove('right-panel-slide--open');
+    slideOver.setAttribute('aria-hidden', 'true');
+    panel.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove(scrollLockClass);
+    slideOver.style.setProperty('--panel-drag-progress', '0');
+    refreshTogglePresentation();
+    unbindMobileKeydown();
+    if (!skipFocus) {
+      toggle.focus({ preventScroll: true });
+    }
+  };
 
   const handleViewportChange = (event: MediaQueryListEvent): void => {
+    if (isMobileViewport) {
+      return;
+    }
     const matches = event.matches;
     toggle.hidden = !matches;
     const collapsed = matches ? narrowLayoutCollapsed : false;
@@ -136,11 +244,125 @@ export function setupRightPanel(
   }
 
   const handleToggleClick = (): void => {
+    if (isMobileViewport) {
+      if (isMobilePanelOpen) {
+        closeMobilePanel();
+      } else {
+        openMobilePanel();
+      }
+      return;
+    }
     const next = !isCollapsed;
     applyCollapsedState(next);
   };
   toggle.addEventListener('click', handleToggleClick);
   disposers.push(() => toggle.removeEventListener('click', handleToggleClick));
+
+  const handleBackdropClick = () => {
+    closeMobilePanel();
+  };
+  slideBackdrop.addEventListener('click', handleBackdropClick);
+  disposers.push(() => slideBackdrop.removeEventListener('click', handleBackdropClick));
+
+  let dragPointerId: number | null = null;
+  let dragStartX = 0;
+  let dragDeltaX = 0;
+
+  const resetDrag = () => {
+    if (dragPointerId !== null) {
+      slideSheet.releasePointerCapture(dragPointerId);
+      dragPointerId = null;
+    }
+    slideSheet.style.transition = '';
+    slideSheet.style.transform = '';
+    slideOver.style.setProperty('--panel-drag-progress', isMobilePanelOpen ? '1' : '0');
+  };
+
+  const handlePointerDown = (event: PointerEvent) => {
+    if (!isMobileViewport || !isMobilePanelOpen) {
+      return;
+    }
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+    dragPointerId = event.pointerId;
+    dragStartX = event.clientX;
+    dragDeltaX = 0;
+    slideSheet.style.transition = 'none';
+    slideSheet.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent) => {
+    if (!isMobileViewport || event.pointerId !== dragPointerId || !isMobilePanelOpen) {
+      return;
+    }
+    dragDeltaX = Math.max(0, event.clientX - dragStartX);
+    const maxOffset = slideSheet.offsetWidth || 1;
+    const offset = Math.min(dragDeltaX, maxOffset);
+    slideSheet.style.transform = `translateX(${offset}px)`;
+    slideOver.style.setProperty('--panel-drag-progress', String(1 - offset / maxOffset));
+  };
+
+  const finishDrag = (shouldClose: boolean) => {
+    resetDrag();
+    if (shouldClose) {
+      closeMobilePanel();
+    }
+  };
+
+  const handlePointerUp = (event: PointerEvent) => {
+    if (event.pointerId !== dragPointerId) {
+      return;
+    }
+    const maxOffset = slideSheet.offsetWidth || 1;
+    const shouldClose = dragDeltaX > maxOffset * 0.35;
+    finishDrag(shouldClose);
+  };
+
+  const handlePointerCancel = () => {
+    finishDrag(false);
+  };
+
+  slideSheet.addEventListener('pointerdown', handlePointerDown);
+  slideSheet.addEventListener('pointermove', handlePointerMove);
+  slideSheet.addEventListener('pointerup', handlePointerUp);
+  slideSheet.addEventListener('pointercancel', handlePointerCancel);
+  disposers.push(() => {
+    slideSheet.removeEventListener('pointerdown', handlePointerDown);
+    slideSheet.removeEventListener('pointermove', handlePointerMove);
+    slideSheet.removeEventListener('pointerup', handlePointerUp);
+    slideSheet.removeEventListener('pointercancel', handlePointerCancel);
+  });
+
+  const detachMobilePlacement = subscribeToIsMobile((isMobile) => {
+    isMobileViewport = isMobile;
+    if (isMobileViewport) {
+      slideSheet.appendChild(panel);
+      if (!slideOver.isConnected) {
+        overlay.appendChild(slideOver);
+      }
+      mobileBar.appendChild(toggle);
+      toggle.classList.add('hud-panel-toggle--mobile');
+      toggle.hidden = false;
+      if (!isMobilePanelOpen) {
+        panel.setAttribute('aria-hidden', 'true');
+        slideOver.setAttribute('aria-hidden', 'true');
+        slideOver.style.setProperty('--panel-drag-progress', '0');
+      }
+    } else {
+      closeMobilePanel({ skipFocus: true });
+      slideOver.style.setProperty('--panel-drag-progress', '1');
+      slideOver.remove();
+      side.appendChild(panel);
+      insertToggle();
+      toggle.classList.remove('hud-panel-toggle--mobile');
+      toggle.hidden = !smallViewportQuery.matches;
+      panel.setAttribute('aria-hidden', 'false');
+      applyCollapsedState(narrowLayoutCollapsed, smallViewportQuery.matches);
+    }
+    refreshTogglePresentation();
+  });
+  disposers.push(detachMobilePlacement);
 
   const tabBar = document.createElement('div');
   tabBar.classList.add('panel-tabs');
@@ -206,8 +428,6 @@ export function setupRightPanel(
     tabBar.appendChild(btn);
     content.appendChild(tabs[name]);
   }
-
-  side.appendChild(panel);
 
   // --- Roster ---
   const rosterPanel = createRosterPanel(rosterTab, { onSelect: onRosterSelect });
@@ -456,6 +676,10 @@ export function setupRightPanel(
         console.warn('Failed to dispose HUD listener', error);
       }
     }
+    unbindMobileKeydown();
+    resetDrag();
+    document.body.classList.remove(scrollLockClass);
+    slideOver.remove();
     toggle.remove();
     panel.remove();
   };

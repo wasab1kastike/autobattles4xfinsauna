@@ -14,6 +14,7 @@ import {
   TORILLE_COST
 } from '../sim/sisu.ts';
 import { ensureHudLayout } from './layout.ts';
+import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 
 type Badge = {
   container: HTMLDivElement;
@@ -109,11 +110,20 @@ export function setupTopbar(
     };
   }
 
-  const { actions } = ensureHudLayout(overlay);
+  const { actions, mobileBar } = ensureHudLayout(overlay);
 
   const bar = document.createElement('div');
   bar.id = 'topbar';
   actions.prepend(bar);
+
+  const badgeRow = document.createElement('div');
+  badgeRow.className = 'topbar-badge-row';
+  bar.appendChild(badgeRow);
+
+  const actionTray = document.createElement('div');
+  actionTray.className = 'topbar-action-tray';
+  actionTray.setAttribute('role', 'group');
+  actionTray.setAttribute('aria-label', 'Combat and audio controls');
 
   const resourceDescriptions: Record<Resource, string> = {
     [Resource.SAUNA_BEER]:
@@ -152,11 +162,11 @@ export function setupTopbar(
   time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
 
-  bar.appendChild(saunaBeer.container);
-  bar.appendChild(sisuResource.container);
-  bar.appendChild(saunakunnia.container);
-  bar.appendChild(burstTimer.container);
-  bar.appendChild(time.container);
+  badgeRow.appendChild(saunaBeer.container);
+  badgeRow.appendChild(sisuResource.container);
+  badgeRow.appendChild(saunakunnia.container);
+  badgeRow.appendChild(burstTimer.container);
+  badgeRow.appendChild(time.container);
 
   let burstBtn: HTMLButtonElement | null = null;
   let rallyBtn: HTMLButtonElement | null = null;
@@ -171,7 +181,8 @@ export function setupTopbar(
       void abilities.useSisuBurst?.();
       refreshAbilityButtons();
     });
-    bar.appendChild(burstBtn);
+    burstBtn.classList.add('topbar-action');
+    actionTray.appendChild(burstBtn);
   }
 
   if (abilities.torille) {
@@ -184,7 +195,8 @@ export function setupTopbar(
       void abilities.torille?.();
       refreshAbilityButtons();
     });
-    bar.appendChild(rallyBtn);
+    rallyBtn.classList.add('topbar-action');
+    actionTray.appendChild(rallyBtn);
   }
 
   function refreshAbilityButtons(): void {
@@ -242,7 +254,8 @@ export function setupTopbar(
     renderMute();
   });
   renderMute();
-  bar.appendChild(muteBtn);
+  muteBtn.classList.add('topbar-action', 'topbar-action--sound');
+  actionTray.appendChild(muteBtn);
 
   const ambienceContainer = document.createElement('div');
   ambienceContainer.className = 'topbar-ambience';
@@ -301,6 +314,16 @@ export function setupTopbar(
 
   ambienceContainer.append(ambienceHeader, sliderWrapper, ambienceStatus);
   bar.appendChild(ambienceContainer);
+
+  const detachMobilePlacement = subscribeToIsMobile((isMobile) => {
+    if (isMobile) {
+      mobileBar.appendChild(actionTray);
+      actionTray.classList.add('topbar-action-tray--mobile');
+    } else {
+      bar.appendChild(actionTray);
+      actionTray.classList.remove('topbar-action-tray--mobile');
+    }
+  });
 
   let ambienceState = getAmbienceState();
 
@@ -541,6 +564,8 @@ export function setupTopbar(
         }
       });
       disposeAmbienceListener();
+      detachMobilePlacement();
+      actionTray.remove();
       bar.remove();
     }
   };

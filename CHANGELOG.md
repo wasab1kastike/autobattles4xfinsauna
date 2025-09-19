@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Add a `useIsMobile` helper that exposes an `is-mobile` root class, move SISU,
+  audio, and the command console toggle into a mobile-only bottom action bar,
+  rework the right panel into a swipeable slide-over that locks body scroll, and
+  tighten HUD padding so 360×800 layouts reserve over 65% of the screen for the
+  battlefield while keeping polished visuals.
+
 - Encapsulate NG+ progression in `src/progression/ngplus.ts`, persist run seeds,
   levels, and unlock slots through `GameState`, wire the modifiers into economy
   upkeep, reinforcement slots, enemy aggression, and elite loot odds, and cover
