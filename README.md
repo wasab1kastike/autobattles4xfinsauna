@@ -23,6 +23,9 @@ with cinematic UI flourishes.
   aria labels.
 - **NG+ progression end screen** tallies liberated strongholds, roster attrition,
   and resource rewards in a glassmorphism overlay that invites the next prestige run.
+- **NG+ scaling** now seeds each run, escalates upkeep and enemy aggression with
+  every prestige level, and unlocks additional reinforcement slots for polished
+  late-game pacing.
 - **Immersive ambience** crossfades a sauna-and-forest soundscape through Web
   Audio, with top-bar controls that remember volume, honor the mute toggle, and
   respect reduced-motion preferences.
