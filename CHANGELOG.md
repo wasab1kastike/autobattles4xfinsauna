@@ -4,6 +4,8 @@
 
 - Rebuild the GitHub Pages mirror from commit ce40f24 so the hashed Vite
   bundle, published HTML, and build badge all advertise the latest deploy.
+- Add a `verify:docs` guard that checks the docs bundle commit hash against the
+  current HEAD so stale mirrors fail fast in CI and locally.
 - Guard ambience preference reads behind a resilient storage helper so startup
   falls back to defaults when `localStorage` is unavailable, and cover the
   regression with a Vitest stubbed-storage test.

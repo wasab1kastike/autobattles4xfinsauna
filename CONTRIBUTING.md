@@ -11,6 +11,11 @@ important for keeping the live experience in sync with the repository.
   `https://artobest.com/?utm_source=chatgpt.com` so the automated `check:demo`
   script can verify the deployment. The CI pipeline now runs this guard after
   the production build, so broken URLs or titles will fail pull requests.
+- Keep the `docs/` mirror aligned with the working tree. The `verify:docs`
+  script inspects `docs/assets/index-*.js` for the embedded commit hash and
+  fails fast if it doesn't match `git rev-parse --short HEAD`. Re-run
+  `npm run build` to regenerate the bundle whenever the guard reports stale
+  assets.
 - Preserve the custom domain configuration. `public/CNAME` (and the mirrored
   `docs/CNAME` for historic deployments) should continue to reference
   `artobest.com` unless the production URL officially changes.
@@ -25,6 +30,10 @@ Run the full workflow locally before pushing:
 2. `npm run build`
 3. `npm run check:demo`
 4. `npm run simulate`
+
+`npm test` now also runs `npm run verify:docs`, so local commits surface stale
+`docs/` assets the same way the CI pipeline does. If the guard fails, run
+`npm run build` and commit the refreshed mirror alongside your changes.
 
 The test script already runs the live demo availability check; the dedicated
 `check:demo` command is listed separately so you can mirror the post-build CI
