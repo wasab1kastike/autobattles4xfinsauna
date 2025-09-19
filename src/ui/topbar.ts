@@ -12,7 +12,7 @@ import {
   isSisuBurstActive,
   SISU_BURST_COST,
   TORILLE_COST
-} from '../sim/sisu.ts';
+} from '../sisu/burst.ts';
 import { ensureHudLayout } from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 
