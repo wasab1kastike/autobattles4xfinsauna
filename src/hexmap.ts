@@ -107,7 +107,12 @@ export class HexMap {
    * within the radius we reveal the tile if it exists on the map. Tiles
    * outside the radius remain fogged.
    */
-  revealAround(center: AxialCoord, radius: number): void {
+  revealAround(
+    center: AxialCoord,
+    radius: number,
+    options: { autoFrame?: boolean } = {}
+  ): void {
+    const { autoFrame: shouldAutoFrame = true } = options;
     for (let dq = -radius; dq <= radius; dq++) {
       const rMin = Math.max(-radius, -dq - radius);
       const rMax = Math.min(radius, -dq + radius);
@@ -117,6 +122,10 @@ export class HexMap {
         tile.reveal();
         markRevealed(coord, this.hexSize);
       }
+    }
+
+    if (!shouldAutoFrame) {
+      return;
     }
 
     const viewport = typeof window !== 'undefined'
