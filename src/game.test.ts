@@ -344,6 +344,41 @@ describe('game lifecycle', () => {
 });
 
 describe('saunoja persistence', () => {
+  it('seeds the starter attendant with zero upkeep and keeps it persisted', async () => {
+    const {
+      __getAttachedUnitIdForTest,
+      __getUnitUpkeepForTest,
+      __syncSaunojaRosterForTest,
+      loadUnits
+    } = await initGame();
+
+    __syncSaunojaRosterForTest();
+
+    const roster = loadUnits();
+    expect(roster).not.toHaveLength(0);
+
+    const starter = roster.find((unit) => unit.id === 'saunoja-1');
+    expect(starter).toBeDefined();
+    expect(starter?.upkeep).toBe(0);
+
+    const stored = window.localStorage?.getItem('autobattles:saunojas');
+    expect(stored).toBeTypeOf('string');
+    const parsed = JSON.parse(stored ?? '[]');
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed[0]?.upkeep).toBe(0);
+
+    if (starter) {
+      const attachedUnitId = __getAttachedUnitIdForTest(starter.id);
+      expect(attachedUnitId).toBeTypeOf('string');
+      if (attachedUnitId) {
+        const { Unit } = await import('./units/Unit.ts');
+        const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
+        const probe = new Unit(attachedUnitId, 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
+        expect(__getUnitUpkeepForTest(probe)).toBe(0);
+      }
+    }
+  });
+
   it('normalizes and persists extended attendant fields', async () => {
     window.localStorage?.setItem(
       'autobattles:saunojas',
