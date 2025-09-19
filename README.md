@@ -21,6 +21,9 @@ with cinematic UI flourishes.
 - **Glass HUD overlays** (resource bar, build badge, and right-panel cards)
   are layered over the canvas with high-end gradients, blur, and accessible
   aria labels.
+- **Immersive ambience** crossfades a sauna-and-forest soundscape through Web
+  Audio, with top-bar controls that remember volume, honor the mute toggle, and
+  respect reduced-motion preferences.
 - **Hand-painted tactical sprites** render terrain, structures, and units with
   crisp vector art that scales cleanly across every zoom level.
 - **Perlin-sculpted fog-of-war** renders with cached noise masks and multi-stop
@@ -42,9 +45,12 @@ with cinematic UI flourishes.
    and the timer badge keeps the current session readable.
 3. **Trigger SISU** to launch a temporary combat surge and watch the countdown
    indicator pulse while the ability is active.
-4. **Adjust sauna tactics** from the sauna card: expand the card from the top
+4. **Dial the ambience** from the top-bar controls—toggle the sauna forest loop
+   or adjust the volume slider, and the preference will persist across future
+   sessions.
+5. **Adjust sauna tactics** from the sauna card: expand the card from the top
    bar to toggle the rally option and monitor spawn progress.
-5. **Review events and policies** from the right panel. Apply policies when you
+6. **Review events and policies** from the right panel. Apply policies when you
    have the gold, acknowledge events to clear the queue, and scan the log for a
    curated history of recent actions.
 
