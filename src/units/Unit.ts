@@ -1,5 +1,5 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
-import { getNeighbors, axialToPixel, hexDistance } from '../hex/HexUtils.ts';
+import { getNeighbors, hexDistance } from '../hex/HexUtils.ts';
 import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
@@ -32,6 +32,7 @@ export class Unit {
   private listeners: { death?: Listener[] } = {};
   private maxHealth: number;
   private healMarkerElapsed = 0;
+  private healAmountBuffer = 0;
   private cachedTargetKey?: string;
   private cachedStartKey?: string;
   private cachedPath?: AxialCoord[];
@@ -102,32 +103,38 @@ export class Unit {
         this.maxHealth
       );
       if (this.stats.health > before) {
+        const healed = this.stats.health - before;
         this.healMarkerElapsed += dt;
-        if (this.healMarkerElapsed >= 1) {
-          this.healMarkerElapsed = 0;
-          this.spawnHealMarker();
+        this.healAmountBuffer += healed;
+        const needsFlush = this.healMarkerElapsed >= 0.9 || this.healAmountBuffer >= 2;
+        if (needsFlush) {
+          this.flushHealEvent();
         }
       }
     } else {
+      if (this.healAmountBuffer > 0) {
+        this.flushHealEvent();
+      }
       this.healMarkerElapsed = 0;
+      this.healAmountBuffer = 0;
     }
   }
 
-  private spawnHealMarker(): void {
-    if (typeof document === 'undefined') return;
-    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
-    if (!canvas) return;
-    const { x, y } = axialToPixel(this.coord, 32);
-    const marker = document.createElement('div');
-    marker.textContent = '+';
-    marker.className = 'heal-marker';
-    marker.style.position = 'absolute';
-    const rect = canvas.getBoundingClientRect();
-    marker.style.left = `${rect.left + x}px`;
-    marker.style.top = `${rect.top + y}px`;
-    marker.style.pointerEvents = 'none';
-    document.body.appendChild(marker);
-    setTimeout(() => marker.remove(), 1000);
+  private flushHealEvent(): void {
+    if (this.healAmountBuffer <= 0) {
+      this.healMarkerElapsed = 0;
+      return;
+    }
+    const amount = Math.round(this.healAmountBuffer * 10) / 10;
+    if (amount > 0) {
+      eventBus.emit('unitHealed', {
+        unitId: this.id,
+        amount,
+        remainingHealth: this.stats.health
+      });
+    }
+    this.healAmountBuffer = 0;
+    this.healMarkerElapsed = 0;
   }
 
   takeDamage(amount?: number, attacker?: Unit): CombatResolution | null {

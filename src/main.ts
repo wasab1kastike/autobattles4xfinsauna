@@ -263,7 +263,7 @@ export function init(): void {
   canvasRef = canvas;
   hud = createHud(overlay);
 
-  setupGame(canvas, resourceBar);
+  setupGame(canvas, resourceBar, overlay);
   attachCanvasInputs(canvas);
 
   const resize = () => resizeCanvasToDisplaySize(canvas);

@@ -17,12 +17,17 @@ type DrawSaunojaFn = (
   options?: DrawSaunojasOptions
 ) => void;
 
+export interface FxLayerOptions {
+  getUnitAlpha?: (unit: Unit) => number;
+}
+
 export interface DrawOptions {
   saunojas?: {
     units: Saunoja[];
     draw: DrawSaunojaFn;
   };
   sauna?: Sauna | null;
+  fx?: FxLayerOptions;
 }
 
 export function draw(
@@ -60,7 +65,7 @@ export function draw(
       hexRadius: mapRenderer.hexSize
     });
   }
-  drawUnits(ctx, mapRenderer, assets, units, origin);
+  drawUnits(ctx, mapRenderer, assets, units, origin, options?.fx);
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
       origin,
@@ -75,7 +80,8 @@ export function drawUnits(
   mapRenderer: HexMapRenderer,
   assets: LoadedAssets['images'],
   units: Unit[],
-  origin: PixelCoord
+  origin: PixelCoord,
+  fx?: FxLayerOptions
 ): void {
   const { width: hexWidth, height: hexHeight } = getHexDimensions(mapRenderer.hexSize);
   const halfHexWidth = hexWidth / 2;
@@ -101,6 +107,15 @@ export function drawUnits(
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
     ctx.save();
+    const alpha = fx?.getUnitAlpha?.(unit);
+    if (typeof alpha === 'number') {
+      const clamped = Math.min(1, Math.max(0, alpha));
+      if (clamped <= 0) {
+        ctx.restore();
+        continue;
+      }
+      ctx.globalAlpha *= clamped;
+    }
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }

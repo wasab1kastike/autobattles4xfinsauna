@@ -16,6 +16,7 @@ import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { draw as render } from './render/renderer.ts';
+import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja, SaunojaItem } from './units/saunoja.ts';
 import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
@@ -69,6 +70,7 @@ let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
 let pendingRosterEntries: RosterEntry[] | null = null;
 let animationFrameId: number | null = null;
 let running = false;
+let unitFx: UnitFxManager | null = null;
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
   pendingRosterRenderer = renderer;
@@ -124,8 +126,25 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
-export function setupGame(canvasEl: HTMLCanvasElement, resourceBarEl: HTMLElement): void {
+export function setupGame(
+  canvasEl: HTMLCanvasElement,
+  resourceBarEl: HTMLElement,
+  overlayEl: HTMLElement
+): void {
   canvas = canvasEl;
+  if (unitFx) {
+    unitFx.dispose();
+    unitFx = null;
+  }
+  unitFx = createUnitFxManager({
+    canvas: canvasEl,
+    overlay: overlayEl,
+    mapRenderer,
+    getUnitById: (id) => unitsById.get(id),
+    requestDraw: () => {
+      draw();
+    }
+  });
   if (rosterHud) {
     rosterHud.destroy();
   }
@@ -691,13 +710,28 @@ export function draw(): void {
   const ctx = canvas.getContext('2d');
   const assets = getAssets();
   if (!ctx || !assets) return;
+  if (unitFx) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    unitFx.step(now);
+  }
+  const shakeOffset = unitFx?.getShakeOffset() ?? { x: 0, y: 0 };
+  const fxOptions = unitFx
+    ? { getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id) }
+    : undefined;
+
+  ctx.save();
+  if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
+    ctx.translate(shakeOffset.x, shakeOffset.y);
+  }
   render(ctx, mapRenderer, assets.images, units, selected, {
     saunojas: {
       units: saunojas,
       draw: drawSaunojas
     },
-    sauna
+    sauna,
+    fx: fxOptions
   });
+  ctx.restore();
 }
 
 const onPolicyApplied = ({ policy }) => {
@@ -801,6 +835,11 @@ export function cleanup(): void {
     saveUnits();
   } catch (error) {
     console.warn('Failed to persist Saunoja roster during cleanup', error);
+  }
+
+  if (unitFx) {
+    unitFx.dispose();
+    unitFx = null;
   }
 
   eventBus.off('policyApplied', onPolicyApplied);

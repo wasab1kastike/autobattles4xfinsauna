@@ -26,6 +26,9 @@ with cinematic UI flourishes.
   respect reduced-motion preferences.
 - **Hand-painted tactical sprites** render terrain, structures, and units with
   crisp vector art that scales cleanly across every zoom level.
+- **Combat feedback floaters** pop luxe damage and heal numbers over units,
+  mix canvas shakes with casualty fades, and respect reduced-motion
+  preferences for mobile players.
 - **Perlin-sculpted fog-of-war** renders with cached noise masks and multi-stop
   gradients so frontier edges stay crisp at every zoom level.
 - **Sauna operations** expose a toggleable control card to manage rally
@@ -119,4 +122,23 @@ documentation, changelog entries, and domain checks.
 ## Changelog
 
 Key updates are catalogued in [CHANGELOG.md](CHANGELOG.md).
+
+## Combat Feedback System
+
+The battlefield now routes combat events through a dedicated FX manager:
+
+- `src/ui/fx/Floater.tsx` mounts an overlay layer that spawns glassy number
+  badges above units. Each floater accepts color and directional parameters, so
+  damage bursts can blaze crimson while heals surge in sauna-green hues.
+- `src/render/unit_fx.ts` subscribes to the `unitDamaged`, `unitHealed`, and
+  `unitDied` events. It projects unit coordinates into screen space, queues
+  screen shakes, and eases casualty fades without stalling the main loop. The
+  helper automatically tempers intensity on coarse pointers and honors
+  `prefers-reduced-motion` so handheld devices degrade gracefully.
+- `src/game.ts` wires the manager into the primary draw routine, translating
+  shake offsets at 60fps while feeding per-unit alpha overrides into the canvas
+  renderer.
+
+These layers keep frontline skirmishes legible with premium polish while
+respecting accessibility settings.
 
