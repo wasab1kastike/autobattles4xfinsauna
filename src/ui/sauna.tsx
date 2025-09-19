@@ -7,6 +7,7 @@ export function setupSaunaUI(sauna: Sauna): (dt: number) => void {
 
   const container = document.createElement('div');
   container.classList.add('sauna-control');
+  container.dataset.tutorialTarget = 'heat';
 
   const btn = document.createElement('button');
   btn.type = 'button';
