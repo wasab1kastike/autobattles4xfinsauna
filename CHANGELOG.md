@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Pace unit beer upkeep so the economy only deducts reserves every five
+  seconds, matching the new simulation cadence and communicating the change to
+  players.
+
 p resolution with new Vitest assertions.
 
 - Surface sauna beer debt in the HUD by letting negative totals render, tagging
