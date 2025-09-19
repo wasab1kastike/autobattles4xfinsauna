@@ -11,6 +11,7 @@ import { addModifier, removeModifier } from '../mods/runtime.ts';
 const SISU_BURST_DURATION_SECONDS = 10;
 const SISU_BURST_ATTACK_MULTIPLIER = 1.5;
 const SISU_BURST_MOVEMENT_MULTIPLIER = 1.5;
+const SISU_BURST_SHIELD_BONUS = 1;
 const TORILLE_HEAL_RATIO = 0.6;
 const SISU_BURST_STATUS_MESSAGE = '⚔️ +50% attack · 🛡️ Barrier · ♾️ Immortal';
 
@@ -19,9 +20,9 @@ export const TORILLE_COST = 3;
 
 type SisuBurstModifierState = {
   unit: Unit;
-  baseAttack: number;
-  baseMovement: number;
-  baseShield: number;
+  attackDelta: number;
+  movementDelta: number;
+  shieldBonusApplied: number;
   shieldBonusRemaining: number;
   wasImmortal: boolean;
 };
@@ -77,10 +78,10 @@ export function useSisuBurst(state: GameState, units: Unit[]): boolean {
     const modifierId = `sisu-burst-${unit.id}`;
     const state: SisuBurstModifierState = {
       unit,
-      baseAttack: unit.stats.attackDamage,
-      baseMovement: unit.stats.movementRange,
-      baseShield: unit.getShield(),
-      shieldBonusRemaining: 1,
+      attackDelta: 0,
+      movementDelta: 0,
+      shieldBonusApplied: SISU_BURST_SHIELD_BONUS,
+      shieldBonusRemaining: SISU_BURST_SHIELD_BONUS,
       wasImmortal: unit.isImmortal()
     };
 
@@ -89,26 +90,66 @@ export function useSisuBurst(state: GameState, units: Unit[]): boolean {
       duration: SISU_BURST_DURATION_SECONDS,
       data: state,
       onApply: () => {
-        unit.stats.attackDamage = Math.round(
-          state.baseAttack * SISU_BURST_ATTACK_MULTIPLIER
+        const attackBefore = unit.stats.attackDamage;
+        const attackAfter = Math.round(
+          attackBefore * SISU_BURST_ATTACK_MULTIPLIER
         );
-        unit.stats.movementRange = Math.max(
+        state.attackDelta = Math.max(0, attackAfter - attackBefore);
+        if (state.attackDelta !== 0) {
+          unit.stats.attackDamage = attackBefore + state.attackDelta;
+        }
+
+        const movementBefore = unit.stats.movementRange;
+        const movementAfter = Math.max(
           1,
-          Math.round(state.baseMovement * SISU_BURST_MOVEMENT_MULTIPLIER)
+          Math.round(movementBefore * SISU_BURST_MOVEMENT_MULTIPLIER)
         );
-        unit.setShield(state.baseShield + state.shieldBonusRemaining);
+        state.movementDelta = Math.max(0, movementAfter - movementBefore);
+        if (state.movementDelta !== 0) {
+          unit.stats.movementRange = movementBefore + state.movementDelta;
+        }
+
+        state.shieldBonusRemaining = state.shieldBonusApplied;
+        unit.setShield(unit.getShield() + state.shieldBonusApplied);
         unit.setImmortal(true);
         (unit as Record<string, unknown>).fearless = true;
       },
       onExpire: () => {
-        unit.stats.attackDamage = state.baseAttack;
-        unit.stats.movementRange = state.baseMovement;
+        let statsChanged = false;
+
+        if (state.attackDelta !== 0) {
+          const currentAttack = unit.stats.attackDamage;
+          const nextAttack = Math.max(0, currentAttack - state.attackDelta);
+          if (nextAttack !== currentAttack) {
+            unit.stats.attackDamage = nextAttack;
+            statsChanged = true;
+          }
+        }
+
+        if (state.movementDelta !== 0) {
+          const currentMovement = unit.stats.movementRange;
+          const nextMovement = Math.max(0, currentMovement - state.movementDelta);
+          if (nextMovement !== currentMovement) {
+            unit.stats.movementRange = nextMovement;
+            statsChanged = true;
+          }
+        }
+
         unit.setImmortal(state.wasImmortal);
-        const leftover = Math.max(0, state.shieldBonusRemaining);
+        const leftover = Math.max(
+          0,
+          Math.min(state.shieldBonusApplied, state.shieldBonusRemaining)
+        );
         if (leftover > 0) {
           unit.setShield(Math.max(0, unit.getShield() - leftover));
         }
         delete (unit as Record<string, unknown>).fearless;
+        if (statsChanged) {
+          eventBus.emit('unit:stats:changed', {
+            unitId: unit.id,
+            stats: { ...unit.stats }
+          });
+        }
         if (burstState) {
           burstState.affected = burstState.affected.filter((entry) => entry.modifierId !== modifierId);
         }
