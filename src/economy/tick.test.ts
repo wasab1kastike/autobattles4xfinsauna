@@ -81,5 +81,65 @@ describe('runEconomyTick', () => {
     expect(result.upkeepDrain).toBe(5);
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(95);
     expect(result.spawn.spawned).toBe(0);
+    expect(result.spawn.blockedByRoster).toBe(0);
+  });
+
+  it('honours roster caps and resumes spawning when the limit increases', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 200);
+    const sauna = createSauna(
+      { q: 0, r: 0 },
+      { baseThreshold: 6, heatPerSecond: 0, initialHeat: 6 },
+      { maxRosterSize: 0 }
+    );
+    const units: Unit[] = [];
+    const spawned: Unit[] = [];
+    const rosterCount = () => units.filter((unit) => unit.faction === 'player' && !unit.isDead()).length;
+    const spawnUnitAt = (coord: { q: number; r: number }): Unit | null => {
+      const unit = new UnitClass(`test-${spawned.length + 1}`, 'soldier', coord, 'player', getSoldierStats());
+      units.push(unit);
+      spawned.push(unit);
+      return unit;
+    };
+
+    const first = runEconomyTick({
+      dt: 0,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units,
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => ({ q: 1, r: 0 }),
+      spawnBaseUnit: spawnUnitAt,
+      minUpkeepReserve: 0,
+      maxSpawns: 3,
+      rosterCap: 0,
+      getRosterCount: rosterCount
+    });
+
+    expect(first.spawn.spawned).toBe(0);
+    expect(first.spawn.blockedByRoster).toBe(1);
+    expect(sauna.heatTracker.getHeat()).toBeLessThan(sauna.playerSpawnThreshold);
+
+    sauna.heatTracker.setHeat(sauna.playerSpawnThreshold);
+
+    const second = runEconomyTick({
+      dt: 0,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units,
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => ({ q: 1, r: 0 }),
+      spawnBaseUnit: spawnUnitAt,
+      minUpkeepReserve: 0,
+      maxSpawns: 3,
+      rosterCap: 2,
+      getRosterCount: rosterCount
+    });
+
+    expect(second.spawn.spawned).toBe(1);
+    expect(second.spawn.blockedByRoster).toBe(0);
+    expect(spawned).toHaveLength(1);
   });
 });

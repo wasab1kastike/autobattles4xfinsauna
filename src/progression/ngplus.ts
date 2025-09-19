@@ -166,7 +166,7 @@ export function getAiAggressionModifier(state: NgPlusState): number {
 }
 
 export function getUnlockSpawnLimit(state: NgPlusState): number {
-  return Math.max(1, 1 + Math.max(0, state.unlockSlots));
+  return 1 + Math.max(0, state.unlockSlots);
 }
 
 export function createNgPlusRng(seed: number, salt = 0): () => number {
