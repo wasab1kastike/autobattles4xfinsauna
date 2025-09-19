@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuild the GitHub Pages mirror from commit 8f618f4 so the hashed Vite
+  bundle, published HTML, and build badge all advertise the latest deploy.
+
 
 - Encapsulate NG+ progression in `src/progression/ngplus.ts`, persist run seeds,
   levels, and unlock slots through `GameState`, wire the modifiers into economy
