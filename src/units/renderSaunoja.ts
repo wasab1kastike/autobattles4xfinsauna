@@ -1,6 +1,8 @@
-import { axialToPixel, HEX_R, pathHex } from '../hex/index.ts';
+import { HEX_R, pathHex } from '../hex/index.ts';
 import type { Saunoja } from './saunoja.ts';
 import { drawHP, drawHitFlash, drawSteam } from './visualHelpers.ts';
+import { getSpriteCenter } from '../render/units/draw.ts';
+import { snapForZoom } from '../render/zoom.ts';
 
 function resolveSaunojaIconPath(): string {
   const baseUrl = import.meta.env.BASE_URL ?? '/';
@@ -90,12 +92,13 @@ export interface DrawSaunojasOptions {
   originX?: number;
   originY?: number;
   hexRadius?: number;
+  zoom?: number;
 }
 
 export function drawSaunojas(
   ctx: CanvasRenderingContext2D,
   saunojas: Saunoja[],
-  { originX = 0, originY = 0, hexRadius = HEX_R }: DrawSaunojasOptions = {}
+  { originX = 0, originY = 0, hexRadius = HEX_R, zoom = 1 }: DrawSaunojasOptions = {}
 ): void {
   if (!ctx || !Array.isArray(saunojas) || saunojas.length === 0) {
     return;
@@ -119,21 +122,23 @@ export function drawSaunojas(
   });
 
   for (const unit of renderable) {
-    const { x, y } = axialToPixel(unit.coord, radius);
-    const drawX = x - originX;
-    const drawY = y - originY;
-    const centerX = drawX + radius;
-    const centerY = drawY + radius;
+    const { x: centerX, y: centerY } = getSpriteCenter({
+      coord: unit.coord,
+      hexSize: radius,
+      origin: { x: originX, y: originY },
+      zoom,
+      type: 'saunoja'
+    });
 
     ctx.save();
     pathHex(ctx, centerX, centerY, clipRadius);
     ctx.clip();
 
     const baseScale = (radius * 2.15) / Math.max(icon.naturalWidth, icon.naturalHeight || 1);
-    const drawWidth = icon.naturalWidth * baseScale;
-    const drawHeight = icon.naturalHeight * baseScale;
-    const imageX = centerX - drawWidth / 2;
-    const imageY = centerY - drawHeight * 0.72;
+    const drawWidth = snapForZoom(icon.naturalWidth * baseScale, zoom);
+    const drawHeight = snapForZoom(icon.naturalHeight * baseScale, zoom);
+    const imageX = snapForZoom(centerX - drawWidth / 2, zoom);
+    const imageY = snapForZoom(centerY - drawHeight * 0.72, zoom);
 
     ctx.save();
     ctx.filter = 'grayscale(100%) contrast(112%)';
