@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Fix Sisu Burst expiration to roll back only its attack, movement, and barrier
+  bonuses while preserving other buffs applied mid-burst and notifying stat
+  listeners when the surge fades.
+
 - Fix combat resolution so `remainingShield` includes both base and keyword
   barriers, and extend the resolve tests to cover leftover keyword stacks after
   a hit.
