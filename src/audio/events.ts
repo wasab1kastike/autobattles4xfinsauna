@@ -1,19 +1,6 @@
 import { eventBus } from '../events/EventBus.ts';
+import type { UnitDamagedPayload, UnitDiedPayload } from '../events/types.ts';
 import { playSafe } from './sfx.ts';
-
-type UnitDamagedPayload = {
-  attackerId?: string;
-  targetId: string;
-  amount: number;
-  remainingHealth: number;
-};
-
-type UnitDiedPayload = {
-  unitId: string;
-  attackerId?: string;
-  unitFaction: string;
-  attackerFaction?: string;
-};
 
 type SisuBurstPayload = {
   remaining: number;

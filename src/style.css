@@ -141,6 +141,31 @@ body > #game-container {
   gap: clamp(20px, 3vw, 32px);
 }
 
+.ui-floater-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.ui-floater {
+  position: absolute;
+  transform: translate3d(-50%, -50%, 0);
+  font-size: clamp(16px, 2.4vw, 24px);
+  color: color-mix(in srgb, var(--color-danger) 80%, white 10%);
+  text-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 24px color-mix(in srgb, currentColor 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  will-change: transform, opacity;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .hud-row {
   display: flex;
   align-items: flex-start;
