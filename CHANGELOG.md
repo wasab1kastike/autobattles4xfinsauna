@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Pace sauna beer upkeep by accumulating unit costs and draining them once
+  every five seconds so resource losses arrive in larger, less frequent bursts.
 - Ensure the seeded sauna attendant starts with zero upkeep by explicitly
   setting the roster seed cost to free, exporting test helpers, and covering the
   persistence plus upkeep resolution with new Vitest assertions.

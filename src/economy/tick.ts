@@ -39,16 +39,72 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
 
   const { addedHeat, cooledHeat } = options.heat.advance(dt);
 
-  let upkeepDrain = 0;
+  const secondsPerUpkeepTick = 5;
+
+  let perSecondUpkeep = 0;
   for (const unit of options.units) {
     if (unit.isDead() || unit.faction !== 'player') {
       continue;
     }
     const upkeep = Math.max(0, sanitize(options.getUnitUpkeep(unit), 0));
     if (upkeep > 0) {
-      upkeepDrain += upkeep;
+      perSecondUpkeep += upkeep;
     }
   }
+
+  if (!options.sauna.beerUpkeep) {
+    options.sauna.beerUpkeep = { elapsed: 0, segments: [] };
+  }
+
+  const upkeepTracker = options.sauna.beerUpkeep;
+  const segments = Array.isArray(upkeepTracker.segments) ? upkeepTracker.segments : [];
+  if (!Array.isArray(upkeepTracker.segments)) {
+    upkeepTracker.segments = segments;
+  }
+
+  const epsilon = 1e-6;
+  const sanitizedElapsed = Math.max(0, sanitize(upkeepTracker.elapsed, 0));
+  let elapsed = sanitizedElapsed + dt;
+
+  if (dt > 0 && perSecondUpkeep > 0) {
+    segments.push({ amount: perSecondUpkeep, duration: dt });
+  }
+
+  let upkeepDrain = 0;
+  while (elapsed >= secondsPerUpkeepTick) {
+    let remaining = secondsPerUpkeepTick;
+    let drainedThisInterval = 0;
+
+    while (remaining > epsilon && segments.length > 0) {
+      const segment = segments[0];
+      const amount = Math.max(0, sanitize(segment.amount, 0));
+      const duration = Math.max(0, sanitize(segment.duration, 0));
+      if (duration <= epsilon || amount <= 0) {
+        segments.shift();
+        continue;
+      }
+
+      const consumed = Math.min(duration, remaining);
+      drainedThisInterval += amount * consumed;
+      segment.duration = duration - consumed;
+      segment.amount = amount;
+      remaining -= consumed;
+
+      if (segment.duration <= epsilon) {
+        segments.shift();
+      }
+    }
+
+    upkeepDrain += drainedThisInterval;
+    elapsed -= secondsPerUpkeepTick;
+
+    if (segments.length === 0) {
+      elapsed = elapsed % secondsPerUpkeepTick;
+      break;
+    }
+  }
+
+  upkeepTracker.elapsed = elapsed;
 
   if (upkeepDrain > 0) {
     options.state.addResource(Resource.SAUNA_BEER, -upkeepDrain);

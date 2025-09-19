@@ -2,6 +2,16 @@ import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Unit } from '../units/Unit.ts';
 import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/heat.ts';
 
+export interface SaunaUpkeepSegment {
+  amount: number;
+  duration: number;
+}
+
+export interface SaunaUpkeepTracker {
+  elapsed: number;
+  segments: SaunaUpkeepSegment[];
+}
+
 export function pickFreeTileAround(
   origin: AxialCoord,
   radiusOrUnits: number | Unit[],
@@ -46,6 +56,7 @@ export interface Sauna {
   playerSpawnCooldown: number;
   playerSpawnTimer: number;
   heatTracker: SaunaHeat;
+  beerUpkeep: SaunaUpkeepTracker;
 }
 
 export function createSauna(pos: AxialCoord, heatConfig?: SaunaHeatInit): Sauna {
@@ -65,6 +76,10 @@ export function createSauna(pos: AxialCoord, heatConfig?: SaunaHeatInit): Sauna 
     playerSpawnThreshold: tracker.getThreshold(),
     playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown : 0,
     playerSpawnTimer: Number.isFinite(timer) ? timer : 0,
-    heatTracker: tracker
+    heatTracker: tracker,
+    beerUpkeep: {
+      elapsed: 0,
+      segments: []
+    }
   };
 }
