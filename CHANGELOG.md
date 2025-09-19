@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Layer a Web Audio sauna-and-forest ambience loop with seamless crossfades,
+  surface a top-bar ambience toggle and volume slider that persist
+  `audio_enabled`, sync with the master mute, honor reduced-motion
+  preferences, and document the new controls
 - Introduce an `src/audio` suite with registry-driven SFX playback, hook combat
   hits, kills, and SISU bursts into the event bus so polished cues fire while
   honoring the shared mute toggle, and document the procedurally generated WAV
