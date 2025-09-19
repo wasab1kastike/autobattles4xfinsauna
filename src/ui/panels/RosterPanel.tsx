@@ -1,6 +1,7 @@
 import { renderItemIcon } from '../components/ItemIcon.tsx';
 import { renderModPill } from '../components/ModPill.tsx';
 import type { SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
+import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
 
 export type RosterStatus = 'engaged' | 'reserve' | 'downed';
 
@@ -17,6 +18,15 @@ export interface RosterStats {
   readonly shield?: number;
 }
 
+export interface RosterEquipmentSlot {
+  readonly id: EquipmentSlotId;
+  readonly label: string;
+  readonly description: string;
+  readonly maxStacks: number;
+  readonly item: (RosterItem & { slot: EquipmentSlotId }) | null;
+  readonly modifiers: EquipmentModifier | null;
+}
+
 export interface RosterEntry {
   readonly id: string;
   readonly name: string;
@@ -25,12 +35,16 @@ export interface RosterEntry {
   readonly selected: boolean;
   readonly traits: readonly string[];
   readonly stats: RosterStats;
+  readonly baseStats: RosterStats;
+  readonly equipment: readonly RosterEquipmentSlot[];
   readonly items: readonly RosterItem[];
   readonly modifiers: readonly RosterModifier[];
 }
 
 export interface RosterPanelOptions {
   readonly onSelect?: (unitId: string) => void;
+  readonly onEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  readonly onUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
 }
 
 const rosterStatusLabels: Record<RosterStatus, string> = {
@@ -52,20 +66,63 @@ function formatTraits(traits: readonly string[]): string {
   return traits.join(' • ');
 }
 
+function formatDelta(value: number, base: number | undefined): string {
+  const baseline = typeof base === 'number' ? base : 0;
+  const delta = Math.round(value - baseline);
+  if (delta === 0) {
+    return '';
+  }
+  const formatted = integerFormatter.format(Math.abs(delta));
+  return delta > 0 ? ` (+${formatted})` : ` (-${formatted})`;
+}
+
+function formatModifierSummary(modifiers: EquipmentModifier | null): string {
+  if (!modifiers) {
+    return 'No stat changes';
+  }
+  const segments: string[] = [];
+  const push = (label: string, value?: number) => {
+    if (typeof value === 'number' && value !== 0) {
+      const sign = value > 0 ? '+' : '−';
+      segments.push(`${label} ${sign}${integerFormatter.format(Math.abs(value))}`);
+    }
+  };
+  push('HP', modifiers.health);
+  push('ATK', modifiers.attackDamage);
+  push('RNG', modifiers.attackRange);
+  push('MOV', modifiers.movementRange);
+  push('DEF', modifiers.defense);
+  push('Shield', modifiers.shield);
+  if (segments.length === 0) {
+    return 'No stat changes';
+  }
+  return segments.join(', ');
+}
+
 function buildMetaLine(entry: RosterEntry): string {
-  const { stats } = entry;
+  const { stats, baseStats } = entry;
   const segments: string[] = [
-    `HP ${integerFormatter.format(stats.health)}/${integerFormatter.format(stats.maxHealth)}`
+    `HP ${integerFormatter.format(stats.health)}/${integerFormatter.format(stats.maxHealth)}${formatDelta(stats.maxHealth, baseStats.maxHealth)}`
   ];
   if (stats.shield && stats.shield > 0) {
-    segments.push(`Shield ${integerFormatter.format(stats.shield)}`);
+    segments.push(
+      `Shield ${integerFormatter.format(stats.shield)}${formatDelta(stats.shield, baseStats.shield)}`
+    );
   }
-  segments.push(`ATK ${integerFormatter.format(stats.attackDamage)}`);
-  segments.push(`RNG ${integerFormatter.format(stats.attackRange)}`);
+  segments.push(
+    `ATK ${integerFormatter.format(stats.attackDamage)}${formatDelta(stats.attackDamage, baseStats.attackDamage)}`
+  );
+  segments.push(
+    `RNG ${integerFormatter.format(stats.attackRange)}${formatDelta(stats.attackRange, baseStats.attackRange)}`
+  );
   if (stats.defense && stats.defense > 0) {
-    segments.push(`DEF ${integerFormatter.format(stats.defense)}`);
+    segments.push(
+      `DEF ${integerFormatter.format(stats.defense)}${formatDelta(stats.defense, baseStats.defense)}`
+    );
   }
-  segments.push(`MOV ${integerFormatter.format(stats.movementRange)}`);
+  segments.push(
+    `MOV ${integerFormatter.format(stats.movementRange)}${formatDelta(stats.movementRange, baseStats.movementRange)}`
+  );
   segments.push(`Upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   return segments.join(' • ');
 }
@@ -86,8 +143,9 @@ function buildAriaLabel(entry: RosterEntry): string {
   }
   segments.push(`movement ${integerFormatter.format(stats.movementRange)}`);
   segments.push(`upkeep ${integerFormatter.format(entry.upkeep)} beer`);
-  if (entry.items.length > 0) {
-    segments.push(`${entry.items.length} equipped item${entry.items.length === 1 ? '' : 's'}`);
+  const equippedCount = entry.equipment.filter((slot) => slot.item).length;
+  if (equippedCount > 0) {
+    segments.push(`${equippedCount} equipped item${equippedCount === 1 ? '' : 's'}`);
   }
   if (entry.modifiers.length > 0) {
     segments.push(`${entry.modifiers.length} active modifier${entry.modifiers.length === 1 ? '' : 's'}`);
@@ -119,25 +177,88 @@ function renderMetrics(container: HTMLElement, entries: readonly RosterEntry[]):
   container.appendChild(metrics);
 }
 
-function renderLoadout(root: HTMLButtonElement, entry: RosterEntry): void {
-  if (entry.items.length === 0 && entry.modifiers.length === 0) {
-    return;
-  }
-
+function renderLoadout(
+  root: HTMLButtonElement,
+  entry: RosterEntry,
+  options: RosterPanelOptions
+): void {
   const loadout = document.createElement('div');
   loadout.classList.add('panel-roster__loadout');
 
-  if (entry.items.length > 0) {
-    const list = document.createElement('ul');
-    list.classList.add('panel-roster__items');
-    list.setAttribute('role', 'list');
-    list.setAttribute('aria-label', `${entry.name} equipped items`);
-    list.title = entry.items.map((item) => item.name).join(', ');
-    for (const item of entry.items) {
-      list.appendChild(renderItemIcon(item));
+  const slotsList = document.createElement('ul');
+  slotsList.classList.add('panel-roster__slots');
+  slotsList.setAttribute('role', 'list');
+  slotsList.setAttribute('aria-label', `${entry.name} equipment slots`);
+
+  for (const slot of entry.equipment) {
+    const slotItem = document.createElement('li');
+    slotItem.classList.add('panel-roster__slot');
+    slotItem.dataset.slot = slot.id;
+
+    const header = document.createElement('div');
+    header.classList.add('panel-roster__slot-header');
+
+    const label = document.createElement('span');
+    label.classList.add('panel-roster__slot-label');
+    label.textContent = slot.label;
+    label.title = slot.description;
+    header.appendChild(label);
+
+    const summary = document.createElement('span');
+    summary.classList.add('panel-roster__slot-summary');
+    summary.textContent = slot.item ? slot.item.name : 'Empty';
+    summary.title = slot.description;
+    header.appendChild(summary);
+
+    slotItem.appendChild(header);
+
+    if (slot.item) {
+      const iconList = document.createElement('ul');
+      iconList.classList.add('panel-roster__slot-icons');
+      iconList.setAttribute('role', 'list');
+      iconList.appendChild(renderItemIcon(slot.item));
+      slotItem.appendChild(iconList);
     }
-    loadout.appendChild(list);
+
+    const modifierLabel = document.createElement('span');
+    modifierLabel.classList.add('panel-roster__slot-modifiers');
+    modifierLabel.textContent = formatModifierSummary(slot.modifiers);
+    modifierLabel.title = modifierLabel.textContent;
+    slotItem.appendChild(modifierLabel);
+
+    const actions = document.createElement('div');
+    actions.classList.add('panel-roster__slot-actions');
+
+    const equipBtn = document.createElement('button');
+    equipBtn.type = 'button';
+    equipBtn.classList.add('panel-roster__slot-action');
+    equipBtn.textContent = slot.item ? 'Replace' : 'Equip';
+    equipBtn.setAttribute('aria-label', `Equip ${slot.label} for ${entry.name}`);
+    equipBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      options.onEquipSlot?.(entry.id, slot.id);
+    });
+    actions.appendChild(equipBtn);
+
+    const unequipBtn = document.createElement('button');
+    unequipBtn.type = 'button';
+    unequipBtn.classList.add('panel-roster__slot-action');
+    unequipBtn.textContent = 'Unequip';
+    unequipBtn.disabled = slot.item === null;
+    unequipBtn.setAttribute('aria-label', `Unequip ${slot.label} from ${entry.name}`);
+    unequipBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (!unequipBtn.disabled) {
+        options.onUnequipSlot?.(entry.id, slot.id);
+      }
+    });
+    actions.appendChild(unequipBtn);
+
+    slotItem.appendChild(actions);
+    slotsList.appendChild(slotItem);
   }
+
+  loadout.appendChild(slotsList);
 
   if (entry.modifiers.length > 0) {
     const list = document.createElement('ul');
@@ -258,7 +379,7 @@ export function createRosterPanel(
       traits.title = traitLabel;
 
       button.append(nameRow, meta, healthBar, traits);
-      renderLoadout(button, entry);
+      renderLoadout(button, entry, options);
 
       if (typeof options.onSelect === 'function') {
         button.addEventListener('click', () => options.onSelect?.(entry.id));
