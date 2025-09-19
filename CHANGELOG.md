@@ -22,7 +22,7 @@
   seconds, matching the new simulation cadence and communicating the change to
   players.
 
-p resolution with new Vitest assertions.
+- p resolution with new Vitest assertions.
 
 - Surface sauna beer debt in the HUD by letting negative totals render, tagging
   the resource badge for debt styling, enriching the aria-label messaging, and
