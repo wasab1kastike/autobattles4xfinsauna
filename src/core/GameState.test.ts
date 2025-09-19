@@ -35,6 +35,38 @@ describe('GameState', () => {
     expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(6); // 1 saved + 5 offline ticks
   });
 
+  it('logs a warning and continues when localStorage.setItem throws', () => {
+    const state = new GameState(1000);
+    vi.setSystemTime(1234);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function () {
+      throw new Error('kaboom');
+    });
+
+    expect(() => state.save()).not.toThrow();
+    expect((state as any).lastSaved).toBe(1234);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+
+    setItemSpy.mockRestore();
+    warnSpy.mockRestore();
+  });
+
+  it('skips persistence when localStorage is unavailable', () => {
+    const getSpy = vi.spyOn(globalThis, 'localStorage', 'get').mockReturnValue(undefined as any);
+
+    const state = new GameState(1000);
+    vi.setSystemTime(5678);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(() => state.save()).not.toThrow();
+    expect((state as any).lastSaved).toBe(5678);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    warnSpy.mockRestore();
+    getSpy.mockRestore();
+  });
+
   it('reports whether a saved game was restored', () => {
     const initialBeer = 200;
     const initialHonor = 3;
