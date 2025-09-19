@@ -8,8 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run && node scripts/check-demo-link.js",
+    "test": "vitest run && node scripts/check-demo-link.js && npm run verify:docs",
     "check:demo": "node scripts/check-demo-link.js",
+    "verify:docs": "node scripts/check-docs-commit.js",
     "simulate": "vite-node scripts/simulate.ts"
   },
   "devDependencies": {
