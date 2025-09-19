@@ -6,6 +6,9 @@
   bundle, published HTML, and build badge all advertise the latest deploy.
 
 
+- Document the `docs/` mirror refresh workflow in the README deployment section,
+  highlighting the `npm run build` + sync step and cross-linking to the
+  contributing notes about the custom domain records.
 - Encapsulate NG+ progression in `src/progression/ngplus.ts`, persist run seeds,
   levels, and unlock slots through `GameState`, wire the modifiers into economy
   upkeep, reinforcement slots, enemy aggression, and elite loot odds, and cover

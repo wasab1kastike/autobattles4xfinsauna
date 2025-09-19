@@ -102,6 +102,15 @@ publishes the contents of `dist/` directly to GitHub Pages. The workflow uploads
 the artifact and releases it without committing generated files back to the
 repository, keeping the default branch clean.
 
+The repository still tracks a `docs/` mirror so historic GitHub Pages snapshots
+and the custom domain records stay versioned. When you cut a release (or any
+change that should be reflected on the live site), run `npm run build` locally
+and copy the resulting `dist/` output into `docs/` before committing (for
+example, `rsync -a dist/ docs/`). That manual refresh keeps the checked-in
+mirror aligned with the action-managed deployment and preserves the
+`docs/CNAME` expectations documented in
+[CONTRIBUTING.md](CONTRIBUTING.md#before-you-start).
+
 ## Testing
 
 ```bash
