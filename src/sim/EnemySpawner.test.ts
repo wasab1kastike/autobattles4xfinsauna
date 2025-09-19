@@ -12,7 +12,8 @@ describe('EnemySpawner', () => {
   it('spawns bundles according to cadence and faction identity', () => {
     const spawner = new EnemySpawner({
       factionId: 'enemy',
-      random: makeRandomSource([0.6, 0.95])
+      eliteOdds: 0.5,
+      random: makeRandomSource([0.6, 0.8, 0.6, 0.4, 0.1])
     });
     const units: Unit[] = [];
     const edges = [

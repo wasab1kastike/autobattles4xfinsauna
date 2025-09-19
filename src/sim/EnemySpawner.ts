@@ -9,6 +9,7 @@ export interface EnemySpawnerOptions {
   readonly random?: () => number;
   readonly idFactory?: () => string;
   readonly difficulty?: number;
+  readonly eliteOdds?: number;
 }
 
 export class EnemySpawner {
@@ -18,12 +19,15 @@ export class EnemySpawner {
   private readonly random: () => number;
   private readonly makeId: () => string;
   private readonly difficulty: number;
+  private readonly eliteOdds: number;
 
   constructor(options: EnemySpawnerOptions = {}) {
     this.factionId = options.factionId ?? 'enemy';
     this.random = typeof options.random === 'function' ? options.random : Math.random;
     const difficulty = Number.isFinite(options.difficulty) ? Number(options.difficulty) : 1;
     this.difficulty = Math.max(0.5, difficulty);
+    const odds = typeof options.eliteOdds === 'number' ? options.eliteOdds : 0;
+    this.eliteOdds = Math.max(0, Math.min(0.95, odds));
     const initialCadence = Math.max(10, 30 / this.difficulty);
     this.interval = initialCadence;
     this.timer = initialCadence;
@@ -55,7 +59,9 @@ export class EnemySpawner {
         pickEdge,
         addUnit,
         makeId: this.makeId,
-        availableSlots
+        availableSlots,
+        eliteOdds: this.eliteOdds,
+        random: this.random
       });
     }
 
