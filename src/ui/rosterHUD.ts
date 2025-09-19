@@ -37,6 +37,7 @@ export function setupRosterHUD(
   container.setAttribute('role', 'status');
   container.setAttribute('aria-live', 'polite');
   container.setAttribute('title', 'Active sauna battalion on the field');
+  container.dataset.tutorialTarget = 'upkeep';
   container.replaceChildren();
 
   const summary = document.createElement('div');

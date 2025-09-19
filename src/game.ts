@@ -15,6 +15,7 @@ import { setupTopbar } from './ui/topbar.ts';
 import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sim/sisu.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
+import { createTutorialController, type TutorialController } from './ui/tutorial/Tutorial.tsx';
 import { draw as render } from './render/renderer.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
@@ -58,6 +59,7 @@ import {
   type RosterHudSummary
 } from './ui/rosterHUD.ts';
 import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
+import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -108,6 +110,34 @@ let running = false;
 let unitFx: UnitFxManager | null = null;
 let objectiveTracker: ObjectiveTracker | null = null;
 let endScreen: EndScreenController | null = null;
+let tutorial: TutorialController | null = null;
+
+function disposeTutorial(): void {
+  if (!tutorial) {
+    return;
+  }
+  tutorial.destroy();
+  tutorial = null;
+}
+
+function startTutorialIfNeeded(): void {
+  if (isTutorialDone()) {
+    disposeTutorial();
+    return;
+  }
+  disposeTutorial();
+  tutorial = createTutorialController({
+    onComplete: () => {
+      setTutorialDone(true);
+      disposeTutorial();
+    },
+    onSkip: () => {
+      setTutorialDone(true);
+      disposeTutorial();
+    }
+  });
+  tutorial.start();
+}
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
   pendingRosterRenderer = renderer;
@@ -672,6 +702,7 @@ function initializeRightPanel(): void {
 
 initializeRightPanel();
 updateRosterDisplay();
+startTutorialIfNeeded();
 
 
 function spawn(type: UnitType, coord: AxialCoord): void {
@@ -994,6 +1025,7 @@ export function cleanup(): void {
   pendingRosterEntries = null;
   pendingRosterSummary = null;
   pendingRosterRenderer = null;
+  disposeTutorial();
 }
 
 export async function start(): Promise<void> {
