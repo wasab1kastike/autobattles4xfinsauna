@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add a progression tracker in `src/progression/objectives.ts` to monitor strongholds,
+  roster wipes, and upkeep debt, surface a glassmorphism NG+ end screen via
+  `src/ui/overlays/EndScreen.tsx`, escalate enemy spawn cadence each prestige, and
+  document the refreshed loop.
 - Launch a battlefield feedback suite that emits glassy damage/heal floaters,
   eases fatal fades, and jostles the canvas on major hits via
   `src/ui/fx/Floater.tsx`, `src/render/unit_fx.ts`, and updated `game.ts`
