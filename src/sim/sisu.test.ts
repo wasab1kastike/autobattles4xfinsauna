@@ -4,6 +4,7 @@ import { useSisuBurst, endSisuBurst, isSisuBurstActive } from '../sisu/burst.ts'
 import { modifierRuntime } from '../mods/runtime.ts';
 import { Unit } from '../units/Unit.ts';
 import type { UnitStats } from '../unit/types.ts';
+import { eventBus } from '../events';
 
 const BASE_COORD = { q: 0, r: 0 } as const;
 
@@ -85,5 +86,39 @@ describe('useSisuBurst', () => {
     expect(ally.stats.movementRange).toBe(baseMovement);
     expect(ally.isImmortal()).toBe(false);
     expect(ally.getShield()).toBe(0);
+  });
+
+  it('preserves external buffs applied during the burst when it expires', () => {
+    const ally = createUnit('buffed-ally', 'player');
+    const baseAttack = ally.stats.attackDamage;
+    const baseMovement = ally.stats.movementRange;
+    const statsChangedListener = vi.fn();
+    eventBus.on('unit:stats:changed', statsChangedListener);
+
+    try {
+      useSisuBurst(state, [ally]);
+      const burstAttack = ally.stats.attackDamage;
+      const burstMovement = ally.stats.movementRange;
+
+      const externalAttackBonus = 3;
+      const externalMovementBonus = 2;
+      ally.stats.attackDamage += externalAttackBonus;
+      ally.stats.movementRange += externalMovementBonus;
+
+      expect(ally.stats.attackDamage).toBe(burstAttack + externalAttackBonus);
+      expect(ally.stats.movementRange).toBe(burstMovement + externalMovementBonus);
+
+      now += durationMs;
+      vi.advanceTimersByTime(durationMs);
+
+      expect(isSisuBurstActive()).toBe(false);
+      expect(ally.stats.attackDamage).toBe(baseAttack + externalAttackBonus);
+      expect(ally.stats.movementRange).toBe(baseMovement + externalMovementBonus);
+      expect(statsChangedListener).toHaveBeenCalledWith(
+        expect.objectContaining({ unitId: ally.id })
+      );
+    } finally {
+      eventBus.off('unit:stats:changed', statsChangedListener);
+    }
   });
 });
