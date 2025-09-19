@@ -8,18 +8,25 @@ export interface EnemySpawnerOptions {
   readonly factionId?: string;
   readonly random?: () => number;
   readonly idFactory?: () => string;
+  readonly difficulty?: number;
 }
 
 export class EnemySpawner {
-  private timer = 30; // seconds
-  private interval = 30; // cadence
+  private timer: number;
+  private interval: number;
   private readonly factionId: string;
   private readonly random: () => number;
   private readonly makeId: () => string;
+  private readonly difficulty: number;
 
   constructor(options: EnemySpawnerOptions = {}) {
     this.factionId = options.factionId ?? 'enemy';
     this.random = typeof options.random === 'function' ? options.random : Math.random;
+    const difficulty = Number.isFinite(options.difficulty) ? Number(options.difficulty) : 1;
+    this.difficulty = Math.max(0.5, difficulty);
+    const initialCadence = Math.max(10, 30 / this.difficulty);
+    this.interval = initialCadence;
+    this.timer = initialCadence;
     const fallbackIdFactory = (() => {
       let counter = 0;
       return () => `e${Date.now()}-${(counter += 1)}`;
@@ -52,7 +59,8 @@ export class EnemySpawner {
       });
     }
 
-    this.interval = Math.max(10, this.interval * 0.95); // escalate slowly
+    const decay = Math.pow(0.95, this.difficulty);
+    this.interval = Math.max(8, this.interval * decay); // escalate faster with higher difficulty
     this.timer = this.interval;
   }
 }
