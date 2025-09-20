@@ -10,6 +10,10 @@
 - Refresh the inventory stash badge with an inline SVG bag icon, centered
   styling, and updated palette treatments for a crisper HUD affordance.
 
+- Ensure the HUD atom styles ship with every entry point by importing
+  `ui/style/atoms.css` in the main bootstrap, mirroring the refreshed bundle to
+  `docs/`, and verifying the stash badge renders its icon in production builds.
+
 - Introduce a combat audio loudness workflow by adding a reusable WAV analysis
   utility, a `vite-node` QA script with auto-normalisation support, runtime
   metadata for cue gain, a Vitest regression that decodes each payload, and
