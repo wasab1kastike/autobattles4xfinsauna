@@ -29,6 +29,9 @@
 - Prevent Saunoja overlays from double-rendering player combatants by omitting
   player-faction units from battlefield draw passes whenever attendants are
   projected on top of the map.
+- Preserve enemy visibility when Saunoja overlays hide player sprites by
+  routing friendly vision sources through the renderer and covering the
+  regression with a focused Vitest battlefield draw test.
 
 - Ramp enemy progression by tracking spawn cycles, tightening spawn cadence
   beyond the eight-second floor, and feeding a difficulty multiplier into bundle
