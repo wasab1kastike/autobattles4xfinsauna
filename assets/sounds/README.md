@@ -1,11 +1,14 @@
 # Sound Effects
 
-Short combat cues now live in `src/audio/sfxData.ts` as base64-encoded PCM WAV
-payloads that the `src/audio/sfx.ts` registry decodes at runtime. The attack,
-death, and SISU bursts were procedurally generated for this project and are
-released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) so
-they can be remixed or replaced freely.
+Combat cues are authored procedurally and rendered on demand from the
+`src/audio/sfxData.ts` definitions. The current calming palette consists of:
 
-To swap in higher fidelity recordings, drop new WAV/OGG files alongside this
-README and update the registry loaders. Keep contributions under a permissive
-license and note attribution details here when external assets are introduced.
+- **Birch Mallet Chimes** — a trio of gentle attack accents used for combat hits.
+- **Cedar Breath Clusters** — soft loss cues that exhale instead of crunching.
+- **Aurora Steam Pads** — luminous SISU bursts that bloom without piercing.
+
+Each patch is synthesised at runtime via `src/audio/sfx.ts` and ships under
+[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/), enabling remixing
+or replacement without attribution. When introducing external assets, document
+licensing notes here and update the procedural tables accordingly so the mixer
+continues to load the correct variants.
