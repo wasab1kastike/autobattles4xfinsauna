@@ -1,5 +1,12 @@
 import { GameState, Resource } from '../core/GameState.ts';
-import { eventBus } from '../events';
+import {
+  eventBus,
+  eventScheduler,
+  SCHEDULER_EVENTS,
+  type ActiveSchedulerEvent,
+  type SchedulerEventContent,
+  type SchedulerTriggeredPayload
+} from '../events';
 import { ensureHudLayout } from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
@@ -21,12 +28,7 @@ export type {
   RosterProgression
 } from './panels/RosterPanel.tsx';
 
-export type GameEvent = {
-  id: string;
-  headline: string;
-  body: string;
-  buttonText?: string;
-};
+export type GameEvent = SchedulerEventContent;
 
 const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
@@ -676,38 +678,144 @@ export function setupRightPanel(
   });
 
   // --- Events ---
-  const events: GameEvent[] = [];
-
-  function renderEvents(): void {
-    eventsTab.innerHTML = '';
-    for (const ev of events) {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('panel-event');
-      const h = document.createElement('h4');
-      h.textContent = ev.headline;
-      const p = document.createElement('p');
-      p.textContent = ev.body;
-      const btn = document.createElement('button');
-      btn.textContent = ev.buttonText ?? 'Acknowledge';
-      btn.classList.add('panel-action');
-      btn.addEventListener('click', () => {
-        const idx = events.findIndex((e) => e.id === ev.id);
-        if (idx !== -1) {
-          events.splice(idx, 1);
-          renderEvents();
-        }
-      });
-      wrapper.appendChild(h);
-      wrapper.appendChild(p);
-      wrapper.appendChild(btn);
-      eventsTab.appendChild(wrapper);
+  function createChoiceButton(event: ActiveSchedulerEvent, choice: SchedulerEventContent['choices'][number]): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add('event-card__choice');
+    if (choice.accent) {
+      button.classList.add(`event-card__choice--${choice.accent}`);
     }
+    button.dataset.choiceId = choice.id;
+
+    const label = document.createElement('span');
+    label.className = 'event-card__choice-label';
+    label.textContent = choice.label;
+    button.appendChild(label);
+
+    if (choice.description) {
+      const detail = document.createElement('span');
+      detail.className = 'event-card__choice-detail';
+      detail.textContent = choice.description;
+      button.appendChild(detail);
+    }
+
+    button.addEventListener('click', () => {
+      if (!button.isConnected) {
+        return;
+      }
+      button.disabled = true;
+      const resolved = eventScheduler.resolve(event.id, choice.id);
+      if (!resolved) {
+        button.disabled = false;
+      }
+    });
+
+    return button;
   }
 
+  function renderEvents(activeEvents: ActiveSchedulerEvent[]): void {
+    eventsTab.innerHTML = '';
+    if (activeEvents.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'event-card event-card--empty';
+      const emptyCopy = document.createElement('p');
+      emptyCopy.className = 'event-card__empty';
+      emptyCopy.textContent = 'All clear. Command will notify you when new briefings arrive.';
+      empty.appendChild(emptyCopy);
+      eventsTab.appendChild(empty);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const ev of activeEvents) {
+      const card = document.createElement('article');
+      card.className = 'event-card';
+      card.dataset.eventId = ev.id;
+      card.style.setProperty('--event-accent', ev.accentColor ?? 'var(--color-accent)');
+
+      const typography = (ev.typography ?? 'sans').toLowerCase();
+      card.classList.add(`event-card--${['serif', 'mono'].includes(typography) ? typography : 'sans'}`);
+
+      const animation = (ev.animation ?? '').toLowerCase();
+      if (['aurora', 'pulse', 'tilt'].includes(animation)) {
+        card.classList.add(`event-card--${animation}`);
+      }
+
+      const frame = document.createElement('div');
+      frame.className = 'event-card__frame';
+
+      if (ev.art) {
+        const media = document.createElement('div');
+        media.className = 'event-card__media';
+        media.style.backgroundImage = `url(${ev.art})`;
+        frame.appendChild(media);
+      }
+
+      const body = document.createElement('div');
+      body.className = 'event-card__body';
+
+      const badge = document.createElement('span');
+      badge.className = 'event-card__badge';
+      badge.textContent = 'Priority Dispatch';
+      body.appendChild(badge);
+
+      const headline = document.createElement('h4');
+      headline.className = 'event-card__headline';
+      headline.textContent = ev.headline;
+      body.appendChild(headline);
+
+      const copy = document.createElement('p');
+      copy.className = 'event-card__copy';
+      copy.textContent = ev.body;
+      body.appendChild(copy);
+
+      const choicesContainer = document.createElement('div');
+      choicesContainer.className = 'event-card__choices';
+      const choices = ev.choices && ev.choices.length > 0
+        ? ev.choices
+        : [
+            {
+              id: 'acknowledge',
+              label: ev.acknowledgeText ?? 'Acknowledge'
+            }
+          ];
+      for (const choice of choices) {
+        const button = createChoiceButton(ev, {
+          id: choice.id,
+          label: choice.label,
+          description: choice.description,
+          event: choice.event,
+          payload: choice.payload,
+          accent: choice.accent
+        });
+        choicesContainer.appendChild(button);
+      }
+
+      body.appendChild(choicesContainer);
+      frame.appendChild(body);
+
+      const shimmer = document.createElement('span');
+      shimmer.className = 'event-card__shimmer';
+      card.append(frame, shimmer);
+      fragment.appendChild(card);
+    }
+
+    eventsTab.appendChild(fragment);
+  }
+
+  const unsubscribeScheduler = eventScheduler.subscribe(renderEvents);
+  disposers.push(unsubscribeScheduler);
+
+  const handleSchedulerTriggered = ({ event }: SchedulerTriggeredPayload): void => {
+    log(`Event • ${event.headline}`);
+  };
+  eventBus.on(SCHEDULER_EVENTS.TRIGGERED, handleSchedulerTriggered);
+  disposers.push(() => {
+    eventBus.off(SCHEDULER_EVENTS.TRIGGERED, handleSchedulerTriggered);
+  });
+
   function addEvent(ev: GameEvent): void {
-    events.push(ev);
-    renderEvents();
-    log(`Event • ${ev.headline}`);
+    eventScheduler.publish(ev);
   }
 
   // --- Log ---

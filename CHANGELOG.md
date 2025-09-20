@@ -6,6 +6,11 @@
   hashed Vite bundles and published HTML reflect the refreshed deployment.
 
 
+- Launch a persistent event scheduler that survives reloads, powers premium
+  animated event cards in the command console, dispatches choice outcomes
+  through the event bus, and lands Vitest coverage for persistence plus
+  single-resolution guarantees.
+
 - Extend sauna settings persistence with an experimental HUD flag, expose the
   toggle in the quartermaster drawer with polished controls, and branch the main
   bootstrap to launch a React/Tailwind placeholder when the flag is enabled.
