@@ -13,9 +13,10 @@ important for keeping the live experience in sync with the repository.
   the production build, so broken URLs or titles will fail pull requests.
 - Keep the `docs/` mirror aligned with the working tree. The `verify:docs`
   script inspects `docs/assets/index-*.js` for the embedded commit hash and
-  fails fast if it doesn't match `git rev-parse --short HEAD`. Re-run
-  `npm run build` to regenerate the bundle whenever the guard reports stale
-  assets.
+  fails fast if it doesn't match `git rev-parse --short HEAD`. The CI workflow
+  now runs `npm test` immediately after the production build, so this guard
+  executes on every push or pull request. Re-run `npm run build` and mirror the
+  fresh `dist/` output into `docs/` whenever the guard reports stale assets.
 - Preserve the custom domain configuration. `public/CNAME` (and the mirrored
   `docs/CNAME` for historic deployments) should continue to reference
   `artobest.com` unless the production URL officially changes.
