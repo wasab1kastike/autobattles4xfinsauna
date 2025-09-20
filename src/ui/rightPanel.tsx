@@ -19,6 +19,19 @@ import {
   type PolicyAppliedEvent,
   type PolicyRejectedEvent
 } from '../data/policies.ts';
+import {
+  getLogHistory,
+  LOG_EVENT_META,
+  LOG_EVENT_ORDER,
+  logEvent,
+  readLogPreferences,
+  subscribeToLogs,
+  type LogChange,
+  type LogEntry,
+  type LogEventPayload,
+  type LogEventType,
+  writeLogPreferences
+} from './logging.ts';
 
 export type {
   RosterEntry,
@@ -43,7 +56,7 @@ export function setupRightPanel(
   state: GameState,
   options: RightPanelOptions = {}
 ): {
-  log: (msg: string) => void;
+  log: (event: LogEventPayload) => void;
   addEvent: (ev: GameEvent) => void;
   renderRoster: (entries: RosterEntry[]) => void;
   dispose: () => void;
@@ -401,16 +414,43 @@ export function setupRightPanel(
   policiesTab.id = 'right-panel-policies';
   const eventsTab = document.createElement('div');
   eventsTab.id = 'right-panel-events';
-  const logTab = document.createElement('div');
-  logTab.id = 'event-log';
-  logTab.setAttribute('role', 'log');
-  logTab.setAttribute('aria-live', 'polite');
+  const logSection = document.createElement('div');
+  logSection.id = 'right-panel-log';
+  logSection.setAttribute('role', 'region');
+  logSection.setAttribute('aria-label', 'Combat log');
+
+  const logContainer = document.createElement('section');
+  logContainer.className = 'panel-log';
+
+  const logHeader = document.createElement('header');
+  logHeader.className = 'panel-log__header';
+
+  const logTitle = document.createElement('h3');
+  logTitle.className = 'panel-log__title';
+  logTitle.textContent = 'Combat Log';
+
+  const logTotal = document.createElement('span');
+  logTotal.className = 'panel-log__total';
+  logTotal.textContent = '0 entries';
+  logHeader.append(logTitle, logTotal);
+
+  const logFilters = document.createElement('div');
+  logFilters.className = 'panel-log__filters';
+
+  const logFeed = document.createElement('div');
+  logFeed.id = 'event-log';
+  logFeed.className = 'panel-log__feed';
+  logFeed.setAttribute('role', 'log');
+  logFeed.setAttribute('aria-live', 'polite');
+
+  logContainer.append(logHeader, logFilters, logFeed);
+  logSection.appendChild(logContainer);
 
   const tabs: Record<string, HTMLDivElement> = {
     Roster: rosterTab,
     Policies: policiesTab,
     Events: eventsTab,
-    Log: logTab
+    Log: logSection
   };
 
   const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
@@ -419,7 +459,7 @@ export function setupRightPanel(
     section.dataset.tab = name;
     section.hidden = true;
   }
-  logTab.classList.add('panel-section--log');
+  logSection.classList.add('panel-section--log');
 
   function show(tab: string): void {
     for (const [name, el] of Object.entries(tabs)) {
@@ -807,7 +847,14 @@ export function setupRightPanel(
   disposers.push(unsubscribeScheduler);
 
   const handleSchedulerTriggered = ({ event }: SchedulerTriggeredPayload): void => {
-    log(`Event • ${event.headline}`);
+    logEvent({
+      type: 'event',
+      message: `Event • ${event.headline}`,
+      metadata: {
+        eventId: (event as ActiveSchedulerEvent)?.id ?? event.headline,
+        headline: event.headline
+      }
+    });
   };
   eventBus.on(SCHEDULER_EVENTS.TRIGGERED, handleSchedulerTriggered);
   disposers.push(() => {
@@ -819,105 +866,300 @@ export function setupRightPanel(
   }
 
   // --- Log ---
-  const LOG_STORAGE_KEY = 'autobattles:panel-log';
-  const MAX_LOG_MESSAGES = 100;
-  const pending: string[] = [];
-  let scheduled = false;
-  const logHistory: string[] = [];
-
-  const readStoredLogs = (): string[] => {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
-      return [];
-    }
-    try {
-      const serialized = window.localStorage.getItem(LOG_STORAGE_KEY);
-      if (!serialized) {
-        return [];
-      }
-      const parsed = JSON.parse(serialized);
-      if (!Array.isArray(parsed)) {
-        return [];
-      }
-      const sanitized = parsed.filter((msg) => typeof msg === 'string');
-      if (sanitized.length > MAX_LOG_MESSAGES) {
-        return sanitized.slice(-MAX_LOG_MESSAGES);
-      }
-      return sanitized;
-    } catch {
-      return [];
-    }
+  type LogEntryNodeState = {
+    element: HTMLElement;
+    type: LogEventType;
+    occurrences: number;
+    badge: HTMLSpanElement;
+    message: HTMLParagraphElement;
+    tokens: HTMLDivElement | null;
+    setBadge: (value: number) => void;
   };
 
-  const persistLogs = (messages: string[]): void => {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+  const entryStates = new Map<string, LogEntryNodeState>();
+  const typeCounts = new Map<LogEventType, number>();
+  const typeBadges = new Map<LogEventType, HTMLSpanElement>();
+  const mutedTypes = new Set(readLogPreferences().mutedTypes ?? []);
+  const activeTypes = new Set<LogEventType>();
+
+  for (const type of LOG_EVENT_ORDER) {
+    if (!mutedTypes.has(type)) {
+      activeTypes.add(type);
+    }
+    typeCounts.set(type, 0);
+  }
+
+  let totalOccurrences = 0;
+  let stickToBottom = true;
+
+  const scheduleFrame =
+    typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame
+      : (cb: FrameRequestCallback) => setTimeout(cb, 16);
+
+  const formatCount = (value: number): string => numberFormatter.format(Math.max(0, value));
+
+  const updateTotalBadge = (): void => {
+    const label = totalOccurrences === 1 ? 'entry' : 'entries';
+    logTotal.textContent = `${formatCount(totalOccurrences)} ${label}`;
+  };
+
+  const updateTypeBadge = (type: LogEventType): void => {
+    const badge = typeBadges.get(type);
+    if (!badge) {
       return;
     }
-    try {
-      const bounded = messages.length > MAX_LOG_MESSAGES
-        ? messages.slice(-MAX_LOG_MESSAGES)
-        : messages;
-      window.localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(bounded));
-    } catch {
-      // Best effort persistence; ignore storage errors.
-    }
+    badge.textContent = formatCount(typeCounts.get(type) ?? 0);
   };
 
-  const appendLogEntry = (msg: string): void => {
-    const div = document.createElement('div');
-    div.textContent = msg;
-    div.classList.add('panel-log-entry');
-    logTab.appendChild(div);
-  };
-
-  const hydrateStoredLogs = (): void => {
-    const stored = readStoredLogs();
-    if (stored.length === 0) {
+  const adjustCounts = (type: LogEventType, delta: number): void => {
+    if (delta === 0) {
       return;
     }
-    for (const msg of stored) {
-      appendLogEntry(msg);
-      logHistory.push(msg);
-    }
-    logTab.scrollTop = logTab.scrollHeight;
+    const currentTypeTotal = typeCounts.get(type) ?? 0;
+    typeCounts.set(type, Math.max(0, currentTypeTotal + delta));
+    totalOccurrences = Math.max(0, totalOccurrences + delta);
+    updateTypeBadge(type);
+    updateTotalBadge();
   };
 
-  hydrateStoredLogs();
+  const isNearBottom = (): boolean => {
+    return logFeed.scrollHeight - (logFeed.scrollTop + logFeed.clientHeight) < 48;
+  };
 
-  function flush(): void {
-    for (const msg of pending) {
-      appendLogEntry(msg);
+  const scrollToBottom = (): void => {
+    scheduleFrame(() => {
+      logFeed.scrollTop = logFeed.scrollHeight;
+      stickToBottom = true;
+    });
+  };
+
+  const ensureVisibility = (state: LogEntryNodeState): void => {
+    const visible = activeTypes.has(state.type);
+    state.element.hidden = !visible;
+    state.element.classList.toggle('panel-log-entry--muted', !visible);
+  };
+
+  const extractSpawnNames = (entry: LogEntry): string[] => {
+    const meta = entry.metadata ?? {};
+    const base = Array.isArray(meta.unitNames)
+      ? meta.unitNames
+      : typeof meta.unitName === 'string'
+        ? [meta.unitName]
+        : [];
+    return base
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter((value): value is string => value.length > 0);
+  };
+
+  const renderSpawnTokens = (container: HTMLDivElement, entry: LogEntry): void => {
+    if (entry.type !== 'spawn') {
+      container.replaceChildren();
+      container.hidden = true;
+      return;
     }
-    if (pending.length > 0) {
-      logHistory.push(...pending);
-      if (logHistory.length > MAX_LOG_MESSAGES) {
-        const overflow = logHistory.length - MAX_LOG_MESSAGES;
-        logHistory.splice(0, overflow);
-        for (let i = 0; i < overflow; i += 1) {
-          if (logTab.firstChild) {
-            logTab.removeChild(logTab.firstChild);
-          }
-        }
-      }
+    const names = extractSpawnNames(entry);
+    const fragments: HTMLElement[] = names.map((name) => {
+      const chip = document.createElement('span');
+      chip.className = 'panel-log-entry__token';
+      chip.textContent = name;
+      return chip;
+    });
+    const remainder = entry.occurrences - names.length;
+    if (remainder > 0) {
+      const chip = document.createElement('span');
+      chip.className = 'panel-log-entry__token panel-log-entry__token--more';
+      chip.textContent = `+${remainder}`;
+      fragments.push(chip);
     }
-    logTab.scrollTop = logTab.scrollHeight;
-    pending.length = 0;
-    scheduled = false;
-    if (logHistory.length > 0) {
-      persistLogs(logHistory);
+    if (fragments.length === 0) {
+      container.replaceChildren();
+      container.hidden = true;
     } else {
-      persistLogs([]);
+      container.replaceChildren(...fragments);
+      container.hidden = false;
     }
+  };
+
+  const renderLogEntry = (entry: LogEntry): LogEntryNodeState => {
+    const element = document.createElement('article');
+    element.className = 'panel-log-entry';
+    element.dataset.logType = entry.type;
+    element.style.setProperty(
+      '--log-entry-accent',
+      LOG_EVENT_META[entry.type]?.accent ?? 'var(--color-accent)'
+    );
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'panel-log-entry__header';
+
+    const typeChip = document.createElement('span');
+    typeChip.className = 'panel-log-entry__type';
+    typeChip.textContent = LOG_EVENT_META[entry.type]?.label ?? entry.type;
+
+    const badge = document.createElement('span');
+    badge.className = 'panel-log-entry__badge';
+
+    const message = document.createElement('p');
+    message.className = 'panel-log-entry__message';
+    message.textContent = entry.message;
+
+    const tokens = document.createElement('div');
+    tokens.className = 'panel-log-entry__tokens';
+    tokens.hidden = true;
+
+    headerRow.append(typeChip, badge);
+    element.append(headerRow, message, tokens);
+
+    const setBadge = (value: number): void => {
+      if (value <= 1) {
+        badge.textContent = '';
+        badge.hidden = true;
+      } else {
+        badge.hidden = false;
+        badge.textContent = `×${value}`;
+      }
+    };
+
+    const state: LogEntryNodeState = {
+      element,
+      type: entry.type,
+      occurrences: entry.occurrences,
+      badge,
+      message,
+      tokens,
+      setBadge
+    };
+
+    setBadge(entry.occurrences);
+    renderSpawnTokens(tokens, entry);
+
+    return state;
+  };
+
+  const appendEntry = (entry: LogEntry, hydrate = false): void => {
+    const stick = hydrate ? true : isNearBottom() || stickToBottom;
+    const state = renderLogEntry(entry);
+    entryStates.set(entry.id, state);
+    logFeed.appendChild(state.element);
+    adjustCounts(state.type, state.occurrences);
+    ensureVisibility(state);
+    if (stick) {
+      scrollToBottom();
+    }
+  };
+
+  const updateEntry = (entry: LogEntry): void => {
+    const state = entryStates.get(entry.id);
+    if (!state) {
+      return;
+    }
+    const delta = entry.occurrences - state.occurrences;
+    if (delta !== 0) {
+      state.occurrences = entry.occurrences;
+      adjustCounts(state.type, delta);
+    }
+    state.message.textContent = entry.message;
+    state.setBadge(entry.occurrences);
+    if (state.tokens) {
+      renderSpawnTokens(state.tokens, entry);
+    }
+    ensureVisibility(state);
+    if (stickToBottom) {
+      scrollToBottom();
+    }
+  };
+
+  const removeEntry = (entry: LogEntry): void => {
+    const state = entryStates.get(entry.id);
+    if (!state) {
+      return;
+    }
+    entryStates.delete(entry.id);
+    adjustCounts(state.type, -state.occurrences);
+    if (state.element.parentElement === logFeed) {
+      logFeed.removeChild(state.element);
+    }
+  };
+
+  const refreshEntryVisibility = (): void => {
+    for (const state of entryStates.values()) {
+      ensureVisibility(state);
+    }
+  };
+
+  for (const type of LOG_EVENT_ORDER) {
+    const meta = LOG_EVENT_META[type];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'log-chip';
+    button.dataset.logFilter = type;
+    button.style.setProperty('--log-chip-accent', meta?.accent ?? 'var(--color-accent)');
+    button.setAttribute('aria-pressed', activeTypes.has(type) ? 'true' : 'false');
+    button.setAttribute('aria-label', `${meta?.label ?? type} log filter`);
+
+    const label = document.createElement('span');
+    label.className = 'log-chip__label';
+    label.textContent = meta?.label ?? type;
+
+    const badge = document.createElement('span');
+    badge.className = 'log-chip__count';
+    badge.textContent = '0';
+    typeBadges.set(type, badge);
+
+    if (!activeTypes.has(type)) {
+      button.classList.add('is-muted');
+    }
+
+    button.append(label, badge);
+    logFilters.appendChild(button);
+
+    button.addEventListener('click', () => {
+      const isActive = activeTypes.has(type);
+      if (isActive) {
+        activeTypes.delete(type);
+        mutedTypes.add(type);
+      } else {
+        activeTypes.add(type);
+        mutedTypes.delete(type);
+      }
+      button.classList.toggle('is-muted', !activeTypes.has(type));
+      button.setAttribute('aria-pressed', activeTypes.has(type) ? 'true' : 'false');
+      writeLogPreferences({ mutedTypes: Array.from(mutedTypes) });
+      refreshEntryVisibility();
+    });
   }
 
-  function log(msg: string): void {
-    pending.push(msg);
-    if (!scheduled) {
-      scheduled = true;
-      (typeof requestAnimationFrame === 'function'
-        ? requestAnimationFrame
-        : (cb: FrameRequestCallback) => setTimeout(cb, 16))(flush);
+  updateTotalBadge();
+
+  const handleLogScroll = (): void => {
+    stickToBottom = isNearBottom();
+  };
+  logFeed.addEventListener('scroll', handleLogScroll, { passive: true });
+  disposers.push(() => logFeed.removeEventListener('scroll', handleLogScroll));
+
+  const seedHistory = getLogHistory();
+  if (seedHistory.length > 0) {
+    for (const entry of seedHistory) {
+      appendEntry(entry, true);
     }
+    scrollToBottom();
   }
+
+  const unsubscribeLogs = subscribeToLogs((change: LogChange) => {
+    if (change.kind === 'append') {
+      appendEntry(change.entry);
+    } else if (change.kind === 'update') {
+      updateEntry(change.entry);
+    } else if (change.kind === 'remove') {
+      for (const entry of change.entries) {
+        removeEntry(entry);
+      }
+    }
+  });
+  disposers.push(unsubscribeLogs);
+
+  refreshEntryVisibility();
 
   show('Roster');
   const dispose = (): void => {
@@ -936,6 +1178,13 @@ export function setupRightPanel(
     panel.remove();
   };
 
-  return { log, addEvent, renderRoster, dispose };
+  return {
+    log: (event: LogEventPayload) => {
+      logEvent(event);
+    },
+    addEvent,
+    renderRoster,
+    dispose
+  };
 }
 
