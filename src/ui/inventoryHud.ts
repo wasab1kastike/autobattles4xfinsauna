@@ -6,6 +6,7 @@ import type {
   InventoryState
 } from '../inventory/state.ts';
 import { ensureHudLayout } from './layout.ts';
+import { zIndex } from './theme/tokens.ts';
 import {
   createDefaultFilterState,
   selectInventoryView,
@@ -42,36 +43,62 @@ const STAT_LABELS: Record<string, string> = {
   shield: 'Shield'
 };
 
+const TOAST_STACK_CLASSES =
+  'pointer-events-none ml-auto flex w-full max-w-[min(22rem,90vw)] flex-col gap-[clamp(6px,1vw,12px)]';
+const TOAST_BASE_CLASSES =
+  'pointer-events-auto flex w-full items-center gap-[clamp(4px,0.8vw,12px)] rounded-hud-md border border-white/15 px-4 py-3 text-[0.9rem] font-semibold leading-[1.35] shadow-[0_18px_32px_rgba(15,23,42,0.22)] backdrop-blur-[14px] backdrop-saturate-[135%] transition-all duration-300 ease-out';
+const TOAST_VARIANT_CLASSES: Record<'loot' | 'info' | 'warn', string> = {
+  loot: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(215,229,255,0.95))] text-slate-900',
+  info: 'bg-[linear-gradient(135deg,rgba(219,245,255,0.95),rgba(197,228,255,0.95))] text-slate-900',
+  warn: 'bg-[linear-gradient(135deg,rgba(255,231,217,0.95),rgba(255,214,196,0.95))] text-amber-900',
+};
+const TOAST_EXIT_CLASSES = ['-translate-y-2', 'opacity-0'] as const;
+
+function updateToastStackVisibility(stack: HTMLDivElement): void {
+  stack.hidden = stack.childElementCount === 0;
+}
+
 function ensureToastStack(overlay: HTMLElement, target: HTMLElement): HTMLDivElement {
-  const existing = overlay.querySelector<HTMLDivElement>('.loot-toast-stack');
+  const existing = overlay.querySelector<HTMLDivElement>('[data-ui="loot-toast-stack"]');
   if (existing) {
     if (existing.parentElement !== target) {
       target.appendChild(existing);
     }
+    existing.className = TOAST_STACK_CLASSES;
+    existing.style.zIndex = String(zIndex.toast);
+    updateToastStackVisibility(existing);
     return existing;
   }
   const doc = overlay.ownerDocument ?? document;
   const stack = doc.createElement('div');
-  stack.classList.add('loot-toast-stack');
+  stack.dataset.ui = 'loot-toast-stack';
+  stack.className = TOAST_STACK_CLASSES;
   stack.setAttribute('aria-live', 'polite');
   stack.setAttribute('role', 'status');
+  stack.style.zIndex = String(zIndex.toast);
+  updateToastStackVisibility(stack);
   target.appendChild(stack);
   return stack;
 }
 
 function showToast(stack: HTMLDivElement, message: string, variant: 'loot' | 'info' | 'warn'): void {
-  const toast = document.createElement('div');
-  toast.classList.add('loot-toast');
+  const toast = (stack.ownerDocument ?? document).createElement('div');
   toast.dataset.variant = variant;
+  toast.className = `${TOAST_BASE_CLASSES} ${TOAST_VARIANT_CLASSES[variant]}`;
   toast.textContent = message;
   stack.appendChild(toast);
+  updateToastStackVisibility(stack);
+  const removeToast = () => {
+    toast.remove();
+    updateToastStackVisibility(stack);
+  };
   const timeout = window.setTimeout(() => {
-    toast.classList.add('loot-toast--exit');
-    window.setTimeout(() => toast.remove(), TOAST_EXIT_MS);
+    toast.classList.add(...TOAST_EXIT_CLASSES);
+    window.setTimeout(removeToast, TOAST_EXIT_MS);
   }, TOAST_LIFETIME_MS);
   toast.addEventListener('click', () => {
     window.clearTimeout(timeout);
-    toast.remove();
+    removeToast();
   });
 }
 
@@ -114,13 +141,17 @@ function createBadge(): {
 } {
   const button = document.createElement('button');
   button.type = 'button';
-  button.classList.add('inventory-badge');
+  button.dataset.testid = 'inventory-badge';
+  button.dataset.ui = 'inventory-badge';
+  button.className =
+    'group inline-flex items-center gap-2 rounded-hud-pill border border-white/15 bg-[linear-gradient(135deg,rgba(27,36,56,0.9),rgba(39,74,110,0.9))] px-3.5 py-2 font-semibold text-sky-50 shadow-hud-sm transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:-translate-y-0.5 hover:shadow-hud-md data-[autoequip=off]:bg-[linear-gradient(135deg,rgba(56,44,25,0.9),rgba(92,72,40,0.9))]';
   button.setAttribute('aria-expanded', 'false');
   button.setAttribute('aria-controls', 'inventory-stash-panel');
   button.setAttribute('aria-label', 'Open quartermaster stash');
 
   const icon = document.createElement('span');
-  icon.classList.add('inventory-badge__icon');
+  icon.className =
+    'relative flex h-[1.65rem] w-[1.65rem] flex-shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.9),rgba(225,235,255,0.2))] text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]';
   icon.setAttribute('aria-hidden', 'true');
 
   const svgNs = 'http://www.w3.org/2000/svg';
@@ -128,30 +159,40 @@ function createBadge(): {
   svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('focusable', 'false');
-  svg.classList.add('inventory-badge__svg');
+  svg.setAttribute('class', 'h-[76%] w-[76%]');
 
   const bagOutline = document.createElementNS(svgNs, 'path');
   bagOutline.setAttribute(
     'd',
     'M8.25 7V6a3.75 3.75 0 0 1 7.5 0v1m3 0h-14.25a1.5 1.5 0 0 0-1.485 1.342l-.75 9a3 3 0 0 0 2.985 3.158h9.78a3 3 0 0 0 2.985-3.158l-.75-9A1.5 1.5 0 0 0 18.75 7Z'
   );
-  bagOutline.classList.add('inventory-badge__icon-outline');
+  bagOutline.setAttribute('fill', 'rgba(194, 216, 255, 0.32)');
+  bagOutline.setAttribute('stroke', 'rgba(255, 255, 255, 0.92)');
+  bagOutline.setAttribute('stroke-width', '1.6');
+  bagOutline.setAttribute('stroke-linecap', 'round');
+  bagOutline.setAttribute('stroke-linejoin', 'round');
 
   const bagDetail = document.createElementNS(svgNs, 'path');
   bagDetail.setAttribute('d', 'M9.75 12.25h4.5');
-  bagDetail.classList.add('inventory-badge__icon-detail');
+  bagDetail.setAttribute('fill', 'none');
+  bagDetail.setAttribute('stroke', 'rgba(255, 255, 255, 0.85)');
+  bagDetail.setAttribute('stroke-width', '1.4');
+  bagDetail.setAttribute('stroke-linecap', 'round');
+  bagDetail.setAttribute('stroke-linejoin', 'round');
+  bagDetail.setAttribute('opacity', '0.9');
 
   svg.append(bagOutline, bagDetail);
   icon.appendChild(svg);
   button.appendChild(icon);
 
   const label = document.createElement('span');
-  label.classList.add('inventory-badge__text');
+  label.className = 'text-[0.75rem] uppercase tracking-[0.08em]';
   label.textContent = 'Stash';
   button.appendChild(label);
 
   const count = document.createElement('span');
-  count.classList.add('inventory-badge__count');
+  count.className =
+    'min-w-[1.5rem] rounded-full bg-white/15 px-2 py-[0.1rem] text-center text-xs font-semibold text-white/90';
   count.textContent = '0';
   count.setAttribute('aria-hidden', 'true');
   button.appendChild(count);
@@ -172,7 +213,9 @@ export function setupInventoryHud(
   const topRegion = regions.top;
   const toastStack = ensureToastStack(overlay, topRegion);
 
-  overlay.querySelectorAll('.inventory-badge').forEach((el) => el.remove());
+  overlay
+    .querySelectorAll<HTMLButtonElement>('[data-testid="inventory-badge"]')
+    .forEach((el) => el.remove());
   const { button: badgeButton, count: badgeCount } = createBadge();
   badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
   topRegion.appendChild(badgeButton);
