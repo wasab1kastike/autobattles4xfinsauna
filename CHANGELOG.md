@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Expose NG+ and policy-friendly enemy ramp knobs, thread the modifiers into
+  the spawner and HUD telemetry, persist structured enemy scaling summaries for
+  post-run analysis, and document the new configuration hooks alongside fresh
+  integration coverage for cadence, calm periods, and ramp strength tuning.
+
 - Refresh the inventory stash badge with an inline SVG bag icon, centered
   styling, and updated palette treatments for a crisper HUD affordance.
 
