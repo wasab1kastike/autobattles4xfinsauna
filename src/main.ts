@@ -1,4 +1,5 @@
 import './style.css';
+import './ui/style/atoms.css';
 import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
