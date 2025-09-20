@@ -61,21 +61,21 @@ describe('main HUD lifecycle', () => {
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
-    expect(document.querySelectorAll('.inventory-badge')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-testid="inventory-badge"]')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
 
     destroy();
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(0);
-    expect(document.querySelectorAll('.inventory-badge')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-testid="inventory-badge"]')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
 
     init();
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
-    expect(document.querySelectorAll('.inventory-badge')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-testid="inventory-badge"]')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
   });
 });
