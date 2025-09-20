@@ -9,37 +9,80 @@ import { SFX_PAYLOADS } from './sfxData.ts';
 
 export type SfxName = 'click' | 'spawn' | 'error' | 'attack' | 'death' | 'sisu';
 
+type DebounceConfig = {
+  windowMs: number;
+  maxWeight: number;
+  weight?: number;
+};
+
+type DebounceEntry = {
+  time: number;
+  weight: number;
+};
+
 type SoundDefinition = {
   loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
-  debounceMs?: number;
+  debounce?: DebounceConfig;
+  polyphony?: number;
   gain?: number;
 };
 
 const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
   click: {
     loader: (ctx) => createClick(ctx),
-    debounceMs: 30
+    debounce: {
+      windowMs: 35,
+      weight: 0.5,
+      maxWeight: 1.5
+    },
+    polyphony: 6
   },
   spawn: {
     loader: (ctx) => createSpawn(ctx),
-    debounceMs: 120
+    debounce: {
+      windowMs: 150,
+      weight: 0.7,
+      maxWeight: 1.4
+    },
+    polyphony: 3
   },
   error: {
-    loader: (ctx) => createError(ctx)
+    loader: (ctx) => createError(ctx),
+    debounce: {
+      windowMs: 220,
+      weight: 1,
+      maxWeight: 1
+    },
+    polyphony: 2
   },
   attack: {
     loader: (ctx) => decodeAsset(SFX_PAYLOADS.attack.payload, ctx),
-    debounceMs: 70,
+    debounce: {
+      windowMs: 120,
+      weight: 0.6,
+      maxWeight: 1.2
+    },
+    polyphony: 3,
     gain: SFX_PAYLOADS.attack.loudness.gain
   },
   death: {
     loader: (ctx) => decodeAsset(SFX_PAYLOADS.death.payload, ctx),
-    debounceMs: 180,
+    debounce: {
+      windowMs: 360,
+      weight: 1,
+      maxWeight: 1.5
+    },
+    polyphony: 3,
     gain: SFX_PAYLOADS.death.loudness.gain
   },
   sisu: {
     loader: (ctx) => decodeAsset(SFX_PAYLOADS.sisu.payload, ctx),
-    debounceMs: 800,
+    debounce: {
+      windowMs: 900,
+      weight: 1,
+      maxWeight: 1
+    },
+    polyphony: 1,
     gain: SFX_PAYLOADS.sisu.loudness.gain
   }
 };
@@ -47,7 +90,30 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
 let audioCtx: AudioContext | null = null;
 const buffers = new Map<SfxName, AudioBuffer>();
 const pendingLoads = new Map<SfxName, Promise<AudioBuffer>>();
-const lastPlayed = new Map<SfxName, number>();
+const playbackHistory = new Map<SfxName, DebounceEntry[]>();
+const pendingPolyphony = new Map<SfxName, number>();
+const activeSources = new Map<SfxName, Set<AudioBufferSourceNode>>();
+
+type AttackLimiterState = {
+  node: GainNode | null;
+  destination: AudioNode | null;
+  envelope: number;
+  lastUpdate: number;
+};
+
+const attackLimiter: AttackLimiterState = {
+  node: null,
+  destination: null,
+  envelope: 0,
+  lastUpdate: 0
+};
+
+const SISU_DUCK = {
+  attackSeconds: 0.04,
+  releaseSeconds: 0.6,
+  depth: 0.55,
+  floor: 0.25
+};
 
 const muteListeners = new Set<(muted: boolean) => void>();
 
@@ -176,6 +242,198 @@ function getBuffer(name: SfxName): Promise<AudioBuffer> {
   return loadPromise;
 }
 
+function getPolyphonyLimit(definition: SoundDefinition): number {
+  const limit = definition.polyphony;
+  if (!Number.isFinite(limit) || !limit || limit <= 0) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return limit;
+}
+
+function pruneDebounceHistory(name: SfxName, cutoff: number): DebounceEntry[] {
+  const history = playbackHistory.get(name);
+  if (!history || history.length === 0) {
+    return [];
+  }
+  const pruned: DebounceEntry[] = [];
+  for (const entry of history) {
+    if (entry.time >= cutoff) {
+      pruned.push(entry);
+    }
+  }
+  playbackHistory.set(name, pruned);
+  return pruned;
+}
+
+type DebounceEvaluation = { blocked: true } | { blocked: false; weight: number };
+
+function evaluateDebounce(
+  name: SfxName,
+  definition: SoundDefinition,
+  now: number
+): DebounceEvaluation {
+  const config = definition.debounce;
+  if (!config) {
+    return { blocked: false, weight: 0 };
+  }
+  const weight = config.weight ?? 1;
+  const windowMs = config.windowMs;
+  const cutoff = now - windowMs;
+  const recent = pruneDebounceHistory(name, cutoff);
+  let total = 0;
+  for (const entry of recent) {
+    total += entry.weight;
+  }
+  if (total + weight > config.maxWeight) {
+    return { blocked: true };
+  }
+  return { blocked: false, weight };
+}
+
+function recordDebounce(name: SfxName, time: number, weight: number): void {
+  if (weight <= 0) {
+    return;
+  }
+  const history = playbackHistory.get(name) ?? [];
+  history.push({ time, weight });
+  playbackHistory.set(name, history);
+}
+
+function incrementPending(name: SfxName): void {
+  const next = (pendingPolyphony.get(name) ?? 0) + 1;
+  pendingPolyphony.set(name, next);
+}
+
+function decrementPending(name: SfxName): void {
+  const current = pendingPolyphony.get(name) ?? 0;
+  if (current <= 1) {
+    pendingPolyphony.delete(name);
+    return;
+  }
+  pendingPolyphony.set(name, current - 1);
+}
+
+function isPolyphonyBlocked(name: SfxName, limit: number): boolean {
+  if (!Number.isFinite(limit)) {
+    return false;
+  }
+  const active = activeSources.get(name)?.size ?? 0;
+  const pending = pendingPolyphony.get(name) ?? 0;
+  return active + pending >= limit;
+}
+
+function registerActiveSource(name: SfxName, source: AudioBufferSourceNode): () => void {
+  let set = activeSources.get(name);
+  if (!set) {
+    set = new Set<AudioBufferSourceNode>();
+    activeSources.set(name, set);
+  }
+  set.add(source);
+  let released = false;
+  const release = () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    const currentSet = activeSources.get(name);
+    currentSet?.delete(source);
+    if (currentSet && currentSet.size === 0) {
+      activeSources.delete(name);
+    }
+  };
+  if (typeof source.addEventListener === 'function') {
+    source.addEventListener(
+      'ended',
+      () => {
+        release();
+      },
+      { once: true }
+    );
+  } else {
+    const previous = source.onended;
+    source.onended = () => {
+      try {
+        previous?.call(source);
+      } finally {
+        release();
+      }
+    };
+  }
+  return release;
+}
+
+function ensureAttackLimiter(ctx: AudioContext, destination: AudioNode): GainNode {
+  const node = attackLimiter.node;
+  if (!node || node.context !== ctx) {
+    attackLimiter.node?.disconnect();
+    const limiter = ctx.createGain();
+    limiter.gain.value = 1;
+    limiter.connect(destination);
+    attackLimiter.node = limiter;
+    attackLimiter.destination = destination;
+    attackLimiter.envelope = 0;
+    attackLimiter.lastUpdate = ctx.currentTime;
+    return limiter;
+  }
+  if (attackLimiter.destination !== destination) {
+    node.disconnect();
+    node.connect(destination);
+    attackLimiter.destination = destination;
+  }
+  return node;
+}
+
+function driveAttackLimiter(ctx: AudioContext): void {
+  const node = attackLimiter.node;
+  if (!node) {
+    return;
+  }
+  const now = ctx.currentTime;
+  const releaseSeconds = 0.6;
+  const impact = 0.55;
+  const elapsed = Math.max(0, now - attackLimiter.lastUpdate);
+  const decay = Math.exp(-elapsed / releaseSeconds);
+  attackLimiter.envelope *= decay;
+  attackLimiter.envelope = Math.min(1, attackLimiter.envelope + impact);
+  attackLimiter.lastUpdate = now;
+
+  const depth = 0.5;
+  const floor = 0.35;
+  const targetGain = Math.max(floor, 1 - attackLimiter.envelope * depth);
+  const attackSeconds = 0.02;
+
+  node.gain.cancelScheduledValues(now);
+  node.gain.setValueAtTime(node.gain.value, now);
+  node.gain.linearRampToValueAtTime(targetGain, now + attackSeconds);
+  node.gain.setTargetAtTime(1, now + attackSeconds, releaseSeconds);
+}
+
+function applySisuDucking(ctx: AudioContext): void {
+  const music = getChannelGainNode('music');
+  if (!music) {
+    return;
+  }
+  const masterState = getChannelState('master');
+  const musicState = getChannelState('music');
+  if (masterState.muted || musicState.muted) {
+    return;
+  }
+  const baseVolume = musicState.volume;
+  if (baseVolume <= 0) {
+    return;
+  }
+  const now = ctx.currentTime;
+  const currentValue = music.gain.value;
+  const dipTarget = baseVolume * (1 - SISU_DUCK.depth);
+  const floorValue = baseVolume * SISU_DUCK.floor;
+  const target = Math.min(currentValue, Math.max(dipTarget, floorValue));
+
+  music.gain.cancelScheduledValues(now);
+  music.gain.setValueAtTime(currentValue, now);
+  music.gain.linearRampToValueAtTime(target, now + SISU_DUCK.attackSeconds);
+  music.gain.setTargetAtTime(baseVolume, now + SISU_DUCK.attackSeconds, SISU_DUCK.releaseSeconds);
+}
+
 export function playSafe(name: SfxName): void {
   if (isMuted()) {
     return;
@@ -187,15 +445,28 @@ export function playSafe(name: SfxName): void {
   }
 
   const now = getNowMs();
-  const debounceMs = definition.debounceMs ?? 0;
-  const last = lastPlayed.get(name) ?? 0;
-  if (debounceMs > 0 && now - last < debounceMs) {
+  const debounceResult = evaluateDebounce(name, definition, now);
+  if (debounceResult.blocked) {
     return;
   }
-  lastPlayed.set(name, now);
+
+  const polyphonyLimit = getPolyphonyLimit(definition);
+  if (isPolyphonyBlocked(name, polyphonyLimit)) {
+    return;
+  }
+
+  incrementPending(name);
+  let pendingCleared = false;
+  const clearPending = () => {
+    if (!pendingCleared) {
+      decrementPending(name);
+      pendingCleared = true;
+    }
+  };
 
   void getBuffer(name)
     .then((buffer) => {
+      clearPending();
       if (isMuted()) {
         return;
       }
@@ -207,28 +478,49 @@ export function playSafe(name: SfxName): void {
       if (!destination) {
         return;
       }
+      const limit = getPolyphonyLimit(definition);
+      if (isPolyphonyBlocked(name, limit)) {
+        return;
+      }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       const soundGain = definition.gain;
+      let tail: AudioNode = source;
       if (typeof soundGain === 'number' && soundGain > 0 && soundGain !== 1) {
         const gainNode = ctx.createGain();
         gainNode.gain.value = soundGain;
         source.connect(gainNode);
-        gainNode.connect(destination);
-      } else {
-        source.connect(destination);
+        tail = gainNode;
       }
+      const connectTarget = name === 'attack' ? ensureAttackLimiter(ctx, destination) : destination;
+      tail.connect(connectTarget);
+      const release = registerActiveSource(name, source);
       try {
         source.start();
+        if (name === 'attack') {
+          driveAttackLimiter(ctx);
+        }
+        if (name === 'sisu') {
+          applySisuDucking(ctx);
+        }
+        const startTime = getNowMs();
+        if (!debounceResult.blocked && debounceResult.weight > 0) {
+          recordDebounce(name, startTime, debounceResult.weight);
+        }
       } catch (err) {
         console.warn('Unable to start sound', err);
+        release();
       }
     })
     .catch((err) => {
+      clearPending();
       if (err instanceof Error && err.message === 'Audio context unavailable') {
         return;
       }
       console.warn('Failed to play sound', name, err);
+    })
+    .finally(() => {
+      clearPending();
     });
 }
 
@@ -271,6 +563,22 @@ function initAudioSafe(): AudioContext | null {
   }
   audioCtx = initAudioContext();
   return audioCtx;
+}
+
+export function resetSfxForTests(): void {
+  buffers.clear();
+  pendingLoads.clear();
+  playbackHistory.clear();
+  pendingPolyphony.clear();
+  activeSources.clear();
+  attackLimiter.node?.disconnect();
+  attackLimiter.node = null;
+  attackLimiter.destination = null;
+  attackLimiter.envelope = 0;
+  attackLimiter.lastUpdate = 0;
+  muteListeners.clear();
+  audioCtx = null;
+  lastMute = getEffectiveMute();
 }
 
 initAudioSafe();
