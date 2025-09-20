@@ -1,39 +1,43 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CALMING_SFX,
   LOUDNESS_TOLERANCE,
   PEAK_HEADROOM_DB,
-  SFX_PAYLOADS,
-  TARGET_LUFS
+  TARGET_LUFS,
+  renderVariantSamples
 } from '../../src/audio/sfxData.ts';
-import {
-  computeLoudness,
-  decodeBase64ToUint8Array,
-  decodeWav
-} from '../../scripts/audio/loudnessUtils.ts';
+import { computeLoudness } from '../../scripts/audio/loudnessUtils.ts';
 
 const LOUDNESS_EPSILON = 0.05;
 const PEAK_EPSILON = 0.1;
 
+const TEST_SAMPLE_RATE = 48000;
+
 describe('combat cue loudness', () => {
-  for (const [name, entry] of Object.entries(SFX_PAYLOADS)) {
-    it(`${name} meets loudness target`, () => {
-      const bytes = decodeBase64ToUint8Array(entry.payload);
-      const wav = decodeWav(bytes);
-      const stats = computeLoudness(wav.channelData);
+  for (const [name, collection] of Object.entries(CALMING_SFX)) {
+    for (const variant of collection.variants) {
+      it(`${name}/${variant.id} meets loudness target`, () => {
+        const samples = renderVariantSamples(variant, TEST_SAMPLE_RATE);
+        const rawStats = computeLoudness([samples]);
+        const gain = variant.loudness.gain ?? 1;
+        const scaled = new Float32Array(samples.length);
+        for (let i = 0; i < samples.length; i++) {
+          scaled[i] = samples[i] * gain;
+        }
+        const scaledStats = computeLoudness([scaled]);
 
-      if (Number.isFinite(stats.lufs)) {
-        const deviation = Math.abs(stats.lufs - TARGET_LUFS);
-        expect(deviation).toBeLessThanOrEqual(LOUDNESS_TOLERANCE + LOUDNESS_EPSILON);
-      }
+        if (Number.isFinite(scaledStats.lufs)) {
+          const deviation = Math.abs(scaledStats.lufs - TARGET_LUFS);
+          expect(deviation).toBeLessThanOrEqual(LOUDNESS_TOLERANCE + LOUDNESS_EPSILON);
+        }
 
-      if (Number.isFinite(stats.peakDb)) {
-        expect(stats.peakDb).toBeLessThanOrEqual(PEAK_HEADROOM_DB + PEAK_EPSILON);
-      }
+        if (Number.isFinite(scaledStats.peakDb)) {
+          expect(scaledStats.peakDb).toBeLessThanOrEqual(PEAK_HEADROOM_DB + PEAK_EPSILON);
+        }
 
-      // Metadata should reflect the encoded payload and runtime gain should be neutral.
-      expect(entry.loudness.gain).toBeCloseTo(1, 5);
-      expect(entry.loudness.lufs).toBeCloseTo(stats.lufs, 3);
-      expect(entry.loudness.peakDb).toBeCloseTo(stats.peakDb, 3);
-    });
+        expect(variant.loudness.lufs).toBeCloseTo(rawStats.lufs, 3);
+        expect(variant.loudness.peakDb).toBeCloseTo(rawStats.peakDb, 3);
+      });
+    }
   }
 });
