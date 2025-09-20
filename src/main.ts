@@ -1,5 +1,4 @@
 import './style.css';
-import './ui/style/atoms.css';
 import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
 import { loadSaunaSettings } from './game/saunaSettings.ts';
 import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.ts';

@@ -69,7 +69,7 @@ describe('setupInventoryHud', () => {
 
     const hud = setupInventoryHud(inventory);
 
-    const badge = overlay.querySelector<HTMLButtonElement>('.inventory-badge');
+    const badge = overlay.querySelector<HTMLButtonElement>('[data-testid="inventory-badge"]');
     expect(badge).not.toBeNull();
 
     badge!.click();

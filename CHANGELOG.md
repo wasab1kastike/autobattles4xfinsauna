@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+- Adopt Tailwind CSS for the classic HUD by wiring the Vite plugin, publishing
+  shared spacing, radius, shadow, and z-index tokens, migrating the stash badge,
+  loot toast stack, and error overlay to utility classes, and refreshing the
+  published docs mirror after the rebuild.
+
 - Rebuild the GitHub Pages mirror from the latest production build so the
   hashed Vite bundles and published HTML reflect the refreshed deployment.
-
 
 - Launch a persistent event scheduler that survives reloads, powers premium
   animated event cards in the command console, dispatches choice outcomes
