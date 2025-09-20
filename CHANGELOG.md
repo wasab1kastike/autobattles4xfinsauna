@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Rebuild the GitHub Pages mirror from commit bb726e0 so the hashed Vite
-  bundle, published HTML, and verification guard all advertise the current
-  deploy after `npm run build` and `npm run verify:docs`.
 
 - Upgrade battlefield motion with dedicated render coordinates, eased 200 ms
   tweens, premium motion trails, and Vitest coverage validating animator and
