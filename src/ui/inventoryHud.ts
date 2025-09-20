@@ -214,8 +214,12 @@ export function setupInventoryHud(
       isOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
     );
     if (isOpen) {
-      panel.focus();
       overlay.classList.add('inventory-panel-open');
+      try {
+        panel.focus();
+      } catch (error) {
+        console.warn('Unable to focus stash panel', error);
+      }
     } else {
       overlay.classList.remove('inventory-panel-open');
     }
