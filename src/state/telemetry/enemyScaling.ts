@@ -1,4 +1,9 @@
 import type { EnemySpawnerSnapshot } from '../../sim/EnemySpawner.ts';
+import {
+  emitStructuredTelemetry,
+  persistStructuredTelemetry,
+  type StructuredTelemetryEntry
+} from './structured.ts';
 
 export interface EnemyScalingTelemetryOptions {
   readonly wipeSince?: number | null;
@@ -8,6 +13,10 @@ export interface EnemyScalingTelemetryOptions {
 let lastStageIndex = -1;
 let lastLoggedSpawnCycles = -1;
 let lastLoggedClearAt: number | null = null;
+let peakMultiplier = 0;
+let longestCalmMs = 0;
+
+const ENEMY_SCALING_SUMMARY_KEY = 'telemetry:enemy-scaling:summaries';
 
 export function recordEnemyScalingTelemetry(
   snapshot: EnemySpawnerSnapshot,
@@ -25,6 +34,12 @@ export function recordEnemyScalingTelemetry(
   lastLoggedSpawnCycles = snapshot.spawnCycles;
   lastLoggedClearAt = snapshot.lastClearAt ?? lastLoggedClearAt;
 
+  peakMultiplier = Math.max(peakMultiplier, snapshot.difficultyMultiplier);
+  const calmMs = Math.max(0, Math.round(snapshot.calmSecondsRemaining * 1000));
+  if (calmMs > longestCalmMs) {
+    longestCalmMs = calmMs;
+  }
+
   const payload = {
     stage: snapshot.rampStageLabel,
     stageIndex: snapshot.rampStageIndex,
@@ -32,22 +47,29 @@ export function recordEnemyScalingTelemetry(
     cadenceSeconds: Number(snapshot.cadence.toFixed(2)),
     lastCadenceSeconds: Number(snapshot.lastCadence.toFixed(2)),
     multiplier: Number(snapshot.difficultyMultiplier.toFixed(2)),
+    effectiveDifficulty: Number(snapshot.effectiveDifficulty.toFixed(2)),
+    aggressionMultiplier: Number(snapshot.aggressionMultiplier.toFixed(2)),
+    cadenceMultiplier: Number(snapshot.cadenceMultiplier.toFixed(2)),
+    strengthMultiplier: Number(snapshot.strengthMultiplier.toFixed(2)),
+    pressureMultiplier: Number(snapshot.pressureMultiplier.toFixed(2)),
+    calmSecondsRemaining: Number(snapshot.calmSecondsRemaining.toFixed(2)),
     runSeconds: Math.round(snapshot.runSeconds),
     spawnCycles: snapshot.spawnCycles,
     clears: snapshot.clears,
     wipeSince: options.wipeSince ?? null,
-    longestWipeMs: options.wipeDurationMs ?? 0
+    longestWipeMs: options.wipeDurationMs ?? 0,
+    peakMultiplier: Number(peakMultiplier.toFixed(2)),
+    longestCalmMs
   };
 
-  if (import.meta.env.PROD) {
-    console.info('enemy-scaling', payload);
-  } else {
-    console.debug('Enemy scaling telemetry', payload);
-  }
+  const entry: StructuredTelemetryEntry = emitStructuredTelemetry('enemy-scaling', payload);
+  persistStructuredTelemetry(ENEMY_SCALING_SUMMARY_KEY, entry, { limit: 24 });
 }
 
 export function resetEnemyScalingTelemetry(): void {
   lastStageIndex = -1;
   lastLoggedSpawnCycles = -1;
   lastLoggedClearAt = null;
+  peakMultiplier = 0;
+  longestCalmMs = 0;
 }

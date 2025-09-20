@@ -4,6 +4,7 @@ import {
   createNgPlusState,
   ensureNgPlusRunState,
   getAiAggressionModifier,
+  getEnemyRampModifiers,
   getEliteOdds,
   getUnlockSpawnLimit,
   getUpkeepMultiplier,
@@ -75,7 +76,16 @@ describe('ngplus progression helpers', () => {
     const raw = storage.getItem('progression:ngPlusState');
     expect(raw).toBeTruthy();
     const parsed = raw ? JSON.parse(raw) : null;
-    expect(parsed).toEqual({ runSeed: 7, ngPlusLevel: 3, unlockSlots: 4 });
+    expect(parsed).toEqual({
+      runSeed: 7,
+      ngPlusLevel: 3,
+      unlockSlots: 4,
+      enemyTuning: {
+        aggressionMultiplier: 1,
+        cadenceMultiplier: 1,
+        strengthMultiplier: 1
+      }
+    });
     const restored = loadNgPlusState(() => 0.5);
     expect(restored.ngPlusLevel).toBe(3);
     expect(restored.unlockSlots).toBe(4);
@@ -88,6 +98,7 @@ describe('ngplus progression helpers', () => {
     expect(next.ngPlusLevel).toBe(3);
     expect(next.unlockSlots).toBe(2);
     expect(next.runSeed).not.toBe(base.runSeed);
+    expect(next.enemyTuning).toEqual(base.enemyTuning);
   });
 
   it('computes modifier helpers from the current NG+ state', () => {
@@ -96,6 +107,25 @@ describe('ngplus progression helpers', () => {
     expect(getEliteOdds(state)).toBeCloseTo(0.1 + 4 * 0.05 + 3 * 0.01);
     expect(getAiAggressionModifier(state)).toBeCloseTo(1 + 4 * 0.25);
     expect(getUnlockSpawnLimit(state)).toBe(1 + 3);
+  });
+
+  it('captures enemy tuning multipliers for ramp scaling', () => {
+    const state = createNgPlusState({
+      runSeed: 23,
+      ngPlusLevel: 1,
+      unlockSlots: 0,
+      enemyTuning: {
+        aggressionMultiplier: 1.6,
+        cadenceMultiplier: 1.25,
+        strengthMultiplier: 1.4
+      }
+    });
+    expect(getAiAggressionModifier(state)).toBeCloseTo(
+      Math.min(8, Math.max(0.25, (1 + 1 * 0.25) * 1.6))
+    );
+    const tuning = getEnemyRampModifiers(state);
+    expect(tuning.cadenceMultiplier).toBeCloseTo(1.25);
+    expect(tuning.strengthMultiplier).toBeCloseTo(1.4);
   });
 
   it('clamps unlock slots when advancing repeatedly', () => {

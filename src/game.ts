@@ -1,4 +1,4 @@
-import { GameState, Resource } from './core/GameState.ts';
+import { GameState, Resource, type EnemyScalingSnapshot } from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { BattleManager } from './battle/BattleManager.ts';
@@ -9,11 +9,11 @@ import type { UnitStats, UnitType } from './unit/index.ts';
 import { eventBus } from './events';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
-import { EnemySpawner } from './sim/EnemySpawner.ts';
+import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
-import { setupTopbar, type TopbarControls } from './ui/topbar.ts';
+import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
@@ -48,12 +48,14 @@ import {
   createNgPlusRng,
   ensureNgPlusRunState,
   getAiAggressionModifier,
+  getEnemyRampModifiers,
   getEliteOdds,
   getUnlockSpawnLimit,
   getUpkeepMultiplier,
   loadNgPlusState,
   planNextNgPlusRun,
   saveNgPlusState,
+  type NgPlusEnemyTuning,
   type NgPlusState
 } from './progression/ngplus.ts';
 import {
@@ -104,6 +106,11 @@ let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
 let ngPlusUpkeepMultiplier = 1;
 let ngPlusEliteOdds = 0;
 let ngPlusSpawnLimit = 1;
+let ngPlusEnemyScaling: NgPlusEnemyTuning = {
+  aggressionMultiplier: 1,
+  cadenceMultiplier: 1,
+  strengthMultiplier: 1
+};
 let enemyAggressionModifier = 1;
 let enemyRandom: () => number = Math.random;
 let lootRandom: () => number = Math.random;
@@ -113,6 +120,7 @@ function applyNgPlusState(next: NgPlusState): void {
   ngPlusUpkeepMultiplier = getUpkeepMultiplier(currentNgPlusState);
   ngPlusEliteOdds = getEliteOdds(currentNgPlusState);
   ngPlusSpawnLimit = getUnlockSpawnLimit(currentNgPlusState);
+  ngPlusEnemyScaling = getEnemyRampModifiers(currentNgPlusState);
   enemyAggressionModifier = getAiAggressionModifier(currentNgPlusState);
   enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
   lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
@@ -695,6 +703,11 @@ if (restoredSave) {
   applyNgPlusState(seededNgPlus);
   saveNgPlusState(seededNgPlus);
 }
+state.setEnemyScalingBase({
+  aggression: ngPlusEnemyScaling.aggressionMultiplier,
+  cadence: ngPlusEnemyScaling.cadenceMultiplier,
+  strength: ngPlusEnemyScaling.strengthMultiplier
+});
 if (!restoredSave && currentNgPlusState.ngPlusLevel > 0) {
   const bonusBeer = Math.round(75 * currentNgPlusState.ngPlusLevel);
   if (bonusBeer > 0) {
@@ -750,6 +763,7 @@ const enemySpawner = new EnemySpawner({
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
+  const rampModifiers: EnemyScalingSnapshot = state.getEnemyScalingSnapshot();
   const rosterCap = updateRosterCap(sauna.maxRosterSize);
   runEconomyTick({
     dt: dtSeconds,
@@ -765,8 +779,35 @@ const clock = new GameClock(1000, (deltaMs) => {
     rosterCap,
     getRosterCount: getActiveRosterCount
   });
-  enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
+  const runtimeModifiers: EnemySpawnerRuntimeModifiers = {
+    aggressionMultiplier: rampModifiers.aggression,
+    cadenceMultiplier: rampModifiers.cadence,
+    strengthMultiplier: rampModifiers.strength,
+    calmSecondsRemaining: rampModifiers.calmSecondsRemaining
+  };
+  enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile, runtimeModifiers);
+  state.advanceEnemyCalm(dtSeconds);
   const scalingSnapshot = enemySpawner.getSnapshot();
+  const calmSecondsRemaining = Math.max(
+    rampModifiers.calmSecondsRemaining,
+    scalingSnapshot.calmSecondsRemaining
+  );
+  if (topbarControls) {
+    const rampSummary: EnemyRampSummary = {
+      stage: scalingSnapshot.rampStageLabel,
+      stageIndex: scalingSnapshot.rampStageIndex,
+      bundleTier: scalingSnapshot.bundleTier,
+      multiplier: scalingSnapshot.difficultyMultiplier,
+      cadenceSeconds: scalingSnapshot.cadence,
+      effectiveDifficulty: scalingSnapshot.effectiveDifficulty,
+      aggressionMultiplier: scalingSnapshot.aggressionMultiplier,
+      cadenceMultiplier: scalingSnapshot.cadenceMultiplier,
+      strengthMultiplier: scalingSnapshot.strengthMultiplier,
+      calmSecondsRemaining,
+      spawnCycles: scalingSnapshot.spawnCycles
+    } satisfies EnemyRampSummary;
+    topbarControls.setEnemyRampSummary(rampSummary);
+  }
   const rosterProgress = objectiveTracker?.getProgress().roster;
   recordEnemyScalingTelemetry(scalingSnapshot, {
     wipeSince: rosterProgress?.wipeSince ?? null,
