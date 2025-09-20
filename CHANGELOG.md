@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Rebuild HUD controllers during `setupGame` so repeated `destroy()` + `init()`
+  cycles refresh the top bar, inventory badge, and command console without
+  duplicating DOM nodes or leaking listeners, covering the flow with a Vitest
+  lifecycle test.
 - Fix Sisu Burst expiration to roll back only its attack, movement, and barrier
   bonuses while preserving other buffs applied mid-burst and notifying stat
   listeners when the surge fades.

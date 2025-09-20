@@ -6,9 +6,22 @@ export interface SaunaUIOptions {
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 }
 
-export function setupSaunaUI(sauna: Sauna, options: SaunaUIOptions = {}): (dt: number) => void {
+export type SaunaUIController = {
+  update(): void;
+  dispose(): void;
+};
+
+export function setupSaunaUI(
+  sauna: Sauna,
+  options: SaunaUIOptions = {}
+): SaunaUIController {
   const overlay = document.getElementById('ui-overlay');
-  if (!overlay) return () => {};
+  if (!overlay) {
+    return {
+      update: () => {},
+      dispose: () => {}
+    } satisfies SaunaUIController;
+  }
 
   const container = document.createElement('div');
   container.classList.add('sauna-control');
@@ -136,25 +149,30 @@ export function setupSaunaUI(sauna: Sauna, options: SaunaUIOptions = {}): (dt: n
     return applied;
   };
 
-  slider.addEventListener('input', () => {
+  const handleSliderInput = () => {
     applyRosterCap(Number(slider.value), false);
-  });
-  slider.addEventListener('change', () => {
+  };
+  const handleSliderCommit = () => {
     applyRosterCap(Number(slider.value), true);
-  });
+  };
+  slider.addEventListener('input', handleSliderInput);
+  slider.addEventListener('change', handleSliderCommit);
 
   const commitNumeric = (persist: boolean): void => {
     applyRosterCap(Number(numericInput.value), persist);
   };
-  numericInput.addEventListener('input', () => {
+  const handleNumericInput = () => {
     commitNumeric(false);
-  });
-  numericInput.addEventListener('change', () => {
+  };
+  const handleNumericCommit = () => {
     commitNumeric(true);
-  });
-  numericInput.addEventListener('blur', () => {
+  };
+  const handleNumericBlur = () => {
     commitNumeric(true);
-  });
+  };
+  numericInput.addEventListener('input', handleNumericInput);
+  numericInput.addEventListener('change', handleNumericCommit);
+  numericInput.addEventListener('blur', handleNumericBlur);
 
   applyRosterCap(sauna.maxRosterSize, false);
 
@@ -172,22 +190,24 @@ export function setupSaunaUI(sauna: Sauna, options: SaunaUIOptions = {}): (dt: n
     return false;
   };
 
+  let placementObserver: MutationObserver | null = null;
   if (!placeControl()) {
-    const observer = new MutationObserver(() => {
+    placementObserver = new MutationObserver(() => {
       if (placeControl()) {
-        observer.disconnect();
+        placementObserver?.disconnect();
       }
     });
-    observer.observe(actions, { childList: true });
+    placementObserver.observe(actions, { childList: true });
   }
 
-  btn.addEventListener('click', () => {
+  const handleToggle = () => {
     const nextHidden = !card.hidden;
     card.hidden = nextHidden;
     btn.setAttribute('aria-expanded', String(!nextHidden));
-  });
+  };
+  btn.addEventListener('click', handleToggle);
 
-  return () => {
+  const update = () => {
     const cooldown =
       sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
     const progress = 1 - sauna.playerSpawnTimer / cooldown;
@@ -207,5 +227,22 @@ export function setupSaunaUI(sauna: Sauna, options: SaunaUIOptions = {}): (dt: n
       updateDisplay(limit, sanitized);
     }
   };
+
+  const dispose = () => {
+    placementObserver?.disconnect();
+    placementObserver = null;
+    btn.removeEventListener('click', handleToggle);
+    slider.removeEventListener('input', handleSliderInput);
+    slider.removeEventListener('change', handleSliderCommit);
+    numericInput.removeEventListener('input', handleNumericInput);
+    numericInput.removeEventListener('change', handleNumericCommit);
+    numericInput.removeEventListener('blur', handleNumericBlur);
+    container.remove();
+  };
+
+  return {
+    update,
+    dispose
+  } satisfies SaunaUIController;
 }
 
