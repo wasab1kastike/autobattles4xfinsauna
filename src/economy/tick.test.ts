@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
 import { createSauna } from '../sim/sauna.ts';
 import { runEconomyTick } from './tick.ts';
+import { createPlayerSpawnTierQueue } from '../world/spawn/tier_helpers.ts';
 import type { Unit } from '../units/Unit.ts';
 import { Unit as UnitClass } from '../units/Unit.ts';
 import { getSoldierStats } from '../units/Soldier.ts';
@@ -173,5 +174,86 @@ describe('runEconomyTick', () => {
     expect(second.spawn.spawned).toBe(1);
     expect(second.spawn.blockedByRoster).toBe(0);
     expect(spawned).toHaveLength(1);
+  });
+
+  it('queues spawns while the tier is saturated and redeploys once space opens', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 120);
+    const sauna = createSauna(
+      { q: 0, r: 0 },
+      { baseThreshold: 6, heatPerSecond: 0, initialHeat: 6 },
+      { maxRosterSize: 1 }
+    );
+    const units: Unit[] = [];
+    let rosterCount = 1;
+    const tier = {
+      id: 'aurora-ward',
+      name: 'Aurora Ward',
+      rosterCap: 2,
+      description: 'test tier',
+      art: { badge: 'badge.svg' },
+      unlock: { type: 'default', label: 'Always ready' }
+    } as const;
+
+    const tierHelpers = createPlayerSpawnTierQueue({
+      getTier: () => tier,
+      getRosterLimit: () => 1,
+      getRosterCount: () => rosterCount,
+      log: () => {},
+      queueCapacity: 2
+    });
+
+    const first = runEconomyTick({
+      dt: 0,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units,
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => ({ q: 0, r: 0 }),
+      spawnBaseUnit: (coord) => {
+        const unit = new UnitClass(`queue-${units.length + 1}`, 'soldier', coord, 'player', getSoldierStats());
+        units.push(unit);
+        rosterCount += 1;
+        return unit;
+      },
+      minUpkeepReserve: 0,
+      maxSpawns: 2,
+      rosterCap: 1,
+      getRosterCount: () => rosterCount,
+      tierHelpers
+    });
+
+    expect(first.spawn.spawned).toBe(0);
+    expect(first.spawn.blockedByRoster).toBe(1);
+    expect(tierHelpers.hasQueuedSpawn()).toBe(true);
+    expect(sauna.heatTracker.hasTriggerReady()).toBe(false);
+
+    rosterCount = 0;
+
+    const second = runEconomyTick({
+      dt: 0,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units,
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => ({ q: 1, r: 0 }),
+      spawnBaseUnit: (coord) => {
+        const unit = new UnitClass(`queue-${units.length + 1}`, 'soldier', coord, 'player', getSoldierStats());
+        units.push(unit);
+        rosterCount += 1;
+        return unit;
+      },
+      minUpkeepReserve: 0,
+      maxSpawns: 2,
+      rosterCap: 1,
+      getRosterCount: () => rosterCount,
+      tierHelpers
+    });
+
+    expect(second.spawn.spawned).toBe(1);
+    expect(tierHelpers.hasQueuedSpawn()).toBe(false);
+    expect(units).toHaveLength(1);
   });
 });
