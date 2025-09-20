@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add a sauna integrity HUD that tracks structure health with an animated
+  glassmorphism bar, reacts to combat events with reduced-motion aware impact
+  flashes plus destruction shockwaves, and ships with Vitest coverage for the
+  new damage and defeat transitions.
+
 - Restore the inventory overlay's pointer interactivity only while the stash
   panel is open so its controls respond crisply without blocking gameplay when
   closed.
