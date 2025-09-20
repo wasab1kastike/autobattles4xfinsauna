@@ -19,6 +19,7 @@ import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/bur
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { createTutorialController, type TutorialController } from './ui/tutorial/Tutorial.tsx';
 import { draw as render, type VisionSource } from './render/renderer.ts';
+import { Animator } from './render/Animator.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
@@ -437,7 +438,8 @@ export function setupGame(
 }
 
 const map = new HexMap(10, 10, 32);
-const battleManager = new BattleManager(map);
+const animator = new Animator(() => draw());
+const battleManager = new BattleManager(map, animator);
 const mapRenderer = new HexMapRenderer(map);
 const invalidateTerrainCache = (): void => {
   mapRenderer.invalidateCache();
@@ -1256,6 +1258,9 @@ const onUnitDied = ({
   const label = fallen ? describeUnit(fallen, persona) : `unit ${unitId}`;
 
   if (idx !== -1) {
+    if (fallen) {
+      animator.clear(fallen, { snap: true });
+    }
     units.splice(idx, 1);
     unitsById.delete(unitId);
     detachSaunoja(unitId);
