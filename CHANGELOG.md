@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Correct the active roster counter to track only living attendants, allowing
+  expanded caps to spawn multiple reinforcements in a tick, and backstop the
+  behaviour with updated Vitest coverage for the game loop and economy.
+
+
 - Upgrade battlefield motion with dedicated render coordinates, eased 200 ms
   tweens, premium motion trails, and Vitest coverage validating animator and
   combat manager interpolation so unit movement feels polished while combat
