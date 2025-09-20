@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ramp enemy progression by tracking spawn cycles, tightening spawn cadence
+  beyond the eight-second floor, and feeding a difficulty multiplier into bundle
+  spawns so late waves deploy stronger or more numerous units.
+
 - Rebuild HUD controllers during `setupGame` so repeated `destroy()` + `init()`
   cycles refresh the top bar, inventory badge, and command console without
   duplicating DOM nodes or leaking listeners, covering the flow with a Vitest

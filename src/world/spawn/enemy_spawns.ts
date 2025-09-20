@@ -12,6 +12,7 @@ export interface SpawnBundleOptions {
   readonly availableSlots: number;
   readonly eliteOdds?: number;
   readonly random?: () => number;
+  readonly difficultyMultiplier?: number;
 }
 
 export interface SpawnBundleResult {
@@ -45,13 +46,22 @@ export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult
     0,
     Math.min(0.95, typeof options.eliteOdds === 'number' ? options.eliteOdds : 0)
   );
+  const difficultyMultiplier = Math.max(
+    1,
+    Number.isFinite(options.difficultyMultiplier)
+      ? (options.difficultyMultiplier as number)
+      : 1
+  );
 
   for (const spec of options.bundle.units) {
-    const iterations = Math.min(spec.quantity, slots);
+    const scaledQuantity = Math.max(1, Math.round(spec.quantity * difficultyMultiplier));
+    const iterations = Math.min(scaledQuantity, slots);
     const unitType = spec.unit as UnitType;
+    const scaledLevel = Math.max(1, Math.round(spec.level * difficultyMultiplier));
     for (let index = 0; index < iterations; index += 1) {
       const levelBoost = random() < eliteOdds ? 1 : 0;
-      const spawnOptions = buildSpawnOptions(Math.max(1, spec.level + levelBoost));
+      const spawnLevel = Math.max(1, scaledLevel + levelBoost);
+      const spawnOptions = buildSpawnOptions(spawnLevel);
       const coord = options.pickEdge();
       if (!coord) {
         return {

@@ -15,6 +15,7 @@ export interface EnemySpawnerOptions {
 export class EnemySpawner {
   private timer: number;
   private interval: number;
+  private spawnCycles: number;
   private readonly factionId: string;
   private readonly random: () => number;
   private readonly makeId: () => string;
@@ -31,6 +32,7 @@ export class EnemySpawner {
     const initialCadence = Math.max(10, 30 / this.difficulty);
     this.interval = initialCadence;
     this.timer = initialCadence;
+    this.spawnCycles = 0;
     const fallbackIdFactory = (() => {
       let counter = 0;
       return () => `e${Date.now()}-${(counter += 1)}`;
@@ -53,6 +55,7 @@ export class EnemySpawner {
     const availableSlots = MAX_ENEMIES - enemyCount;
     if (availableSlots > 0) {
       const bundle = pickFactionBundle(this.factionId, this.random);
+      const rampMultiplier = this.computeRampFactor(this.spawnCycles);
       spawnEnemyBundle({
         bundle,
         factionId: this.factionId,
@@ -61,12 +64,24 @@ export class EnemySpawner {
         makeId: this.makeId,
         availableSlots,
         eliteOdds: this.eliteOdds,
-        random: this.random
+        random: this.random,
+        difficultyMultiplier: rampMultiplier
       });
+      this.spawnCycles += 1;
     }
 
     const decay = Math.pow(0.95, this.difficulty);
     this.interval = Math.max(8, this.interval * decay); // escalate faster with higher difficulty
-    this.timer = this.interval;
+    const nextRamp = this.computeRampFactor(this.spawnCycles);
+    const tightenedInterval = Math.max(2, this.interval / nextRamp);
+    this.timer = tightenedInterval;
+  }
+
+  private computeRampFactor(cycles: number): number {
+    if (cycles <= 0) {
+      return 1;
+    }
+    const growth = 1 + cycles * 0.05 * Math.max(1, this.difficulty);
+    return Math.max(1, growth);
   }
 }
