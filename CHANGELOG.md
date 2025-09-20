@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Elevate the stash drawer layering so it sits above the command console, gating
+  pointer interactivity to the open state and keeping the right rail fully
+  covered on desktop and mobile layouts.
+
 - Enforce sauna tier roster ceilings during player spawns with heat-aware queueing,
   auto-advancing NG+ tier unlocks, and expanded coverage for tier transitions and
   blocked reinforcements.
