@@ -2113,6 +2113,200 @@ body > #game-container {
   transition: width 240ms ease;
 }
 
+.sauna-tier {
+  display: grid;
+  gap: clamp(14px, 2vw, 20px);
+  margin-top: clamp(12px, 2vw, 20px);
+  padding: clamp(14px, 2.4vw, 22px);
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 20%, transparent);
+  background: linear-gradient(145deg, rgba(13, 23, 40, 0.86), rgba(9, 16, 30, 0.68));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04), 0 20px 44px rgba(5, 12, 26, 0.55);
+}
+
+.sauna-tier__header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sauna-tier__title {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-muted) 68%, white 8%);
+}
+
+.sauna-tier__subtitle {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--color-muted) 80%, white 12%);
+}
+
+.sauna-tier__grid {
+  display: grid;
+  gap: clamp(12px, 2vw, 18px);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.sauna-tier__option {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 16px;
+  padding: clamp(12px, 1.8vw, 18px);
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-muted) 70%, transparent);
+  background: linear-gradient(150deg, rgba(12, 22, 39, 0.88), rgba(14, 26, 46, 0.74));
+  box-shadow: 0 16px 32px rgba(5, 15, 30, 0.55);
+  color: var(--color-foreground);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+  overflow: hidden;
+}
+
+.sauna-tier__option::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(
+    --sauna-tier-glow,
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.18), transparent 60%)
+  );
+  opacity: 0.45;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transition: opacity 220ms ease;
+}
+
+.sauna-tier__option:hover,
+.sauna-tier__option:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  box-shadow: 0 24px 40px rgba(6, 14, 31, 0.65);
+}
+
+.sauna-tier__option:hover::before,
+.sauna-tier__option:focus-visible::before {
+  opacity: 0.72;
+}
+
+.sauna-tier__option[data-state='active'] {
+  border-color: color-mix(in srgb, var(--color-accent) 70%, transparent);
+  box-shadow: 0 26px 44px rgba(9, 18, 36, 0.72);
+}
+
+.sauna-tier__option[data-state='locked'] {
+  cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--color-muted) 60%, transparent);
+  opacity: 0.7;
+}
+
+.sauna-tier__badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.28), transparent 65%),
+    color-mix(in srgb, var(--color-accent) 22%, rgba(10, 19, 34, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 30px rgba(4, 12, 26, 0.45);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.sauna-tier__badge::after {
+  content: '';
+  width: 42px;
+  height: 42px;
+  background: var(--sauna-tier-badge-image) center/contain no-repeat;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
+}
+
+.sauna-tier__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.sauna-tier__name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sauna-tier__cap {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-muted) 70%, white 10%);
+}
+
+.sauna-tier__description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-muted) 82%, white 12%);
+}
+
+.sauna-tier__progress {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 35%, rgba(10, 19, 34, 0.8));
+  overflow: hidden;
+}
+
+.sauna-tier__progress-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 189, 111, 0.92), rgba(255, 91, 159, 0.9));
+  transition: width 240ms ease;
+}
+
+.sauna-tier__progress-label {
+  margin-top: 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-muted) 74%, white 18%);
+}
+
+.sauna-tier__requirement {
+  font-size: 11px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--color-muted) 88%, white 8%);
+}
+
+.sauna-tier__option--denied {
+  animation: sauna-tier-denied 320ms ease;
+}
+
+@keyframes sauna-tier-denied {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
 .sauna-roster {
   display: grid;
   gap: 12px;

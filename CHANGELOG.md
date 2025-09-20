@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Introduce a curated sauna tier registry with persistent selections, premium
+  badge art, unlock progress cues, and tier-aware roster caps, backed by new
+  serialization and HUD DOM regression tests.
+
+
 - Wire the CI workflow to run `npm test` after builds so the docs mirror guard
   executes on every push, regenerate `docs/` with the current bundle commit, and
   document the enforced check for contributors.

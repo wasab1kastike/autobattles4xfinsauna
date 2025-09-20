@@ -1,10 +1,22 @@
 import type { Sauna } from '../sim/sauna.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
+import {
+  DEFAULT_SAUNA_TIER_ID,
+  evaluateSaunaTier,
+  getSaunaTier,
+  listSaunaTiers,
+  type SaunaTier,
+  type SaunaTierContext,
+  type SaunaTierId
+} from '../sauna/tiers.ts';
 import { ensureHudLayout } from './layout.ts';
 
 export interface SaunaUIOptions {
   getRosterCapLimit?: () => number;
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
+  getActiveTierId?: () => SaunaTierId;
+  setActiveTierId?: (value: SaunaTierId, options?: { persist?: boolean }) => boolean;
+  getTierContext?: () => SaunaTierContext;
 }
 
 const integerFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -31,6 +43,16 @@ export function setupSaunaUI(
   const container = document.createElement('div');
   container.classList.add('sauna-control');
   container.dataset.tutorialTarget = 'heat';
+
+  const resolveActiveTierId = (): SaunaTierId => {
+    const maybeId = options.getActiveTierId?.();
+    return getSaunaTier(maybeId ?? DEFAULT_SAUNA_TIER_ID).id;
+  };
+
+  const resolveTierContext = (): SaunaTierContext | null => {
+    const context = options.getTierContext?.();
+    return context ?? null;
+  };
 
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -82,6 +104,103 @@ export function setupSaunaUI(
 
   card.appendChild(integritySection);
   card.appendChild(barContainer);
+
+  const tiers = listSaunaTiers();
+  type TierEntry = {
+    tier: SaunaTier;
+    button: HTMLButtonElement;
+    fill: HTMLDivElement;
+    progressLabel: HTMLSpanElement;
+    requirement: HTMLSpanElement;
+    handleClick: () => void;
+  };
+  const tierEntries = new Map<SaunaTierId, TierEntry>();
+
+  const tierSection = document.createElement('section');
+  tierSection.classList.add('sauna-tier');
+  const tierHeader = document.createElement('div');
+  tierHeader.classList.add('sauna-tier__header');
+  const tierTitle = document.createElement('span');
+  tierTitle.classList.add('sauna-tier__title');
+  tierTitle.textContent = 'Premium Tiers';
+  tierHeader.appendChild(tierTitle);
+  const tierSubtitle = document.createElement('p');
+  tierSubtitle.classList.add('sauna-tier__subtitle');
+  tierSubtitle.textContent =
+    'Align the löyly with your prestige to unlock lavish benches and roster headroom.';
+  tierHeader.appendChild(tierSubtitle);
+  tierSection.appendChild(tierHeader);
+
+  const tierGrid = document.createElement('div');
+  tierGrid.classList.add('sauna-tier__grid');
+  tierSection.appendChild(tierGrid);
+
+  for (const tier of tiers) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.classList.add('sauna-tier__option');
+    option.dataset.tierId = tier.id;
+    option.setAttribute('aria-pressed', 'false');
+
+    const badge = document.createElement('div');
+    badge.classList.add('sauna-tier__badge');
+    badge.style.setProperty('--sauna-tier-badge-image', `url(${tier.art.badge})`);
+    if (tier.art.glow) {
+      badge.style.setProperty('--sauna-tier-glow', tier.art.glow);
+    }
+    option.appendChild(badge);
+
+    const copy = document.createElement('div');
+    copy.classList.add('sauna-tier__copy');
+    option.appendChild(copy);
+
+    const nameEl = document.createElement('span');
+    nameEl.classList.add('sauna-tier__name');
+    nameEl.textContent = tier.name;
+    copy.appendChild(nameEl);
+
+    const capEl = document.createElement('span');
+    capEl.classList.add('sauna-tier__cap');
+    capEl.textContent = `Cap ${tier.rosterCap}`;
+    copy.appendChild(capEl);
+
+    const descriptionEl = document.createElement('p');
+    descriptionEl.classList.add('sauna-tier__description');
+    descriptionEl.textContent = tier.description;
+    copy.appendChild(descriptionEl);
+
+    const progress = document.createElement('div');
+    progress.classList.add('sauna-tier__progress');
+    const progressFill = document.createElement('div');
+    progressFill.classList.add('sauna-tier__progress-fill');
+    progress.appendChild(progressFill);
+    const progressLabel = document.createElement('span');
+    progressLabel.classList.add('sauna-tier__progress-label');
+    progress.appendChild(progressLabel);
+    copy.appendChild(progress);
+
+    const requirement = document.createElement('span');
+    requirement.classList.add('sauna-tier__requirement');
+    copy.appendChild(requirement);
+
+    const entry: TierEntry = {
+      tier,
+      button: option,
+      fill: progressFill,
+      progressLabel,
+      requirement,
+      handleClick: () => {
+        handleTierSelection(tier, entry);
+      }
+    } satisfies TierEntry;
+
+    option.addEventListener('click', entry.handleClick);
+    tierEntries.set(tier.id, entry);
+    tierGrid.appendChild(option);
+  }
+
+  card.appendChild(tierSection);
+  refreshTierDisplay();
 
   const rosterContainer = document.createElement('div');
   rosterContainer.classList.add('sauna-roster');
@@ -189,12 +308,53 @@ export function setupSaunaUI(
   }
 
   const resolveLimit = (): number => {
+    const activeTier = getSaunaTier(resolveActiveTierId());
+    const tierCap = Math.max(0, Math.floor(activeTier.rosterCap));
     const limit = options.getRosterCapLimit?.();
     if (typeof limit === 'number' && Number.isFinite(limit)) {
-      return Math.max(0, Math.floor(limit));
+      const sanitized = Math.max(0, Math.floor(limit));
+      return Math.max(0, Math.min(tierCap, sanitized));
     }
-    return Math.max(0, Math.floor(sauna.maxRosterSize));
+    return tierCap;
   };
+
+  function refreshTierDisplay(): void {
+    const activeId = resolveActiveTierId();
+    const context = resolveTierContext();
+    for (const entry of tierEntries.values()) {
+      const status = evaluateSaunaTier(entry.tier, context);
+      const progressPercent = Math.round(Math.max(0, Math.min(status.progress, 1)) * 100);
+      entry.fill.style.width = `${progressPercent}%`;
+      entry.progressLabel.textContent = status.unlocked
+        ? 'Unlocked'
+        : `${progressPercent}% ready`;
+      entry.requirement.textContent = status.unlocked
+        ? `Roster cap ${entry.tier.rosterCap}`
+        : status.requirementLabel;
+      entry.button.dataset.state = status.unlocked
+        ? entry.tier.id === activeId
+          ? 'active'
+          : 'available'
+        : 'locked';
+      entry.button.setAttribute('aria-pressed', entry.tier.id === activeId ? 'true' : 'false');
+      entry.button.setAttribute('aria-disabled', status.unlocked ? 'false' : 'true');
+    }
+  }
+
+  function handleTierSelection(tier: SaunaTier, entry: TierEntry): void {
+    const status = evaluateSaunaTier(tier, resolveTierContext());
+    if (!status.unlocked) {
+      entry.button.classList.remove('sauna-tier__option--denied');
+      void entry.button.offsetWidth;
+      entry.button.classList.add('sauna-tier__option--denied');
+      return;
+    }
+    const success = options.setActiveTierId?.(tier.id, { persist: true }) ?? false;
+    if (success) {
+      applyRosterCap(sauna.maxRosterSize, true);
+    }
+    refreshTierDisplay();
+  }
 
   const updateDisplay = (limit: number, value: number): void => {
     const cappedValue = Math.max(0, Math.min(limit, Math.floor(value)));
@@ -209,7 +369,7 @@ export function setupSaunaUI(
     numericInput.setAttribute('aria-label', `Roster cap set to ${cappedValue}`);
   };
 
-  const applyRosterCap = (raw: number, persist: boolean): number => {
+  function applyRosterCap(raw: number, persist: boolean): number {
     const numeric = Number(raw);
     const limit = resolveLimit();
     const normalized = Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : 0;
@@ -221,7 +381,7 @@ export function setupSaunaUI(
     }
     updateDisplay(limit, applied);
     return applied;
-  };
+  }
 
   const handleSliderInput = () => {
     applyRosterCap(Number(slider.value), false);
@@ -383,6 +543,7 @@ export function setupSaunaUI(
     } else {
       updateDisplay(limit, sanitized);
     }
+    refreshTierDisplay();
   };
 
   updateHealthDisplay();
@@ -420,6 +581,10 @@ export function setupSaunaUI(
       destructionTimeout = null;
     }
     hideDestructionFx();
+    for (const entry of tierEntries.values()) {
+      entry.button.removeEventListener('click', entry.handleClick);
+    }
+    tierEntries.clear();
     container.remove();
   };
 
