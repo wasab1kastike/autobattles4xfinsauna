@@ -1,4 +1,4 @@
-import type { RosterEntry } from './rightPanel.tsx';
+import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const rosterUpkeepFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -13,6 +13,7 @@ export type RosterCardViewModel = {
   name: string;
   traits: readonly string[];
   upkeep: number;
+  progression: RosterProgression;
 };
 
 export type RosterHudSummary = {
@@ -26,6 +27,37 @@ export type RosterHudController = {
   renderRoster(entries: RosterEntry[]): void;
   destroy(): void;
 };
+
+function formatProgressPercent(progress: number): number {
+  if (!Number.isFinite(progress)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(progress * 100)));
+}
+
+function formatXpLabel(progression: RosterProgression): string {
+  const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  if (progression.xpForNext === null) {
+    return `${formatter.format(progression.xp)} XP • Max level`;
+  }
+  const percent = formatProgressPercent(progression.progress);
+  return `${formatter.format(progression.xpIntoLevel)} / ${formatter.format(progression.xpForNext)} XP • ${percent}%`;
+}
+
+function formatStatBonuses(bonuses: RosterProgression['statBonuses']): string {
+  const formatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  const parts: string[] = [];
+  if (bonuses.vigor > 0) {
+    parts.push(`+${formatter.format(bonuses.vigor)} Vigor`);
+  }
+  if (bonuses.focus > 0) {
+    parts.push(`+${formatter.format(bonuses.focus)} Focus`);
+  }
+  if (bonuses.resolve > 0) {
+    parts.push(`+${formatter.format(bonuses.resolve)} Resolve`);
+  }
+  return parts.length > 0 ? parts.join(' • ') : 'No level bonuses yet';
+}
 
 export function setupRosterHUD(
   container: HTMLElement,
@@ -68,17 +100,43 @@ export function setupRosterHUD(
   rosterCard.setAttribute('aria-live', 'polite');
   rosterCard.hidden = true;
 
+  const rosterCardHeader = document.createElement('div');
+  rosterCardHeader.classList.add('saunoja-card__header');
+
+  const rosterCardLevel = document.createElement('div');
+  rosterCardLevel.classList.add('saunoja-card__level');
+  rosterCardLevel.setAttribute('role', 'img');
+  rosterCardLevel.style.setProperty('--level-progress', '0%');
+  const rosterCardLevelValue = document.createElement('span');
+  rosterCardLevelValue.classList.add('saunoja-card__level-value');
+  rosterCardLevelValue.textContent = '1';
+  rosterCardLevel.appendChild(rosterCardLevelValue);
+
+  const rosterCardIdentity = document.createElement('div');
+  rosterCardIdentity.classList.add('saunoja-card__identity');
+
   const rosterCardName = document.createElement('h3');
   rosterCardName.classList.add('saunoja-card__name');
   rosterCardName.textContent = 'Saunoja';
 
+  const rosterCardXp = document.createElement('div');
+  rosterCardXp.classList.add('saunoja-card__xp');
+  rosterCardXp.textContent = '0 / 0 XP • 0%';
+
+  rosterCardIdentity.append(rosterCardName, rosterCardXp);
+  rosterCardHeader.append(rosterCardLevel, rosterCardIdentity);
+
   const rosterCardTraits = document.createElement('p');
   rosterCardTraits.classList.add('saunoja-card__traits');
+
+  const rosterCardStats = document.createElement('div');
+  rosterCardStats.classList.add('saunoja-card__callouts');
+  rosterCardStats.textContent = 'No level bonuses yet';
 
   const rosterCardUpkeep = document.createElement('p');
   rosterCardUpkeep.classList.add('saunoja-card__upkeep');
 
-  rosterCard.append(rosterCardName, rosterCardTraits, rosterCardUpkeep);
+  rosterCard.append(rosterCardHeader, rosterCardTraits, rosterCardStats, rosterCardUpkeep);
   container.append(summary, rosterCard);
 
   let rosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
@@ -99,6 +157,23 @@ export function setupRosterHUD(
     const traitLabel = traitList.length > 0 ? traitList.join(', ') : 'No notable traits yet';
     rosterCardTraits.textContent = traitLabel;
     rosterCardTraits.title = traitLabel;
+
+    const xpLabel = formatXpLabel(card.progression);
+    rosterCardXp.textContent = xpLabel;
+    rosterCardXp.title = xpLabel;
+
+    const progressPercent = formatProgressPercent(card.progression.progress);
+    rosterCardLevel.style.setProperty('--level-progress', `${progressPercent}%`);
+    rosterCardLevelValue.textContent = String(card.progression.level);
+    const levelAria =
+      card.progression.xpForNext === null
+        ? `Level ${card.progression.level}, at mastery`
+        : `Level ${card.progression.level}, ${progressPercent}% toward next level`;
+    rosterCardLevel.setAttribute('aria-label', levelAria);
+
+    const bonusLabel = formatStatBonuses(card.progression.statBonuses);
+    rosterCardStats.textContent = bonusLabel;
+    rosterCardStats.title = bonusLabel;
 
     const upkeepValue = Math.max(0, Math.round(card.upkeep));
     const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
@@ -151,6 +226,10 @@ export function setupRosterHUD(
       entry.upkeep,
       entry.status,
       entry.selected ? 1 : 0,
+      entry.progression.level,
+      entry.progression.xp,
+      entry.progression.xpIntoLevel,
+      entry.progression.xpForNext ?? 'max',
       stats.health,
       stats.maxHealth,
       stats.attackDamage,

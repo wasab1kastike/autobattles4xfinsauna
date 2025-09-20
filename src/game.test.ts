@@ -593,3 +593,76 @@ describe('saunoja persistence', () => {
     }
   });
 });
+
+describe('experience progression', () => {
+  it('awards kill experience and applies level bonuses', async () => {
+    const {
+      eventBus,
+      loadUnits,
+      __grantExperienceForTest,
+      __getAttachedUnitIdForTest
+    } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 18, attackDamage: 4, attackRange: 1, movementRange: 1 };
+
+    const attacker = new Unit('xp-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: attacker });
+
+    const foe = new Unit('xp-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: foe });
+
+    eventBus.emit('unitDied', {
+      unitId: foe.id,
+      attackerId: attacker.id,
+      attackerFaction: 'player',
+      unitFaction: 'enemy'
+    });
+
+    await flushLogs();
+
+    const rosterAfterKill = loadUnits();
+    const killerPersona = rosterAfterKill.find(
+      (unit) => __getAttachedUnitIdForTest(unit.id) === attacker.id
+    );
+    expect(killerPersona).toBeDefined();
+    const baseHealthBefore = killerPersona?.baseStats.health ?? 0;
+    const baseAttackBefore = killerPersona?.baseStats.attackDamage ?? 0;
+    const baseDefenseBefore = killerPersona?.baseStats.defense ?? 0;
+    expect(killerPersona?.xp).toBe(6);
+
+    __grantExperienceForTest(attacker.id, 200);
+
+    const rosterAfterLevel = loadUnits();
+    const leveledPersona = rosterAfterLevel.find(
+      (unit) => __getAttachedUnitIdForTest(unit.id) === attacker.id
+    );
+    expect(leveledPersona).toBeDefined();
+    expect(leveledPersona?.xp).toBe(206);
+    expect(leveledPersona?.baseStats.health).toBe(baseHealthBefore + 5);
+    expect(leveledPersona?.baseStats.attackDamage).toBe(baseAttackBefore + 2);
+    expect(leveledPersona?.baseStats.defense).toBe((baseDefenseBefore ?? 0) + 1);
+    expect(leveledPersona?.maxHp).toBe(baseHealthBefore + 5);
+  });
+
+  it('applies roster-wide objective experience and persists it', async () => {
+    const { loadUnits, __grantRosterExperienceForTest } = await initGame();
+
+    const rosterBefore = loadUnits();
+    const xpBefore = rosterBefore.map((unit) => unit.xp);
+
+    __grantRosterExperienceForTest(200);
+
+    const rosterAfter = loadUnits();
+    rosterAfter.forEach((unit, index) => {
+      expect(unit.xp).toBe((xpBefore[index] ?? 0) + 200);
+    });
+
+    vi.resetModules();
+    renderGameShell();
+    const { loadUnits: loadUnitsAgain } = await initGame();
+    const rosterRehydrated = loadUnitsAgain();
+    rosterRehydrated.forEach((unit, index) => {
+      expect(unit.xp).toBe((xpBefore[index] ?? 0) + 200);
+    });
+  });
+});

@@ -8,6 +8,11 @@
   combat manager interpolation so unit movement feels polished while combat
   logic stays deterministic.
 
+- Introduce Saunoja leveling with kill and objective XP payouts, stat growth,
+  and persistence; refresh the roster HUD and command console with level
+  badges plus progress rings, and lock the experience pipeline down with new
+  regression tests.
+
 - Expose NG+ and policy-friendly enemy ramp knobs, thread the modifiers into
   the spawner and HUD telemetry, persist structured enemy scaling summaries for
   post-run analysis, and document the new configuration hooks alongside fresh

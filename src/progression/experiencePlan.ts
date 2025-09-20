@@ -46,6 +46,14 @@ function clampXp(totalXp: number): number {
   return Math.max(0, Math.floor(totalXp));
 }
 
+function zeroAwards(): StatAwards {
+  return { vigor: 0, focus: 0, resolve: 0 } satisfies StatAwards;
+}
+
+function cloneAwards(awards: StatAwards): StatAwards {
+  return { vigor: awards.vigor, focus: awards.focus, resolve: awards.resolve } satisfies StatAwards;
+}
+
 /**
  * Returns the level associated with the provided XP as well as progress toward the next level.
  * Aligns with docs/progression/experience.md so tests can guard against accidental drift.
@@ -83,4 +91,39 @@ export function getExperienceForLevel(level: number): number {
   const cappedLevel = Math.min(level, EXPERIENCE_LEVELS[EXPERIENCE_LEVELS.length - 1].level);
   const match = EXPERIENCE_LEVELS.find((entry) => entry.level === cappedLevel);
   return match ? match.cumulativeXp : EXPERIENCE_LEVELS[EXPERIENCE_LEVELS.length - 1].cumulativeXp;
+}
+
+/** Returns the documented stat awards for the provided level. */
+export function getStatAwardsForLevel(level: number): StatAwards {
+  const maxLevel = EXPERIENCE_LEVELS[EXPERIENCE_LEVELS.length - 1].level;
+  const capped = Math.max(EXPERIENCE_LEVELS[0].level, Math.min(level, maxLevel));
+  const match = EXPERIENCE_LEVELS.find((entry) => entry.level === capped);
+  return match ? cloneAwards(match.statAwards) : zeroAwards();
+}
+
+/** Returns the cumulative stat bonuses granted up to and including the provided level. */
+export function getTotalStatAwards(level: number): StatAwards {
+  if (level <= EXPERIENCE_LEVELS[0].level) {
+    return zeroAwards();
+  }
+  const maxLevel = EXPERIENCE_LEVELS[EXPERIENCE_LEVELS.length - 1].level;
+  const capped = Math.min(level, maxLevel);
+  const total = zeroAwards();
+  for (const entry of EXPERIENCE_LEVELS) {
+    if (entry.level > capped) {
+      break;
+    }
+    if (entry.level === EXPERIENCE_LEVELS[0].level) {
+      continue;
+    }
+    total.vigor += entry.statAwards.vigor;
+    total.focus += entry.statAwards.focus;
+    total.resolve += entry.statAwards.resolve;
+  }
+  return total;
+}
+
+/** Convenience wrapper returning just the level for a given XP total. */
+export function getLevelForExperience(totalXp: number): number {
+  return getLevelProgress(totalXp).level;
 }
