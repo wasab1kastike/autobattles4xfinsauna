@@ -30,21 +30,21 @@ export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   default: DEFAULT_SPRITE,
   soldier: {
     nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.5, y: 0.88 },
-    scale: { x: 1.06, y: 1.18 },
-    nudge: { x: 0, y: -0.1 }
+    anchor: { x: 0.5, y: 0.9 },
+    scale: { x: 1.12, y: 1.24 },
+    nudge: { x: 0, y: -0.14 }
   },
   archer: {
     nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.5, y: 0.86 },
-    scale: { x: 1.04, y: 1.16 },
-    nudge: { x: 0, y: -0.08 }
+    anchor: { x: 0.46, y: 0.88 },
+    scale: { x: 1.1, y: 1.22 },
+    nudge: { x: -0.04, y: -0.12 }
   },
   'avanto-marauder': {
     nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.5, y: 0.86 },
-    scale: { x: 1.08, y: 1.12 },
-    nudge: { x: 0, y: -0.12 }
+    anchor: { x: 0.5, y: 0.92 },
+    scale: { x: 1.18, y: 1.3 },
+    nudge: { x: 0, y: -0.18 }
   },
   saunoja: {
     nativeSize: { width: 128, height: 128 },

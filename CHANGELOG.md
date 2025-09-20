@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Upgrade the enemy frontline with aurora-lit SVGs for the soldier, archer, and
+  Avanto marauder, recalibrate their sprite anchors/scales, and refresh renderer
+  tests so battlefield placement matches the premium art.
+
 - Sync Saunoja overlay icons with animated render coordinates so attendant
   badges glide alongside their battlefield units, threading the callback through
   the draw pipeline and extending Vitest coverage for both the renderer and
