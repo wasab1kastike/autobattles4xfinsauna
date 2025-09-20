@@ -29,16 +29,16 @@ const DEFAULT_SPRITE: UnitSpriteMetadata = {
 export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   default: DEFAULT_SPRITE,
   soldier: {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.94 },
-    scale: { x: 1, y: 1 },
-    nudge: { x: 0, y: -0.06 }
+    nativeSize: { width: 128, height: 128 },
+    anchor: { x: 0.5, y: 0.88 },
+    scale: { x: 1.06, y: 1.18 },
+    nudge: { x: 0, y: -0.1 }
   },
   archer: {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.88 },
-    scale: { x: 1, y: 1 },
-    nudge: { x: 0, y: -0.04 }
+    nativeSize: { width: 128, height: 128 },
+    anchor: { x: 0.5, y: 0.86 },
+    scale: { x: 1.04, y: 1.16 },
+    nudge: { x: 0, y: -0.08 }
   },
   'avanto-marauder': {
     nativeSize: { width: 128, height: 128 },

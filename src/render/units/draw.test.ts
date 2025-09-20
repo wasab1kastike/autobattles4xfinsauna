@@ -83,4 +83,18 @@ describe('unit sprite placement', () => {
     expect(placement.height).toBeCloseTo(snapForZoom(rawHeight, zoom));
     expect(placement.metadata).toBe(meta);
   });
+
+  it('exposes refreshed metadata for soldier and archer sprites', () => {
+    const soldier = getUnitSpriteMetadata('soldier');
+    expect(soldier.nativeSize).toEqual({ width: 128, height: 128 });
+    expect(soldier.anchor).toEqual({ x: 0.5, y: 0.88 });
+    expect(soldier.scale).toEqual({ x: 1.06, y: 1.18 });
+    expect(soldier.nudge).toEqual({ x: 0, y: -0.1 });
+
+    const archer = getUnitSpriteMetadata('archer');
+    expect(archer.nativeSize).toEqual({ width: 128, height: 128 });
+    expect(archer.anchor).toEqual({ x: 0.5, y: 0.86 });
+    expect(archer.scale).toEqual({ x: 1.04, y: 1.16 });
+    expect(archer.nudge).toEqual({ x: 0, y: -0.08 });
+  });
 });
