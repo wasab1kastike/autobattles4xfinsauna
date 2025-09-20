@@ -122,7 +122,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     if (!unit) {
       return;
     }
-    const position = project(unit.coord);
+    const position = project(unit.renderCoord ?? unit.coord);
     if (!position) {
       return;
     }
