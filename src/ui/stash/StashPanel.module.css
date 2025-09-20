@@ -12,12 +12,14 @@
   transform: translate3d(100%, 0, 0);
   transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 180ms ease;
   opacity: 0;
-  z-index: 32;
+  z-index: 960;
+  pointer-events: none;
 }
 
 .panel[data-open='true'] {
   transform: translate3d(0, 0, 0);
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (max-width: 720px) {
