@@ -109,7 +109,10 @@ and copy the resulting `dist/` output into `docs/` before committing (for
 example, `rsync -a dist/ docs/`). That manual refresh keeps the checked-in
 mirror aligned with the action-managed deployment and preserves the
 `docs/CNAME` expectations documented in
-[CONTRIBUTING.md](CONTRIBUTING.md#before-you-start).
+[CONTRIBUTING.md](CONTRIBUTING.md#before-you-start). Continuous integration now
+runs `npm test` immediately after the production build, so stale mirrors that
+still advertise an older commit hash will fail pull requests until the docs
+bundle is refreshed.
 
 ## Testing
 

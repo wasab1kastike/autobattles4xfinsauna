@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Wire the CI workflow to run `npm test` after builds so the docs mirror guard
+  executes on every push, regenerate `docs/` with the current bundle commit, and
+  document the enforced check for contributors.
+
+
 - Correct the active roster counter to track only living attendants, allowing
   expanded caps to spawn multiple reinforcements in a tick, and backstop the
   behaviour with updated Vitest coverage for the game loop and economy.
