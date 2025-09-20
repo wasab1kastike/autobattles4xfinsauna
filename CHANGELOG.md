@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Reinforce combat audio with per-cue polyphony caps, weighted SFX debounce
+  windows, SISU-triggered music ducking, and Vitest coverage for the limiter and
+  ducking safeguards to keep repeated cues from overwhelming the mix.
+
 - Introduce a dedicated Web Audio mixer with persisted master/music/SFX buses,
   route ambience loops and combat cues through the shared gains, ship a polished
   in-game mixer overlay with live sliders and ambience toggles, and cover the
