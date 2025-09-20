@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
 import { NEG, POS } from './data/traits.ts';
+import { GameState, Resource } from './core/GameState.ts';
+import { createSauna } from './sim/sauna.ts';
+import { runEconomyTick } from './economy/tick.ts';
+import { getSoldierStats } from './units/Soldier.ts';
 
 const flushLogs = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -112,19 +116,19 @@ describe('game logging', () => {
         .querySelector<HTMLSpanElement>('#resource-bar .sauna-roster__value')
         ?.textContent ?? '';
 
-    expect(__getActiveRosterCountForTest()).toBe(2);
+    expect(__getActiveRosterCountForTest()).toBe(1);
     await flushLogs();
-    expect(rosterValue()).toBe('2');
+    expect(rosterValue()).toBe('1');
 
     const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: ally });
     await flushLogs();
-    expect(rosterValue()).toBe('4');
+    expect(rosterValue()).toBe('2');
 
     const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
     eventBus.emit('unitSpawned', { unit: foe });
     await flushLogs();
-    expect(rosterValue()).toBe('4');
+    expect(rosterValue()).toBe('2');
 
     eventBus.emit('unitDied', {
       unitId: ally.id,
@@ -132,7 +136,60 @@ describe('game logging', () => {
       attackerFaction: 'enemy'
     });
     await flushLogs();
-    expect(rosterValue()).toBe('3');
+    expect(rosterValue()).toBe('1');
+
+    eventBus.emit('unitDied', {
+      unitId: foe.id,
+      unitFaction: 'enemy',
+      attackerFaction: 'player'
+    });
+  });
+
+  it('spawns multiple reinforcements once the roster cap exceeds one', async () => {
+    const { eventBus, __getActiveRosterCountForTest } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 500);
+
+    const sauna = createSauna(
+      { q: 0, r: 0 },
+      { baseThreshold: 1, heatPerSecond: 0, thresholdGrowth: 0, initialHeat: 5 }
+    );
+
+    const units: InstanceType<typeof Unit>[] = [];
+    const baseline = __getActiveRosterCountForTest();
+    const rosterCap = Math.max(2, baseline + 2);
+
+    const result = runEconomyTick({
+      dt: 0,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units,
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => ({ q: units.length + 1, r: 0 }),
+      spawnBaseUnit: (coord) => {
+        const unit = new Unit(
+          `roster-cap-${units.length + 1}`,
+          'soldier',
+          coord,
+          'player',
+          getSoldierStats()
+        );
+        units.push(unit);
+        eventBus.emit('unitSpawned', { unit });
+        return unit;
+      },
+      minUpkeepReserve: 0,
+      maxSpawns: 3,
+      rosterCap,
+      getRosterCount: __getActiveRosterCountForTest
+    });
+
+    expect(result.spawn.spawned).toBe(2);
+    expect(result.spawn.blockedByRoster).toBe(1);
+    expect(__getActiveRosterCountForTest()).toBe(baseline + 2);
   });
 
   it('records spawn and casualty events with sauna flavor', async () => {
