@@ -7,6 +7,7 @@ import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { eventBus } from './events';
+import { POLICY_EVENTS, type PolicyAppliedEvent } from './data/policies.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
@@ -1542,10 +1543,10 @@ export function draw(): void {
   ctx.restore();
 }
 
-const onPolicyApplied = ({ policy }) => {
-  log(`Sauna council toasts a fresh keg for policy: ${policy}.`);
+const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
+  log(`Sauna council toasts a fresh keg for policy: ${policy.name}.`);
 };
-eventBus.on('policyApplied', onPolicyApplied);
+eventBus.on(POLICY_EVENTS.APPLIED, onPolicyApplied);
 
 const onUnitDied = ({
   unitId,
@@ -1681,7 +1682,7 @@ export function cleanup(): void {
     unitFx = null;
   }
 
-  eventBus.off('policyApplied', onPolicyApplied);
+  eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);
   eventBus.off('unitDied', onUnitDied);
   eventBus.off('unitSpawned', onUnitSpawned);
   eventBus.off('inventoryChanged', onInventoryChanged);
