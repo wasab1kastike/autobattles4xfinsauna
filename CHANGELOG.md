@@ -41,9 +41,9 @@
   visible even without active scouts, wiring the renderer through the game
   draw loop and locking the behaviour down with a Vitest regression.
 
-- Ramp enemy progression by tracking spawn cycles, tightening spawn cadence
-  beyond the eight-second floor, and feeding a difficulty multiplier into bundle
-  spawns so late waves deploy stronger or more numerous units.
+- Overhaul enemy scaling with configurable difficulty curves, ramp-tier bundle
+  unlocks, telemetry snapshots, and long-run simulations so cadence keeps
+  tightening and marauders escalate in strength for balance tuning.
 
 - Rebuild the GitHub Pages mirror from commit ef38287 so the hashed Vite
   bundle, published HTML, and build badge all advertise the latest deploy.

@@ -19,8 +19,9 @@ describe('faction bundles', () => {
   });
 
   it('respects bundle weights during selection', () => {
+    const bundles = getFactionBundles('enemy');
     const bundle = pickFactionBundle('enemy', () => 0.99);
-    expect(bundle.id).toBe('frost-champion');
+    expect(bundle.id).toBe(bundles[bundles.length - 1]?.id ?? '');
   });
 
   it('falls back to Math.random when a provided source is invalid', () => {

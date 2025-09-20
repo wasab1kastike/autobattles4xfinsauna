@@ -7,6 +7,7 @@
       "id": "iceblade-scouts",
       "label": "Iceblade Scouts",
       "weight": 3,
+      "minRampTier": 0,
       "units": [
         { "unit": "avanto-marauder", "level": 1, "quantity": 1 }
       ],
@@ -17,6 +18,7 @@
       "id": "raiding-party",
       "label": "Raiding Party",
       "weight": 2,
+      "minRampTier": 0,
       "units": [
         { "unit": "avanto-marauder", "level": 1, "quantity": 2 }
       ],
@@ -27,11 +29,48 @@
       "id": "frost-champion",
       "label": "Frost Champion",
       "weight": 1,
+      "minRampTier": 0,
       "units": [
         { "unit": "avanto-marauder", "level": 2, "quantity": 1 }
       ],
       "items": ["glacier-brand"],
       "modifiers": ["glacial-ward"]
+    },
+    {
+      "id": "icebreaker-vanguard",
+      "label": "Icebreaker Vanguard",
+      "weight": 2.5,
+      "minRampTier": 1,
+      "units": [
+        { "unit": "avanto-marauder", "level": 2, "quantity": 2 },
+        { "unit": "avanto-marauder", "level": 1, "quantity": 1 }
+      ],
+      "items": ["stormglass-pendant"],
+      "modifiers": ["frost-resilience", "berserker-drift"]
+    },
+    {
+      "id": "glacial-phalanx",
+      "label": "Glacial Phalanx",
+      "weight": 2,
+      "minRampTier": 2,
+      "units": [
+        { "unit": "avanto-marauder", "level": 3, "quantity": 3 },
+        { "unit": "avanto-marauder", "level": 2, "quantity": 1 }
+      ],
+      "items": ["glacier-brand", "frostshard-relic"],
+      "modifiers": ["glacial-ward", "polar-endurance"]
+    },
+    {
+      "id": "avalanche-warhost",
+      "label": "Avalanche Warhost",
+      "weight": 1.25,
+      "minRampTier": 3,
+      "units": [
+        { "unit": "avanto-marauder", "level": 4, "quantity": 3 },
+        { "unit": "avanto-marauder", "level": 3, "quantity": 2 }
+      ],
+      "items": ["avalanche-totem"],
+      "modifiers": ["glacial-ward", "polar-endurance", "berserker-drift"]
     }
   ]
 }

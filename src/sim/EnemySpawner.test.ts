@@ -3,7 +3,6 @@ import { EnemySpawner } from './EnemySpawner.ts';
 import type { Unit } from '../units/Unit.ts';
 import { getAvantoMarauderStats } from '../units/AvantoMarauder.ts';
 import * as enemySpawns from '../world/spawn/enemy_spawns.ts';
-import * as factionBundles from '../factions/bundles.ts';
 import type { FactionBundleDefinition } from '../factions/bundles.ts';
 
 function makeRandomSource(values: number[]): () => number {
@@ -20,26 +19,44 @@ describe('EnemySpawner', () => {
     const spawner = new EnemySpawner({
       factionId: 'enemy',
       eliteOdds: 0.5,
-      random: makeRandomSource([0.6, 0.8, 0.6, 0.4, 0.1])
+      random: makeRandomSource([0.6, 0.8, 0.6, 0.4, 0.9])
     });
+    const raiders: FactionBundleDefinition = {
+      id: 'raiding-party',
+      label: 'Raiding Party',
+      weight: 2,
+      units: Object.freeze([{ unit: 'avanto-marauder', level: 1, quantity: 2 }]),
+      items: Object.freeze([]),
+      modifiers: Object.freeze([]),
+      minRampTier: 0
+    };
+    const champion: FactionBundleDefinition = {
+      id: 'frost-champion',
+      label: 'Frost Champion',
+      weight: 1,
+      units: Object.freeze([{ unit: 'avanto-marauder', level: 2, quantity: 1 }]),
+      items: Object.freeze([]),
+      modifiers: Object.freeze([]),
+      minRampTier: 0
+    };
+    const picks = [raiders, raiders, champion];
+    const bundleSpy = vi
+      .spyOn(enemySpawns, 'pickRampBundle')
+      .mockImplementation(() => picks.shift() ?? champion);
     const units: Unit[] = [];
-    const edges = [
-      { q: 0, r: 0 },
-      { q: 1, r: 0 },
-      { q: 2, r: 0 }
-    ];
+    let edgeCursor = 0;
     const added: Unit[] = [];
 
     const registerUnit = (unit: Unit) => {
       units.push(unit);
       added.push(unit);
     };
-    const pickEdge = () => edges.shift();
+    const pickEdge = () => ({ q: edgeCursor++, r: 0 });
 
-    spawner.update(29, units, registerUnit, pickEdge);
+    spawner.update(25, units, registerUnit, pickEdge);
     expect(units).toHaveLength(0);
 
-    spawner.update(1, units, registerUnit, pickEdge);
+    spawner.update(1.5, units, registerUnit, pickEdge);
     expect(units).toHaveLength(2);
     expect(added.map((unit) => unit.coord)).toEqual([
       { q: 0, r: 0 },
@@ -51,13 +68,17 @@ describe('EnemySpawner', () => {
     expect(units).toHaveLength(2);
 
     spawner.update(23.5, units, registerUnit, pickEdge);
-    expect(units).toHaveLength(3);
+    expect(units).toHaveLength(4);
+
+    spawner.update(24, units, registerUnit, pickEdge);
+    expect(units).toHaveLength(5);
     const lastUnit = units.at(-1);
-    expect(lastUnit?.coord).toEqual({ q: 2, r: 0 });
+    expect(lastUnit?.coord).toEqual({ q: 4, r: 0 });
     if (lastUnit) {
       const levelTwoStats = getAvantoMarauderStats(2);
       expect(lastUnit.stats.health).toBe(levelTwoStats.health);
     }
+    bundleSpy.mockRestore();
   });
 
   it('ramps spawn cadence and requests progressively higher tiers', () => {
@@ -79,47 +100,41 @@ describe('EnemySpawner', () => {
       items: Object.freeze([]),
       modifiers: Object.freeze([])
     };
-    const bundleSpy = vi.spyOn(factionBundles, 'pickFactionBundle').mockReturnValue(fixedBundle);
+    const bundleSpy = vi.spyOn(enemySpawns, 'pickRampBundle').mockReturnValue(fixedBundle);
 
-    const actualSpawn = enemySpawns.spawnEnemyBundle;
-    const spawnTimes: number[] = [];
-    const multipliers: number[] = [];
-    const capturedSpawns: Unit[][] = [];
+    let previousCycles = 0;
+    const cadenceHistory: number[] = [];
+    const multiplierHistory: number[] = [];
+    const tierHistory: number[] = [];
+    const enemyStub = { faction: 'enemy', isDead: () => false } as unknown as Unit;
 
-    let elapsed = 0;
-    const spawnSpy = vi
-      .spyOn(enemySpawns, 'spawnEnemyBundle')
-      .mockImplementation((options) => {
-        multipliers.push(options.difficultyMultiplier ?? 1);
-        spawnTimes.push(elapsed);
-        const result = actualSpawn(options);
-        capturedSpawns.push([...result.spawned]);
-        return result;
-      });
-
-    const targetSpawns = 15;
-    for (let iterations = 0; iterations < 500 && spawnTimes.length < targetSpawns; iterations += 1) {
-      elapsed += 1;
-      spawner.update(1, units, () => undefined, pickEdge);
+    const stepSeconds = 0.75;
+    for (let iterations = 0; iterations < 600 && multiplierHistory.length < 25; iterations += 1) {
+      units.length = 0;
+      if (iterations % 2 === 0) {
+        units.push(enemyStub);
+      }
+      spawner.update(stepSeconds, units, () => undefined, pickEdge);
+      units.length = 0;
+      const snapshot = spawner.getSnapshot();
+      if (snapshot.spawnCycles > previousCycles) {
+        cadenceHistory.push(snapshot.lastCadence);
+        multiplierHistory.push(snapshot.difficultyMultiplier);
+        tierHistory.push(snapshot.bundleTier);
+        previousCycles = snapshot.spawnCycles;
+      }
     }
 
-    spawnSpy.mockRestore();
     bundleSpy.mockRestore();
 
-    expect(spawnTimes.length).toBeGreaterThanOrEqual(targetSpawns);
-    const intervals = spawnTimes.map((time, index) =>
-      index === 0 ? time : time - spawnTimes[index - 1]
+    expect(cadenceHistory.length).toBeGreaterThanOrEqual(10);
+    expect(cadenceHistory[cadenceHistory.length - 1]).toBeLessThan(cadenceHistory[0]);
+    expect(Math.min(...cadenceHistory.slice(1))).toBeLessThan(cadenceHistory[0]);
+    expect(multiplierHistory[0]).toBeGreaterThan(0);
+    expect(multiplierHistory[multiplierHistory.length - 1]).toBeGreaterThan(
+      multiplierHistory[0]
     );
-    expect(intervals[intervals.length - 1]).toBeLessThan(8);
-    expect(Math.min(...intervals.slice(1))).toBeLessThan(intervals[1]);
-    expect(multipliers[0]).toBe(1);
-    expect(multipliers[multipliers.length - 1]).toBeGreaterThan(multipliers[0]);
-
-    const lastSpawn = capturedSpawns.at(-1) ?? [];
-    for (const unit of lastSpawn) {
-      const baseStats = getAvantoMarauderStats(2);
-      expect(unit.stats.health).toBeGreaterThan(baseStats.health);
-    }
+    expect(Math.max(...tierHistory)).toBeGreaterThan(0);
   });
 
   it('scales spawn bundles with the provided difficulty multiplier', () => {
@@ -147,15 +162,16 @@ describe('EnemySpawner', () => {
       availableSlots: 6,
       eliteOdds: 0,
       random: () => 0.9,
-      difficultyMultiplier: 2
+      difficultyMultiplier: 2,
+      rampTier: 2
     });
 
-    expect(result.spawned).toHaveLength(4);
-    expect(added).toHaveLength(4);
-    const levelTwoStats = getAvantoMarauderStats(2);
+    expect(result.spawned).toHaveLength(6);
+    expect(added).toHaveLength(6);
     const levelFourStats = getAvantoMarauderStats(4);
+    const levelSixStats = getAvantoMarauderStats(6);
     const spawnedHealth = added.map((unit) => unit.stats.health);
-    expect(spawnedHealth.some((value) => value >= levelFourStats.health)).toBe(true);
-    expect(spawnedHealth.every((value) => value >= levelTwoStats.health)).toBe(true);
+    expect(spawnedHealth.some((value) => value >= levelSixStats.health)).toBe(true);
+    expect(spawnedHealth.every((value) => value >= levelFourStats.health)).toBe(true);
   });
 });
