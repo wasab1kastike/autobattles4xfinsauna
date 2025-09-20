@@ -5,6 +5,10 @@ import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
 import { RoundRobinScheduler } from '../ai/scheduler.ts';
 import { PathCache } from '../ai/path_cache.ts';
+import type { Sauna } from '../sim/sauna.ts';
+import { damageSauna } from '../sim/sauna.ts';
+import { eventBus } from '../events';
+import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
 
 export const MAX_ENEMIES = 30;
 
@@ -62,7 +66,7 @@ export class BattleManager {
   }
 
   /** Process a single game tick for the provided units. */
-  tick(units: Unit[], deltaSeconds: number): void {
+  tick(units: Unit[], deltaSeconds: number, sauna?: Sauna): void {
     const totalUnits = units.length;
     const now = Date.now();
 
@@ -111,8 +115,24 @@ export class BattleManager {
       }
 
       const target = Targeting.selectTarget(unit, units);
+
+      if (!target && sauna && !sauna.destroyed) {
+        const attacked = this.tryAttackSauna(unit, sauna);
+        if (attacked) {
+          const currentKey = coordKey(unit.coord);
+          occupied.add(currentKey);
+          continue;
+        }
+      }
+
       if (!target) {
-        const goal = this.findExplorationGoal(unit, occupied);
+        let goal: AxialCoord | null = null;
+        if (sauna && !sauna.destroyed) {
+          goal = sauna.pos;
+        }
+        if (!goal) {
+          goal = this.findExplorationGoal(unit, occupied);
+        }
         if (goal) {
           const path = this.computeMovementPath(unit, goal, occupied, now);
           if (path.length > 1 && unit.stats.movementRange > 0) {
@@ -142,7 +162,11 @@ export class BattleManager {
         } else {
           unit.clearPathCache();
         }
-        occupied.add(originalKey);
+        const currentKey = coordKey(unit.coord);
+        occupied.add(currentKey);
+        if (sauna && !sauna.destroyed) {
+          this.tryAttackSauna(unit, sauna);
+        }
         continue;
       }
 
@@ -188,6 +212,38 @@ export class BattleManager {
         }
       }
     }
+  }
+
+  private tryAttackSauna(unit: Unit, sauna: Sauna): boolean {
+    if (unit.faction === 'player') {
+      return false;
+    }
+    const range = unit.stats.attackRange;
+    if (range <= 0) {
+      return false;
+    }
+    if (unit.distanceTo(sauna.pos) > range) {
+      return false;
+    }
+    const result = damageSauna(sauna, unit.stats.attackDamage);
+    if (result.amount <= 0) {
+      return false;
+    }
+    const damagePayload: SaunaDamagedPayload = {
+      attackerId: unit.id,
+      attackerFaction: unit.faction,
+      amount: result.amount,
+      remainingHealth: result.remainingHealth
+    };
+    eventBus.emit('saunaDamaged', damagePayload);
+    if (result.destroyed) {
+      const destroyedPayload: SaunaDestroyedPayload = {
+        attackerId: unit.id,
+        attackerFaction: unit.faction
+      };
+      eventBus.emit('saunaDestroyed', destroyedPayload);
+    }
+    return true;
   }
 
   private computeMovementPath(
