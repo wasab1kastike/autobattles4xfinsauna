@@ -16,6 +16,7 @@ import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
   getSaunaTier,
+  listSaunaTiers,
   type SaunaTierContext,
   type SaunaTierId
 } from './sauna/tiers.ts';
@@ -73,6 +74,7 @@ import {
   type NgPlusEnemyTuning,
   type NgPlusState
 } from './progression/ngplus.ts';
+import { createPlayerSpawnTierQueue } from './world/spawn/tier_helpers.ts';
 import {
   equip as equipLoadout,
   unequip as unequipLoadout,
@@ -135,6 +137,7 @@ let ngPlusEnemyScaling: NgPlusEnemyTuning = {
 let enemyAggressionModifier = 1;
 let enemyRandom: () => number = Math.random;
 let lootRandom: () => number = Math.random;
+let syncActiveTierWithUnlocks: ((options?: { persist?: boolean }) => void) | null = null;
 
 function applyNgPlusState(next: NgPlusState): void {
   currentNgPlusState = ensureNgPlusRunState(next);
@@ -145,6 +148,7 @@ function applyNgPlusState(next: NgPlusState): void {
   enemyAggressionModifier = getAiAggressionModifier(currentNgPlusState);
   enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
   lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
+  syncActiveTierWithUnlocks?.({ persist: true });
 }
 
 applyNgPlusState(currentNgPlusState);
@@ -971,6 +975,14 @@ const sauna = createSauna(
   { maxRosterSize: initialRosterCap }
 );
 
+const spawnTierQueue = createPlayerSpawnTierQueue({
+  getTier: () => getSaunaTier(currentTierId),
+  getRosterLimit: () => getActiveTierLimit(),
+  getRosterCount: () => getActiveRosterCount(),
+  log: (message) => log(message),
+  queueCapacity: 3
+});
+
 let lastPersistedRosterCap = initialRosterCap;
 let lastPersistedTierId = currentTierId;
 
@@ -1001,6 +1013,39 @@ const updateRosterCap = (
   return sanitized;
 };
 
+syncActiveTierWithUnlocks = (options: { persist?: boolean } = {}): void => {
+  const context = getTierContext();
+  const tiers = listSaunaTiers();
+  let highestUnlockedId = DEFAULT_SAUNA_TIER_ID;
+  for (const tier of tiers) {
+    const status = evaluateSaunaTier(tier, context);
+    if (status.unlocked) {
+      highestUnlockedId = tier.id;
+    } else {
+      break;
+    }
+  }
+
+  const currentStatus = evaluateSaunaTier(getSaunaTier(currentTierId), context);
+  const tierChanged = !currentStatus.unlocked || currentTierId !== highestUnlockedId;
+  if (tierChanged) {
+    const previousTierId = currentTierId;
+    currentTierId = highestUnlockedId;
+    spawnTierQueue.clearQueue?.('tier-change');
+    updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
+    if (previousTierId !== currentTierId) {
+      saunaUiController?.update?.();
+    }
+    return;
+  }
+
+  if (options.persist) {
+    updateRosterCap(sauna.maxRosterSize, { persist: true });
+  }
+};
+
+syncActiveTierWithUnlocks({ persist: true });
+
 const setActiveTier = (
   tierId: SaunaTierId,
   options: { persist?: boolean } = {}
@@ -1017,6 +1062,7 @@ const setActiveTier = (
     return true;
   }
   currentTierId = tier.id;
+  spawnTierQueue.clearQueue?.('tier-change');
   updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
   return true;
 };
@@ -1052,7 +1098,8 @@ const clock = new GameClock(1000, (deltaMs) => {
     minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN),
     maxSpawns: ngPlusSpawnLimit,
     rosterCap,
-    getRosterCount: getActiveRosterCount
+    getRosterCount: getActiveRosterCount,
+    tierHelpers: spawnTierQueue
   });
   const runtimeModifiers: EnemySpawnerRuntimeModifiers = {
     aggressionMultiplier: rampModifiers.aggression,
@@ -1726,6 +1773,10 @@ export function __syncSaunojaRosterForTest(): boolean {
 
 export function __getActiveRosterCountForTest(): number {
   return getActiveRosterCount();
+}
+
+export function __getActiveTierIdForTest(): SaunaTierId {
+  return currentTierId;
 }
 
 export function __getUnitUpkeepForTest(unit: Unit): number {
