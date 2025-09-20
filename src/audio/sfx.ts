@@ -5,49 +5,93 @@ import {
   onMixerChange,
   setSfxMuted
 } from './mixer.ts';
-import { SFX_PAYLOADS } from './sfxData.ts';
+import { SFX_VARIANTS } from './sfxData.ts';
 
 export type SfxName = 'click' | 'spawn' | 'error' | 'attack' | 'death' | 'sisu';
 
+type Envelope = {
+  readonly attack: number;
+  readonly release: number;
+};
+
+type VariantDefinition = {
+  readonly id: string;
+  readonly label: string;
+  readonly loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
+  readonly gain?: number;
+  readonly envelope?: Envelope;
+};
+
 type SoundDefinition = {
-  loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
-  debounceMs?: number;
-  gain?: number;
+  readonly variants: readonly VariantDefinition[];
+  readonly debounceMs?: number;
 };
 
 const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
   click: {
-    loader: (ctx) => createClick(ctx),
+    variants: [
+      {
+        id: 'ui-click-frost',
+        label: 'Frosted UI tick',
+        loader: (ctx) => createClick(ctx),
+        gain: 0.9,
+        envelope: { attack: 0.005, release: 0.1 }
+      }
+    ],
     debounceMs: 30
   },
   spawn: {
-    loader: (ctx) => createSpawn(ctx),
+    variants: [
+      {
+        id: 'spawn-chime-glint',
+        label: 'Glacial spawn chime',
+        loader: (ctx) => createSpawn(ctx),
+        gain: 0.85,
+        envelope: { attack: 0.02, release: 0.3 }
+      }
+    ],
     debounceMs: 120
   },
   error: {
-    loader: (ctx) => createError(ctx)
+    variants: [
+      {
+        id: 'soft-error-hum',
+        label: 'Soft error hum',
+        loader: (ctx) => createError(ctx),
+        gain: 0.8,
+        envelope: { attack: 0.03, release: 0.35 }
+      }
+    ]
   },
   attack: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.attack.payload, ctx),
-    debounceMs: 70,
-    gain: SFX_PAYLOADS.attack.loudness.gain
+    variants: createEncodedVariants('attack'),
+    debounceMs: 70
   },
   death: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.death.payload, ctx),
-    debounceMs: 180,
-    gain: SFX_PAYLOADS.death.loudness.gain
+    variants: createEncodedVariants('death'),
+    debounceMs: 180
   },
   sisu: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.sisu.payload, ctx),
-    debounceMs: 800,
-    gain: SFX_PAYLOADS.sisu.loudness.gain
+    variants: createEncodedVariants('sisu'),
+    debounceMs: 800
   }
 };
 
+function createEncodedVariants(name: keyof typeof SFX_VARIANTS): readonly VariantDefinition[] {
+  return SFX_VARIANTS[name].map((variant) => ({
+    id: `${name}-${variant.id}`,
+    label: variant.label,
+    loader: (ctx: AudioContext) => decodeAsset(variant.payload, ctx),
+    gain: variant.loudness.gain,
+    envelope: variant.envelope
+  }));
+}
+
 let audioCtx: AudioContext | null = null;
-const buffers = new Map<SfxName, AudioBuffer>();
-const pendingLoads = new Map<SfxName, Promise<AudioBuffer>>();
+const buffers = new Map<string, AudioBuffer>();
+const pendingLoads = new Map<string, Promise<AudioBuffer>>();
 const lastPlayed = new Map<SfxName, number>();
+const variantRotation = new Map<SfxName, number>();
 
 const muteListeners = new Set<(muted: boolean) => void>();
 
@@ -140,13 +184,18 @@ function getNowMs(): number {
   return Date.now();
 }
 
-function getBuffer(name: SfxName): Promise<AudioBuffer> {
-  const cached = buffers.get(name);
+function getVariantKey(name: SfxName, variant: VariantDefinition): string {
+  return `${name}:${variant.id}`;
+}
+
+function getBuffer(name: SfxName, variant: VariantDefinition): Promise<AudioBuffer> {
+  const key = getVariantKey(name, variant);
+  const cached = buffers.get(key);
   if (cached) {
     return Promise.resolve(cached);
   }
 
-  const pending = pendingLoads.get(name);
+  const pending = pendingLoads.get(key);
   if (pending) {
     return pending;
   }
@@ -156,24 +205,50 @@ function getBuffer(name: SfxName): Promise<AudioBuffer> {
     return Promise.reject(new Error('Audio context unavailable'));
   }
 
-  const definition = SOUND_DEFINITIONS[name];
-  if (!definition) {
-    return Promise.reject(new Error(`No sound registered for ${name}`));
-  }
-
-  const loadPromise = Promise.resolve(definition.loader(ctx))
+  const loadPromise = Promise.resolve(variant.loader(ctx))
     .then((buffer) => {
-      buffers.set(name, buffer);
-      pendingLoads.delete(name);
+      buffers.set(key, buffer);
+      pendingLoads.delete(key);
       return buffer;
     })
     .catch((err) => {
-      pendingLoads.delete(name);
+      pendingLoads.delete(key);
       throw err;
     });
 
-  pendingLoads.set(name, loadPromise);
+  pendingLoads.set(key, loadPromise);
   return loadPromise;
+}
+
+function applyEnvelope(
+  gainNode: GainNode,
+  ctx: AudioContext,
+  level: number,
+  duration: number,
+  envelope: Envelope
+): void {
+  const now = ctx.currentTime;
+  const attack = Math.max(0, envelope.attack);
+  const release = Math.max(0, envelope.release);
+  const sustain = Math.max(0, duration - attack - release);
+
+  gainNode.gain.cancelScheduledValues(now);
+
+  if (attack > 0) {
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(level, now + attack);
+  } else {
+    gainNode.gain.setValueAtTime(level, now);
+  }
+
+  const sustainEnd = now + attack + sustain;
+  gainNode.gain.setValueAtTime(level, sustainEnd);
+
+  if (release > 0) {
+    gainNode.gain.linearRampToValueAtTime(0, sustainEnd + release);
+  } else {
+    gainNode.gain.setValueAtTime(0, sustainEnd);
+  }
 }
 
 export function playSafe(name: SfxName): void {
@@ -186,6 +261,11 @@ export function playSafe(name: SfxName): void {
     return;
   }
 
+  const variants = definition.variants;
+  if (!variants || variants.length === 0) {
+    return;
+  }
+
   const now = getNowMs();
   const debounceMs = definition.debounceMs ?? 0;
   const last = lastPlayed.get(name) ?? 0;
@@ -194,7 +274,11 @@ export function playSafe(name: SfxName): void {
   }
   lastPlayed.set(name, now);
 
-  void getBuffer(name)
+  const rotationIndex = variantRotation.get(name) ?? 0;
+  const variant = variants[rotationIndex % variants.length];
+  variantRotation.set(name, (rotationIndex + 1) % variants.length);
+
+  void getBuffer(name, variant)
     .then((buffer) => {
       if (isMuted()) {
         return;
@@ -209,10 +293,15 @@ export function playSafe(name: SfxName): void {
       }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      const soundGain = definition.gain;
-      if (typeof soundGain === 'number' && soundGain > 0 && soundGain !== 1) {
+      const baseGain = typeof variant.gain === 'number' && variant.gain > 0 ? variant.gain : 1;
+      const envelope = variant.envelope;
+      if (envelope || baseGain !== 1) {
         const gainNode = ctx.createGain();
-        gainNode.gain.value = soundGain;
+        if (envelope) {
+          applyEnvelope(gainNode, ctx, baseGain, buffer.duration, envelope);
+        } else {
+          gainNode.gain.value = baseGain;
+        }
         source.connect(gainNode);
         gainNode.connect(destination);
       } else {

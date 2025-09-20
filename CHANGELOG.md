@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Replace the combat cue palette with a rotating, CC0 procedural harp and ember
+  suite, surface variant metadata/envelopes in the runtime loader, and document
+  the calming refresh in the audio asset notes.
+
 - Introduce a dedicated Web Audio mixer with persisted master/music/SFX buses,
   route ambience loops and combat cues through the shared gains, ship a polished
   in-game mixer overlay with live sliders and ambience toggles, and cover the
