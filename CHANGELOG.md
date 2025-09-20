@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Introduce a bottom-aligned React/Tailwind action bar that anchors to the HUD
+  grid, hosts Sisu Burst, Torille!, Build, Sound, and Pause controls with
+  hotkeys plus resource-aware shake/pulse feedback, trims the legacy top bar to
+  resource/time/enemy ramp badges, and threads a real pause toggle through the
+  game loop.
+
+- Sync the published docs mirror with the refreshed HUD build so the hashed
+  Vite bundles and embedded build badge match the current commit.
+
 - Adopt Tailwind CSS for the classic HUD by wiring the Vite plugin, publishing
   shared spacing, radius, shadow, and z-index tokens, migrating the stash badge,
   loot toast stack, and error overlay to utility classes, and refreshing the

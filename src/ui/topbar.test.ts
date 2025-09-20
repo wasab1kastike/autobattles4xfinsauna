@@ -1,28 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { setupTopbar } from './topbar.ts';
 import { Resource, type GameState } from '../core/GameState.ts';
 
 describe('topbar resource badges', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
-    Object.defineProperty(window, 'matchMedia', {
-      configurable: true,
-      writable: true,
-      value: vi.fn((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn()
-      }))
-    });
-  });
-
-  afterEach(() => {
-    delete (window as typeof window & { matchMedia?: unknown }).matchMedia;
   });
 
   it('shows sauna beer debt with accessible messaging', () => {
