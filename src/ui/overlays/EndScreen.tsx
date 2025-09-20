@@ -47,6 +47,8 @@ function describeCause(resolution: ObjectiveResolution): string {
       return 'Every attendant is down—no one remains to hold the line.';
     case 'bankruptcy':
       return 'Upkeep debts have exhausted the steam reserves.';
+    case 'saunaDestroyed':
+      return 'The sauna collapsed under relentless assault—the sacred steamline has fallen silent.';
     default:
       return '';
   }
