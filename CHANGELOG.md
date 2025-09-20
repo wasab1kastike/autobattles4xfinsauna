@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce a combat audio loudness workflow by adding a reusable WAV analysis
+  utility, a `vite-node` QA script with auto-normalisation support, runtime
+  metadata for cue gain, a Vitest regression that decodes each payload, and
+  contributor docs covering the target LUFS and verification steps.
+
 - Keep the stash overlay interactive even when focus operations throw by
   toggling the inventory panel class before focusing, guarding the panel focus
   helper with a fallback, and covering the regression with Vitest DOM tests.
