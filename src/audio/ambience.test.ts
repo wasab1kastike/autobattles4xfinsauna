@@ -23,18 +23,26 @@ describe('ambience storage resilience', () => {
     };
 
     vi.stubGlobal('localStorage', throwingStorage as unknown as Storage);
-    vi.mock('./sfx.ts', () => ({
-      initAudioSafe: vi.fn(() => null),
-      isMuted: vi.fn(() => false),
-      onMuteChange: vi.fn(() => () => undefined),
+    vi.mock('./mixer.ts', () => ({
+      getMixerState: () => ({
+        channels: {
+          master: { volume: 0.9, muted: false, effectiveVolume: 0.9 },
+          music: { volume: 0.65, muted: false, effectiveVolume: 0.585 },
+          sfx: { volume: 1, muted: false, effectiveVolume: 0.9 }
+        },
+        contextState: 'uninitialized'
+      }),
+      initAudioContext: vi.fn(() => null),
+      getChannelGainNode: vi.fn(() => null),
+      onMixerChange: vi.fn(() => () => undefined),
+      setMusicVolume: vi.fn()
     }));
 
     const ambience = await import('./ambience.ts');
 
     expect(ambience.isEnabled()).toBe(false);
     expect(ambience.getVolume()).toBeCloseTo(0.65, 5);
-    expect(throwingStorage.getItem).toHaveBeenCalledTimes(2);
+    expect(throwingStorage.getItem).toHaveBeenCalledTimes(1);
     expect(throwingStorage.getItem).toHaveBeenNthCalledWith(1, 'audio_enabled');
-    expect(throwingStorage.getItem).toHaveBeenNthCalledWith(2, 'audio_volume');
   });
 });
