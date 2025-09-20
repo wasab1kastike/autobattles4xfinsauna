@@ -15,6 +15,7 @@ export interface FactionBundleDefinition {
   readonly units: readonly FactionBundleUnitDefinition[];
   readonly items: readonly string[];
   readonly modifiers: readonly string[];
+  readonly minRampTier?: number;
 }
 
 export interface FactionDefinition {
@@ -118,6 +119,18 @@ function parseUnitDefinition(
   return Object.freeze({ unit, level, quantity });
 }
 
+function toOptionalNonNegativeInteger(value: unknown): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return undefined;
+  }
+  const truncated = Math.floor(numeric);
+  return truncated >= 0 ? truncated : undefined;
+}
+
 function parseBundleDefinition(
   value: unknown,
   context: string,
@@ -138,13 +151,15 @@ function parseBundleDefinition(
   );
   const items = toStringArray(value.items, `${context}.items`);
   const modifiers = toStringArray(value.modifiers, `${context}.modifiers`);
+  const minRampTier = toOptionalNonNegativeInteger(value.minRampTier);
   return Object.freeze({
     id,
     label,
     weight,
     units: Object.freeze(units),
     items,
-    modifiers
+    modifiers,
+    minRampTier
   });
 }
 

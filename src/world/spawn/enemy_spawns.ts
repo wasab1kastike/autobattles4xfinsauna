@@ -1,7 +1,11 @@
 import type { AxialCoord } from '../../hex/HexUtils.ts';
 import type { Unit } from '../../units/Unit.ts';
 import { createUnit, type UnitSpawnOptions, type UnitType } from '../../units/UnitFactory.ts';
-import type { FactionBundleDefinition } from '../../factions/bundles.ts';
+import {
+  getFactionBundles,
+  type FactionBundleDefinition,
+  type RandomSource
+} from '../../factions/bundles.ts';
 
 export interface SpawnBundleOptions {
   readonly bundle: FactionBundleDefinition;
@@ -13,6 +17,7 @@ export interface SpawnBundleOptions {
   readonly eliteOdds?: number;
   readonly random?: () => number;
   readonly difficultyMultiplier?: number;
+  readonly rampTier?: number;
 }
 
 export interface SpawnBundleResult {
@@ -27,6 +32,37 @@ function defaultIdFactory(): string {
 
 function buildSpawnOptions(level: number): UnitSpawnOptions {
   return { level } satisfies UnitSpawnOptions;
+}
+
+export function pickRampBundle(
+  factionId: string,
+  rampTier: number,
+  randomSource?: RandomSource
+): FactionBundleDefinition {
+  const bundles = getFactionBundles(factionId);
+  if (bundles.length === 0) {
+    throw new Error(`No bundles registered for faction: ${factionId}`);
+  }
+  const normalizedTier = Math.max(0, Math.floor(Number.isFinite(rampTier) ? rampTier : 0));
+  const eligible = bundles.filter((bundle) => {
+    const minTier = typeof bundle.minRampTier === 'number' ? bundle.minRampTier : 0;
+    return minTier <= normalizedTier;
+  });
+  const candidates = eligible.length > 0 ? eligible : bundles;
+  const random = typeof randomSource === 'function' ? randomSource : Math.random;
+  const totalWeight = candidates.reduce((sum, bundle) => sum + bundle.weight, 0);
+  if (!Number.isFinite(totalWeight) || totalWeight <= 0) {
+    throw new Error(`Invalid bundle weights for faction: ${factionId}`);
+  }
+  const roll = random() * totalWeight;
+  let cursor = 0;
+  for (const bundle of candidates) {
+    cursor += bundle.weight;
+    if (roll < cursor) {
+      return bundle;
+    }
+  }
+  return candidates[candidates.length - 1];
 }
 
 export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult {
@@ -52,12 +88,24 @@ export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult
       ? (options.difficultyMultiplier as number)
       : 1
   );
+  const rampTier = Math.max(
+    0,
+    Math.floor(Number.isFinite(options.rampTier) ? (options.rampTier as number) : 0)
+  );
+  const tierQuantityScale = 1 + rampTier * 0.25;
+  const tierLevelBonus = Math.floor(rampTier / 2);
 
   for (const spec of options.bundle.units) {
-    const scaledQuantity = Math.max(1, Math.round(spec.quantity * difficultyMultiplier));
+    const scaledQuantity = Math.max(
+      1,
+      Math.round(spec.quantity * difficultyMultiplier * tierQuantityScale)
+    );
     const iterations = Math.min(scaledQuantity, slots);
     const unitType = spec.unit as UnitType;
-    const scaledLevel = Math.max(1, Math.round(spec.level * difficultyMultiplier));
+    const scaledLevel = Math.max(
+      1,
+      Math.round((spec.level + tierLevelBonus) * difficultyMultiplier)
+    );
     for (let index = 0; index < iterations; index += 1) {
       const levelBoost = random() < eliteOdds ? 1 : 0;
       const spawnLevel = Math.max(1, scaledLevel + levelBoost);
