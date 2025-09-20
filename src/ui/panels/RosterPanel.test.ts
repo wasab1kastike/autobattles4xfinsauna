@@ -3,7 +3,10 @@ import { createRosterPanel, type RosterEntry } from './RosterPanel.tsx';
 
 function buildEntry(
   overrides: Partial<
-    Omit<RosterEntry, 'stats' | 'baseStats' | 'equipment' | 'items' | 'modifiers' | 'traits'>
+    Omit<
+      RosterEntry,
+      'stats' | 'baseStats' | 'equipment' | 'items' | 'modifiers' | 'traits' | 'progression'
+    >
   > & {
     stats?: Partial<RosterEntry['stats']>;
     baseStats?: Partial<RosterEntry['baseStats']>;
@@ -11,6 +14,7 @@ function buildEntry(
     items?: RosterEntry['items'];
     modifiers?: RosterEntry['modifiers'];
     traits?: readonly string[];
+    progression?: RosterEntry['progression'];
   } = {}
 ): RosterEntry {
   const baseStatsDefault: RosterEntry['stats'] = {
@@ -61,6 +65,16 @@ function buildEntry(
     ? [...overrides.modifiers]
     : ([] as RosterEntry['modifiers']);
   const traits = overrides.traits ? [...overrides.traits] : ['Resolute', 'Trailblazer'];
+  const progression =
+    overrides.progression ??
+    ({
+      level: 3,
+      xp: 420,
+      xpIntoLevel: 20,
+      xpForNext: 260,
+      progress: 20 / 260,
+      statBonuses: { vigor: 9, focus: 5, resolve: 3 }
+    } satisfies RosterEntry['progression']);
 
   return {
     id: 'roster-entry',
@@ -71,6 +85,7 @@ function buildEntry(
     traits,
     stats,
     baseStats,
+    progression,
     equipment,
     items,
     modifiers,
@@ -95,6 +110,15 @@ describe('createRosterPanel', () => {
     expect(metaInitial?.textContent).toContain('Upkeep 3 beer');
     expect(container.querySelectorAll('.panel-roster__slot')).toHaveLength(2);
     expect(container.querySelector('.panel-roster__mods')).toBeNull();
+
+    const levelBadgeInitial = container.querySelector('.panel-roster__level-value');
+    expect(levelBadgeInitial?.textContent).toBe('3');
+    const xpRowInitial = container.querySelector('.panel-roster__xp');
+    expect(xpRowInitial?.textContent).toContain('20 / 260');
+    const calloutsInitial = container.querySelector('.panel-roster__callouts');
+    expect(calloutsInitial?.textContent).toContain('+9 Vigor');
+    expect(calloutsInitial?.textContent).toContain('+5 Focus');
+    expect(calloutsInitial?.textContent).toContain('+3 Resolve');
 
     const updatedEntry = buildEntry({
       upkeep: 5,
@@ -177,7 +201,15 @@ describe('createRosterPanel', () => {
           source: 'Shamanic Rite'
         }
       ],
-      traits: ['Resolute', 'Trailblazer', 'Vanguard']
+      traits: ['Resolute', 'Trailblazer', 'Vanguard'],
+      progression: {
+        level: 5,
+        xp: 1000,
+        xpIntoLevel: 20,
+        xpForNext: 380,
+        progress: 20 / 380,
+        statBonuses: { vigor: 19, focus: 10, resolve: 6 }
+      }
     });
 
     panel.render([updatedEntry]);
@@ -198,6 +230,15 @@ describe('createRosterPanel', () => {
 
     const loadout = container.querySelector('.panel-roster__loadout');
     expect(loadout).not.toBeNull();
+
+    const levelBadgeUpdated = container.querySelector('.panel-roster__level-value');
+    expect(levelBadgeUpdated?.textContent).toBe('5');
+    const xpRowUpdated = container.querySelector('.panel-roster__xp');
+    expect(xpRowUpdated?.textContent).toContain('20 / 380');
+    const calloutsUpdated = container.querySelector('.panel-roster__callouts');
+    expect(calloutsUpdated?.textContent).toContain('+19 Vigor');
+    expect(calloutsUpdated?.textContent).toContain('+10 Focus');
+    expect(calloutsUpdated?.textContent).toContain('+6 Resolve');
 
     const slotSummaries = Array.from(
       container.querySelectorAll<HTMLSpanElement>('.panel-roster__slot-summary')

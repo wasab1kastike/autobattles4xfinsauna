@@ -43,6 +43,7 @@ export class Unit {
   private movementCooldownSeconds = 0;
   private shield = 0;
   private immortal = false;
+  private experience = 0;
 
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
@@ -262,6 +263,28 @@ export class Unit {
 
   setImmortal(value: boolean): void {
     this.immortal = Boolean(value);
+  }
+
+  getExperience(): number {
+    return this.experience;
+  }
+
+  setExperience(value: number): void {
+    const normalized = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+    if (normalized === this.experience) {
+      return;
+    }
+    this.experience = normalized;
+    eventBus.emit('unit:xpChanged', { unitId: this.id, xp: this.experience });
+  }
+
+  addExperience(delta: number): number {
+    if (!Number.isFinite(delta) || delta === 0) {
+      return this.experience;
+    }
+    const next = Math.max(0, Math.floor(this.experience + delta));
+    this.setExperience(next);
+    return this.experience;
   }
 
   private toCombatParticipant(): CombatParticipant {

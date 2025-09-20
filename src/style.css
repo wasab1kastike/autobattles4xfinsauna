@@ -985,6 +985,63 @@ body > #game-container {
   display: none;
 }
 
+.saunoja-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.saunoja-card__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  text-align: left;
+}
+
+.saunoja-card__level {
+  position: relative;
+  width: clamp(56px, 7vw, 68px);
+  aspect-ratio: 1;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    conic-gradient(
+      color-mix(in srgb, var(--color-accent) 70%, white 15%) var(--level-progress, 0%),
+      rgba(148, 163, 184, 0.15) 0
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.2),
+    0 20px 34px rgba(15, 23, 42, 0.5);
+  isolation: isolate;
+}
+
+.saunoja-card__level::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(248, 250, 252, 0.45), transparent 60%),
+    linear-gradient(160deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.65));
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  z-index: -1;
+}
+
+.saunoja-card__level-value {
+  position: relative;
+  font-size: clamp(18px, 2.2vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #f8fafc 85%, #38bdf8 15%);
+  text-shadow:
+    0 0 14px rgba(148, 163, 184, 0.45),
+    0 0 24px rgba(56, 189, 248, 0.6);
+}
+
 .saunoja-card__name {
   margin: 0;
   font-size: clamp(16px, 1.8vw, 18px);
@@ -994,11 +1051,27 @@ body > #game-container {
   color: color-mix(in srgb, #f8fafc 80%, #38bdf8 20%);
 }
 
+.saunoja-card__xp {
+  margin: 0;
+  font-size: clamp(11px, 1.5vw, 12px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-muted) 55%, white 45%);
+}
+
 .saunoja-card__traits {
   margin: 0;
   font-size: clamp(12px, 1.6vw, 13px);
   line-height: 1.5;
   color: color-mix(in srgb, var(--color-muted) 70%, white 30%);
+}
+
+.saunoja-card__callouts {
+  margin: 0;
+  font-size: clamp(12px, 1.5vw, 13px);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, #fcd34d 70%, white 30%);
 }
 
 .saunoja-card__upkeep {
@@ -1404,6 +1477,51 @@ body > #game-container {
   gap: 12px;
 }
 
+.panel-roster__identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-roster__level {
+  position: relative;
+  width: 42px;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background:
+    conic-gradient(
+      color-mix(in srgb, var(--color-accent) 70%, white 15%) var(--level-progress, 0%),
+      rgba(148, 163, 184, 0.18) 0
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(148, 163, 184, 0.25),
+    0 12px 22px rgba(15, 23, 42, 0.45);
+  isolation: isolate;
+}
+
+.panel-roster__level::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(248, 250, 252, 0.45), transparent 60%),
+    linear-gradient(160deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7));
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  z-index: -1;
+}
+
+.panel-roster__level-value {
+  position: relative;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #f8fafc 85%, #38bdf8 15%);
+}
+
 .panel-roster__name {
   font-size: 15px;
   font-weight: 600;
@@ -1438,6 +1556,20 @@ body > #game-container {
 .panel-roster__traits {
   font-size: 12px;
   color: var(--color-muted);
+}
+
+.panel-roster__xp {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--color-muted) 60%, white 40%);
+}
+
+.panel-roster__callouts {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, #fcd34d 70%, white 30%);
 }
 
 .panel-roster__traits {
