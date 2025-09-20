@@ -218,7 +218,9 @@ export function getAiAggressionModifier(state: NgPlusState): number {
 }
 
 export function getUnlockSpawnLimit(state: NgPlusState): number {
-  return 1 + Math.max(0, state.unlockSlots);
+  const slots = clampInteger(state.unlockSlots, 0, MAX_UNLOCK_SLOTS);
+  const limit = 1 + slots;
+  return Math.max(3, limit);
 }
 
 export function getEnemyRampModifiers(state: NgPlusState): NgPlusEnemyTuning {

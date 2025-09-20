@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Keep NG+ roster unlock spawn limits from dropping below the base sauna tier
+  capacity so fresh profiles can queue three attendants while higher unlocks
+  continue to respect the active tier ceiling.
+
 - Publish an MIT LICENSE file, align package metadata with the SPDX identifier,
   and document the licensing update for downstream consumers.
 
