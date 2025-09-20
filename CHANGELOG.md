@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Keep the stash overlay interactive even when focus operations throw by
+  toggling the inventory panel class before focusing, guarding the panel focus
+  helper with a fallback, and covering the regression with Vitest DOM tests.
+- Add a sauna integrity HUD that tracks structure health with an animated
 - Add a sauna integrity HUD that tracks structure health with an animated
   glassmorphism bar, reacts to combat events with reduced-motion aware impact
   flashes plus destruction shockwaves, and ships with Vitest coverage for the
