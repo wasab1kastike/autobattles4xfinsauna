@@ -41,6 +41,20 @@ type TopbarAbilities = {
   torille?: () => boolean;
 };
 
+export interface EnemyRampSummary {
+  readonly stage: string;
+  readonly stageIndex: number;
+  readonly bundleTier: number;
+  readonly multiplier: number;
+  readonly cadenceSeconds: number;
+  readonly effectiveDifficulty: number;
+  readonly aggressionMultiplier: number;
+  readonly cadenceMultiplier: number;
+  readonly strengthMultiplier: number;
+  readonly calmSecondsRemaining: number;
+  readonly spawnCycles: number;
+}
+
 function createBadge(label: string, options: BadgeOptions = {}): Badge {
   const { iconSrc, description, srLabel } = options;
   const container = document.createElement('div');
@@ -94,6 +108,7 @@ function createBadge(label: string, options: BadgeOptions = {}): Badge {
 
 export type TopbarControls = {
   update(deltaMs: number): void;
+  setEnemyRampSummary(summary: EnemyRampSummary): void;
   dispose(): void;
 };
 
@@ -164,11 +179,19 @@ export function setupTopbar(
   const time = createBadge('Time');
   time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
+  const enemyRamp = createBadge('Enemy Ramp', {
+    srLabel: 'Enemy ramp intensity'
+  });
+  enemyRamp.container.classList.add('badge-ramp');
+  enemyRamp.delta.style.display = 'none';
+  enemyRamp.container.dataset.tutorialTarget = 'enemy-ramp';
+  enemyRamp.container.title = 'Enemy ramp intensity and cadence.';
 
   badgeRow.appendChild(saunaBeer.container);
   badgeRow.appendChild(sisuResource.container);
   badgeRow.appendChild(saunakunnia.container);
   badgeRow.appendChild(burstTimer.container);
+  badgeRow.appendChild(enemyRamp.container);
   badgeRow.appendChild(time.container);
 
   let burstBtn: HTMLButtonElement | null = null;
@@ -449,6 +472,57 @@ export function setupTopbar(
 
   const deltaTimers: Partial<Record<Resource, ReturnType<typeof setTimeout>>> = {};
 
+  let currentRampSummary: EnemyRampSummary | null = null;
+
+  function renderEnemyRamp(summary: EnemyRampSummary | null): void {
+    currentRampSummary = summary;
+    if (!summary) {
+      enemyRamp.value.textContent = 'Stage 1 · ×1.00';
+      enemyRamp.delta.textContent = '';
+      enemyRamp.delta.style.display = 'none';
+      enemyRamp.container.dataset.state = 'idle';
+      enemyRamp.container.title = 'Enemy ramp idle';
+      enemyRamp.container.setAttribute('aria-label', 'Enemy ramp idle.');
+      return;
+    }
+
+    const stageLabel = summary.stage || `Stage ${summary.stageIndex + 1}`;
+    const multiplierLabel = `×${summary.multiplier.toFixed(2)}`;
+    const cadenceLabel = `${summary.cadenceSeconds.toFixed(2)}s cadence`;
+    const difficultyLabel = `×${summary.effectiveDifficulty.toFixed(2)}`;
+    const calmActive = summary.calmSecondsRemaining > 0.05;
+    const calmLabel = calmActive
+      ? `Calm remaining: ${Math.ceil(summary.calmSecondsRemaining)}s`
+      : 'Calm inactive';
+    enemyRamp.value.textContent = `${stageLabel} · ${multiplierLabel}`;
+    enemyRamp.delta.style.display = calmActive ? '' : 'none';
+    enemyRamp.delta.textContent = calmActive
+      ? `Calm ${Math.ceil(summary.calmSecondsRemaining)}s`
+      : '';
+    enemyRamp.container.dataset.state = calmActive ? 'calm' : 'active';
+    enemyRamp.container.title = [
+      `Stage: ${stageLabel} (Tier ${summary.bundleTier})`,
+      `Cadence: ${cadenceLabel}`,
+      `Multiplier: ${multiplierLabel}`,
+      `Difficulty: ${difficultyLabel}`,
+      `Aggression ×${summary.aggressionMultiplier.toFixed(2)} · Cadence ×${summary.cadenceMultiplier.toFixed(2)} · Strength ×${summary.strengthMultiplier.toFixed(2)}`,
+      calmLabel,
+      `Spawn cycles: ${summary.spawnCycles}`
+    ].join('\n');
+    enemyRamp.container.setAttribute(
+      'aria-label',
+      [
+        `Enemy ramp ${stageLabel}`,
+        `Multiplier ${multiplierLabel}`,
+        `Cadence ${summary.cadenceSeconds.toFixed(2)} seconds`,
+        `Difficulty ${difficultyLabel}`,
+        calmActive
+          ? `Calm remaining ${Math.ceil(summary.calmSecondsRemaining)} seconds`
+          : 'Calm inactive'
+      ].join(' — ')
+    );
+  }
+
   function normalizeResourceTotal(resource: Resource, total: number): number {
     const safeTotal = Number.isFinite(total) ? total : 0;
     if (resource === Resource.SAUNA_BEER) {
@@ -550,6 +624,7 @@ export function setupTopbar(
     state.getResource(Resource.SAUNAKUNNIA)
   );
   updateResourceBadge(Resource.SISU, state.getResource(Resource.SISU));
+  renderEnemyRamp(currentRampSummary);
 
   const resourceChanged = ({
     resource,
@@ -578,6 +653,9 @@ export function setupTopbar(
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       time.value.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    },
+    setEnemyRampSummary(summary: EnemyRampSummary) {
+      renderEnemyRamp(summary);
     },
     dispose() {
       eventBus.off('sisuBurstStart', sisuBurstStart);
