@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Document the polished 12-level run pacing blueprint, codify the XP curve in
-  `src/progression/experiencePlan.ts`, and guard the mapping with Vitest tests
-  so leveling stays synced with the 10–15 minute experience design.
 
 - Upgrade battlefield motion with dedicated render coordinates, eased 200 ms
   tweens, premium motion trails, and Vitest coverage validating animator and
