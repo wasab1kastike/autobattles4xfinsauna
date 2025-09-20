@@ -575,3 +575,7 @@
   the v2 bootstrapper into the centered content well, and apply Tailwind-style
   grid utilities so the overlay honors safe margins from 1280×720 through
   1920×1080.
+- Replace the Saunoja attendant icon with a high-fidelity, non-binary SVG,
+  retune the overlay clip/scale/tint pipeline so the refreshed artwork renders
+  cleanly across zoom levels, extend the renderer tests for the new budgets,
+  and confirm the asset loads through the build pipeline.
