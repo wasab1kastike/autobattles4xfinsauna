@@ -249,7 +249,17 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
       element.dataset.open = open ? 'true' : 'false';
     },
     focus() {
-      element.focus({ preventScroll: true });
+      const focusElement = element.focus.bind(element);
+      try {
+        focusElement({ preventScroll: true });
+      } catch (error) {
+        console.warn('Stash panel focus without scroll prevention fallback', error);
+        try {
+          focusElement();
+        } catch (fallbackError) {
+          console.warn('Unable to focus stash panel element', fallbackError);
+        }
+      }
     },
     destroy() {
       element.remove();
