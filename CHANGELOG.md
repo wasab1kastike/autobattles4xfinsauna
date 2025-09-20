@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Swap combat SFX palette for the calming Birch Mallet Chimes, Cedar Breath
+  Clusters, and Aurora Steam Pads patches with rotating procedural variants,
+  refreshed metadata, and updated licensing notes.
+
 - Reinforce combat audio with per-cue polyphony caps, weighted SFX debounce
   windows, SISU-triggered music ducking, and Vitest coverage for the limiter and
   ducking safeguards to keep repeated cues from overwhelming the mix.
