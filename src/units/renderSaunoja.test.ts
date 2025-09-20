@@ -230,4 +230,55 @@ describe('drawSaunojas', () => {
     const steamOrder = drawSteamSpy.mock.calls.map(([, options]) => options.intensity);
     expect(steamOrder).toEqual([0.1, 0.4, 0.8]);
   });
+
+  it('uses resolved render coordinates when provided', async () => {
+    const { preloadSaunojaIcon, drawSaunojas } = await import('./renderSaunoja.ts');
+    const unitDrawModule = await import('../render/units/draw.ts');
+
+    const getSpriteCenterSpy = vi
+      .spyOn(unitDrawModule, 'getSpriteCenter')
+      .mockImplementation(({ coord }) => ({ x: coord.q * 10, y: coord.r * 10 }));
+
+    const iconPromise = preloadSaunojaIcon();
+    MockImage.lastInstance?.triggerLoad(256, 256);
+    await iconPromise;
+
+    const { ctx } = createMockContext();
+    const units = [
+      {
+        id: 'drifting',
+        name: 'Drifting',
+        coord: { q: 0, r: 0 },
+        maxHp: 12,
+        hp: 9,
+        steam: 0.5,
+        selected: false
+      },
+      {
+        id: 'anchored',
+        name: 'Anchored',
+        coord: { q: 2, r: 1 },
+        maxHp: 10,
+        hp: 7,
+        steam: 0.2,
+        selected: false
+      }
+    ];
+
+    const resolveRenderCoord = vi.fn((unit: (typeof units)[number]) =>
+      unit.id === 'drifting' ? { q: 5, r: -4 } : undefined
+    );
+
+    drawSaunojas(ctx, units as any, { hexRadius: 28, resolveRenderCoord });
+
+    expect(resolveRenderCoord).toHaveBeenCalledTimes(2);
+    expect(
+      getSpriteCenterSpy.mock.calls.some(([options]) => options.coord.q === 5 && options.coord.r === -4)
+    ).toBe(true);
+    expect(
+      getSpriteCenterSpy.mock.calls.some(([options]) => options.coord.q === 2 && options.coord.r === 1)
+    ).toBe(true);
+
+    getSpriteCenterSpy.mockRestore();
+  });
 });
