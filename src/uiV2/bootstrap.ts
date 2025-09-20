@@ -1,4 +1,5 @@
 import '../ui/style/atoms.css';
+import { ensureHudLayout } from '../ui/layout.ts';
 
 export interface UiV2Handle {
   destroy(): void;
@@ -12,6 +13,9 @@ export interface UiV2BootstrapOptions {
 
 export function bootstrapUiV2(options: UiV2BootstrapOptions): UiV2Handle {
   const { overlay, resourceBar } = options;
+  const layout = ensureHudLayout(overlay);
+  const { regions } = layout;
+
   const root = document.createElement('div');
   root.className = 'ui-v2-overlay';
 
@@ -46,7 +50,7 @@ export function bootstrapUiV2(options: UiV2BootstrapOptions): UiV2Handle {
   card.appendChild(resourceDock);
 
   root.appendChild(card);
-  overlay.appendChild(root);
+  regions.content.appendChild(root);
 
   return {
     destroy() {
