@@ -8,6 +8,14 @@ import type { HexMap } from '../hexmap.ts';
 import { Farm, Barracks, type Building } from '../buildings/index.ts';
 import { markRevealed } from '../camera/autoFrame.ts';
 import { safeLoadJSON } from '../loader.ts';
+import { PASSIVE_GENERATION, Resource } from './resources.ts';
+import {
+  getPolicyDefinition,
+  POLICY_EVENTS,
+  type PolicyAppliedEvent,
+  type PolicyRejectedEvent
+} from '../data/policies.ts';
+export { PASSIVE_GENERATION, Resource } from './resources.ts';
 import {
   createNgPlusState,
   ensureNgPlusRunState,
@@ -26,20 +34,6 @@ const BUILDING_FACTORIES: Record<string, () => Building> = {
 function createBuilding(type: string): Building | undefined {
   return BUILDING_FACTORIES[type]?.();
 }
-
-/** Available resource types. */
-export enum Resource {
-  SAUNA_BEER = 'sauna-beer',
-  SAUNAKUNNIA = 'saunakunnia',
-  SISU = 'sisu'
-}
-
-/** Default passive generation per tick for each resource. */
-export const PASSIVE_GENERATION: Record<Resource, number> = {
-  [Resource.SAUNA_BEER]: 1,
-  [Resource.SAUNAKUNNIA]: 0,
-  [Resource.SISU]: 0
-};
 
 // Shape of the serialized game state stored in localStorage.
 type SerializedState = {
@@ -217,13 +211,13 @@ export class GameState {
     const savedPolicies = Array.isArray(data.policies)
       ? data.policies.filter((policy): policy is string => typeof policy === 'string')
       : [];
-    savedPolicies.forEach((policy) => {
-      this.policies.add(policy);
-    });
-
-    // Replay policy effects so listeners and derived state align with the restored save.
-    this.policies.forEach((policy) => {
-      eventBus.emit('policyApplied', { policy, state: this });
+    savedPolicies.forEach((policyId) => {
+      const definition = getPolicyDefinition(policyId);
+      if (!definition) {
+        return;
+      }
+      this.policies.add(definition.id);
+      eventBus.emit(POLICY_EVENTS.APPLIED, { policy: definition, state: this });
     });
 
     if (data.passiveGeneration) {
@@ -429,16 +423,56 @@ export class GameState {
   }
 
   /** Spend resources to apply a policy. */
-  applyPolicy(
-    policy: string,
-    cost: number,
-    res: Resource = Resource.SAUNAKUNNIA
-  ): boolean {
-    if (!this.spend(cost, res)) {
+  applyPolicy(policyId: string): boolean {
+    const definition = getPolicyDefinition(policyId);
+    if (!definition) {
+      const payload: PolicyRejectedEvent = {
+        policyId,
+        state: this,
+        reason: 'unknown-policy'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
       return false;
     }
-    this.policies.add(policy);
-    eventBus.emit('policyApplied', { policy, state: this });
+
+    if (this.hasPolicy(definition.id)) {
+      const payload: PolicyRejectedEvent = {
+        policyId: definition.id,
+        policy: definition,
+        state: this,
+        reason: 'already-applied'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    const missing = definition.prerequisites.filter((requirement) => !requirement.isSatisfied(this));
+    if (missing.length > 0) {
+      const payload: PolicyRejectedEvent = {
+        policyId: definition.id,
+        policy: definition,
+        state: this,
+        reason: 'prerequisites-not-met',
+        missingPrerequisites: missing
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    if (!this.spend(definition.cost, definition.resource)) {
+      const payload: PolicyRejectedEvent = {
+        policyId: definition.id,
+        policy: definition,
+        state: this,
+        reason: 'insufficient-resources'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    this.policies.add(definition.id);
+    const payload: PolicyAppliedEvent = { policy: definition, state: this };
+    eventBus.emit(POLICY_EVENTS.APPLIED, payload);
     return true;
   }
 
