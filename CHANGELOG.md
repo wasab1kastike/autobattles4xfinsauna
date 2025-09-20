@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuild the GitHub Pages mirror from the latest production build so the
+  hashed Vite bundles and published HTML reflect the refreshed deployment.
+
 
 - Extend sauna settings persistence with an experimental HUD flag, expose the
   toggle in the quartermaster drawer with polished controls, and branch the main
