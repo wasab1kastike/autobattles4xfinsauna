@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restore the inventory overlay's pointer interactivity only while the stash
+  panel is open so its controls respond crisply without blocking gameplay when
+  closed.
+
 - Script a new end-screen epilogue for sauna destruction so defeat runs narrate
   the collapse with bespoke copy and polished UI coverage.
 
