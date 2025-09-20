@@ -18,6 +18,11 @@ export interface UnitDiedPayload {
   attackerFaction?: string;
 }
 
+export interface UnitExperienceChangedPayload {
+  unitId: string;
+  xp: number;
+}
+
 export interface SaunaDamagedPayload {
   attackerId?: string;
   attackerFaction?: string;

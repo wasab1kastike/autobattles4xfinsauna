@@ -2,6 +2,7 @@ import { renderItemIcon } from '../components/ItemIcon.tsx';
 import { renderModPill } from '../components/ModPill.tsx';
 import type { SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
 import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
+import type { StatAwards } from '../../progression/experiencePlan.ts';
 
 export type RosterStatus = 'engaged' | 'reserve' | 'downed';
 
@@ -16,6 +17,15 @@ export interface RosterStats {
   readonly movementRange: number;
   readonly defense?: number;
   readonly shield?: number;
+}
+
+export interface RosterProgression {
+  readonly level: number;
+  readonly xp: number;
+  readonly xpIntoLevel: number;
+  readonly xpForNext: number | null;
+  readonly progress: number;
+  readonly statBonuses: StatAwards;
 }
 
 export interface RosterEquipmentSlot {
@@ -36,6 +46,7 @@ export interface RosterEntry {
   readonly traits: readonly string[];
   readonly stats: RosterStats;
   readonly baseStats: RosterStats;
+  readonly progression: RosterProgression;
   readonly equipment: readonly RosterEquipmentSlot[];
   readonly items: readonly RosterItem[];
   readonly modifiers: readonly RosterModifier[];
@@ -64,6 +75,38 @@ function formatTraits(traits: readonly string[]): string {
     return 'No defining traits yet';
   }
   return traits.join(' • ');
+}
+
+function formatProgressPercent(progress: number): number {
+  if (!Number.isFinite(progress)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(progress * 100)));
+}
+
+function formatXpLabel(progression: RosterProgression): string {
+  const formatter = integerFormatter;
+  if (progression.xpForNext === null) {
+    return `${formatter.format(progression.xp)} XP • Max level`;
+  }
+  const percent = formatProgressPercent(progression.progress);
+  return `${formatter.format(progression.xpIntoLevel)} / ${formatter.format(progression.xpForNext)} XP • ${percent}%`;
+}
+
+function formatStatBonuses(bonuses: StatAwards): string {
+  const segments: string[] = [];
+  const push = (label: string, value: number) => {
+    if (value > 0) {
+      segments.push(`+${integerFormatter.format(value)} ${label}`);
+    }
+  };
+  push('Vigor', bonuses.vigor);
+  push('Focus', bonuses.focus);
+  push('Resolve', bonuses.resolve);
+  if (segments.length === 0) {
+    return 'No level bonuses yet';
+  }
+  return segments.join(' • ');
 }
 
 function formatDelta(value: number, base: number | undefined): string {
@@ -130,6 +173,7 @@ function buildMetaLine(entry: RosterEntry): string {
 function buildAriaLabel(entry: RosterEntry): string {
   const { stats } = entry;
   const segments: string[] = [entry.name, rosterStatusLabels[entry.status]];
+  segments.push(`level ${entry.progression.level}`);
   segments.push(`health ${integerFormatter.format(stats.health)} of ${integerFormatter.format(stats.maxHealth)}`);
   if (stats.shield && stats.shield > 0) {
     segments.push(`shield ${integerFormatter.format(stats.shield)}`);
@@ -143,6 +187,17 @@ function buildAriaLabel(entry: RosterEntry): string {
   }
   segments.push(`movement ${integerFormatter.format(stats.movementRange)}`);
   segments.push(`upkeep ${integerFormatter.format(entry.upkeep)} beer`);
+  if (entry.progression.xpForNext === null) {
+    segments.push(`${integerFormatter.format(entry.progression.xp)} total experience`);
+  } else {
+    segments.push(
+      `${integerFormatter.format(entry.progression.xpIntoLevel)} of ${integerFormatter.format(entry.progression.xpForNext)} experience toward next level`
+    );
+  }
+  const bonusSummary = formatStatBonuses(entry.progression.statBonuses);
+  if (bonusSummary) {
+    segments.push(`level bonuses ${bonusSummary}`);
+  }
   const equippedCount = entry.equipment.filter((slot) => slot.item).length;
   if (equippedCount > 0) {
     segments.push(`${equippedCount} equipped item${equippedCount === 1 ? '' : 's'}`);
@@ -342,11 +397,34 @@ export function createRosterPanel(
       const nameRow = document.createElement('div');
       nameRow.classList.add('panel-roster__name-row');
 
+      const identity = document.createElement('div');
+      identity.classList.add('panel-roster__identity');
+
+      const level = document.createElement('span');
+      level.classList.add('panel-roster__level');
+      level.dataset.level = String(entry.progression.level);
+      level.style.setProperty('--level-progress', '0%');
+      const levelProgress = formatProgressPercent(entry.progression.progress);
+      level.style.setProperty('--level-progress', `${levelProgress}%`);
+      level.setAttribute('role', 'img');
+      const levelAria =
+        entry.progression.xpForNext === null
+          ? `Level ${entry.progression.level}, at mastery`
+          : `Level ${entry.progression.level}, ${levelProgress}% toward next level`;
+      level.setAttribute('aria-label', levelAria);
+
+      const levelValue = document.createElement('span');
+      levelValue.classList.add('panel-roster__level-value');
+      levelValue.textContent = String(entry.progression.level);
+      level.appendChild(levelValue);
+
       const name = document.createElement('span');
       name.classList.add('panel-roster__name');
       name.textContent = entry.name;
       name.title = entry.name;
-      nameRow.appendChild(name);
+
+      identity.append(level, name);
+      nameRow.appendChild(identity);
 
       const badge = document.createElement('span');
       badge.classList.add('panel-roster__status');
@@ -359,6 +437,18 @@ export function createRosterPanel(
       const metaLabel = buildMetaLine(entry);
       meta.textContent = metaLabel;
       meta.title = metaLabel;
+
+      const xpRow = document.createElement('div');
+      xpRow.classList.add('panel-roster__xp');
+      const xpLabel = formatXpLabel(entry.progression);
+      xpRow.textContent = xpLabel;
+      xpRow.title = xpLabel;
+
+      const callouts = document.createElement('div');
+      callouts.classList.add('panel-roster__callouts');
+      const calloutLabel = formatStatBonuses(entry.progression.statBonuses);
+      callouts.textContent = calloutLabel;
+      callouts.title = calloutLabel;
 
       const healthBar = document.createElement('div');
       healthBar.classList.add('panel-roster__health');
@@ -378,7 +468,7 @@ export function createRosterPanel(
       traits.textContent = traitLabel;
       traits.title = traitLabel;
 
-      button.append(nameRow, meta, healthBar, traits);
+      button.append(nameRow, xpRow, meta, callouts, healthBar, traits);
       renderLoadout(button, entry, options);
 
       if (typeof options.onSelect === 'function') {

@@ -6,7 +6,13 @@ import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
 import type { EquipmentSlotId } from '../items/types.ts';
 
-export type { RosterEntry, RosterItem, RosterModifier, RosterStats } from './panels/RosterPanel.tsx';
+export type {
+  RosterEntry,
+  RosterItem,
+  RosterModifier,
+  RosterStats,
+  RosterProgression
+} from './panels/RosterPanel.tsx';
 
 export type GameEvent = {
   id: string;
