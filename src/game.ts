@@ -1140,6 +1140,9 @@ export function draw(): void {
     ? { getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id) }
     : undefined;
   const hasSaunojaOverlays = Array.isArray(saunojas) && saunojas.length > 0;
+  const friendlyVisionSources = units.filter(
+    (unit) => unit.faction === 'player' && !unit.isDead()
+  );
   const renderUnits = hasSaunojaOverlays
     ? units.filter((unit) => unit.faction !== 'player')
     : units;
@@ -1154,7 +1157,8 @@ export function draw(): void {
       draw: drawSaunojas
     },
     sauna,
-    fx: fxOptions
+    fx: fxOptions,
+    friendlyVisionSources
   });
   ctx.restore();
 }

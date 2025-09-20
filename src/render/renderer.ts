@@ -28,6 +28,7 @@ export interface DrawOptions {
   };
   sauna?: Sauna | null;
   fx?: FxLayerOptions;
+  friendlyVisionSources?: readonly Unit[];
 }
 
 export function draw(
@@ -66,7 +67,15 @@ export function draw(
       zoom: camera.zoom
     });
   }
-  drawUnits(ctx, mapRenderer, assets, units, origin, options?.fx);
+  drawUnits(
+    ctx,
+    mapRenderer,
+    assets,
+    units,
+    origin,
+    options?.fx,
+    options?.friendlyVisionSources
+  );
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
       origin,
@@ -82,9 +91,11 @@ export function drawUnits(
   assets: LoadedAssets['images'],
   units: Unit[],
   origin: PixelCoord,
-  fx?: FxLayerOptions
+  fx?: FxLayerOptions,
+  visionSources?: readonly Unit[]
 ): void {
-  const friendlyVisionSources = units
+  const visionUnits = visionSources ?? units;
+  const friendlyVisionSources = visionUnits
     .filter((unit) => unit.faction === 'player' && !unit.isDead())
     .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
   for (const unit of units) {
