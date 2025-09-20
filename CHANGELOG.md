@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Prevent Saunoja overlays from double-rendering player combatants by omitting
+  player-faction units from battlefield draw passes whenever attendants are
+  projected on top of the map.
+
 - Ramp enemy progression by tracking spawn cycles, tightening spawn cadence
   beyond the eight-second floor, and feeding a difficulty multiplier into bundle
   spawns so late waves deploy stronger or more numerous units.
