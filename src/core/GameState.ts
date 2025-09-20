@@ -50,8 +50,44 @@ type SerializedState = {
   policies: string[];
   passiveGeneration: Record<Resource, number>;
   nightWorkSpeedMultiplier: number;
+  enemyScaling?: EnemyScalingMultipliers;
   ngPlus?: NgPlusState;
 };
+
+export interface EnemyScalingMultipliers {
+  readonly aggression: number;
+  readonly cadence: number;
+  readonly strength: number;
+}
+
+export interface EnemyScalingSnapshot extends EnemyScalingMultipliers {
+  readonly calmSecondsRemaining: number;
+}
+
+const DEFAULT_ENEMY_SCALING: EnemyScalingMultipliers = Object.freeze({
+  aggression: 1,
+  cadence: 1,
+  strength: 1
+});
+
+function sanitizeMultiplier(value: unknown, min: number, max: number, fallback: number): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function sanitizeEnemyScaling(
+  base: EnemyScalingMultipliers,
+  overrides: Partial<EnemyScalingMultipliers>
+): EnemyScalingMultipliers {
+  return {
+    aggression: sanitizeMultiplier(overrides.aggression ?? base.aggression, 0.1, 8, base.aggression),
+    cadence: sanitizeMultiplier(overrides.cadence ?? base.cadence, 0.25, 6, base.cadence),
+    strength: sanitizeMultiplier(overrides.strength ?? base.strength, 0.25, 12, base.strength)
+  } satisfies EnemyScalingMultipliers;
+}
 
 export class GameState {
   /** Current amounts of each resource. */
@@ -79,6 +115,12 @@ export class GameState {
 
   /** Modifier for work speed during night, affected by policies. */
   nightWorkSpeedMultiplier = 1;
+
+  /** Global enemy scaling multipliers contributed by policies and difficulty. */
+  private enemyScaling: EnemyScalingMultipliers = { ...DEFAULT_ENEMY_SCALING };
+
+  /** Remaining calm duration in seconds applied to enemy spawns. */
+  private enemyCalmSecondsRemaining = 0;
 
   /** Prestige modifiers for the current run. */
   private ngPlus: NgPlusState = createNgPlusState();
@@ -109,6 +151,7 @@ export class GameState {
       policies: Array.from(this.policies),
       passiveGeneration: { ...this.passiveGeneration },
       nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
+      enemyScaling: { ...this.enemyScaling },
       ngPlus: this.ngPlus
     };
     const storage =
@@ -137,6 +180,8 @@ export class GameState {
         this.resources[res] = 0;
       }
     });
+    this.enemyScaling = sanitizeEnemyScaling(DEFAULT_ENEMY_SCALING, data.enemyScaling ?? {});
+    this.enemyCalmSecondsRemaining = 0;
     const validBuildings: Record<string, number> = {};
     Object.entries(data.buildings ?? {}).forEach(([type, count]) => {
       if (BUILDING_FACTORIES[type]) {
@@ -249,6 +294,73 @@ export class GameState {
   modifyPassiveGeneration(res: Resource, delta: number): void {
     this.passiveGeneration[res] =
       (this.passiveGeneration[res] ?? 0) + delta;
+  }
+
+  /** Override the baseline enemy scaling multipliers. */
+  setEnemyScalingBase(multipliers: Partial<EnemyScalingMultipliers>): EnemyScalingMultipliers {
+    this.enemyScaling = sanitizeEnemyScaling(this.enemyScaling, multipliers);
+    return { ...this.enemyScaling };
+  }
+
+  /** Multiply the current enemy scaling multipliers by the provided factors. */
+  applyEnemyScalingModifiers(
+    multipliers: Partial<EnemyScalingMultipliers>
+  ): EnemyScalingMultipliers {
+    const next: EnemyScalingMultipliers = {
+      aggression: sanitizeMultiplier(
+        this.enemyScaling.aggression * (multipliers.aggression ?? 1),
+        0.1,
+        8,
+        this.enemyScaling.aggression
+      ),
+      cadence: sanitizeMultiplier(
+        this.enemyScaling.cadence * (multipliers.cadence ?? 1),
+        0.25,
+        6,
+        this.enemyScaling.cadence
+      ),
+      strength: sanitizeMultiplier(
+        this.enemyScaling.strength * (multipliers.strength ?? 1),
+        0.25,
+        12,
+        this.enemyScaling.strength
+      )
+    };
+    this.enemyScaling = next;
+    return { ...this.enemyScaling };
+  }
+
+  /** Snapshot the combined enemy scaling modifiers currently applied. */
+  getEnemyScalingSnapshot(): EnemyScalingSnapshot {
+    return {
+      ...this.enemyScaling,
+      calmSecondsRemaining: Math.max(0, this.enemyCalmSecondsRemaining)
+    } satisfies EnemyScalingSnapshot;
+  }
+
+  /** Request an enemy calm period lasting at least the provided duration in seconds. */
+  requestEnemyCalm(durationSeconds: number): number {
+    const numeric = Number(durationSeconds);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return this.enemyCalmSecondsRemaining;
+    }
+    this.enemyCalmSecondsRemaining = Math.max(this.enemyCalmSecondsRemaining, numeric);
+    return this.enemyCalmSecondsRemaining;
+  }
+
+  /** Advance any pending enemy calm timer by the supplied delta. */
+  advanceEnemyCalm(dtSeconds: number): number {
+    const numeric = Number(dtSeconds);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return this.enemyCalmSecondsRemaining;
+    }
+    this.enemyCalmSecondsRemaining = Math.max(0, this.enemyCalmSecondsRemaining - numeric);
+    return this.enemyCalmSecondsRemaining;
+  }
+
+  /** Clear any pending calm period immediately. */
+  clearEnemyCalm(): void {
+    this.enemyCalmSecondsRemaining = 0;
   }
 
   /** Spend resources to construct a building of the given type. */

@@ -123,6 +123,39 @@ describe('GameState', () => {
     expect(parsed.nightWorkSpeedMultiplier).toBeCloseTo(1.05);
   });
 
+  it('tracks enemy scaling multipliers and persists them', () => {
+    const state = new GameState(1000);
+    state.setEnemyScalingBase({ aggression: 1.4, cadence: 1.2 });
+    state.applyEnemyScalingModifiers({ strength: 1.3 });
+    const snapshot = state.getEnemyScalingSnapshot();
+    expect(snapshot.aggression).toBeCloseTo(1.4);
+    expect(snapshot.cadence).toBeCloseTo(1.2);
+    expect(snapshot.strength).toBeCloseTo(1.3);
+    state.save();
+    const serialized = localStorage.getItem('gameState');
+    expect(serialized).not.toBeNull();
+    const parsed = JSON.parse(serialized ?? '{}');
+    expect(parsed.enemyScaling.aggression).toBeCloseTo(1.4);
+    expect(parsed.enemyScaling.cadence).toBeCloseTo(1.2);
+    const loaded = new GameState(1000);
+    loaded.load();
+    const loadedSnapshot = loaded.getEnemyScalingSnapshot();
+    expect(loadedSnapshot.strength).toBeCloseTo(1.3);
+  });
+
+  it('handles enemy calm timers over subsequent ticks', () => {
+    const state = new GameState(1000);
+    expect(state.requestEnemyCalm(5)).toBeCloseTo(5);
+    let snapshot = state.getEnemyScalingSnapshot();
+    expect(snapshot.calmSecondsRemaining).toBeCloseTo(5);
+    state.advanceEnemyCalm(1.5);
+    snapshot = state.getEnemyScalingSnapshot();
+    expect(snapshot.calmSecondsRemaining).toBeCloseTo(3.5);
+    state.clearEnemyCalm();
+    snapshot = state.getEnemyScalingSnapshot();
+    expect(snapshot.calmSecondsRemaining).toBe(0);
+  });
+
   it('applies policy modifiers via listeners', () => {
     const state = new GameState(1000);
     state.applyPolicy('eco', 0); // free for testing
@@ -276,7 +309,16 @@ describe('GameState', () => {
     const raw = localStorage.getItem('gameState');
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw ?? '{}');
-    expect(parsed.ngPlus).toEqual({ runSeed: 37, ngPlusLevel: 2, unlockSlots: 3 });
+    expect(parsed.ngPlus).toEqual({
+      runSeed: 37,
+      ngPlusLevel: 2,
+      unlockSlots: 3,
+      enemyTuning: {
+        aggressionMultiplier: 1,
+        cadenceMultiplier: 1,
+        strengthMultiplier: 1
+      }
+    });
 
     const loaded = new GameState(1000);
     expect(loaded.load()).toBe(true);

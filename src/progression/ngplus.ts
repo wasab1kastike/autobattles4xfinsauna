@@ -4,17 +4,64 @@ export interface NgPlusState {
   readonly runSeed: number;
   readonly ngPlusLevel: number;
   readonly unlockSlots: number;
+  readonly enemyTuning?: NgPlusEnemyTuning;
+}
+
+export interface NgPlusEnemyTuning {
+  readonly aggressionMultiplier: number;
+  readonly cadenceMultiplier: number;
+  readonly strengthMultiplier: number;
 }
 
 const NG_PLUS_STORAGE_KEY = 'progression:ngPlusState';
 const MAX_UNLOCK_SLOTS = 5;
 const DEFAULT_RUN_SEED_FALLBACK = 0x6d2b79f5;
 
+const DEFAULT_ENEMY_TUNING: NgPlusEnemyTuning = Object.freeze({
+  aggressionMultiplier: 1,
+  cadenceMultiplier: 1,
+  strengthMultiplier: 1
+});
+
 export const DEFAULT_NGPLUS_STATE: NgPlusState = Object.freeze({
   runSeed: 0,
   ngPlusLevel: 0,
-  unlockSlots: 0
+  unlockSlots: 0,
+  enemyTuning: DEFAULT_ENEMY_TUNING
 });
+
+function sanitizeModifier(value: unknown, min: number, max: number, fallback: number): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, numeric));
+}
+
+function sanitizeEnemyTuning(
+  tuning: Partial<NgPlusEnemyTuning> | undefined
+): NgPlusEnemyTuning {
+  return {
+    aggressionMultiplier: sanitizeModifier(
+      tuning?.aggressionMultiplier,
+      0.25,
+      6,
+      DEFAULT_ENEMY_TUNING.aggressionMultiplier
+    ),
+    cadenceMultiplier: sanitizeModifier(
+      tuning?.cadenceMultiplier,
+      0.25,
+      4,
+      DEFAULT_ENEMY_TUNING.cadenceMultiplier
+    ),
+    strengthMultiplier: sanitizeModifier(
+      tuning?.strengthMultiplier,
+      0.25,
+      6,
+      DEFAULT_ENEMY_TUNING.strengthMultiplier
+    )
+  } satisfies NgPlusEnemyTuning;
+}
 
 function storageOrNull(): Storage | null {
   if (typeof window === 'undefined') {
@@ -63,10 +110,12 @@ export function createNgPlusState(overrides: Partial<NgPlusState> = {}): NgPlusS
   const runSeed = sanitizeRunSeed(overrides.runSeed ?? base.runSeed);
   const ngPlusLevel = clampInteger(overrides.ngPlusLevel ?? base.ngPlusLevel, 0, Number.MAX_SAFE_INTEGER);
   const unlockSlots = clampInteger(overrides.unlockSlots ?? base.unlockSlots, 0, MAX_UNLOCK_SLOTS);
+  const enemyTuning = sanitizeEnemyTuning(overrides.enemyTuning ?? base.enemyTuning);
   return {
     runSeed,
     ngPlusLevel,
-    unlockSlots
+    unlockSlots,
+    enemyTuning
   } satisfies NgPlusState;
 }
 
@@ -141,7 +190,8 @@ export function planNextNgPlusRun(
     createNgPlusState({
       runSeed: nextSeed,
       ngPlusLevel: level,
-      unlockSlots
+      unlockSlots,
+      enemyTuning: sanitized.enemyTuning
     }),
     random
   );
@@ -162,11 +212,17 @@ export function getEliteOdds(state: NgPlusState): number {
 
 export function getAiAggressionModifier(state: NgPlusState): number {
   const level = Math.max(0, state.ngPlusLevel);
-  return Math.max(0.5, 1 + level * 0.25);
+  const base = Math.max(0.5, 1 + level * 0.25);
+  const tuning = sanitizeEnemyTuning(state.enemyTuning ?? DEFAULT_ENEMY_TUNING);
+  return Math.max(0.25, Math.min(8, base * tuning.aggressionMultiplier));
 }
 
 export function getUnlockSpawnLimit(state: NgPlusState): number {
   return 1 + Math.max(0, state.unlockSlots);
+}
+
+export function getEnemyRampModifiers(state: NgPlusState): NgPlusEnemyTuning {
+  return sanitizeEnemyTuning(state.enemyTuning ?? DEFAULT_ENEMY_TUNING);
 }
 
 export function createNgPlusRng(seed: number, salt = 0): () => number {
