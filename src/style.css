@@ -140,10 +140,77 @@ body > #game-container {
   inset: 0;
   padding: var(--hud-padding);
   padding-bottom: calc(var(--hud-padding) + env(safe-area-inset-bottom, 0px));
+}
+
+#ui-overlay:not(.hud-grid) {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: clamp(16px, 3vw, 28px);
+}
+
+#ui-overlay.hud-grid {
+  align-content: start;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-rows-\[64px_1fr_80px\] {
+  grid-template-rows: 64px 1fr 80px;
+}
+
+.grid-cols-\[280px_1fr_340px\] {
+  grid-template-columns: 280px 1fr 340px;
+}
+
+.gap-\[clamp\(16px\,3vw\,28px\)\] {
+  gap: clamp(16px, 3vw, 28px);
+}
+
+.col-span-3 {
+  grid-column: span 3 / span 3;
+}
+
+.col-start-1 {
+  grid-column-start: 1;
+}
+
+.col-start-2 {
+  grid-column-start: 2;
+}
+
+.col-start-3 {
+  grid-column-start: 3;
+}
+
+.row-start-1 {
+  grid-row-start: 1;
+}
+
+.row-start-2 {
+  grid-row-start: 2;
+}
+
+.row-start-3 {
+  grid-row-start: 3;
+}
+
+.row-span-1 {
+  grid-row: span 1 / span 1;
+}
+
+.hud-layout-root {
+  display: contents;
+}
+
+.hud-region {
+  pointer-events: none;
+}
+
+.hud-region > * {
+  pointer-events: auto;
 }
 
 #ui-overlay.inventory-panel-open {
@@ -154,7 +221,7 @@ body > #game-container {
   pointer-events: auto;
 }
 
-.is-mobile #ui-overlay {
+.is-mobile #ui-overlay:not(.hud-grid) {
   gap: clamp(12px, 4vw, 18px);
 }
 
@@ -190,7 +257,7 @@ body > #game-container {
   gap: clamp(16px, 2vw, 28px);
 }
 
-.hud-top-row {
+#ui-overlay:not(.hud-grid) .hud-top-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -199,24 +266,41 @@ body > #game-container {
 }
 
 .hud-actions {
+  max-width: min(620px, 58vw);
+}
+
+#ui-overlay:not(.hud-grid) .hud-actions {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: clamp(16px, 2.4vw, 24px);
-  max-width: min(620px, 58vw);
-}
-
-.hud-actions > * {
-  pointer-events: auto;
 }
 
 .hud-right-column {
+  width: fit-content;
+  max-width: min(360px, 32vw);
+}
+
+#ui-overlay:not(.hud-grid) .hud-right-column {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: clamp(18px, 2vw, 24px);
-  width: fit-content;
-  max-width: min(360px, 32vw);
+}
+
+.hud-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(18px, 2vw, 28px);
+  min-height: 0;
+}
+
+.hud-bottom-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: clamp(12px, 2.4vw, 20px);
 }
 
 .hud-mobile-bar {
@@ -259,20 +343,20 @@ body > #game-container {
   flex: 1 1 0;
 }
 
-.is-mobile .hud-top-row {
+.is-mobile #ui-overlay:not(.hud-grid) .hud-top-row {
   flex-direction: column;
   align-items: stretch;
   gap: clamp(12px, 4vw, 18px);
 }
 
-.is-mobile .hud-actions {
+.is-mobile #ui-overlay:not(.hud-grid) .hud-actions {
   width: 100%;
   max-width: none;
   align-items: stretch;
   gap: clamp(12px, 4vw, 16px);
 }
 
-.is-mobile .hud-right-column {
+.is-mobile #ui-overlay:not(.hud-grid) .hud-right-column {
   width: 100%;
   max-width: none;
   align-items: stretch;

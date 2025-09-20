@@ -125,11 +125,12 @@ export function setupTopbar(
     };
   }
 
-  const { actions, mobileBar } = ensureHudLayout(overlay);
+  const { regions, mobileBar } = ensureHudLayout(overlay);
+  const topRegion = regions.top;
 
   const bar = document.createElement('div');
   bar.id = 'topbar';
-  actions.prepend(bar);
+  topRegion.prepend(bar);
 
   const badgeRow = document.createElement('div');
   badgeRow.className = 'topbar-badge-row';
