@@ -7,9 +7,12 @@ const flushLogs = () =>
 
 const renderGameShell = () => {
   document.body.innerHTML = `
-    <canvas id="game-canvas"></canvas>
-    <div id="resource-bar"></div>
-    <div id="ui-overlay"></div>
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
+      <div id="ui-overlay">
+        <div id="resource-bar"></div>
+      </div>
+    </div>
   `;
 };
 
@@ -100,13 +103,17 @@ describe('game logging', () => {
   });
 
   it('tracks the active Saunoja roster as units rally and fall', async () => {
-    const { eventBus } = await initGame();
+    const { eventBus, __getActiveRosterCountForTest } = await initGame();
     const { Unit } = await import('./units/Unit.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
 
     const rosterValue = () =>
-      document.querySelector<HTMLSpanElement>('.sauna-roster__value')?.textContent ?? '';
+      document
+        .querySelector<HTMLSpanElement>('#resource-bar .sauna-roster__value')
+        ?.textContent ?? '';
 
+    expect(__getActiveRosterCountForTest()).toBe(2);
+    await flushLogs();
     expect(rosterValue()).toBe('2');
 
     const ally = new Unit('steam-ally', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
