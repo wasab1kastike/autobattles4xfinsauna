@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extend sauna fog-of-war so the structure's aura contributes a vision source,
+  keeping enemies overlapping the building visible even when no player scouts
+  survive, and lock the regression down with renderer tests.
+
 - Keep the stash overlay interactive even when focus operations throw by
   toggling the inventory panel class before focusing, guarding the panel focus
   helper with a fallback, and covering the regression with Vitest DOM tests.

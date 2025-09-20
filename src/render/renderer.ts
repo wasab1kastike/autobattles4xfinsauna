@@ -74,7 +74,8 @@ export function draw(
     units,
     origin,
     options?.fx,
-    options?.friendlyVisionSources
+    options?.friendlyVisionSources,
+    options?.sauna ?? null
   );
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
@@ -92,12 +93,19 @@ export function drawUnits(
   units: Unit[],
   origin: PixelCoord,
   fx?: FxLayerOptions,
-  visionSources?: readonly Unit[]
+  visionSources?: readonly Unit[],
+  sauna?: Sauna | null
 ): void {
   const visionUnits = visionSources ?? units;
   const friendlyVisionSources = visionUnits
     .filter((unit) => unit.faction === 'player' && !unit.isDead())
     .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
+
+  if (sauna && !sauna.destroyed) {
+    const auraRadius = Number.isFinite(sauna.auraRadius) ? sauna.auraRadius : 0;
+    const range = Math.max(0, auraRadius);
+    friendlyVisionSources.push({ coord: sauna.pos, range });
+  }
   for (const unit of units) {
     if (unit.isDead()) {
       continue;
