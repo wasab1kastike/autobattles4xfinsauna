@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Script a new end-screen epilogue for sauna destruction so defeat runs narrate
+  the collapse with bespoke copy and polished UI coverage.
+
 - Refresh the soldier and archer unit art with high-fidelity 128×128 SVGs,
   recalibrated sprite metadata, and placement tests so their battlefield
   silhouettes match the marauder's polish.
