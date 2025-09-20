@@ -292,9 +292,12 @@ describe('game logging', () => {
     expect(__getActiveTierIdForTest()).toBe('mythic-conclave');
 
     const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
-    const parsed = stored ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string }) : null;
+    const parsed = stored
+      ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string; useUiV2: boolean })
+      : null;
     expect(parsed?.activeTierId).toBe('mythic-conclave');
     expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
+    expect(parsed?.useUiV2).toBe(false);
   });
 
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {

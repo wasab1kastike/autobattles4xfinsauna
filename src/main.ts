@@ -1,6 +1,8 @@
 import './style.css';
 import './ui/style/atoms.css';
 import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
+import { loadSaunaSettings } from './game/saunaSettings.ts';
+import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.ts';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { preloadSaunojaIcon } from './units/renderSaunoja.ts';
@@ -27,6 +29,8 @@ let initToken = 0;
 let canvasRef: HTMLCanvasElement | null = null;
 let hud: HudController = createHud(null);
 let loaderHandle: LoadingHandle | null = null;
+let hudVariant: 'classic' | 'v2' = 'classic';
+let uiV2Handle: UiV2Handle | null = null;
 
 function applyBuildIdentity(): void {
   if (typeof document === 'undefined') {
@@ -229,6 +233,8 @@ function attachCanvasInputs(canvas: HTMLCanvasElement): void {
 export function destroy(): void {
   initToken += 1;
   clearCleanupHandlers();
+  uiV2Handle?.destroy();
+  uiV2Handle = null;
   loaderHandle?.dispose();
   loaderHandle = null;
   if (canvasRef) {
@@ -262,13 +268,19 @@ export function init(): void {
 
   const runToken = ++initToken;
 
+  const storedSettings = loadSaunaSettings();
+  hudVariant = storedSettings.useUiV2 ? 'v2' : 'classic';
+
   canvasRef = canvas;
   hud = createHud(overlay);
 
   const mobileViewport = useIsMobile();
   addCleanup(() => mobileViewport.dispose());
 
-  setupGame(canvas, resourceBar, overlay);
+  setupGame(canvas, resourceBar, overlay, { hudVariant });
+  if (hudVariant === 'v2') {
+    uiV2Handle = bootstrapUiV2({ overlay, resourceBar, canvas });
+  }
   attachCanvasInputs(canvas);
 
   const resize = () => resizeCanvasToDisplaySize(canvas);
