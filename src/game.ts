@@ -10,6 +10,7 @@ import { eventBus } from './events';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
+import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar, type TopbarControls } from './ui/topbar.ts';
@@ -765,6 +766,12 @@ const clock = new GameClock(1000, (deltaMs) => {
     getRosterCount: getActiveRosterCount
   });
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
+  const scalingSnapshot = enemySpawner.getSnapshot();
+  const rosterProgress = objectiveTracker?.getProgress().roster;
+  recordEnemyScalingTelemetry(scalingSnapshot, {
+    wipeSince: rosterProgress?.wipeSince ?? null,
+    wipeDurationMs: rosterProgress?.wipeDurationMs ?? 0
+  });
   battleManager.tick(units, dtSeconds, sauna);
   advanceModifiers(dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
