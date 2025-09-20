@@ -1126,12 +1126,16 @@ export function draw(): void {
   const fxOptions = unitFx
     ? { getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id) }
     : undefined;
+  const hasSaunojaOverlays = Array.isArray(saunojas) && saunojas.length > 0;
+  const renderUnits = hasSaunojaOverlays
+    ? units.filter((unit) => unit.faction !== 'player')
+    : units;
 
   ctx.save();
   if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
     ctx.translate(shakeOffset.x, shakeOffset.y);
   }
-  render(ctx, mapRenderer, assets.images, units, selected, {
+  render(ctx, mapRenderer, assets.images, renderUnits, selected, {
     saunojas: {
       units: saunojas,
       draw: drawSaunojas
