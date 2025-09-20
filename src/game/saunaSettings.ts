@@ -8,6 +8,7 @@ import {
 export interface SaunaSettings {
   maxRosterSize: number;
   activeTierId: SaunaTierId;
+  useUiV2: boolean;
 }
 
 export const SAUNA_SETTINGS_STORAGE_KEY = 'autobattles:sauna-settings';
@@ -49,6 +50,10 @@ function sanitizeCap(value: unknown, fallback: number, limit: number): number {
   return Math.max(0, Math.min(safeLimit, cap));
 }
 
+function sanitizeUseUiV2(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
 function sanitizeSettings(
   record: Partial<Record<keyof SaunaSettings, unknown>> | null,
   defaultCap: number
@@ -58,11 +63,12 @@ function sanitizeSettings(
   const limit = resolveEffectiveLimit(tier.rosterCap, defaultCap);
   return {
     activeTierId: tier.id,
-    maxRosterSize: sanitizeCap(record?.maxRosterSize, limit, limit)
+    maxRosterSize: sanitizeCap(record?.maxRosterSize, limit, limit),
+    useUiV2: sanitizeUseUiV2(record?.useUiV2)
   } satisfies SaunaSettings;
 }
 
-export function loadSaunaSettings(defaultCap: number): SaunaSettings {
+export function loadSaunaSettings(defaultCap = 1 + MAX_UNLOCK_SLOTS): SaunaSettings {
   const storage = getStorage();
   if (!storage) {
     return sanitizeSettings(null, defaultCap);
@@ -94,7 +100,8 @@ export function saveSaunaSettings(settings: SaunaSettings): void {
   const tierLimit = resolveEffectiveLimit(tier.rosterCap, tier.rosterCap);
   const payload: SaunaSettings = {
     activeTierId: tier.id,
-    maxRosterSize: sanitizeCap(settings.maxRosterSize, tierLimit, tierLimit)
+    maxRosterSize: sanitizeCap(settings.maxRosterSize, tierLimit, tierLimit),
+    useUiV2: sanitizeUseUiV2(settings.useUiV2)
   } satisfies SaunaSettings;
   try {
     storage.setItem(SAUNA_SETTINGS_STORAGE_KEY, JSON.stringify(payload));

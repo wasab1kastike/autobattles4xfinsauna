@@ -18,6 +18,10 @@ export interface StashPanelCallbacks {
   readonly onItemEquip?: (item: InventoryListItemView) => void;
   readonly onItemTransfer?: (item: InventoryListItemView) => void;
   readonly onItemTrash?: (item: InventoryListItemView) => void;
+  readonly getAutoEquipState?: () => boolean;
+  readonly onAutoEquipChange?: (enabled: boolean) => void;
+  readonly getUiV2State?: () => boolean;
+  readonly onUiV2Change?: (enabled: boolean) => void;
 }
 
 export interface StashPanelController {
@@ -26,6 +30,8 @@ export interface StashPanelController {
   setOpen(open: boolean): void;
   focus(): void;
   destroy(): void;
+  setAutoEquip(enabled: boolean): void;
+  setUiV2(enabled: boolean): void;
 }
 
 interface FilterSlot {
@@ -137,6 +143,89 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
   searchRow.appendChild(sortSelect);
 
   controls.appendChild(searchRow);
+
+  const settings = document.createElement('div');
+  settings.className = panelStyles.settings;
+
+  const buildToggle = (
+    id: string,
+    title: string,
+    hint: string,
+    onChange?: (value: boolean) => void
+  ): { root: HTMLDivElement; setChecked: (checked: boolean) => void } => {
+    const root = document.createElement('div');
+    root.className = panelStyles.settingRow;
+
+    const copy = document.createElement('div');
+    copy.className = panelStyles.settingCopy;
+
+    const label = document.createElement('span');
+    label.className = panelStyles.settingLabel;
+    label.textContent = title;
+    copy.appendChild(label);
+
+    const description = document.createElement('p');
+    description.className = panelStyles.settingHint;
+    description.textContent = hint;
+    copy.appendChild(description);
+
+    const control = document.createElement('div');
+    control.className = panelStyles.settingControl;
+
+    const state = document.createElement('span');
+    state.className = panelStyles.settingState;
+    state.textContent = 'Off';
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.id = id;
+    input.className = panelStyles.settingInput;
+
+    const toggle = document.createElement('label');
+    toggle.className = panelStyles.settingSwitch;
+    toggle.htmlFor = id;
+    toggle.dataset.state = 'off';
+
+    const track = document.createElement('span');
+    track.className = panelStyles.settingTrack;
+    const thumb = document.createElement('span');
+    thumb.className = panelStyles.settingThumb;
+    toggle.append(track, thumb);
+
+    const setChecked = (checked: boolean) => {
+      input.checked = checked;
+      toggle.dataset.state = checked ? 'on' : 'off';
+      state.textContent = checked ? 'On' : 'Off';
+    };
+
+    input.addEventListener('change', () => {
+      setChecked(input.checked);
+      onChange?.(input.checked);
+    });
+
+    control.append(state, input, toggle);
+    root.append(copy, control);
+    return { root, setChecked };
+  };
+
+  const autoEquipToggle = buildToggle(
+    'inventory-autoequip-toggle',
+    'Auto-equip loot',
+    'Try outfitting the selected attendant as soon as new gear arrives.',
+    (value) => callbacks.onAutoEquipChange?.(value)
+  );
+  const uiVariantToggle = buildToggle(
+    'inventory-ui-variant-toggle',
+    'Experimental HUD',
+    'Swap to the React/Tailwind HUD. You can revert at any time.',
+    (value) => callbacks.onUiV2Change?.(value)
+  );
+
+  autoEquipToggle.setChecked(callbacks.getAutoEquipState?.() ?? false);
+  uiVariantToggle.setChecked(callbacks.getUiV2State?.() ?? false);
+
+  settings.append(autoEquipToggle.root, uiVariantToggle.root);
+  controls.appendChild(settings);
 
   const filterSection = document.createElement('div');
   const filterSlots: Record<'slots' | 'rarities' | 'tags', FilterSlot> = {
@@ -263,6 +352,12 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
     },
     destroy() {
       element.remove();
+    },
+    setAutoEquip(enabled: boolean) {
+      autoEquipToggle.setChecked(enabled);
+    },
+    setUiV2(enabled: boolean) {
+      uiVariantToggle.setChecked(enabled);
     }
   } satisfies StashPanelController;
 

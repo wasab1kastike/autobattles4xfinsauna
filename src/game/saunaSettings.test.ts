@@ -15,24 +15,26 @@ describe('saunaSettings', () => {
     const settings = loadSaunaSettings(4);
     expect(settings.maxRosterSize).toBe(3);
     expect(settings.activeTierId).toBe(DEFAULT_SAUNA_TIER_ID);
+    expect(settings.useUiV2).toBe(false);
   });
 
   it('clamps stored values to the unlock ceiling', () => {
     window.localStorage?.setItem(
       SAUNA_SETTINGS_STORAGE_KEY,
-      JSON.stringify({ maxRosterSize: 99, activeTierId: 'mythic-conclave' })
+      JSON.stringify({ maxRosterSize: 99, activeTierId: 'mythic-conclave', useUiV2: true })
     );
     const settings = loadSaunaSettings(1);
     expect(settings.maxRosterSize).toBe(1);
     expect(settings.activeTierId).toBe('mythic-conclave');
+    expect(settings.useUiV2).toBe(true);
   });
 
   it('persists sanitized roster caps', () => {
-    saveSaunaSettings({ maxRosterSize: 7, activeTierId: 'mythic-conclave' });
+    saveSaunaSettings({ maxRosterSize: 7, activeTierId: 'mythic-conclave', useUiV2: true });
     const raw = window.localStorage?.getItem(SAUNA_SETTINGS_STORAGE_KEY);
     expect(raw).toBeTypeOf('string');
     const parsed = raw ? JSON.parse(raw) : null;
-    expect(parsed).toEqual({ maxRosterSize: 6, activeTierId: 'mythic-conclave' });
+    expect(parsed).toEqual({ maxRosterSize: 6, activeTierId: 'mythic-conclave', useUiV2: true });
   });
 
   it('handles malformed payloads gracefully', () => {
@@ -42,6 +44,7 @@ describe('saunaSettings', () => {
       const settings = loadSaunaSettings(3);
       expect(settings.maxRosterSize).toBe(3);
       expect(settings.activeTierId).toBe(DEFAULT_SAUNA_TIER_ID);
+      expect(settings.useUiV2).toBe(false);
       expect(warn).toHaveBeenCalled();
     } finally {
       warn.mockRestore();
@@ -51,11 +54,12 @@ describe('saunaSettings', () => {
   it('falls back to the default tier when an unknown id is stored', () => {
     window.localStorage?.setItem(
       SAUNA_SETTINGS_STORAGE_KEY,
-      JSON.stringify({ maxRosterSize: 3, activeTierId: 'unknown-tier' })
+      JSON.stringify({ maxRosterSize: 3, activeTierId: 'unknown-tier', useUiV2: 'true' })
     );
     const settings = loadSaunaSettings(4);
     expect(settings.activeTierId).toBe(DEFAULT_SAUNA_TIER_ID);
     expect(settings.maxRosterSize).toBe(3);
+    expect(settings.useUiV2).toBe(true);
   });
 
   it('respects tier roster caps when loading', () => {
@@ -63,9 +67,10 @@ describe('saunaSettings', () => {
     expect(premium).toBeDefined();
     window.localStorage?.setItem(
       SAUNA_SETTINGS_STORAGE_KEY,
-      JSON.stringify({ maxRosterSize: 99, activeTierId: premium?.id })
+      JSON.stringify({ maxRosterSize: 99, activeTierId: premium?.id, useUiV2: false })
     );
     const settings = loadSaunaSettings(10);
     expect(settings.maxRosterSize).toBe(premium?.rosterCap ?? 4);
+    expect(settings.useUiV2).toBe(false);
   });
 });

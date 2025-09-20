@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Extend sauna settings persistence with an experimental HUD flag, expose the
+  toggle in the quartermaster drawer with polished controls, and branch the main
+  bootstrap to launch a React/Tailwind placeholder when the flag is enabled.
+
 - Overhaul the policy system with a shared registry, premium HUD cards that surface
   prerequisites, typed events, declarative effect wiring, and Vitest coverage for
   both successful enactments and rejection flows.
