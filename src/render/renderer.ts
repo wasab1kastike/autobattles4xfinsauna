@@ -17,6 +17,45 @@ type DrawSaunojaFn = (
   options?: DrawSaunojasOptions
 ) => void;
 
+export interface VisionSource {
+  coord: AxialCoord;
+  range: number;
+}
+
+type SaunaVisionSource =
+  | VisionSource
+  | (Pick<Sauna, 'pos' | 'auraRadius'> & Partial<Sauna>);
+
+function isVisionSource(candidate: unknown): candidate is VisionSource {
+  if (!candidate || typeof candidate !== 'object') {
+    return false;
+  }
+  const maybeSource = candidate as Partial<VisionSource>;
+  const hasCoord =
+    !!maybeSource.coord &&
+    typeof maybeSource.coord === 'object' &&
+    typeof maybeSource.coord.q === 'number' &&
+    typeof maybeSource.coord.r === 'number';
+  return hasCoord && typeof maybeSource.range === 'number';
+}
+
+function resolveSaunaVision(sauna?: SaunaVisionSource | null): VisionSource | null {
+  if (!sauna) {
+    return null;
+  }
+  if (isVisionSource(sauna)) {
+    const range = Number.isFinite(sauna.range) ? Math.max(0, sauna.range) : 0;
+    return { coord: sauna.coord, range };
+  }
+  if ('pos' in sauna && 'auraRadius' in sauna) {
+    const range = Number.isFinite(sauna.auraRadius)
+      ? Math.max(0, sauna.auraRadius)
+      : 0;
+    return { coord: sauna.pos, range } satisfies VisionSource;
+  }
+  return null;
+}
+
 export interface FxLayerOptions {
   getUnitAlpha?: (unit: Unit) => number;
 }
@@ -27,6 +66,7 @@ export interface DrawOptions {
     draw: DrawSaunojaFn;
   };
   sauna?: Sauna | null;
+  saunaVision?: VisionSource | null;
   fx?: FxLayerOptions;
   friendlyVisionSources?: readonly Unit[];
 }
@@ -74,7 +114,8 @@ export function draw(
     units,
     origin,
     options?.fx,
-    options?.friendlyVisionSources
+    options?.friendlyVisionSources,
+    options?.saunaVision ?? options?.sauna ?? null
   );
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
@@ -92,12 +133,18 @@ export function drawUnits(
   units: Unit[],
   origin: PixelCoord,
   fx?: FxLayerOptions,
-  visionSources?: readonly Unit[]
+  visionSources?: readonly Unit[],
+  saunaVision?: SaunaVisionSource | null
 ): void {
   const visionUnits = visionSources ?? units;
-  const friendlyVisionSources = visionUnits
+  const friendlyVisionSources: VisionSource[] = visionUnits
     .filter((unit) => unit.faction === 'player' && !unit.isDead())
-    .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() }));
+    .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() } satisfies VisionSource));
+
+  const resolvedSaunaVision = resolveSaunaVision(saunaVision);
+  if (resolvedSaunaVision) {
+    friendlyVisionSources.push(resolvedSaunaVision);
+  }
   for (const unit of units) {
     if (unit.isDead()) {
       continue;
