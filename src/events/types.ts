@@ -17,3 +17,15 @@ export interface UnitDiedPayload {
   unitFaction: string;
   attackerFaction?: string;
 }
+
+export interface SaunaDamagedPayload {
+  attackerId?: string;
+  attackerFaction?: string;
+  amount: number;
+  remainingHealth: number;
+}
+
+export interface SaunaDestroyedPayload {
+  attackerId?: string;
+  attackerFaction?: string;
+}
