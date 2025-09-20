@@ -1,3 +1,10 @@
+import {
+  getChannelGainNode,
+  getChannelState,
+  initAudioContext,
+  onMixerChange,
+  setSfxMuted
+} from './mixer.ts';
 import { SFX_PAYLOADS } from './sfxData.ts';
 
 export type SfxName = 'click' | 'spawn' | 'error' | 'attack' | 'death' | 'sisu';
@@ -38,33 +45,23 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
 };
 
 let audioCtx: AudioContext | null = null;
-let gainNode: GainNode | null = null;
 const buffers = new Map<SfxName, AudioBuffer>();
 const pendingLoads = new Map<SfxName, Promise<AudioBuffer>>();
 const lastPlayed = new Map<SfxName, number>();
 
-let muted = false;
-if (typeof localStorage !== 'undefined') {
-  muted = localStorage.getItem('sfx-muted') === 'true';
-}
-
 const muteListeners = new Set<(muted: boolean) => void>();
 
+function getEffectiveMute(): boolean {
+  const master = getChannelState('master');
+  const sfx = getChannelState('sfx');
+  return master.muted || sfx.muted;
+}
+
 function notifyMuteListeners(): void {
+  const muted = getEffectiveMute();
   for (const listener of muteListeners) {
     listener(muted);
   }
-}
-
-function ensureGainNode(ctx: AudioContext): GainNode {
-  if (gainNode) {
-    return gainNode;
-  }
-  const node = ctx.createGain();
-  node.gain.value = muted ? 0 : 1;
-  node.connect(ctx.destination);
-  gainNode = node;
-  return node;
 }
 
 function createBuffer(
@@ -136,37 +133,6 @@ async function decodeAsset(base64: string, ctx: AudioContext): Promise<AudioBuff
   return await ctx.decodeAudioData(arrayBuffer);
 }
 
-function initAudioSafe(): AudioContext | null {
-  if (audioCtx || typeof window === 'undefined') {
-    return audioCtx;
-  }
-
-  const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AC) {
-    console.warn('Web Audio API not supported');
-    return null;
-  }
-
-  try {
-    audioCtx = new AC();
-    ensureGainNode(audioCtx);
-  } catch (err) {
-    console.warn('Unable to create AudioContext', err);
-    audioCtx = null;
-    return null;
-  }
-
-  if (audioCtx.state === 'suspended') {
-    const resume = () => {
-      void audioCtx?.resume();
-    };
-    window.addEventListener('pointerdown', resume, { once: true });
-    window.addEventListener('keydown', resume, { once: true });
-  }
-
-  return audioCtx;
-}
-
 function getNowMs(): number {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
     return performance.now();
@@ -211,7 +177,7 @@ function getBuffer(name: SfxName): Promise<AudioBuffer> {
 }
 
 export function playSafe(name: SfxName): void {
-  if (muted) {
+  if (isMuted()) {
     return;
   }
 
@@ -230,14 +196,17 @@ export function playSafe(name: SfxName): void {
 
   void getBuffer(name)
     .then((buffer) => {
-      if (muted) {
+      if (isMuted()) {
         return;
       }
       const ctx = initAudioSafe();
       if (!ctx) {
         return;
       }
-      const destination = ensureGainNode(ctx);
+      const destination = getChannelGainNode('sfx');
+      if (!destination) {
+        return;
+      }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       const soundGain = definition.gain;
@@ -264,18 +233,11 @@ export function playSafe(name: SfxName): void {
 }
 
 export function isMuted(): boolean {
-  return muted;
+  return getEffectiveMute();
 }
 
 export function setMuted(m: boolean): void {
-  muted = m;
-  if (gainNode) {
-    gainNode.gain.value = muted ? 0 : 1;
-  }
-  if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('sfx-muted', muted ? 'true' : 'false');
-  }
-  notifyMuteListeners();
+  setSfxMuted(m);
 }
 
 export function onMuteChange(listener: (m: boolean) => void): () => void {
@@ -291,6 +253,24 @@ if (typeof document !== 'undefined') {
       playSafe('click');
     }
   });
+}
+
+let lastMute = getEffectiveMute();
+onMixerChange((state) => {
+  const muted = state.channels.master.muted || state.channels.sfx.muted;
+  if (muted === lastMute) {
+    return;
+  }
+  lastMute = muted;
+  notifyMuteListeners();
+});
+
+function initAudioSafe(): AudioContext | null {
+  if (audioCtx) {
+    return audioCtx;
+  }
+  audioCtx = initAudioContext();
+  return audioCtx;
 }
 
 initAudioSafe();
