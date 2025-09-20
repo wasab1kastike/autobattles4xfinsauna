@@ -10,7 +10,8 @@ import {
   getUpkeepMultiplier,
   loadNgPlusState,
   planNextNgPlusRun,
-  saveNgPlusState
+  saveNgPlusState,
+  MAX_UNLOCK_SLOTS
 } from './ngplus.ts';
 
 declare global {
@@ -107,6 +108,17 @@ describe('ngplus progression helpers', () => {
     expect(getEliteOdds(state)).toBeCloseTo(0.1 + 4 * 0.05 + 3 * 0.01);
     expect(getAiAggressionModifier(state)).toBeCloseTo(1 + 4 * 0.25);
     expect(getUnlockSpawnLimit(state)).toBe(1 + 3);
+  });
+
+  it('never drops the spawn limit below the base roster capacity', () => {
+    const fresh = createNgPlusState({ unlockSlots: 0 });
+    expect(getUnlockSpawnLimit(fresh)).toBe(3);
+
+    const negative = createNgPlusState({ unlockSlots: -5 });
+    expect(getUnlockSpawnLimit(negative)).toBe(3);
+
+    const overflow = createNgPlusState({ unlockSlots: MAX_UNLOCK_SLOTS + 4 });
+    expect(getUnlockSpawnLimit(overflow)).toBe(1 + MAX_UNLOCK_SLOTS);
   });
 
   it('captures enemy tuning multipliers for ramp scaling', () => {
