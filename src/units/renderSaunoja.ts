@@ -118,7 +118,7 @@ export function drawSaunojas(
   }
 
   const radius = Number.isFinite(hexRadius) && hexRadius > 0 ? hexRadius : HEX_R;
-  const clipRadius = radius * 0.98;
+  const clipRadius = radius * 0.965;
   const renderable = saunojas
     .map((unit) => {
       const candidate = resolveRenderCoord?.(unit);
@@ -155,15 +155,18 @@ export function drawSaunojas(
     pathHex(ctx, centerX, centerY, clipRadius);
     ctx.clip();
 
-    const baseScale = (radius * 2.15) / Math.max(icon.naturalWidth, icon.naturalHeight || 1);
-    const drawWidth = snapForZoom(icon.naturalWidth * baseScale, zoom);
-    const drawHeight = snapForZoom(icon.naturalHeight * baseScale, zoom);
+    const iconWidth = icon.naturalWidth || 1;
+    const iconHeight = icon.naturalHeight || 1;
+    const widthBudget = clipRadius * 1.85;
+    const heightBudget = clipRadius * 2.4;
+    const iconScale = Math.min(widthBudget / iconWidth, heightBudget / iconHeight);
+    const drawWidth = snapForZoom(iconWidth * iconScale, zoom);
+    const drawHeight = snapForZoom(iconHeight * iconScale, zoom);
     const imageX = snapForZoom(centerX - drawWidth / 2, zoom);
-    const imageY = snapForZoom(centerY - drawHeight * 0.72, zoom);
+    const imageY = snapForZoom(centerY - drawHeight * 0.78, zoom);
 
     ctx.save();
-    ctx.filter = 'grayscale(100%) contrast(112%)';
-    ctx.globalAlpha *= 0.96;
+    ctx.filter = 'saturate(112%) contrast(108%) brightness(1.04)';
     ctx.drawImage(icon, imageX, imageY, drawWidth, drawHeight);
     ctx.restore();
 
@@ -177,8 +180,8 @@ export function drawSaunojas(
       centerY + clipRadius * 0.38,
       clipRadius * 1.05
     );
-    shadow.addColorStop(0, 'rgba(15, 23, 42, 0.55)');
-    shadow.addColorStop(1, 'rgba(15, 23, 42, 0)');
+    shadow.addColorStop(0, 'rgba(22, 30, 50, 0.58)');
+    shadow.addColorStop(1, 'rgba(22, 30, 50, 0)');
     ctx.fillStyle = shadow;
     ctx.fillRect(centerX - clipRadius, centerY - clipRadius, clipRadius * 2, clipRadius * 2);
     ctx.restore();
@@ -186,16 +189,16 @@ export function drawSaunojas(
     ctx.save();
     ctx.globalCompositeOperation = 'soft-light';
     const tint = ctx.createLinearGradient(centerX, centerY - clipRadius, centerX, centerY + clipRadius);
-    tint.addColorStop(0, 'rgba(255, 232, 210, 0.18)');
-    tint.addColorStop(0.52, 'rgba(255, 183, 124, 0.32)');
-    tint.addColorStop(1, 'rgba(212, 97, 54, 0.5)');
+    tint.addColorStop(0, 'rgba(233, 224, 255, 0.28)');
+    tint.addColorStop(0.52, 'rgba(196, 148, 255, 0.26)');
+    tint.addColorStop(1, 'rgba(94, 75, 168, 0.35)');
     ctx.fillStyle = tint;
     ctx.fillRect(centerX - clipRadius, centerY - clipRadius, clipRadius * 2, clipRadius * 2);
     ctx.restore();
 
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.68;
     const highlight = ctx.createRadialGradient(
       centerX,
       centerY - clipRadius * 0.68,

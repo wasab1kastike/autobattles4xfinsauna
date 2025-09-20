@@ -220,7 +220,7 @@ describe('drawSaunojas', () => {
 
     expect((ctx.drawImage as unknown as Mock).mock.calls).toHaveLength(3);
 
-    const clipRadius = 30 * 0.98;
+    const clipRadius = 30 * 0.965;
     const clipCalls = pathSpy.mock.calls.filter(([, , , radius]) => Math.abs(radius - clipRadius) < 0.001);
     expect(clipCalls).toHaveLength(3);
 
@@ -229,6 +229,41 @@ describe('drawSaunojas', () => {
 
     const steamOrder = drawSteamSpy.mock.calls.map(([, options]) => options.intensity);
     expect(steamOrder).toEqual([0.1, 0.4, 0.8]);
+
+    const { snapForZoom } = await import('../render/zoom.ts');
+    const { getSpriteCenter } = await import('../render/units/draw.ts');
+
+    const iconSize = 256;
+    const expectedScale = Math.min((clipRadius * 1.85) / iconSize, (clipRadius * 2.4) / iconSize);
+    const expectedSize = snapForZoom(iconSize * expectedScale, 1);
+
+    const sorted = [...units].sort((a, b) => {
+      if (a.coord.r !== b.coord.r) {
+        return a.coord.r - b.coord.r;
+      }
+      if (a.coord.q !== b.coord.q) {
+        return a.coord.q - b.coord.q;
+      }
+      return a.id.localeCompare(b.id);
+    });
+
+    const drawCalls = (ctx.drawImage as unknown as Mock).mock.calls;
+    sorted.forEach((unit, index) => {
+      const [, imageX, imageY, drawWidth, drawHeight] = drawCalls[index];
+      expect(drawWidth).toBe(expectedSize);
+      expect(drawHeight).toBe(expectedSize);
+      const center = getSpriteCenter({
+        coord: unit.coord,
+        hexSize: 30,
+        origin: { x: 0, y: 0 },
+        zoom: 1,
+        type: 'saunoja'
+      });
+      const expectedX = snapForZoom(center.x - expectedSize / 2, 1);
+      const expectedY = snapForZoom(center.y - expectedSize * 0.78, 1);
+      expect(imageX).toBe(expectedX);
+      expect(imageY).toBe(expectedY);
+    });
   });
 
   it('uses resolved render coordinates when provided', async () => {
