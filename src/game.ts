@@ -9,9 +9,9 @@ import type { UnitStats, UnitType } from './unit/index.ts';
 import { eventBus } from './events';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
-import { setupSaunaUI } from './ui/sauna.tsx';
+import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
 import { resetAutoFrame } from './camera/autoFrame.ts';
-import { setupTopbar } from './ui/topbar.ts';
+import { setupTopbar, type TopbarControls } from './ui/topbar.ts';
 import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
@@ -128,6 +128,9 @@ let selected: AxialCoord | null = null;
 let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
 let disposeRightPanel: (() => void) | null = null;
+let topbarControls: TopbarControls | null = null;
+let saunaUiController: SaunaUIController | null = null;
+let inventoryHudController: { destroy(): void } | null = null;
 let rosterHud: RosterHudController | null = null;
 let pendingRosterSummary: RosterHudSummary | null = null;
 let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
@@ -367,7 +370,60 @@ export function setupGame(
     rosterHud.renderRoster(pendingRosterEntries);
     pendingRosterEntries = null;
   }
+
+  saunaUiController?.dispose();
+  saunaUiController = setupSaunaUI(sauna, {
+    getRosterCapLimit: () => ngPlusSpawnLimit,
+    updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist })
+  });
+
+  topbarControls?.dispose();
+  topbarControls = setupTopbar(
+    state,
+    {
+      saunakunnia: uiIcons.resource,
+      sisu: uiIcons.sisu,
+      saunaBeer: uiIcons.saunaBeer,
+      sound: uiIcons.sound
+    },
+    {
+      useSisuBurst: () => {
+        const used = useSisuBurst(state, units);
+        if (used) {
+          playSafe('sisu');
+          log(
+            `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
+          );
+        } else {
+          playSafe('error');
+        }
+        return used;
+      },
+      torille: () => {
+        const used = torille(state, units, sauna.pos, map);
+        if (used) {
+          log(
+            `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
+          );
+        } else {
+          playSafe('error');
+        }
+        return used;
+      }
+    }
+  );
+
+  inventoryHudController?.destroy();
+  inventoryHudController = setupInventoryHud(inventory, {
+    getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
+    getComparisonContext: () => getSelectedInventoryContext(),
+    onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item)
+  });
+
+  initializeRightPanel();
+  syncSaunojaRosterWithUnits();
   updateRosterDisplay();
+  startTutorialIfNeeded();
 }
 
 const map = new HexMap(10, 10, 32);
@@ -833,42 +889,6 @@ objectiveTracker = createObjectiveTracker({
   bankruptcyGraceMs: 12000
 });
 objectiveTracker.onResolution(handleObjectiveResolution);
-const updateSaunaUI = setupSaunaUI(sauna, {
-  getRosterCapLimit: () => ngPlusSpawnLimit,
-  updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist })
-});
-const { update: updateTopbar, dispose: disposeTopbar } = setupTopbar(
-  state,
-  {
-    saunakunnia: uiIcons.resource,
-    sisu: uiIcons.sisu,
-    saunaBeer: uiIcons.saunaBeer,
-    sound: uiIcons.sound
-  },
-  {
-    useSisuBurst: () => {
-      const used = useSisuBurst(state, units);
-      if (used) {
-        playSafe('sisu');
-        log(
-          `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
-        );
-      } else {
-        playSafe('error');
-      }
-      return used;
-    },
-    torille: () => {
-      const used = torille(state, units, sauna.pos, map);
-      if (used) {
-        log(`Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`);
-      } else {
-        playSafe('error');
-      }
-      return used;
-    }
-  }
-);
 function getSelectedInventoryContext(): InventoryComparisonContext | null {
   const selected = saunojas.find((unit) => unit.selected) ?? null;
   if (!selected) {
@@ -881,31 +901,30 @@ function getSelectedInventoryContext(): InventoryComparisonContext | null {
   } satisfies InventoryComparisonContext;
 }
 
-const inventoryHud = setupInventoryHud(inventory, {
-  getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-  getComparisonContext: () => getSelectedInventoryContext(),
-  onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item)
-});
 function initializeRightPanel(): void {
   if (disposeRightPanel) {
     disposeRightPanel();
     disposeRightPanel = null;
   }
-const rightPanel = setupRightPanel(state, {
-  onRosterSelect: focusSaunojaById,
-  onRosterRendererReady: installRosterRenderer,
-  onRosterEquipSlot: equipSlotFromStash,
-  onRosterUnequipSlot: unequipSlotToStash
-});
+  const rightPanel = setupRightPanel(state, {
+    onRosterSelect: focusSaunojaById,
+    onRosterRendererReady: installRosterRenderer,
+    onRosterEquipSlot: equipSlotFromStash,
+    onRosterUnequipSlot: unequipSlotToStash
+  });
   log = rightPanel.log;
   addEvent = rightPanel.addEvent;
   installRosterRenderer(rightPanel.renderRoster);
   disposeRightPanel = rightPanel.dispose;
 }
 
-initializeRightPanel();
-updateRosterDisplay();
-startTutorialIfNeeded();
+function updateSaunaHud(): void {
+  saunaUiController?.update();
+}
+
+function updateTopbarHud(deltaMs: number): void {
+  topbarControls?.update(deltaMs);
+}
 
 
 function spawn(type: UnitType, coord: AxialCoord): void {
@@ -1252,8 +1271,18 @@ export function cleanup(): void {
     disposeRightPanel();
     disposeRightPanel = null;
   }
-  inventoryHud.destroy();
-  disposeTopbar();
+  if (inventoryHudController) {
+    inventoryHudController.destroy();
+    inventoryHudController = null;
+  }
+  if (saunaUiController) {
+    saunaUiController.dispose();
+    saunaUiController = null;
+  }
+  if (topbarControls) {
+    topbarControls.dispose();
+    topbarControls = null;
+  }
   if (rosterHud) {
     rosterHud.destroy();
     rosterHud = null;
@@ -1293,8 +1322,8 @@ export async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     clock.tick(delta);
-    updateSaunaUI();
-    updateTopbar(delta);
+    updateSaunaHud();
+    updateTopbarHud(delta);
     refreshRosterPanel();
     draw();
     if (!running) {
@@ -1314,6 +1343,10 @@ export function __rebuildRightPanelForTest(): void {
 
 export function __syncSaunojaRosterForTest(): boolean {
   return syncSaunojaRosterWithUnits();
+}
+
+export function __getActiveRosterCountForTest(): number {
+  return getActiveRosterCount();
 }
 
 export function __getUnitUpkeepForTest(unit: Unit): number {
