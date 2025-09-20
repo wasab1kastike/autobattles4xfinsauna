@@ -146,6 +146,14 @@ body > #game-container {
   gap: clamp(16px, 3vw, 28px);
 }
 
+#ui-overlay.inventory-panel-open {
+  pointer-events: auto;
+}
+
+#ui-overlay.inventory-panel-open #inventory-stash-panel {
+  pointer-events: auto;
+}
+
 .is-mobile #ui-overlay {
   gap: clamp(12px, 4vw, 18px);
 }
