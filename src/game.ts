@@ -1688,16 +1688,13 @@ export function __grantRosterExperienceForTest(amount: number): void {
 }
 
 function getActiveRosterCount(): number {
-  const seen = new Set<string>();
+  let count = 0;
   for (const unit of units) {
     if (unit.faction === 'player' && !unit.isDead()) {
-      seen.add(unit.id);
+      count += 1;
     }
   }
-  for (const attendant of saunojas) {
-    seen.add(attendant.id);
-  }
-  return seen.size;
+  return count;
 }
 
 function buildRosterEntries(): RosterEntry[] {
