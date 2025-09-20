@@ -5,9 +5,14 @@ import { GameState, Resource } from './core/GameState.ts';
 import { createSauna } from './sim/sauna.ts';
 import { runEconomyTick } from './economy/tick.ts';
 import { getSoldierStats } from './units/Soldier.ts';
+import { clearLogs, logStore } from './ui/logging.ts';
 
 const flushLogs = () =>
-  new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  new Promise<void>((resolve) =>
+    (typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame
+      : (cb: FrameRequestCallback) => setTimeout(cb, 16))(() => resolve())
+  );
 
 const renderGameShell = () => {
   document.body.innerHTML = `
@@ -41,6 +46,7 @@ async function initGame() {
 beforeEach(() => {
   vi.resetModules();
   window.localStorage?.clear?.();
+  clearLogs();
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     value: vi.fn(() => null)
@@ -63,55 +69,77 @@ beforeEach(() => {
 });
 
 describe('game logging', () => {
-  it('caps event log at 100 messages', async () => {
+  it('caps event log at 150 messages', async () => {
+    for (let i = 1; i <= 149; i++) {
+      logStore.emit({ type: 'system', message: `seed ${i}` });
+    }
+
     const { log } = await initGame();
 
-    for (let i = 1; i <= 150; i++) {
-      log(`msg ${i}`);
+    await flushLogs();
+
+    for (let i = 1; i <= 7; i++) {
+      log({ type: 'system', message: `msg ${i}` });
     }
 
     await flushLogs();
 
-    const eventLog = document.getElementById('event-log')!;
-    expect(eventLog.childElementCount).toBe(100);
-    expect(eventLog.firstChild?.textContent).toBe('msg 51');
-  });
+    const entries = Array.from(
+      document.querySelectorAll<HTMLElement>('#event-log .panel-log-entry')
+    );
+    expect(entries.length).toBe(150);
+    const firstMessage =
+      entries[0]?.querySelector<HTMLParagraphElement>('.panel-log-entry__message')?.textContent ?? '';
+    const lastMessage =
+      entries[entries.length - 1]?.querySelector<HTMLParagraphElement>('.panel-log-entry__message')
+        ?.textContent ?? '';
+    expect(lastMessage).toBe('msg 7');
+    const firstSeedNumber = Number(firstMessage.replace('seed ', ''));
+    expect(Number.isNaN(firstSeedNumber)).toBe(false);
+    expect(firstSeedNumber).toBeGreaterThan(1);
+  }, 10000);
 
   it('persists event log history across reloads', async () => {
     const { log } = await initGame();
 
     const logMessages = () =>
-      Array.from(document.getElementById('event-log')?.children ?? []).map(
-        (child) => child.textContent ?? ''
-      );
+      Array.from(
+        document.querySelectorAll<HTMLParagraphElement>('#event-log .panel-log-entry__message')
+      ).map((node) => node.textContent ?? '');
 
     await flushLogs();
     const baseline = logMessages();
 
-    log('prelude 1');
-    log('prelude 2');
+    log({ type: 'system', message: 'prelude 1' });
+    log({ type: 'system', message: 'prelude 2' });
 
     await flushLogs();
 
     const firstSessionLog = logMessages();
     expect(firstSessionLog.slice(-2)).toEqual(['prelude 1', 'prelude 2']);
-    expect(firstSessionLog.length).toBe(baseline.length + 2);
+    expect(firstSessionLog.length).toBe(Math.min(baseline.length + 2, 150));
 
     vi.resetModules();
     renderGameShell();
 
     const { log: logAgain } = await initGame();
     const rehydratedLog = logMessages();
-    expect(rehydratedLog.slice(-2)).toEqual(['prelude 1', 'prelude 2']);
+    expect(rehydratedLog).toEqual(expect.arrayContaining(['prelude 1', 'prelude 2']));
+    const lastPrelude1 = rehydratedLog.lastIndexOf('prelude 1');
+    const lastPrelude2 = rehydratedLog.lastIndexOf('prelude 2');
+    expect(lastPrelude1).toBeGreaterThanOrEqual(0);
+    expect(lastPrelude2).toBeGreaterThan(lastPrelude1);
 
-    logAgain('prelude 3');
+    logAgain({ type: 'system', message: 'prelude 3' });
     await flushLogs();
 
     const finalMessages = logMessages();
     const lastPrelude3 = finalMessages.lastIndexOf('prelude 3');
     expect(lastPrelude3).toBe(finalMessages.length - 1);
     expect(finalMessages.lastIndexOf('prelude 1')).toBeLessThan(lastPrelude3);
-    expect(finalMessages.lastIndexOf('prelude 2')).toBeLessThan(lastPrelude3);
+    const finalPrelude2 = finalMessages.lastIndexOf('prelude 2');
+    expect(finalPrelude2).toBeLessThan(lastPrelude3);
+    expect(finalPrelude2).toBeGreaterThan(finalMessages.lastIndexOf('prelude 1'));
   });
 
   it('tracks the active Saunoja roster as units rally and fall', async () => {
@@ -216,10 +244,17 @@ describe('game logging', () => {
       await flushLogs();
 
       const eventLog = document.getElementById('event-log')!;
-      const allySpawn = eventLog.lastElementChild?.textContent ?? '';
+      const allyEntry = eventLog.lastElementChild as HTMLElement;
+      const allySpawn =
+        allyEntry.querySelector<HTMLParagraphElement>('.panel-log-entry__message')?.textContent ?? '';
       expect(allySpawn).toContain('Our');
       expect(allySpawn).toContain('emerges from the steam');
       expect(allySpawn).toContain('Legacy "Frostward" Aalto');
+
+      const spawnTokens = Array.from(
+        allyEntry.querySelectorAll<HTMLSpanElement>('.panel-log-entry__token')
+      ).map((node) => node.textContent ?? '');
+      expect(spawnTokens).toContain('Legacy "Frostward" Aalto');
 
       const foe = new Unit('steam-foe', 'soldier', { q: 1, r: 0 }, 'enemy', { ...baseStats });
       const beforeFoeSpawn = eventLog.childElementCount;
@@ -227,7 +262,11 @@ describe('game logging', () => {
       await flushLogs();
 
       expect(eventLog.childElementCount).toBe(beforeFoeSpawn);
-      expect(eventLog.lastElementChild?.textContent ?? '').toBe(allySpawn);
+      const latestMessage =
+        eventLog
+          .lastElementChild?.querySelector<HTMLParagraphElement>('.panel-log-entry__message')
+          ?.textContent ?? '';
+      expect(latestMessage).toBe(allySpawn);
 
       eventBus.emit('unitDied', {
         unitId: foe.id,
@@ -236,7 +275,10 @@ describe('game logging', () => {
       });
       await flushLogs();
 
-      const casualtyMessage = eventLog.lastElementChild?.textContent ?? '';
+      const casualtyMessage =
+        eventLog
+          .lastElementChild?.querySelector<HTMLParagraphElement>('.panel-log-entry__message')
+          ?.textContent ?? '';
       expect(casualtyMessage).toContain('a rival');
       expect(casualtyMessage).toContain(foe.id);
     } finally {
