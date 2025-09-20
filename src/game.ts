@@ -17,7 +17,7 @@ import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { createTutorialController, type TutorialController } from './ui/tutorial/Tutorial.tsx';
-import { draw as render } from './render/renderer.ts';
+import { draw as render, type VisionSource } from './render/renderer.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
@@ -1143,6 +1143,12 @@ export function draw(): void {
   const friendlyVisionSources = units.filter(
     (unit) => unit.faction === 'player' && !unit.isDead()
   );
+  const saunaVision: VisionSource | null = sauna
+    ? {
+        coord: sauna.pos,
+        range: sauna.auraRadius
+      }
+    : null;
   const renderUnits = hasSaunojaOverlays
     ? units.filter((unit) => unit.faction !== 'player')
     : units;
@@ -1157,6 +1163,7 @@ export function draw(): void {
       draw: drawSaunojas
     },
     sauna,
+    saunaVision,
     fx: fxOptions,
     friendlyVisionSources
   });

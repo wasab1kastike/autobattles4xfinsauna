@@ -3,6 +3,7 @@ import { drawUnits } from './renderer.ts';
 import type { Unit } from '../unit/index.ts';
 import type { HexMapRenderer } from './HexMapRenderer.ts';
 import type { PixelCoord } from '../hex/HexUtils.ts';
+import type { Sauna } from '../sim/sauna.ts';
 import { camera } from '../camera/autoFrame.ts';
 
 vi.mock('../sisu/burst.ts', () => ({
@@ -73,6 +74,33 @@ describe('drawUnits', () => {
     };
 
     drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, [friendly]);
+
+    expect(ctx.drawImage).toHaveBeenCalledTimes(1);
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      assets['unit-marauder'],
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number),
+      expect.any(Number)
+    );
+  });
+
+  it('renders enemies overlapping the sauna when only sauna vision is supplied', () => {
+    const enemy = createStubUnit('enemy', 'enemy', { q: 0, r: 0 }, 'marauder');
+    const sauna = {
+      pos: enemy.coord,
+      auraRadius: 2
+    } as unknown as Sauna;
+    const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
+    const origin: PixelCoord = { x: 0, y: 0 };
+    const ctx = createMockContext();
+    const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const assets = {
+      'unit-marauder': makeImage(),
+      placeholder: makeImage()
+    };
+
+    drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, [], sauna);
 
     expect(ctx.drawImage).toHaveBeenCalledTimes(1);
     expect(ctx.drawImage).toHaveBeenCalledWith(
