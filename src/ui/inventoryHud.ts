@@ -25,6 +25,8 @@ export interface InventoryHudOptions {
     item: InventoryItem,
     source: InventoryCollection
   ) => EquipAttemptResult;
+  readonly getUseUiV2?: () => boolean;
+  readonly onUseUiV2Change?: (enabled: boolean) => void;
 }
 
 const PAGE_SIZE = 24;
@@ -213,6 +215,29 @@ export function setupInventoryHud(
     },
     onItemTrash: (item) => {
       handleTrash(item);
+    },
+    getAutoEquipState: () => inventory.isAutoEquipEnabled(),
+    onAutoEquipChange: (enabled) => {
+      inventory.setAutoEquip(enabled);
+      badgeButton.dataset.autoequip = enabled ? 'on' : 'off';
+      showToast(
+        toastStack,
+        enabled
+          ? 'Auto-equip enabled. Newly recovered gear will try to arm your selected attendant.'
+          : 'Auto-equip disabled. Loot will head to the stash until you equip it manually.',
+        'info'
+      );
+    },
+    getUiV2State: () => options.getUseUiV2?.() ?? false,
+    onUiV2Change: (enabled) => {
+      options.onUseUiV2Change?.(enabled);
+      showToast(
+        toastStack,
+        enabled
+          ? 'Experimental HUD enabled. Reload to try the React/Tailwind experience.'
+          : 'Classic HUD restored for your next session.',
+        'info'
+      );
     }
   };
 
@@ -389,6 +414,7 @@ export function setupInventoryHud(
       }
       case 'settings-updated':
         badgeButton.dataset.autoequip = event.autoEquip ? 'on' : 'off';
+        panel.setAutoEquip(event.autoEquip);
         break;
       default:
         break;

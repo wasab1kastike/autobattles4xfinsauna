@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createStashPanel } from './StashPanel.tsx';
+import type { StashPanelCallbacks } from './StashPanel.tsx';
 import type { InventoryPanelView } from '../../state/inventory.ts';
 import type { InventoryListItemView } from '../../state/inventory.ts';
 
@@ -155,6 +156,34 @@ describe('createStashPanel', () => {
     const readyButton = panel.element.querySelectorAll('button[data-active]')[1];
     readyButton.dispatchEvent(new Event('click'));
     expect(callbacks.onCollectionChange).toHaveBeenCalledWith('inventory');
+  });
+
+  it('wires settings toggles to callbacks', () => {
+    const callbacks = {
+      onAutoEquipChange: vi.fn(),
+      onUiV2Change: vi.fn(),
+      getAutoEquipState: () => true,
+      getUiV2State: () => false
+    } satisfies Partial<StashPanelCallbacks>;
+
+    const panel = createStashPanel(callbacks);
+    container.appendChild(panel.element);
+
+    const toggles = panel.element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    expect(toggles).toHaveLength(2);
+    expect(toggles[0]?.checked).toBe(true);
+    expect(toggles[1]?.checked).toBe(false);
+
+    toggles[0]!.checked = false;
+    toggles[0]!.dispatchEvent(new Event('change'));
+    expect(callbacks.onAutoEquipChange).toHaveBeenCalledWith(false);
+
+    toggles[1]!.checked = true;
+    toggles[1]!.dispatchEvent(new Event('change'));
+    expect(callbacks.onUiV2Change).toHaveBeenCalledWith(true);
+
+    panel.setUiV2(false);
+    expect(toggles[1]?.checked).toBe(false);
   });
 
   it('falls back to focusing without options when preventScroll throws', () => {

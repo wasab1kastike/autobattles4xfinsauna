@@ -567,11 +567,18 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
+export interface SetupGameOptions {
+  hudVariant?: 'classic' | 'v2';
+}
+
 export function setupGame(
   canvasEl: HTMLCanvasElement,
   resourceBarEl: HTMLElement,
-  overlayEl: HTMLElement
+  overlayEl: HTMLElement,
+  options: SetupGameOptions = {}
 ): void {
+  const hudVariant = options.hudVariant ?? 'classic';
+  const useClassicHud = hudVariant === 'classic';
   canvas = canvasEl;
   if (unitFx) {
     unitFx.dispose();
@@ -588,78 +595,109 @@ export function setupGame(
   });
   if (rosterHud) {
     rosterHud.destroy();
+    rosterHud = null;
   }
-  rosterHud = setupRosterHUD(resourceBarEl, { rosterIcon: uiIcons.saunojaRoster });
-  if (pendingRosterRenderer) {
-    rosterHud.installRenderer(pendingRosterRenderer);
-  }
-  if (pendingRosterEntries) {
-    rosterHud.renderRoster(pendingRosterEntries);
+  if (useClassicHud) {
+    rosterHud = setupRosterHUD(resourceBarEl, { rosterIcon: uiIcons.saunojaRoster });
+    if (pendingRosterRenderer) {
+      rosterHud.installRenderer(pendingRosterRenderer);
+    }
+    if (pendingRosterEntries) {
+      rosterHud.renderRoster(pendingRosterEntries);
+      pendingRosterEntries = null;
+    }
+    if (pendingRosterSummary) {
+      rosterHud.updateSummary(pendingRosterSummary);
+      pendingRosterSummary = null;
+    }
+  } else {
+    pendingRosterRenderer = null;
     pendingRosterEntries = null;
+    pendingRosterSummary = null;
   }
 
   saunaUiController?.dispose();
-  saunaUiController = setupSaunaUI(sauna, {
-    getRosterCapLimit: () => getActiveTierLimit(),
-    updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist }),
-    getActiveTierId: () => currentTierId,
-    setActiveTierId: (tierId, opts) => {
-      const unlocked = setActiveTier(tierId, { persist: opts?.persist });
-      if (unlocked) {
-        saunaUiController?.update();
-      }
-      return currentTierId;
-    },
-    getTierContext: () => getTierContext()
-  });
+  saunaUiController = null;
+  if (useClassicHud) {
+    saunaUiController = setupSaunaUI(sauna, {
+      getRosterCapLimit: () => getActiveTierLimit(),
+      updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist }),
+      getActiveTierId: () => currentTierId,
+      setActiveTierId: (tierId, opts) => {
+        const unlocked = setActiveTier(tierId, { persist: opts?.persist });
+        if (unlocked) {
+          saunaUiController?.update();
+        }
+        return currentTierId;
+      },
+      getTierContext: () => getTierContext()
+    });
+  }
 
   topbarControls?.dispose();
-  topbarControls = setupTopbar(
-    state,
-    {
-      saunakunnia: uiIcons.resource,
-      sisu: uiIcons.sisu,
-      saunaBeer: uiIcons.saunaBeer,
-      sound: uiIcons.sound
-    },
-    {
-      useSisuBurst: () => {
-        const used = useSisuBurst(state, units);
-        if (used) {
-          playSafe('sisu');
-          log(
-            `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
-          );
-        } else {
-          playSafe('error');
-        }
-        return used;
+  topbarControls = null;
+  if (useClassicHud) {
+    topbarControls = setupTopbar(
+      state,
+      {
+        saunakunnia: uiIcons.resource,
+        sisu: uiIcons.sisu,
+        saunaBeer: uiIcons.saunaBeer,
+        sound: uiIcons.sound
       },
-      torille: () => {
-        const used = torille(state, units, sauna.pos, map);
-        if (used) {
-          log(
-            `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
-          );
-        } else {
-          playSafe('error');
+      {
+        useSisuBurst: () => {
+          const used = useSisuBurst(state, units);
+          if (used) {
+            playSafe('sisu');
+            log(
+              `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
+            );
+          } else {
+            playSafe('error');
+          }
+          return used;
+        },
+        torille: () => {
+          const used = torille(state, units, sauna.pos, map);
+          if (used) {
+            log(
+              `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
+            );
+          } else {
+            playSafe('error');
+          }
+          return used;
         }
-        return used;
       }
-    }
-  );
+    );
+  }
 
   inventoryHudController?.destroy();
-  inventoryHudController = setupInventoryHud(inventory, {
-    getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-    getComparisonContext: () => getSelectedInventoryContext(),
-    onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item)
-  });
+  inventoryHudController = null;
+  if (useClassicHud) {
+    inventoryHudController = setupInventoryHud(inventory, {
+      getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
+      getComparisonContext: () => getSelectedInventoryContext(),
+      onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
+      getUseUiV2,
+      onUseUiV2Change: setUseUiV2
+    });
+  }
 
-  initializeRightPanel();
-  syncSaunojaRosterWithUnits();
-  updateRosterDisplay();
-  startTutorialIfNeeded();
+  if (useClassicHud) {
+    initializeRightPanel();
+    syncSaunojaRosterWithUnits();
+    updateRosterDisplay();
+    startTutorialIfNeeded();
+  } else {
+    if (disposeRightPanel) {
+      disposeRightPanel();
+      disposeRightPanel = null;
+    }
+    log = () => {};
+    addEvent = () => {};
+  }
 }
 
 const map = new HexMap(10, 10, 32);
@@ -949,6 +987,7 @@ const resolveTierContext = (): SaunaTierContext => ({
 });
 
 let currentTierId: SaunaTierId = saunaSettings.activeTierId;
+let useUiV2 = saunaSettings.useUiV2;
 const initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolveTierContext());
 if (!initialTierStatus.unlocked) {
   currentTierId = DEFAULT_SAUNA_TIER_ID;
@@ -963,9 +1002,14 @@ const getActiveTierLimit = (): number => {
 const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, getActiveTierLimit());
 if (
   initialRosterCap !== saunaSettings.maxRosterSize ||
-  saunaSettings.activeTierId !== currentTierId
+  saunaSettings.activeTierId !== currentTierId ||
+  saunaSettings.useUiV2 !== useUiV2
 ) {
-  saveSaunaSettings({ maxRosterSize: initialRosterCap, activeTierId: currentTierId });
+  saveSaunaSettings({
+    maxRosterSize: initialRosterCap,
+    activeTierId: currentTierId,
+    useUiV2
+  });
 }
 const sauna = createSauna(
   {
@@ -975,6 +1019,16 @@ const sauna = createSauna(
   undefined,
   { maxRosterSize: initialRosterCap }
 );
+
+const getUseUiV2 = (): boolean => useUiV2;
+
+const setUseUiV2 = (next: boolean): void => {
+  const normalized = Boolean(next);
+  if (useUiV2 === normalized) {
+    return;
+  }
+  persistSaunaSettings(sauna.maxRosterSize, { useUiV2: normalized });
+};
 
 const spawnTierQueue = createPlayerSpawnTierQueue({
   getTier: () => getSaunaTier(currentTierId),
@@ -987,11 +1041,15 @@ const spawnTierQueue = createPlayerSpawnTierQueue({
 let lastPersistedRosterCap = initialRosterCap;
 let lastPersistedTierId = currentTierId;
 
-const persistSaunaSettings = (cap: number): void => {
-  saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId });
+const persistSaunaSettings = (cap: number, overrides?: { useUiV2?: boolean }): void => {
+  if (typeof overrides?.useUiV2 === 'boolean') {
+    useUiV2 = overrides.useUiV2;
+  }
+  saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId, useUiV2 });
   lastPersistedRosterCap = cap;
   lastPersistedTierId = currentTierId;
 };
+
 
 const getTierContext = (): SaunaTierContext => resolveTierContext();
 
