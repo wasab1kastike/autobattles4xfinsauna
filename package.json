@@ -14,7 +14,11 @@
     "simulate": "vite-node scripts/simulate.ts"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "autoprefixer": "^10.4.20",
     "jsdom": "^27.0.0",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
     "vite-node": "^3.2.4",
