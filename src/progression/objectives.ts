@@ -3,11 +3,14 @@ import type { HexMap } from '../hexmap.ts';
 import type { BuildingType } from '../hex/HexTile.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexTile } from '../hex/HexTile.ts';
+import type { Sauna } from '../sim/sauna.ts';
+import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
+import type { Unit } from '../units/Unit.ts';
 import { eventBus } from '../events';
 
 export type ObjectiveOutcome = 'win' | 'lose';
 
-export type ObjectiveCause = 'strongholds' | 'rosterWipe' | 'bankruptcy';
+export type ObjectiveCause = 'strongholds' | 'rosterWipe' | 'bankruptcy' | 'saunaDestroyed';
 
 export interface StrongholdProgress {
   total: number;
@@ -33,7 +36,15 @@ export interface ObjectiveProgress {
   strongholds: StrongholdProgress;
   roster: RosterProgress;
   economy: EconomyProgress;
+  sauna: SaunaProgress;
   startedAt: number;
+}
+
+export interface SaunaProgress {
+  maxHealth: number;
+  health: number;
+  destroyed: boolean;
+  destroyedAt: number | null;
 }
 
 export interface ResourceSummary {
@@ -74,6 +85,8 @@ export interface ObjectiveTrackerOptions {
    * The tracker calls this lazily when roster-affecting events fire.
    */
   getRosterCount: () => number;
+  /** Reference to the player's sauna for defeat tracking. */
+  sauna?: Sauna | null;
   /** Override the building types considered strongholds (defaults to `city`). */
   strongholdTypes?: readonly BuildingType[];
   /** Delay (ms) before a roster wipe causes defeat. */
@@ -99,6 +112,7 @@ function cloneProgress(progress: ObjectiveProgress): ObjectiveProgress {
     strongholds: { ...progress.strongholds },
     roster: { ...progress.roster },
     economy: { ...progress.economy },
+    sauna: { ...progress.sauna },
     startedAt: progress.startedAt
   });
 }
@@ -120,6 +134,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
   private readonly state: GameState;
   private readonly map: HexMap;
   private readonly getRosterCount: () => number;
+  private readonly sauna: Sauna | null;
   private readonly strongholdTypes: Set<BuildingType>;
   private readonly rosterGraceMs: number;
   private readonly bankruptcyGraceMs: number;
@@ -133,6 +148,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
   private bankruptcyTimeout: ReturnType<typeof setTimeout> | null = null;
   private bankruptSince: number | null = null;
   private wipeSince: number | null = null;
+  private saunaDestroyedAt: number | null = null;
   private resolution: ObjectiveResolution | null = null;
   private disposed = false;
 
@@ -141,6 +157,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     this.state = options.state;
     this.map = options.map;
     this.getRosterCount = options.getRosterCount;
+    this.sauna = options.sauna ?? null;
     const strongholdTypes = options.strongholdTypes?.length
       ? options.strongholdTypes
       : DEFAULT_STRONGHOLDS;
@@ -164,6 +181,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
         bankruptSince: null,
         bankruptDurationMs: 0
       },
+      sauna: this.createSaunaProgress(),
       startedAt: this.timeSource()
     } satisfies ObjectiveProgress;
 
@@ -171,6 +189,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     this.attachMapListener();
     this.attachEventListeners();
     this.emitProgress();
+    this.evaluateResolution();
   }
 
   onProgress(listener: ObjectiveProgressListener): void {
@@ -215,6 +234,8 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     eventBus.off('unitDied', this.handleUnitDied);
     eventBus.off('unitSpawned', this.handleUnitSpawned);
     eventBus.off('resourceChanged', this.handleResourceChanged);
+    eventBus.off('saunaDamaged', this.handleSaunaDamaged);
+    eventBus.off('saunaDestroyed', this.handleSaunaDestroyed);
   }
 
   private bootstrapStrongholds(): void {
@@ -254,6 +275,8 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     eventBus.on('unitDied', this.handleUnitDied);
     eventBus.on('unitSpawned', this.handleUnitSpawned);
     eventBus.on('resourceChanged', this.handleResourceChanged);
+    eventBus.on('saunaDamaged', this.handleSaunaDamaged);
+    eventBus.on('saunaDestroyed', this.handleSaunaDestroyed);
   }
 
   private readonly handleUnitDied = ({ unitFaction }: { unitFaction: string }): void => {
@@ -302,6 +325,23 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
       this.clearBankruptcyTimer();
     }
     this.emitProgress();
+  };
+
+  private readonly handleSaunaDamaged = ({ remainingHealth }: SaunaDamagedPayload): void => {
+    if (this.disposed) {
+      return;
+    }
+    this.updateSaunaSnapshot(remainingHealth);
+    this.emitProgress();
+  };
+
+  private readonly handleSaunaDestroyed = (_payload: SaunaDestroyedPayload): void => {
+    if (this.disposed) {
+      return;
+    }
+    this.markSaunaDestroyed();
+    this.emitProgress();
+    this.resolve('lose', 'saunaDestroyed');
   };
 
   private startBankruptcyTimer(): void {
@@ -400,6 +440,10 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     if (this.resolution) {
       return;
     }
+    if (this.progress.sauna.destroyed) {
+      this.resolve('lose', 'saunaDestroyed');
+      return;
+    }
     if (
       this.progress.strongholds.total > 0 &&
       this.progress.strongholds.remaining === 0
@@ -427,7 +471,8 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     const summary = cloneProgress({
       ...this.progress,
       roster: { ...this.progress.roster, wipeSince: this.wipeSince },
-      economy: { ...this.progress.economy, bankruptSince: this.bankruptSince }
+      economy: { ...this.progress.economy, bankruptSince: this.bankruptSince },
+      sauna: { ...this.progress.sauna, destroyedAt: this.saunaDestroyedAt }
     });
     const rewards = this.computeRewards();
     this.resolution = Object.freeze({
@@ -497,6 +542,56 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
       return false;
     }
     return this.strongholdTypes.has(building);
+  }
+
+  private createSaunaProgress(): SaunaProgress {
+    if (!this.sauna) {
+      return { maxHealth: 0, health: 0, destroyed: false, destroyedAt: null };
+    }
+    const maxHealth = Math.max(0, Math.round(this.sauna.maxHealth ?? 0));
+    const health = Math.max(0, Math.round(this.sauna.health ?? 0));
+    const destroyed = Boolean(this.sauna.destroyed) || health <= 0;
+    if (destroyed && this.saunaDestroyedAt === null) {
+      this.saunaDestroyedAt = this.timeSource();
+    }
+    return {
+      maxHealth,
+      health,
+      destroyed,
+      destroyedAt: destroyed ? this.saunaDestroyedAt : null
+    } satisfies SaunaProgress;
+  }
+
+  private updateSaunaSnapshot(remainingHealth: number): void {
+    const normalizedRemaining = Number.isFinite(remainingHealth)
+      ? Math.max(0, Math.round(remainingHealth))
+      : 0;
+    const saunaMax = this.sauna ? Math.max(0, Math.round(this.sauna.maxHealth ?? 0)) : 0;
+    const currentMax = this.progress.sauna.maxHealth;
+    const nextMax = Math.max(currentMax, saunaMax, normalizedRemaining);
+    this.progress.sauna.maxHealth = nextMax;
+    const clamped = Math.max(0, Math.min(nextMax, normalizedRemaining));
+    this.progress.sauna.health = clamped;
+    if (clamped > 0) {
+      this.progress.sauna.destroyed = false;
+      this.progress.sauna.destroyedAt = null;
+      this.saunaDestroyedAt = null;
+    }
+  }
+
+  private markSaunaDestroyed(): void {
+    if (this.sauna) {
+      const saunaMax = Math.max(0, Math.round(this.sauna.maxHealth ?? 0));
+      if (saunaMax > this.progress.sauna.maxHealth) {
+        this.progress.sauna.maxHealth = saunaMax;
+      }
+    }
+    this.progress.sauna.health = 0;
+    this.progress.sauna.destroyed = true;
+    if (this.saunaDestroyedAt === null) {
+      this.saunaDestroyedAt = this.timeSource();
+    }
+    this.progress.sauna.destroyedAt = this.saunaDestroyedAt;
   }
 }
 
