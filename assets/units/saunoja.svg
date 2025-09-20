@@ -1,15 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <title>Saunoja</title>
-  <g fill="#0F172A">
-    <circle cx="44" cy="34" r="12" />
-    <path d="M30 56C30 45.95 38.95 37 49 37H77C87.05 37 96 45.95 96 56V66C96 76.05 87.05 85 77 85H66L48.83 102.17C46.03 104.97 41.47 104.97 38.67 102.17L36 99.49C33.2 96.69 33.2 92.13 36 89.33L46 79.33V66C46 60.48 50.48 56 56 56H60C63.31 56 66 58.69 66 62C66 65.31 63.31 68 60 68H54V74H50C38.95 74 30 65.05 30 56Z" />
-    <path d="M16 88H112C116.42 88 120 91.58 120 96V104H8V96C8 91.58 11.58 88 16 88Z" />
-    <rect x="24" y="104" width="12" height="16" rx="4" />
-    <rect x="92" y="104" width="12" height="16" rx="4" />
-  </g>
-  <g fill="none" stroke="#0F172A" stroke-linecap="round" stroke-linejoin="round" stroke-width="6">
-    <path d="M80 70C74.67 62.67 74.67 56 80 50C85.33 44 85.33 37.33 80 30" />
-    <path d="M92 72C84 62 84 54 92 46C100 38 100 30 92 22" />
-    <path d="M104 76C94 64 94 54 104 44C114 34 114 24 104 14" />
-  </g>
-</svg>
+version https://git-lfs.github.com/spec/v1
+oid sha256:ef7d1c2ee7a321904b75e5a8298d6e659cfbc0545c14bb929af5e25d73c91b7a
+size 11318
