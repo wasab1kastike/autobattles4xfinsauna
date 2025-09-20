@@ -156,4 +156,25 @@ describe('createStashPanel', () => {
     readyButton.dispatchEvent(new Event('click'));
     expect(callbacks.onCollectionChange).toHaveBeenCalledWith('inventory');
   });
+
+  it('falls back to focusing without options when preventScroll throws', () => {
+    const panel = createStashPanel({});
+    container.appendChild(panel.element);
+
+    const focusMock = vi
+      .fn<HTMLElement['focus']>()
+      .mockImplementation((options?: FocusOptions) => {
+        if (options) {
+          throw new TypeError('preventScroll unsupported');
+        }
+      });
+
+    panel.element.focus = focusMock as typeof panel.element.focus;
+
+    panel.focus();
+
+    expect(focusMock).toHaveBeenCalledTimes(2);
+    expect(focusMock.mock.calls[0][0]).toEqual({ preventScroll: true });
+    expect(focusMock.mock.calls[1]).toEqual([]);
+  });
 });
