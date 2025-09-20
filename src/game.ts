@@ -1657,7 +1657,14 @@ export function draw(): void {
   render(ctx, mapRenderer, assets.images, renderUnits, selected, {
     saunojas: {
       units: saunojas,
-      draw: drawSaunojas
+      draw: drawSaunojas,
+      resolveRenderCoord: (attendant) => {
+        const unit = getAttachedUnitFor(attendant);
+        if (!unit) {
+          return null;
+        }
+        return unit.renderCoord ?? unit.coord;
+      }
     },
     sauna,
     saunaVision,

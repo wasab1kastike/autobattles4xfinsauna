@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sync Saunoja overlay icons with animated render coordinates so attendant
+  badges glide alongside their battlefield units, threading the callback through
+  the draw pipeline and extending Vitest coverage for both the renderer and
+  roster synchronization.
+
 - Keep NG+ roster unlock spawn limits from dropping below the base sauna tier
   capacity so fresh profiles can queue three attendants while higher unlocks
   continue to respect the active tier ceiling.

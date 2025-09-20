@@ -1,4 +1,5 @@
 import { HEX_R, pathHex } from '../hex/index.ts';
+import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Saunoja } from './saunoja.ts';
 import { drawHP, drawHitFlash, drawSteam } from './visualHelpers.ts';
 import { getSpriteCenter } from '../render/units/draw.ts';
@@ -93,12 +94,19 @@ export interface DrawSaunojasOptions {
   originY?: number;
   hexRadius?: number;
   zoom?: number;
+  resolveRenderCoord?: (saunoja: Saunoja) => AxialCoord | null | undefined;
 }
 
 export function drawSaunojas(
   ctx: CanvasRenderingContext2D,
   saunojas: Saunoja[],
-  { originX = 0, originY = 0, hexRadius = HEX_R, zoom = 1 }: DrawSaunojasOptions = {}
+  {
+    originX = 0,
+    originY = 0,
+    hexRadius = HEX_R,
+    zoom = 1,
+    resolveRenderCoord
+  }: DrawSaunojasOptions = {}
 ): void {
   if (!ctx || !Array.isArray(saunojas) || saunojas.length === 0) {
     return;
@@ -111,19 +119,32 @@ export function drawSaunojas(
 
   const radius = Number.isFinite(hexRadius) && hexRadius > 0 ? hexRadius : HEX_R;
   const clipRadius = radius * 0.98;
-  const renderable = [...saunojas].sort((a, b) => {
-    if (a.coord.r !== b.coord.r) {
-      return a.coord.r - b.coord.r;
-    }
-    if (a.coord.q !== b.coord.q) {
-      return a.coord.q - b.coord.q;
-    }
-    return a.id.localeCompare(b.id);
-  });
+  const renderable = saunojas
+    .map((unit) => {
+      const candidate = resolveRenderCoord?.(unit);
+      const validCandidate =
+        candidate &&
+        typeof candidate === 'object' &&
+        Number.isFinite(candidate.q) &&
+        Number.isFinite(candidate.r);
+      const coord: AxialCoord = validCandidate
+        ? { q: candidate.q, r: candidate.r }
+        : unit.coord;
+      return { unit, coord };
+    })
+    .sort((a, b) => {
+      if (a.coord.r !== b.coord.r) {
+        return a.coord.r - b.coord.r;
+      }
+      if (a.coord.q !== b.coord.q) {
+        return a.coord.q - b.coord.q;
+      }
+      return a.unit.id.localeCompare(b.unit.id);
+    });
 
-  for (const unit of renderable) {
+  for (const { unit, coord } of renderable) {
     const { x: centerX, y: centerY } = getSpriteCenter({
-      coord: unit.coord,
+      coord,
       hexSize: radius,
       origin: { x: originX, y: originY },
       zoom,
