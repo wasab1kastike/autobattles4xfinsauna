@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Rebuild the command console combat log with structured event payloads, polished
+  filter chips with persisted preferences, spawn aggregation, and Vitest
+  coverage for both the log store and UI filter interactions.
+
 - Introduce a bottom-aligned React/Tailwind action bar that anchors to the HUD
   grid, hosts Sisu Burst, Torille!, Build, Sound, and Pause controls with
   hotkeys plus resource-aware shake/pulse feedback, trims the legacy top bar to

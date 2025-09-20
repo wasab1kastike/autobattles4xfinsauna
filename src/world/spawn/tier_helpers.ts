@@ -1,4 +1,5 @@
 import type { SaunaTier } from '../../sauna/tiers.ts';
+import type { LogEventPayload } from '../../ui/logging.ts';
 
 function clampCount(value: number): number {
   if (!Number.isFinite(value)) {
@@ -35,7 +36,7 @@ export interface PlayerSpawnTierQueueOptions {
   getTier(): SaunaTier;
   getRosterLimit(): number;
   getRosterCount(): number;
-  log?: (message: string) => void;
+  log?: (event: LogEventPayload) => void;
   queueCapacity?: number;
 }
 
@@ -52,9 +53,16 @@ export function createPlayerSpawnTierQueue(
   let queued = 0;
   const capacity = Math.max(0, clampCount(options.queueCapacity ?? 2));
 
-  const log = (message: string): void => {
+  const emitLog = (message: string, metadata?: Record<string, unknown>): void => {
     if (message && typeof options.log === 'function') {
-      options.log(message);
+      options.log({
+        type: 'system',
+        message,
+        metadata: {
+          context: 'spawn-queue',
+          ...metadata
+        }
+      });
     }
   };
 
@@ -83,11 +91,22 @@ export function createPlayerSpawnTierQueue(
       }
       queued -= 1;
       if (queued <= 0) {
-        log(`The benches of ${snapshot.tierName} exhale — queued attendants take the field.`);
+        emitLog(`The benches of ${snapshot.tierName} exhale — queued attendants take the field.`, {
+          tierId: snapshot.tierId,
+          tierName: snapshot.tierName,
+          queue: queued,
+          capacity
+        });
       } else {
-        log(
+        emitLog(
           `${snapshot.tierName} deploys a queued attendant. ` +
-            `Relief teams remaining: ${formatQueueStatus(queued, capacity)}.`
+            `Relief teams remaining: ${formatQueueStatus(queued, capacity)}.`,
+          {
+            tierId: snapshot.tierId,
+            tierName: snapshot.tierName,
+            queue: queued,
+            capacity
+          }
         );
       }
       return true;
@@ -100,15 +119,27 @@ export function createPlayerSpawnTierQueue(
       if (capacity > 0) {
         queued = Math.min(queued, capacity);
       }
-      log(
+      emitLog(
         `${snapshot.tierName} keeps the relief attendant on standby ` +
-          `(${formatQueueStatus(queued, capacity)} ready).`
+          `(${formatQueueStatus(queued, capacity)} ready).`,
+        {
+          tierId: snapshot.tierId,
+          tierName: snapshot.tierName,
+          queue: queued,
+          capacity
+        }
       );
     },
     queueBlockedSpawn: (snapshot, consumeTrigger) => {
       if (capacity > 0 && queued >= capacity) {
-        log(
-          `${snapshot.tierName} cannot hold more relief attendants — clear a slot to vent the pressure.`
+        emitLog(
+          `${snapshot.tierName} cannot hold more relief attendants — clear a slot to vent the pressure.`,
+          {
+            tierId: snapshot.tierId,
+            tierName: snapshot.tierName,
+            queue: queued,
+            capacity
+          }
         );
         return false;
       }
@@ -120,21 +151,38 @@ export function createPlayerSpawnTierQueue(
       if (capacity > 0) {
         queued = Math.min(queued, capacity);
       }
-      log(
+      emitLog(
         `${snapshot.tierName} queues a ready attendant in the wings ` +
-          `(${formatQueueStatus(queued, capacity)} poised).`
+          `(${formatQueueStatus(queued, capacity)} poised).`,
+        {
+          tierId: snapshot.tierId,
+          tierName: snapshot.tierName,
+          queue: queued,
+          capacity
+        }
       );
       return true;
     },
     onSpawnResolved: (snapshot, context) => {
       if (context.usedQueue) {
         if (queued > 0) {
-          log(
+          emitLog(
             `${snapshot.tierName} still has relief attendants waiting ` +
-              `(${formatQueueStatus(queued, capacity)}).`
+              `(${formatQueueStatus(queued, capacity)}).`,
+            {
+              tierId: snapshot.tierId,
+              tierName: snapshot.tierName,
+              queue: queued,
+              capacity
+            }
           );
         } else {
-          log(`${snapshot.tierName} has cleared the relief queue.`);
+          emitLog(`${snapshot.tierName} has cleared the relief queue.`, {
+            tierId: snapshot.tierId,
+            tierName: snapshot.tierName,
+            queue: queued,
+            capacity
+          });
         }
       }
     },
@@ -143,12 +191,17 @@ export function createPlayerSpawnTierQueue(
         return;
       }
       queued = 0;
-      if (reason === 'tier-change') {
-        const tier = options.getTier();
-        if (tier) {
-          log(`${tier.name} ushers its queued attendants into the new hall.`);
+        if (reason === 'tier-change') {
+          const tier = options.getTier();
+          if (tier) {
+            emitLog(`${tier.name} ushers its queued attendants into the new hall.`, {
+              tierId: tier.id,
+              tierName: tier.name,
+              queue: queued,
+              capacity
+            });
+          }
         }
-      }
     }
   } satisfies PlayerSpawnTierHelpers;
 
