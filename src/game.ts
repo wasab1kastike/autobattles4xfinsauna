@@ -753,7 +753,7 @@ const clock = new GameClock(1000, (deltaMs) => {
     getRosterCount: getActiveRosterCount
   });
   enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile);
-  battleManager.tick(units, dtSeconds);
+  battleManager.tick(units, dtSeconds, sauna);
   advanceModifiers(dtSeconds);
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
@@ -885,6 +885,7 @@ objectiveTracker = createObjectiveTracker({
   state,
   map,
   getRosterCount: getActiveRosterCount,
+  sauna,
   rosterWipeGraceMs: 8000,
   bankruptcyGraceMs: 12000
 });

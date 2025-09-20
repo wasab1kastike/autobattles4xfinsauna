@@ -204,7 +204,7 @@ function runSeededSimulation(seed: number): SimulationRow[] {
       });
 
       enemySpawner.update(1, units, addEnemyUnit, pickEdge);
-      battleManager.tick(units, 1);
+      battleManager.tick(units, 1, sauna);
 
       const beer = state.getResource(Resource.SAUNA_BEER);
       const roster = units.filter((unit) => unit.faction === 'player' && !unit.isDead()).length;

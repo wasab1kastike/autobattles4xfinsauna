@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Track sauna structural health in objectives, piping combat-driven
+  `saunaDestroyed` defeat events through the tracker and combat manager so runs
+  end immediately when enemies raze the structure, with progress summaries now
+  reporting sauna durability.
 - Prevent Saunoja overlays from double-rendering player combatants by omitting
   player-faction units from battlefield draw passes whenever attendants are
   projected on top of the map.

@@ -5,6 +5,7 @@ import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
 import { TerrainId } from '../map/terrain.ts';
 import { getNeighbors } from '../hex/HexUtils.ts';
+import { createSauna } from '../sim/sauna.ts';
 
 function seedTiles(map: HexMap, coords: { q: number; r: number }[]): void {
   for (const coord of coords) {
@@ -185,6 +186,47 @@ describe('BattleManager', () => {
 
     expect(unit.coord).toEqual({ q: 0, r: 0 });
     expect((unit as any).cachedPath).toBeUndefined();
+  });
+
+  it('allows enemy attacks to destroy the sauna and emits defeat events', () => {
+    const map = new HexMap(3, 3);
+    seedTiles(map, [{ q: 0, r: 0 }]);
+    const attacker = createUnit('enemy-1', { q: 0, r: 0 }, 'enemy', {
+      health: 10,
+      attackDamage: 15,
+      attackRange: 1,
+      movementRange: 0
+    });
+    const sauna = createSauna({ q: 0, r: 0 }, undefined, { maxHealth: 10 });
+
+    const manager = new BattleManager(map);
+
+    const saunaDamageEvents: any[] = [];
+    const saunaDestroyedEvents: any[] = [];
+    const onSaunaDamaged = (payload: any) => saunaDamageEvents.push(payload);
+    const onSaunaDestroyed = (payload: any) => saunaDestroyedEvents.push(payload);
+    eventBus.on('saunaDamaged', onSaunaDamaged);
+    eventBus.on('saunaDestroyed', onSaunaDestroyed);
+
+    manager.tick([attacker], 1, sauna);
+
+    eventBus.off('saunaDamaged', onSaunaDamaged);
+    eventBus.off('saunaDestroyed', onSaunaDestroyed);
+
+    expect(sauna.destroyed).toBe(true);
+    expect(sauna.health).toBe(0);
+    expect(saunaDamageEvents).toHaveLength(1);
+    expect(saunaDamageEvents[0]).toMatchObject({
+      attackerId: 'enemy-1',
+      attackerFaction: 'enemy',
+      amount: 10,
+      remainingHealth: 0
+    });
+    expect(saunaDestroyedEvents).toHaveLength(1);
+    expect(saunaDestroyedEvents[0]).toMatchObject({
+      attackerId: 'enemy-1',
+      attackerFaction: 'enemy'
+    });
   });
 });
 
