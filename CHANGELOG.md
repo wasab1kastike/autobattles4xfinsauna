@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Script the end screen to narrate sauna destruction defeats with a bespoke
+  message and cover the flow with a Vitest DOM check so the glassy overlay
+  always reflects the sauna's fall.
+ 
 - Track sauna structural health in objectives, piping combat-driven
   `saunaDestroyed` defeat events through the tracker and combat manager so runs
   end immediately when enemies raze the structure, with progress summaries now
