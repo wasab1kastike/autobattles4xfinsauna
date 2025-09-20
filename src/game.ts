@@ -6,7 +6,7 @@ import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
-import { eventBus } from './events';
+import { eventBus, eventScheduler } from './events';
 import { POLICY_EVENTS, type PolicyAppliedEvent } from './data/policies.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
@@ -1144,6 +1144,7 @@ const enemySpawner = new EnemySpawner({
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
   state.tick();
+  eventScheduler.tick(dtSeconds, { state });
   const rampModifiers: EnemyScalingSnapshot = state.getEnemyScalingSnapshot();
   const rosterCap = updateRosterCap(sauna.maxRosterSize);
   runEconomyTick({
