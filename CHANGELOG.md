@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Nest the loot toast stack inside the HUD action column, refresh its
+  glassmorphism treatment for responsive layouts, and keep loot notices from
+  covering the command console across desktop and mobile viewports.
+
 - Elevate the stash drawer layering so it sits above the command console, gating
   pointer interactivity to the open state and keeping the right rail fully
   covered on desktop and mobile layouts.
