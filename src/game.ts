@@ -44,7 +44,14 @@ import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats, applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
-import type { ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
+import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
+import {
+  getLevelProgress,
+  getTotalStatAwards,
+  getStatAwardsForLevel,
+  getLevelForExperience,
+  type StatAwards
+} from './progression/experiencePlan.ts';
 import {
   createNgPlusRng,
   ensureNgPlusRunState,
@@ -87,6 +94,12 @@ import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
+
+const XP_STANDARD_KILL = 6;
+const XP_ELITE_KILL = 40;
+const XP_BOSS_KILL = 250;
+const XP_OBJECTIVE_COMPLETION = 200;
+const MAX_LEVEL = getLevelForExperience(Number.MAX_SAFE_INTEGER);
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -152,6 +165,7 @@ let unitFx: UnitFxManager | null = null;
 let objectiveTracker: ObjectiveTracker | null = null;
 let endScreen: EndScreenController | null = null;
 let tutorial: TutorialController | null = null;
+let lastStrongholdsDestroyed = 0;
 
 function getAttachedUnitFor(attendant: Saunoja): Unit | null {
   const attachedUnitId = saunojaToUnit.get(attendant.id);
@@ -197,6 +211,196 @@ function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly Equipped
   applyEffectiveStats(attendant, effective);
   return effective;
 }
+
+function buildProgression(attendant: Saunoja): RosterEntry['progression'] {
+  const progress = getLevelProgress(attendant.xp);
+  return {
+    level: progress.level,
+    xp: Math.max(0, Math.floor(attendant.xp)),
+    xpIntoLevel: progress.xpIntoLevel,
+    xpForNext: progress.xpForNext,
+    progress: progress.progressToNext,
+    statBonuses: getTotalStatAwards(progress.level)
+  } satisfies RosterEntry['progression'];
+}
+
+type ExperienceSource = 'kill' | 'objective' | 'test';
+
+type ExperienceContext = {
+  source: ExperienceSource;
+  label?: string;
+  elite?: boolean;
+  boss?: boolean;
+};
+
+type ExperienceGrantResult = {
+  xpAwarded: number;
+  totalXp: number;
+  level: number;
+  levelsGained: number;
+  statBonuses: StatAwards;
+};
+
+function describeStatBonuses(bonuses: StatAwards): string {
+  const parts: string[] = [];
+  if (bonuses.vigor > 0) {
+    parts.push(`+${bonuses.vigor} Vigor`);
+  }
+  if (bonuses.focus > 0) {
+    parts.push(`+${bonuses.focus} Focus`);
+  }
+  if (bonuses.resolve > 0) {
+    parts.push(`+${bonuses.resolve} Resolve`);
+  }
+  return parts.length > 0 ? parts.join(', ') : '+0 Vigor, +0 Focus, +0 Resolve';
+}
+
+function grantSaunojaExperience(
+  attendant: Saunoja,
+  amount: number,
+  context: ExperienceContext
+): ExperienceGrantResult | null {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+  const before = getLevelProgress(attendant.xp);
+  const nextXp = Math.max(0, Math.floor(attendant.xp + amount));
+  if (nextXp === attendant.xp) {
+    return null;
+  }
+  attendant.xp = nextXp;
+  const after = getLevelProgress(attendant.xp);
+  const levelsGained = Math.max(0, after.level - before.level);
+  const statBonuses: StatAwards = { vigor: 0, focus: 0, resolve: 0 };
+  let bonusHealth = 0;
+  if (levelsGained > 0) {
+    for (let level = before.level + 1; level <= after.level && level <= MAX_LEVEL; level++) {
+      const award = getStatAwardsForLevel(level);
+      statBonuses.vigor += award.vigor;
+      statBonuses.focus += award.focus;
+      statBonuses.resolve += award.resolve;
+
+      const baseHealth = Number.isFinite(attendant.baseStats.health)
+        ? attendant.baseStats.health
+        : attendant.effectiveStats.health;
+      attendant.baseStats.health = Math.max(1, Math.round(baseHealth + award.vigor));
+
+      const baseAttack = Number.isFinite(attendant.baseStats.attackDamage)
+        ? attendant.baseStats.attackDamage
+        : attendant.effectiveStats.attackDamage;
+      attendant.baseStats.attackDamage = Math.max(0, Math.round(baseAttack + award.focus));
+
+      const currentDefense = Number.isFinite(attendant.baseStats.defense)
+        ? attendant.baseStats.defense ?? 0
+        : attendant.effectiveStats.defense ?? 0;
+      const nextDefense = currentDefense + award.resolve;
+      attendant.baseStats.defense = nextDefense > 0 ? nextDefense : undefined;
+    }
+    bonusHealth = statBonuses.vigor;
+  }
+
+  if (bonusHealth > 0) {
+    attendant.hp += bonusHealth;
+  }
+
+  recomputeEffectiveStats(attendant);
+
+  const attachedUnit = getAttachedUnitFor(attendant);
+  if (attachedUnit) {
+    attachedUnit.setExperience(attendant.xp);
+  }
+
+  if (context.source === 'kill') {
+    const slayerName = attendant.name?.trim() || 'Our champion';
+    const foeLabel = context.label?.trim() || 'their foe';
+    const flourish = context.boss ? ' Boss toppled!' : context.elite ? ' Elite threat routed!' : '';
+    log(`${slayerName} earns ${amount} XP for defeating ${foeLabel}.${flourish}`);
+  }
+
+  if (levelsGained > 0) {
+    const summary = describeStatBonuses(statBonuses);
+    const unitName = attendant.name?.trim() || 'Our champion';
+    log(`${unitName} reaches Level ${after.level}! ${summary}.`);
+  }
+
+  return {
+    xpAwarded: amount,
+    totalXp: attendant.xp,
+    level: after.level,
+    levelsGained,
+    statBonuses
+  } satisfies ExperienceGrantResult;
+}
+
+function grantExperienceToUnit(
+  unit: Unit | null,
+  amount: number,
+  context: ExperienceContext
+): ExperienceGrantResult | null {
+  if (!unit) {
+    return null;
+  }
+  const attendant = unitToSaunoja.get(unit.id);
+  if (!attendant) {
+    return null;
+  }
+  return grantSaunojaExperience(attendant, amount, context);
+}
+
+function grantExperienceToRoster(amount: number, context: ExperienceContext): boolean {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return false;
+  }
+  let updated = false;
+  for (const attendant of saunojas) {
+    const result = grantSaunojaExperience(attendant, amount, context);
+    if (result) {
+      updated = true;
+    }
+  }
+  return updated;
+}
+
+function calculateKillExperience(target: Unit | null): {
+  xp: number;
+  elite: boolean;
+  boss: boolean;
+} {
+  if (!target) {
+    return { xp: XP_STANDARD_KILL, elite: false, boss: false };
+  }
+  const typeLabel = target.type?.toLowerCase?.() ?? '';
+  const boss = typeLabel.includes('boss');
+  if (boss) {
+    return { xp: XP_BOSS_KILL, elite: true, boss: true };
+  }
+  const elite = isEliteUnit(target);
+  if (elite) {
+    return { xp: XP_ELITE_KILL, elite: true, boss: false };
+  }
+  return { xp: XP_STANDARD_KILL, elite: false, boss: false };
+}
+
+const handleObjectiveProgress = (progress: ObjectiveProgress): void => {
+  if (!progress) {
+    return;
+  }
+  const destroyed = Math.max(0, Math.floor(progress.strongholds.destroyed));
+  if (destroyed > lastStrongholdsDestroyed) {
+    const delta = destroyed - lastStrongholdsDestroyed;
+    const xpAward = XP_OBJECTIVE_COMPLETION * delta;
+    if (grantExperienceToRoster(xpAward, { source: 'objective', label: 'stronghold' })) {
+      saveUnits();
+      updateRosterDisplay();
+      log(`Strategists toast the captured stronghold — roster gains ${xpAward} XP.`);
+    }
+  }
+  if (destroyed < lastStrongholdsDestroyed) {
+    lastStrongholdsDestroyed = destroyed;
+    return;
+  }
+  lastStrongholdsDestroyed = destroyed;
+};
 
 const INVENTORY_STAT_KEYS: readonly InventoryStatId[] = Object.freeze([
   'health',
@@ -545,6 +749,7 @@ function claimSaunoja(
 
   updateBaseStatsFromUnit(match, unit);
   applyEffectiveStats(match, match.effectiveStats);
+  unit.setExperience(match.xp);
 
   const personaMissing = isSaunojaPersonaMissing(match);
   if (created || personaMissing) {
@@ -951,6 +1156,8 @@ objectiveTracker = createObjectiveTracker({
   rosterWipeGraceMs: 8000,
   bankruptcyGraceMs: 12000
 });
+lastStrongholdsDestroyed = objectiveTracker.getProgress().strongholds.destroyed;
+objectiveTracker.onProgress(handleObjectiveProgress);
 objectiveTracker.onResolution(handleObjectiveResolution);
 function getSelectedInventoryContext(): InventoryComparisonContext | null {
   const selected = saunojas.find((unit) => unit.selected) ?? null;
@@ -1227,10 +1434,12 @@ eventBus.on('policyApplied', onPolicyApplied);
 
 const onUnitDied = ({
   unitId,
+  attackerId,
   attackerFaction,
   unitFaction
 }: {
   unitId: string;
+  attackerId?: string;
   attackerFaction?: string;
   unitFaction: string;
 }) => {
@@ -1257,6 +1466,23 @@ const onUnitDied = ({
   }
   const label = fallen ? describeUnit(fallen, persona) : `unit ${unitId}`;
 
+  let xpUpdated = false;
+  if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
+    const attackerUnit = attackerId ? unitsById.get(attackerId) ?? null : null;
+    const { xp: xpReward, elite, boss } = calculateKillExperience(fallen);
+    if (xpReward > 0) {
+      const result = grantExperienceToUnit(attackerUnit, xpReward, {
+        source: 'kill',
+        label,
+        elite,
+        boss
+      });
+      if (result) {
+        xpUpdated = true;
+      }
+    }
+  }
+
   if (idx !== -1) {
     if (fallen) {
       animator.clear(fallen, { snap: true });
@@ -1266,10 +1492,10 @@ const onUnitDied = ({
     detachSaunoja(unitId);
     draw();
   }
-  if (rosterUpdated) {
+  if (rosterUpdated || xpUpdated) {
     saveUnits();
   }
-  if (unitFaction === 'player') {
+  if (unitFaction === 'player' || xpUpdated) {
     updateRosterDisplay();
   }
   if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
@@ -1311,8 +1537,10 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   running = false;
+  objectiveTracker?.offProgress(handleObjectiveProgress);
   objectiveTracker?.dispose();
   objectiveTracker = null;
+  lastStrongholdsDestroyed = 0;
   if (endScreen) {
     endScreen.destroy();
     endScreen = null;
@@ -1440,6 +1668,25 @@ export function __getAttachedUnitIdForTest(attendantId: string): string | undefi
   return saunojaToUnit.get(attendantId);
 }
 
+export function __grantExperienceForTest(unitId: string, amount: number): void {
+  const unit = unitsById.get(unitId) ?? null;
+  if (!unit) {
+    return;
+  }
+  const result = grantExperienceToUnit(unit, amount, { source: 'test', label: 'test' });
+  if (result) {
+    saveUnits();
+    updateRosterDisplay();
+  }
+}
+
+export function __grantRosterExperienceForTest(amount: number): void {
+  if (grantExperienceToRoster(amount, { source: 'test', label: 'test' })) {
+    saveUnits();
+    updateRosterDisplay();
+  }
+}
+
 function getActiveRosterCount(): number {
   const seen = new Set<string>();
   for (const unit of units) {
@@ -1489,6 +1736,8 @@ function buildRosterEntries(): RosterEntry[] {
     const upkeep = Math.max(0, Math.round(attendant.upkeep));
     const status: RosterEntry['status'] =
       currentHealth <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
+
+    const progression = buildProgression(attendant);
 
     const items = attendant.items.map((item) => ({ ...item }));
     const modifiers = attendant.modifiers.map((modifier) => ({ ...modifier }));
@@ -1551,6 +1800,7 @@ function buildRosterEntries(): RosterEntry[] {
         shield: shield > 0 ? shield : undefined
       },
       baseStats: rosterBase,
+      progression,
       equipment: equipmentSlots,
       items,
       modifiers
@@ -1612,7 +1862,8 @@ function buildRosterSummary(): RosterHudSummary {
       id: featured.id,
       name: featured.name || 'Saunoja',
       traits: [...featured.traits],
-      upkeep: Math.max(0, Math.round(featured.upkeep))
+      upkeep: Math.max(0, Math.round(featured.upkeep)),
+      progression: buildProgression(featured)
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

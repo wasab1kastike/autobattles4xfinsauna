@@ -25,7 +25,15 @@ describe('rosterHUD', () => {
           id: 'saunoja-7',
           name: 'Aurora Kallio',
           traits: ['Brave', 'Sage'],
-          upkeep: 17
+          upkeep: 17,
+          progression: {
+            level: 4,
+            xp: 700,
+            xpIntoLevel: 40,
+            xpForNext: 320,
+            progress: 40 / 320,
+            statBonuses: { vigor: 13, focus: 7, resolve: 5 }
+          }
         }
       });
 
@@ -40,6 +48,17 @@ describe('rosterHUD', () => {
 
       const name = container.querySelector('.saunoja-card__name');
       expect(name?.textContent).toBe('Aurora Kallio');
+
+      const levelBadge = container.querySelector('.saunoja-card__level-value');
+      expect(levelBadge?.textContent).toBe('4');
+
+      const xpRow = container.querySelector('.saunoja-card__xp');
+      expect(xpRow?.textContent).toContain('40 / 320');
+
+      const callouts = container.querySelector('.saunoja-card__callouts');
+      expect(callouts?.textContent).toContain('+13 Vigor');
+      expect(callouts?.textContent).toContain('+7 Focus');
+      expect(callouts?.textContent).toContain('+5 Resolve');
 
       const traits = container.querySelector('.saunoja-card__traits');
       expect(traits?.textContent).toBe('Brave, Sage');
@@ -85,6 +104,14 @@ describe('rosterHUD', () => {
           attackDamage: 3,
           attackRange: 1,
           movementRange: 2
+        },
+        progression: {
+          level: 2,
+          xp: 200,
+          xpIntoLevel: 20,
+          xpForNext: 220,
+          progress: 20 / 220,
+          statBonuses: { vigor: 5, focus: 2, resolve: 1 }
         },
         items: [],
         modifiers: []
