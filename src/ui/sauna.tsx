@@ -269,7 +269,8 @@ export function setupSaunaUI(
   card.appendChild(label);
 
   container.appendChild(card);
-  const { actions } = ensureHudLayout(overlay);
+  const { regions } = ensureHudLayout(overlay);
+  const topRegion = regions.top;
 
   const reduceMotionQuery =
     typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -411,13 +412,13 @@ export function setupSaunaUI(
   applyRosterCap(sauna.maxRosterSize, false);
 
   const placeControl = (): boolean => {
-    if (container.parentElement !== actions) {
-      actions.appendChild(container);
+    if (container.parentElement !== topRegion) {
+      topRegion.appendChild(container);
     }
-    const topbar = actions.querySelector<HTMLDivElement>('#topbar');
-    if (topbar && topbar.parentElement === actions) {
+    const topbar = topRegion.querySelector<HTMLDivElement>('#topbar');
+    if (topbar && topbar.parentElement === topRegion) {
       if (topbar.nextSibling !== container) {
-        actions.insertBefore(container, topbar.nextSibling);
+        topRegion.insertBefore(container, topbar.nextSibling);
       }
       return true;
     }
@@ -431,7 +432,7 @@ export function setupSaunaUI(
         placementObserver?.disconnect();
       }
     });
-    placementObserver.observe(actions, { childList: true });
+    placementObserver.observe(topRegion, { childList: true });
   }
 
   const handleToggle = () => {

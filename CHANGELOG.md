@@ -520,3 +520,8 @@
 - Defer game initialization until DOMContentLoaded via exported `init()`
 - Add workflow to deploy docs from `dist/` on pushes to `main`
 - Switch deployment workflow to Node.js 18
+- Introduce a five-region HUD grid scaffold for the experimental UI v2, teach
+  `ensureHudLayout` to emit explicit top/left/content/right/bottom anchors, move
+  the v2 bootstrapper into the centered content well, and apply Tailwind-style
+  grid utilities so the overlay honors safe margins from 1280×720 through
+  1920×1080.

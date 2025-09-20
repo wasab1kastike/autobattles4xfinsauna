@@ -51,7 +51,9 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
-  const { actions, side, mobileBar } = ensureHudLayout(overlay);
+  const { regions, mobileBar } = ensureHudLayout(overlay);
+  const topRegion = regions.top;
+  const rightRegion = regions.right;
 
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
@@ -115,11 +117,11 @@ export function setupRightPanel(
   toggle.append(toggleIcon, toggleText);
 
   const insertToggle = (): void => {
-    const topbar = actions.querySelector<HTMLElement>('#topbar');
-    if (topbar && topbar.parentElement === actions) {
+    const topbar = topRegion.querySelector<HTMLElement>('#topbar');
+    if (topbar && topbar.parentElement === topRegion) {
       topbar.insertAdjacentElement('afterend', toggle);
     } else {
-      actions.prepend(toggle);
+      topRegion.prepend(toggle);
     }
   };
 
@@ -369,7 +371,7 @@ export function setupRightPanel(
       closeMobilePanel({ skipFocus: true });
       slideOver.style.setProperty('--panel-drag-progress', '1');
       slideOver.remove();
-      side.appendChild(panel);
+  rightRegion.appendChild(panel);
       insertToggle();
       toggle.classList.remove('hud-panel-toggle--mobile');
       toggle.hidden = !smallViewportQuery.matches;
