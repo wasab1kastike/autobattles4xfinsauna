@@ -5,6 +5,7 @@ export type SfxName = 'click' | 'spawn' | 'error' | 'attack' | 'death' | 'sisu';
 type SoundDefinition = {
   loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
   debounceMs?: number;
+  gain?: number;
 };
 
 const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
@@ -20,16 +21,19 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
     loader: (ctx) => createError(ctx)
   },
   attack: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.attack, ctx),
-    debounceMs: 70
+    loader: (ctx) => decodeAsset(SFX_PAYLOADS.attack.payload, ctx),
+    debounceMs: 70,
+    gain: SFX_PAYLOADS.attack.loudness.gain
   },
   death: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.death, ctx),
-    debounceMs: 180
+    loader: (ctx) => decodeAsset(SFX_PAYLOADS.death.payload, ctx),
+    debounceMs: 180,
+    gain: SFX_PAYLOADS.death.loudness.gain
   },
   sisu: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.sisu, ctx),
-    debounceMs: 800
+    loader: (ctx) => decodeAsset(SFX_PAYLOADS.sisu.payload, ctx),
+    debounceMs: 800,
+    gain: SFX_PAYLOADS.sisu.loudness.gain
   }
 };
 
@@ -236,7 +240,15 @@ export function playSafe(name: SfxName): void {
       const destination = ensureGainNode(ctx);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(destination);
+      const soundGain = definition.gain;
+      if (typeof soundGain === 'number' && soundGain > 0 && soundGain !== 1) {
+        const gainNode = ctx.createGain();
+        gainNode.gain.value = soundGain;
+        source.connect(gainNode);
+        gainNode.connect(destination);
+      } else {
+        source.connect(destination);
+      }
       try {
         source.start();
       } catch (err) {
