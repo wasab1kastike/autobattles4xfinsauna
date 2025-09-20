@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 let GIT_COMMIT = JSON.stringify('unknown');
@@ -23,6 +24,7 @@ export default defineConfig({
   // Ensure assets resolve correctly when hosted on GitHub Pages.
   base: '/',
   publicDir: '../public',
+  plugins: [tailwindcss()],
   build: {
     outDir: '../dist',
     emptyOutDir: true,
