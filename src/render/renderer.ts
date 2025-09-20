@@ -172,13 +172,30 @@ export function drawUnits(
     if (unit.stats.health / maxHealth < 0.5) {
       ctx.filter = 'saturate(0)';
     }
+    const renderCoord = unit.renderCoord ?? unit.coord;
     const placement = getSpritePlacement({
-      coord: unit.coord,
+      coord: renderCoord,
       hexSize: mapRenderer.hexSize,
       origin,
       zoom: camera.zoom,
       type: unit.type
     });
+    const filters: string[] = [];
+    if (unit.stats.health / maxHealth < 0.5) {
+      filters.push('saturate(0)');
+    }
+    const deltaQ = Math.abs(renderCoord.q - unit.coord.q);
+    const deltaR = Math.abs(renderCoord.r - unit.coord.r);
+    const motionStrength = Math.min(1, deltaQ + deltaR);
+    if (motionStrength > 0.01) {
+      filters.push('contrast(1.08)');
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.28)';
+      ctx.shadowBlur = Math.max(6, 12 * camera.zoom * motionStrength);
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+      ctx.shadowBlur = 0;
+    }
+    ctx.filter = filters.length > 0 ? filters.join(' ') : 'none';
     ctx.drawImage(img, placement.drawX, placement.drawY, placement.width, placement.height);
     if (isSisuBurstActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';

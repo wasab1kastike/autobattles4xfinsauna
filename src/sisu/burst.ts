@@ -237,7 +237,7 @@ export function torille(
 
   for (const unit of living) {
     const target = pickFreeTileAround(saunaPos, 3, units) ?? { ...saunaPos };
-    unit.coord = target;
+    unit.setCoord(target);
     const healAmount = Math.round(unit.getMaxHealth() * TORILLE_HEAL_RATIO);
     unit.stats.health = Math.min(unit.getMaxHealth(), Math.max(unit.stats.health, healAmount));
   }
