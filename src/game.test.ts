@@ -441,6 +441,7 @@ describe('rendering', () => {
     const playerUnit = new Unit('render-player', 'soldier', { q: 0, r: 0 }, 'player', {
       ...baseStats
     });
+    playerUnit.renderCoord = { q: 3, r: -2 };
     const enemyUnit = new Unit('render-enemy', 'soldier', { q: 1, r: 0 }, 'enemy', {
       ...baseStats
     });
@@ -456,7 +457,17 @@ describe('rendering', () => {
       const [, , , unitsArg, , drawOptions] = renderSpy.mock.calls[0]!;
       expect(unitsArg.some((unit) => unit.faction === 'player')).toBe(false);
       expect(unitsArg.some((unit) => unit.id === enemyUnit.id)).toBe(true);
-      expect(drawOptions?.saunojas?.units?.length ?? 0).toBeGreaterThan(0);
+      const saunojaOverlay = drawOptions?.saunojas;
+      expect(saunojaOverlay?.units?.length ?? 0).toBeGreaterThan(0);
+      expect(typeof saunojaOverlay?.resolveRenderCoord).toBe('function');
+      const resolvedCoords = saunojaOverlay?.units
+        ?.map((attendant) => saunojaOverlay.resolveRenderCoord?.(attendant) ?? null)
+        .filter((coord): coord is { q: number; r: number } => !!coord);
+      expect(
+        resolvedCoords?.some(
+          (coord) => coord.q === playerUnit.renderCoord?.q && coord.r === playerUnit.renderCoord?.r
+        )
+      ).toBe(true);
     } finally {
       renderSpy.mockRestore();
       assetsModule.resetAssetsForTest();

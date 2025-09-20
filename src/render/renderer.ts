@@ -64,6 +64,7 @@ export interface DrawOptions {
   saunojas?: {
     units: Saunoja[];
     draw: DrawSaunojaFn;
+    resolveRenderCoord?: DrawSaunojasOptions['resolveRenderCoord'];
   };
   sauna?: Sauna | null;
   saunaVision?: VisionSource | null;
@@ -104,7 +105,8 @@ export function draw(
       originX: origin.x,
       originY: origin.y,
       hexRadius: mapRenderer.hexSize,
-      zoom: camera.zoom
+      zoom: camera.zoom,
+      resolveRenderCoord: saunojaLayer.resolveRenderCoord
     });
   }
   drawUnits(
