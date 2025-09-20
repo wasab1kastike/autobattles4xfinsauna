@@ -7,8 +7,12 @@ import {
   SISU_BURST_COST,
   TORILLE_COST,
 } from '../../sisu/burst.ts';
-import { isMuted, onMuteChange, setMuted } from '../../audio/sfx.ts';
+import { isMuted, onMuteChange } from '../../audio/sfx.ts';
 import { toggleGamePaused, isGamePaused, type GamePauseEvent } from '../../game/pause.ts';
+import {
+  showAudioSettingsOverlay,
+  type AudioSettingsOverlayHandle
+} from '../overlays/settings.tsx';
 
 export type ActionBarAbilityHandlers = {
   useSisuBurst?: () => boolean;
@@ -159,11 +163,13 @@ function preventWhenTyping(event: KeyboardEvent): boolean {
 export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
   const [sisu, setSisu] = useState<number>(() => state.getResource(Resource.SISU));
   const [muted, setMutedState] = useState<boolean>(() => isMuted());
+  const [audioOverlayOpen, setAudioOverlayOpen] = useState(false);
   const [hotkey, setHotkey] = useState<ActionKind | null>(null);
   const feedbackTimers = useRef<FeedbackTimers>({});
   const [activeFeedback, setActiveFeedback] = useState<Set<ActionKind>>(() => new Set());
   const burst = useBurstState();
   const paused = usePauseState();
+  const audioOverlayRef = useRef<AudioSettingsOverlayHandle | null>(null);
 
   const triggerFeedback = useCallback((kind: ActionKind) => {
     setActiveFeedback((prev) => {
@@ -210,6 +216,36 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
   }, []);
 
   useEffect(() => onMuteChange(setMutedState), []);
+  useEffect(() => {
+    return () => {
+      audioOverlayRef.current?.destroy();
+      audioOverlayRef.current = null;
+    };
+  }, []);
+
+  const toggleAudioOverlay = useCallback(() => {
+    const overlay = document.getElementById('ui-overlay');
+    if (!overlay) {
+      return false;
+    }
+    if (audioOverlayRef.current) {
+      audioOverlayRef.current.destroy();
+      audioOverlayRef.current = null;
+      setAudioOverlayOpen(false);
+      return true;
+    }
+    const handle = showAudioSettingsOverlay({
+      container: overlay,
+      onClose: () => {
+        audioOverlayRef.current = null;
+        setAudioOverlayOpen(false);
+      }
+    });
+    audioOverlayRef.current = handle;
+    setAudioOverlayOpen(true);
+    handle.focus();
+    return true;
+  }, []);
 
   const useBurst = abilities.useSisuBurst;
   const callTorille = abilities.torille;
@@ -294,18 +330,20 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
       },
       {
         id: 'sound',
-        icon: muted ? '🔇' : '🔊',
-        label: muted ? 'Muted' : 'Sound',
-        description: 'Toggle combat sound effects and ambience cues.',
+        icon: muted ? '🔇' : audioOverlayOpen ? '🎚️' : '🎛️',
+        label: 'Audio',
+        description: 'Open the in-game mixer to balance master, ambience, and effects.',
         hotkey: { code: 'KeyR', label: 'R' },
         accent: 'neutral',
-        toggled: muted,
-        detail: muted ? 'Silence engaged' : 'Soundscape active',
+        toggled: audioOverlayOpen,
+        detail: audioOverlayOpen ? 'Mixer open' : muted ? 'Muted' : 'Live mix',
         interactive: true,
         blocked: false,
         onActivate: () => {
-          setMuted(!muted);
-          setMutedState(!muted);
+          const opened = toggleAudioOverlay();
+          if (!opened) {
+            return false;
+          }
           return true;
         },
       },
@@ -335,6 +373,7 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
     burstBlocked,
     burstReason,
     callTorille,
+    audioOverlayOpen,
     muted,
     openBuildPlanner,
     paused,
