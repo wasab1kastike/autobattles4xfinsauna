@@ -116,6 +116,27 @@ function createBadge(): {
   const icon = document.createElement('span');
   icon.classList.add('inventory-badge__icon');
   icon.setAttribute('aria-hidden', 'true');
+
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.classList.add('inventory-badge__svg');
+
+  const bagOutline = document.createElementNS(svgNs, 'path');
+  bagOutline.setAttribute(
+    'd',
+    'M8.25 7V6a3.75 3.75 0 0 1 7.5 0v1m3 0h-14.25a1.5 1.5 0 0 0-1.485 1.342l-.75 9a3 3 0 0 0 2.985 3.158h9.78a3 3 0 0 0 2.985-3.158l-.75-9A1.5 1.5 0 0 0 18.75 7Z'
+  );
+  bagOutline.classList.add('inventory-badge__icon-outline');
+
+  const bagDetail = document.createElementNS(svgNs, 'path');
+  bagDetail.setAttribute('d', 'M9.75 12.25h4.5');
+  bagDetail.classList.add('inventory-badge__icon-detail');
+
+  svg.append(bagOutline, bagDetail);
+  icon.appendChild(svg);
   button.appendChild(icon);
 
   const label = document.createElement('span');
