@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Enforce sauna tier roster ceilings during player spawns with heat-aware queueing,
+  auto-advancing NG+ tier unlocks, and expanded coverage for tier transitions and
+  blocked reinforcements.
+
+
 - Introduce a curated sauna tier registry with persistent selections, premium
   badge art, unlock progress cues, and tier-aware roster caps, backed by new
   serialization and HUD DOM regression tests.
