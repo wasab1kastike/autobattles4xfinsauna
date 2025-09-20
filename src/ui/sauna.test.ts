@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupSaunaUI } from './sauna.tsx';
 import { createSauna } from '../sim/sauna.ts';
 import type { Sauna } from '../sim/sauna.ts';
+import { DEFAULT_SAUNA_TIER_ID } from '../sauna/tiers.ts';
+import type { SaunaTierId } from '../sauna/tiers.ts';
 
 const mockMatchMedia = () =>
   vi.fn((query: string) => ({
@@ -110,6 +112,70 @@ describe('setupSaunaUI', () => {
       const fxEl = overlay.querySelector<HTMLDivElement>('.sauna-health__destruction');
       expect(fxEl?.classList.contains('sauna-health__destruction--active')).toBe(true);
       vi.runOnlyPendingTimers();
+    } finally {
+      controller.dispose();
+      overlay.remove();
+    }
+  });
+
+  it('renders tier badges with unlocked states and selection affordances', () => {
+    const overlay = createOverlay();
+    const sauna = createTestSauna();
+    let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
+    const controller = setupSaunaUI(sauna, {
+      getRosterCapLimit: () => 6,
+      updateMaxRosterSize: (value) => value,
+      getActiveTierId: () => activeTierId,
+      setActiveTierId: (tierId) => {
+        activeTierId = tierId;
+        return true;
+      },
+      getTierContext: () => ({ ngPlusLevel: 4, unlockSlots: 4 })
+    });
+
+    try {
+      controller.update();
+      const activeButton = overlay.querySelector<HTMLButtonElement>(
+        '.sauna-tier__option[data-state="active"]'
+      );
+      expect(activeButton?.dataset.tierId).toBe(DEFAULT_SAUNA_TIER_ID);
+
+      const premiumButton = overlay.querySelector<HTMLButtonElement>(
+        '.sauna-tier__option[data-tier-id="mythic-conclave"]'
+      );
+      expect(premiumButton).toBeTruthy();
+      premiumButton?.click();
+      controller.update();
+
+      expect(activeTierId).toBe('mythic-conclave');
+      const updatedActive = overlay.querySelector<HTMLButtonElement>(
+        '.sauna-tier__option[data-state="active"]'
+      );
+      expect(updatedActive?.dataset.tierId).toBe('mythic-conclave');
+    } finally {
+      controller.dispose();
+      overlay.remove();
+    }
+  });
+
+  it('communicates locked tiers with progress cues', () => {
+    const overlay = createOverlay();
+    const sauna = createTestSauna();
+    let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
+    const controller = setupSaunaUI(sauna, {
+      getActiveTierId: () => activeTierId,
+      setActiveTierId: () => false,
+      getTierContext: () => ({ ngPlusLevel: 0, unlockSlots: 0 })
+    });
+
+    try {
+      controller.update();
+      const lockedTier = overlay.querySelector<HTMLButtonElement>(
+        '.sauna-tier__option[data-tier-id="mythic-conclave"]'
+      );
+      expect(lockedTier?.dataset.state).toBe('locked');
+      lockedTier?.click();
+      expect(lockedTier?.classList.contains('sauna-tier__option--denied')).toBe(true);
     } finally {
       controller.dispose();
       overlay.remove();
