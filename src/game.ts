@@ -12,6 +12,13 @@ import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
+import {
+  DEFAULT_SAUNA_TIER_ID,
+  evaluateSaunaTier,
+  getSaunaTier,
+  type SaunaTierContext,
+  type SaunaTierId
+} from './sauna/tiers.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import { playSafe } from './audio/sfx.ts';
@@ -588,8 +595,17 @@ export function setupGame(
 
   saunaUiController?.dispose();
   saunaUiController = setupSaunaUI(sauna, {
-    getRosterCapLimit: () => ngPlusSpawnLimit,
-    updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist })
+    getRosterCapLimit: () => getActiveTierLimit(),
+    updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist }),
+    getActiveTierId: () => currentTierId,
+    setActiveTierId: (tierId, opts) => {
+      const unlocked = setActiveTier(tierId, { persist: opts?.persist });
+      if (unlocked) {
+        saunaUiController?.update();
+      }
+      return currentTierId;
+    },
+    getTierContext: () => getTierContext()
   });
 
   topbarControls?.dispose();
@@ -922,9 +938,29 @@ if (!restoredSave && currentNgPlusState.ngPlusLevel > 0) {
   }
 }
 const saunaSettings = loadSaunaSettings(ngPlusSpawnLimit);
-const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, ngPlusSpawnLimit);
-if (initialRosterCap !== saunaSettings.maxRosterSize) {
-  saveSaunaSettings({ maxRosterSize: initialRosterCap });
+const resolveTierContext = (): SaunaTierContext => ({
+  ngPlusLevel: currentNgPlusState.ngPlusLevel,
+  unlockSlots: currentNgPlusState.unlockSlots
+});
+
+let currentTierId: SaunaTierId = saunaSettings.activeTierId;
+const initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolveTierContext());
+if (!initialTierStatus.unlocked) {
+  currentTierId = DEFAULT_SAUNA_TIER_ID;
+}
+
+const getActiveTierLimit = (): number => {
+  const tier = getSaunaTier(currentTierId);
+  const cap = Math.max(0, Math.floor(tier.rosterCap));
+  return Math.min(cap, ngPlusSpawnLimit);
+};
+
+const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, getActiveTierLimit());
+if (
+  initialRosterCap !== saunaSettings.maxRosterSize ||
+  saunaSettings.activeTierId !== currentTierId
+) {
+  saveSaunaSettings({ maxRosterSize: initialRosterCap, activeTierId: currentTierId });
 }
 const sauna = createSauna(
   {
@@ -936,21 +972,53 @@ const sauna = createSauna(
 );
 
 let lastPersistedRosterCap = initialRosterCap;
+let lastPersistedTierId = currentTierId;
+
+const persistSaunaSettings = (cap: number): void => {
+  saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId });
+  lastPersistedRosterCap = cap;
+  lastPersistedTierId = currentTierId;
+};
+
+const getTierContext = (): SaunaTierContext => resolveTierContext();
 
 const updateRosterCap = (
   value: number,
   options: { persist?: boolean } = {}
 ): number => {
-  const sanitized = clampRosterCap(value, ngPlusSpawnLimit);
+  const limit = getActiveTierLimit();
+  const sanitized = clampRosterCap(value, limit);
   const changed = sanitized !== sauna.maxRosterSize;
   if (changed) {
     sauna.maxRosterSize = sanitized;
   }
-  if (options.persist && sanitized !== lastPersistedRosterCap) {
-    saveSaunaSettings({ maxRosterSize: sanitized });
-    lastPersistedRosterCap = sanitized;
+  if (options.persist) {
+    const tierChanged = currentTierId !== lastPersistedTierId;
+    if (tierChanged || sanitized !== lastPersistedRosterCap) {
+      persistSaunaSettings(sanitized);
+    }
   }
   return sanitized;
+};
+
+const setActiveTier = (
+  tierId: SaunaTierId,
+  options: { persist?: boolean } = {}
+): boolean => {
+  const tier = getSaunaTier(tierId);
+  const status = evaluateSaunaTier(tier, getTierContext());
+  if (!status.unlocked) {
+    return false;
+  }
+  if (tier.id === currentTierId) {
+    if (options.persist && currentTierId !== lastPersistedTierId) {
+      persistSaunaSettings(sauna.maxRosterSize);
+    }
+    return true;
+  }
+  currentTierId = tier.id;
+  updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
+  return true;
 };
 
 const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
