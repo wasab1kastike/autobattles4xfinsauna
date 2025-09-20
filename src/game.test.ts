@@ -265,6 +265,79 @@ describe('game logging', () => {
   });
 });
 
+describe('rendering', () => {
+  it('omits player units from the render pass when Saunoja overlays are active', async () => {
+    const assetsModule = await import('./game/assets.ts');
+    assetsModule.resetAssetsForTest();
+    const fakeImage = document.createElement('img') as HTMLImageElement;
+    assetsModule.setAssets({
+      images: {
+        placeholder: fakeImage,
+        'unit-soldier': fakeImage
+      }
+    } as any);
+
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const fakeCtx = {
+      canvas: document.createElement('canvas') as HTMLCanvasElement,
+      save: vi.fn(),
+      restore: vi.fn(),
+      translate: vi.fn(),
+      setTransform: vi.fn(),
+      clearRect: vi.fn(),
+      scale: vi.fn()
+    } as unknown as CanvasRenderingContext2D;
+    const ctxStub = vi.fn(function (this: HTMLCanvasElement) {
+      fakeCtx.canvas = this;
+      return fakeCtx;
+    });
+
+    Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+      configurable: true,
+      value: ctxStub
+    });
+
+    const { eventBus, draw } = await initGame();
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    canvas.width = 640;
+    canvas.height = 360;
+
+    const renderModule = await import('./render/renderer.ts');
+    const renderSpy = vi.spyOn(renderModule, 'draw').mockImplementation(() => {});
+
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
+
+    const playerUnit = new Unit('render-player', 'soldier', { q: 0, r: 0 }, 'player', {
+      ...baseStats
+    });
+    const enemyUnit = new Unit('render-enemy', 'soldier', { q: 1, r: 0 }, 'enemy', {
+      ...baseStats
+    });
+
+    eventBus.emit('unitSpawned', { unit: playerUnit });
+    eventBus.emit('unitSpawned', { unit: enemyUnit });
+
+    try {
+      renderSpy.mockClear();
+      draw();
+
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+      const [, , , unitsArg, , drawOptions] = renderSpy.mock.calls[0]!;
+      expect(unitsArg.some((unit) => unit.faction === 'player')).toBe(false);
+      expect(unitsArg.some((unit) => unit.id === enemyUnit.id)).toBe(true);
+      expect(drawOptions?.saunojas?.units?.length ?? 0).toBeGreaterThan(0);
+    } finally {
+      renderSpy.mockRestore();
+      assetsModule.resetAssetsForTest();
+      Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+        configurable: true,
+        value: originalGetContext
+      });
+    }
+  });
+});
+
 describe('game lifecycle', () => {
   it('stops scheduling animation frames after cleanup', async () => {
     const assetsModule = await import('./game/assets.ts');
