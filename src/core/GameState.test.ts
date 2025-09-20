@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameState, Resource } from './GameState';
 import { eventBus } from '../events/EventBus';
+import { POLICY_EVENTS, type PolicyAppliedEvent, type PolicyRejectedEvent } from '../data/policies.ts';
 import { HexMap } from '../hexmap.ts';
 import { Farm } from '../buildings/index.ts';
 import '../events';
@@ -158,19 +159,60 @@ describe('GameState', () => {
 
   it('applies policy modifiers via listeners', () => {
     const state = new GameState(1000);
-    state.applyPolicy('eco', 0); // free for testing
+    state.addResource(Resource.SAUNAKUNNIA, 15);
+    expect(state.applyPolicy('eco')).toBe(true);
     state.tick();
-    expect(state.getResource(Resource.SAUNA_BEER)).toBe(2); // base 1 + eco policy
+    expect(state.getResource(Resource.SAUNA_BEER)).toBe(2); // base 1 + eco mandate
   });
 
   it('spends Saunakunnia when applying policies by default', () => {
     const state = new GameState(1000);
-    state.addResource(Resource.SAUNAKUNNIA, 10);
+    state.addResource(Resource.SAUNAKUNNIA, 20);
 
-    const applied = state.applyPolicy('grand-reveal', 4);
+    const applied = state.applyPolicy('eco');
 
     expect(applied).toBe(true);
-    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(6);
+    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(5);
+  });
+
+  it('rejects policies when prerequisites are missing', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 100);
+
+    const rejections: PolicyRejectedEvent[] = [];
+    const listener = (payload: PolicyRejectedEvent): void => {
+      rejections.push(payload);
+    };
+
+    eventBus.on(POLICY_EVENTS.REJECTED, listener);
+    const applied = state.applyPolicy('temperance');
+    eventBus.off(POLICY_EVENTS.REJECTED, listener);
+
+    expect(applied).toBe(false);
+    expect(rejections[0]?.reason).toBe('prerequisites-not-met');
+    expect(rejections[0]?.missingPrerequisites?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('applies policies once prerequisites are satisfied', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 80);
+    state.addResource(Resource.SAUNA_BEER, 60);
+
+    expect(state.applyPolicy('eco')).toBe(true);
+
+    const appliedPolicies: string[] = [];
+    const listener = ({ policy }: PolicyAppliedEvent): void => {
+      appliedPolicies.push(policy.id);
+    };
+    eventBus.on(POLICY_EVENTS.APPLIED, listener);
+
+    const appliedTemperance = state.applyPolicy('temperance');
+
+    eventBus.off(POLICY_EVENTS.APPLIED, listener);
+
+    expect(appliedTemperance).toBe(true);
+    expect(appliedPolicies).toContain('temperance');
+    expect(state.nightWorkSpeedMultiplier).toBeGreaterThan(1);
   });
 
   it('constructs and upgrades buildings when affordable', () => {
@@ -275,22 +317,23 @@ describe('GameState', () => {
 
   it('restores policy effects and offline progress after save/load', () => {
     const state = new GameState(1000);
-    (state as any).policies.add('eco');
-    (state as any).policies.add('temperance');
-    state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
-    state.nightWorkSpeedMultiplier = 1.05;
+    state.addResource(Resource.SAUNAKUNNIA, 80);
+    state.addResource(Resource.SAUNA_BEER, 50);
+    expect(state.applyPolicy('eco')).toBe(true);
+    expect(state.applyPolicy('temperance')).toBe(true);
+    expect(state.spendResource(50, Resource.SAUNA_BEER)).toBe(true);
     state.save();
 
-    const spy = vi.fn();
-    eventBus.on('policyApplied', spy);
+    const spy = vi.fn<(payload: PolicyAppliedEvent) => void>();
+    eventBus.on(POLICY_EVENTS.APPLIED, spy);
 
     vi.setSystemTime(5000);
     const loaded = new GameState(1000);
     expect(loaded.load()).toBe(true);
 
-    eventBus.off('policyApplied', spy);
+    eventBus.off(POLICY_EVENTS.APPLIED, spy);
 
-    expect(spy.mock.calls.map((call) => call[0]?.policy)).toEqual([
+    expect(spy.mock.calls.map((call) => call[0]?.policy.id)).toEqual([
       'eco',
       'temperance'
     ]);

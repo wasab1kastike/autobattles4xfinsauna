@@ -1,28 +1,36 @@
 import { eventBus } from './EventBus';
-import type { GameState } from '../core/GameState';
-import { Resource } from '../core/GameState';
+import { listPolicies, type PolicyAppliedEvent, type PolicyEffectHook, type PolicyDefinition } from '../data/policies.ts';
 
-type PolicyPayload = { policy: string; state: GameState };
+const disposers: Array<() => void> = [];
 
-const applyEco = ({ policy, state }: PolicyPayload): void => {
-  if (policy !== 'eco') return;
-  // Infuse the sauna beer reserves with +1 passive bottle each tick
-  state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
-  eventBus.off('policyApplied', applyEco);
-};
+function subscribeEffect(definition: PolicyDefinition, effect: PolicyEffectHook): void {
+  const seenStates = new WeakSet<PolicyAppliedEvent['state']>();
+  const listener = (payload: PolicyAppliedEvent): void => {
+    if (payload.policy.id !== definition.id) {
+      return;
+    }
+    if (effect.once !== false && seenStates.has(payload.state)) {
+      return;
+    }
+    effect.invoke(payload);
+    if (effect.once !== false) {
+      seenStates.add(payload.state);
+    }
+  };
 
-const applyTemperance = ({ policy, state }: PolicyPayload): void => {
-  if (policy !== 'temperance') return;
-  state.nightWorkSpeedMultiplier *= 1.05;
-  eventBus.off('policyApplied', applyTemperance);
-};
+  eventBus.on<PolicyAppliedEvent>(effect.event, listener);
+  disposers.push(() => eventBus.off(effect.event, listener));
+}
 
-const applySteamDiplomats = ({ policy, state }: PolicyPayload): void => {
-  if (policy !== 'steam-diplomats') return;
-  state.modifyPassiveGeneration(Resource.SAUNA_BEER, 2);
-  eventBus.off('policyApplied', applySteamDiplomats);
-};
+for (const definition of listPolicies()) {
+  for (const effect of definition.effects) {
+    subscribeEffect(definition, effect);
+  }
+}
 
-eventBus.on<PolicyPayload>('policyApplied', applyEco);
-eventBus.on<PolicyPayload>('policyApplied', applyTemperance);
-eventBus.on<PolicyPayload>('policyApplied', applySteamDiplomats);
+export function disposePolicyListeners(): void {
+  while (disposers.length > 0) {
+    const dispose = disposers.pop();
+    dispose?.();
+  }
+}

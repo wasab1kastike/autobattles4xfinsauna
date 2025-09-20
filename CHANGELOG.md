@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Overhaul the policy system with a shared registry, premium HUD cards that surface
+  prerequisites, typed events, declarative effect wiring, and Vitest coverage for
+  both successful enactments and rejection flows.
+
 - Nest the loot toast stack inside the HUD action column, refresh its
   glassmorphism treatment for responsive layouts, and keep loot notices from
   covering the command console across desktop and mobile viewports.
