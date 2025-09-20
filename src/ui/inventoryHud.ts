@@ -40,16 +40,20 @@ const STAT_LABELS: Record<string, string> = {
   shield: 'Shield'
 };
 
-function ensureToastStack(overlay: HTMLElement): HTMLDivElement {
+function ensureToastStack(overlay: HTMLElement, target: HTMLElement): HTMLDivElement {
   const existing = overlay.querySelector<HTMLDivElement>('.loot-toast-stack');
   if (existing) {
+    if (existing.parentElement !== target) {
+      target.appendChild(existing);
+    }
     return existing;
   }
-  const stack = document.createElement('div');
+  const doc = overlay.ownerDocument ?? document;
+  const stack = doc.createElement('div');
   stack.classList.add('loot-toast-stack');
   stack.setAttribute('aria-live', 'polite');
   stack.setAttribute('role', 'status');
-  overlay.appendChild(stack);
+  target.appendChild(stack);
   return stack;
 }
 
@@ -163,7 +167,7 @@ export function setupInventoryHud(
   }
 
   const { actions } = ensureHudLayout(overlay);
-  const toastStack = ensureToastStack(overlay);
+  const toastStack = ensureToastStack(overlay, actions);
 
   overlay.querySelectorAll('.inventory-badge').forEach((el) => el.remove());
   const { button: badgeButton, count: badgeCount } = createBadge();

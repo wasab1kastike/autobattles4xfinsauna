@@ -93,28 +93,41 @@
 }
 
 .loot-toast-stack {
-  position: absolute;
-  top: var(--gap-lg);
-  right: var(--gap-lg);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: var(--gap-sm);
+  gap: clamp(6px, 1vw, 12px);
+  align-items: stretch;
+  width: min(22rem, 100%);
+  margin-left: auto;
   pointer-events: none;
-  z-index: 900;
+}
+
+.loot-toast-stack:empty {
+  display: none;
+}
+
+.is-mobile .loot-toast-stack {
+  width: 100%;
+  margin-left: 0;
 }
 
 .loot-toast {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(215, 229, 255, 0.95));
   color: #152035;
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(15, 23, 42, 0.18);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.22);
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   font-weight: 600;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.8vw, 12px);
   pointer-events: auto;
   transition: transform 0.25s ease, opacity 0.25s ease;
-  max-width: 18rem;
+  width: 100%;
+  backdrop-filter: blur(14px) saturate(135%);
 }
 
 .loot-toast[data-variant='info'] {
