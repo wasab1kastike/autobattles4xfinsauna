@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Publish an MIT LICENSE file, align package metadata with the SPDX identifier,
+  and document the licensing update for downstream consumers.
+
 - Swap combat SFX palette for the calming Birch Mallet Chimes, Cedar Breath
   Clusters, and Aurora Steam Pads patches with rotating procedural variants,
   refreshed metadata, and updated licensing notes.
