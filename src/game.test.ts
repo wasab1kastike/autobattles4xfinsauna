@@ -237,7 +237,7 @@ describe('game logging', () => {
       target = { q: target.q + 1, r: target.r + 1 };
     }
 
-    ally.coord = target;
+    ally.setCoord(target);
     const targetKey = `${target.q},${target.r}`;
     expect(existing.has(targetKey)).toBe(false);
 

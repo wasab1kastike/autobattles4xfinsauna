@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Upgrade battlefield motion with dedicated render coordinates, eased 200 ms
+  tweens, premium motion trails, and Vitest coverage validating animator and
+  combat manager interpolation so unit movement feels polished while combat
+  logic stays deterministic.
+
 - Expose NG+ and policy-friendly enemy ramp knobs, thread the modifiers into
   the spawner and HUD telemetry, persist structured enemy scaling summaries for
   post-run analysis, and document the new configuration hooks alongside fresh

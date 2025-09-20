@@ -1,5 +1,5 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
-import { getNeighbors } from '../hex/HexUtils.ts';
+import { getNeighbors, hexDistance } from '../hex/HexUtils.ts';
 import { Unit } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
@@ -9,6 +9,7 @@ import type { Sauna } from '../sim/sauna.ts';
 import { damageSauna } from '../sim/sauna.ts';
 import { eventBus } from '../events';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
+import type { Animator } from '../render/Animator.ts';
 
 export const MAX_ENEMIES = 30;
 
@@ -20,8 +21,9 @@ function coordKey(c: { q: number; r: number }): string {
 export class BattleManager {
   private readonly scheduler = new RoundRobinScheduler();
   private readonly pathCache = new PathCache();
+  private readonly lastKnownCoords = new Map<string, AxialCoord>();
 
-  constructor(private readonly map: HexMap) {}
+  constructor(private readonly map: HexMap, private readonly animator?: Animator) {}
 
   private findExplorationGoal(
     unit: Unit,
@@ -77,21 +79,35 @@ export class BattleManager {
       return;
     }
 
-    for (const unit of units) {
-      unit.addMovementTime(deltaSeconds);
-    }
-
     const occupied = new Set<string>();
     const activeUnits: Unit[] = [];
-    for (const u of units) {
-      if (u.isDead()) {
-        u.clearPathCache();
-        this.pathCache.invalidateForUnit(u.id);
+    const livingUnitIds = new Set<string>();
+    for (const unit of units) {
+      unit.addMovementTime(deltaSeconds);
+      if (unit.isDead()) {
+        unit.clearPathCache();
+        this.pathCache.invalidateForUnit(unit.id);
+        this.animator?.clear(unit);
+        this.lastKnownCoords.delete(unit.id);
         continue;
       }
-      this.pathCache.trackUnit(u);
-      activeUnits.push(u);
-      occupied.add(coordKey(u.coord));
+
+      const previous = this.lastKnownCoords.get(unit.id);
+      if (previous && hexDistance(previous, unit.coord) > 1) {
+        this.animator?.clear(unit, { snap: true });
+      }
+      this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
+
+      this.pathCache.trackUnit(unit);
+      activeUnits.push(unit);
+      occupied.add(coordKey(unit.coord));
+      livingUnitIds.add(unit.id);
+    }
+
+    for (const id of [...this.lastKnownCoords.keys()]) {
+      if (!livingUnitIds.has(id)) {
+        this.lastKnownCoords.delete(id);
+      }
     }
 
     if (activeUnits.length === 0) {
@@ -111,6 +127,7 @@ export class BattleManager {
       if (unit.isDead()) {
         unit.clearPathCache();
         this.pathCache.invalidateForUnit(unit.id);
+        this.animator?.clear(unit);
         continue;
       }
 
@@ -144,13 +161,20 @@ export class BattleManager {
                 continue;
               }
               if (unit.consumeMovementCooldown()) {
-                unit.coord = nextCoord;
+                const previous = { q: unit.coord.q, r: unit.coord.r };
+                if (this.animator) {
+                  unit.setCoord(nextCoord, { snapRender: false });
+                  this.animator.enqueue(unit, [previous, nextCoord]);
+                } else {
+                  unit.setCoord(nextCoord);
+                }
                 unit.advancePathCache(1);
                 const currentKey = coordKey(unit.coord);
                 if (currentKey === coordKey(goal)) {
                   unit.clearPathCache();
                 }
                 occupied.add(currentKey);
+                this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
                 continue;
               }
             } else {
@@ -187,7 +211,13 @@ export class BattleManager {
         const steppingIntoTarget = stepKey === targetKey;
         if (!occupied.has(stepKey) || steppingIntoTarget) {
           if (unit.canStep() && unit.consumeMovementCooldown()) {
-            unit.coord = nextCoord;
+            const previous = { q: unit.coord.q, r: unit.coord.r };
+            if (this.animator) {
+              unit.setCoord(nextCoord, { snapRender: false });
+              this.animator.enqueue(unit, [previous, nextCoord]);
+            } else {
+              unit.setCoord(nextCoord);
+            }
             unit.advancePathCache(1);
           }
         } else {
@@ -197,6 +227,7 @@ export class BattleManager {
 
       const currentKey = coordKey(unit.coord);
       occupied.add(currentKey);
+      this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
 
       const currentTargetKey = coordKey(target.coord);
       if (currentTargetKey !== targetKey) {
@@ -209,6 +240,7 @@ export class BattleManager {
           occupied.delete(currentTargetKey);
           unit.clearPathCache();
           this.pathCache.invalidateForUnit(target.id);
+          this.animator?.clear(target);
         }
       }
     }

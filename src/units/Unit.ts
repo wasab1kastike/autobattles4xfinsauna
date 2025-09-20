@@ -26,6 +26,10 @@ function fromKey(key: string): AxialCoord {
   return { q, r };
 }
 
+function cloneCoord(coord: AxialCoord): AxialCoord {
+  return { q: coord.q, r: coord.r };
+}
+
 export class Unit {
   /** Whether the unit is still alive. */
   private alive = true;
@@ -43,15 +47,35 @@ export class Unit {
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
 
+  public coord: AxialCoord;
+  public renderCoord: AxialCoord;
+
   constructor(
     public readonly id: string,
     public readonly type: string,
-    public coord: AxialCoord,
+    coord: AxialCoord,
     public readonly faction: string,
     public readonly stats: UnitStats,
     public readonly priorityFactions: string[] = []
   ) {
+    this.coord = cloneCoord(coord);
+    this.renderCoord = cloneCoord(coord);
     this.maxHealth = stats.health;
+  }
+
+  setCoord(coord: AxialCoord, options?: { snapRender?: boolean }): void {
+    this.coord = cloneCoord(coord);
+    if (options?.snapRender ?? true) {
+      this.renderCoord = cloneCoord(coord);
+    }
+  }
+
+  setRenderCoord(coord: AxialCoord): void {
+    this.renderCoord = cloneCoord(coord);
+  }
+
+  snapRenderToCoord(coord: AxialCoord = this.coord): void {
+    this.renderCoord = cloneCoord(coord);
   }
 
   onDeath(cb: Listener): void {
@@ -190,6 +214,7 @@ export class Unit {
     if (finalResult.lethal && this.alive) {
       this.stats.health = 0;
       this.alive = false;
+      this.snapRenderToCoord();
       eventBus.emit('unitDied', {
         unitId: this.id,
         attackerId: attacker?.id,
