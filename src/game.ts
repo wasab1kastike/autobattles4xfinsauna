@@ -579,6 +579,7 @@ export function setupGame(
 ): void {
   const hudVariant = options.hudVariant ?? 'classic';
   const useClassicHud = hudVariant === 'classic';
+  overlayEl.dataset.hudVariant = hudVariant;
   canvas = canvasEl;
   if (unitFx) {
     unitFx.dispose();

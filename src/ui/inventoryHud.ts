@@ -168,13 +168,14 @@ export function setupInventoryHud(
     return { destroy: () => {} };
   }
 
-  const { actions } = ensureHudLayout(overlay);
-  const toastStack = ensureToastStack(overlay, actions);
+  const { regions } = ensureHudLayout(overlay);
+  const topRegion = regions.top;
+  const toastStack = ensureToastStack(overlay, topRegion);
 
   overlay.querySelectorAll('.inventory-badge').forEach((el) => el.remove());
   const { button: badgeButton, count: badgeCount } = createBadge();
   badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
-  actions.appendChild(badgeButton);
+  topRegion.appendChild(badgeButton);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
 
