@@ -23,6 +23,12 @@ import {
 } from './sauna/tiers.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
+import {
+  setupActionBar,
+  type ActionBarAbilityHandlers,
+  type ActionBarController
+} from './ui/action-bar/index.tsx';
+import { isGamePaused, resetGamePause } from './game/pause.ts';
 import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
@@ -165,6 +171,7 @@ let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
 let disposeRightPanel: (() => void) | null = null;
 let topbarControls: TopbarControls | null = null;
+let actionBarController: ActionBarController | null = null;
 let saunaUiController: SaunaUIController | null = null;
 let inventoryHudController: { destroy(): void } | null = null;
 let rosterHud: RosterHudController | null = null;
@@ -637,42 +644,44 @@ export function setupGame(
 
   topbarControls?.dispose();
   topbarControls = null;
-  if (useClassicHud) {
-    topbarControls = setupTopbar(
-      state,
-      {
-        saunakunnia: uiIcons.resource,
-        sisu: uiIcons.sisu,
-        saunaBeer: uiIcons.saunaBeer,
-        sound: uiIcons.sound
-      },
-      {
-        useSisuBurst: () => {
-          const used = useSisuBurst(state, units);
-          if (used) {
-            playSafe('sisu');
-            log(
-              `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
-            );
-          } else {
-            playSafe('error');
-          }
-          return used;
-        },
-        torille: () => {
-          const used = torille(state, units, sauna.pos, map);
-          if (used) {
-            log(
-              `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
-            );
-          } else {
-            playSafe('error');
-          }
-          return used;
-        }
+  actionBarController?.destroy();
+  actionBarController = null;
+
+  const actionBarAbilities: ActionBarAbilityHandlers = {
+    useSisuBurst: () => {
+      const used = useSisuBurst(state, units);
+      if (used) {
+        playSafe('sisu');
+        log(
+          `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
+        );
+      } else {
+        playSafe('error');
       }
-    );
+      return used;
+    },
+    torille: () => {
+      const used = torille(state, units, sauna.pos, map);
+      if (used) {
+        log(
+          `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
+        );
+      } else {
+        playSafe('error');
+      }
+      return used;
+    }
+  } satisfies ActionBarAbilityHandlers;
+
+  if (useClassicHud) {
+    topbarControls = setupTopbar(state, {
+      saunakunnia: uiIcons.resource,
+      sisu: uiIcons.sisu,
+      saunaBeer: uiIcons.saunaBeer
+    });
   }
+
+  actionBarController = setupActionBar(state, overlayEl, actionBarAbilities);
 
   inventoryHudController?.destroy();
   inventoryHudController = null;
@@ -1717,6 +1726,7 @@ export function cleanup(): void {
   objectiveTracker?.dispose();
   objectiveTracker = null;
   lastStrongholdsDestroyed = 0;
+  resetGamePause();
   if (endScreen) {
     endScreen.destroy();
     endScreen = null;
@@ -1770,6 +1780,10 @@ export function cleanup(): void {
     topbarControls.dispose();
     topbarControls = null;
   }
+  if (actionBarController) {
+    actionBarController.destroy();
+    actionBarController = null;
+  }
   if (rosterHud) {
     rosterHud.destroy();
     rosterHud = null;
@@ -1808,10 +1822,14 @@ export async function start(): Promise<void> {
     }
     const delta = now - last;
     last = now;
-    clock.tick(delta);
-    updateSaunaHud();
-    updateTopbarHud(delta);
-    refreshRosterPanel();
+    if (!isGamePaused()) {
+      clock.tick(delta);
+      updateSaunaHud();
+      updateTopbarHud(delta);
+      refreshRosterPanel();
+    } else {
+      updateTopbarHud(0);
+    }
     draw();
     if (!running) {
       return;
