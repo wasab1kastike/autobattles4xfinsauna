@@ -1,4 +1,14 @@
 export { eventBus } from './EventBus';
+export {
+  eventScheduler,
+  SCHEDULER_EVENTS,
+  registerSchedulerCondition,
+  type SchedulerEventContent,
+  type SchedulerChoice,
+  type ActiveSchedulerEvent,
+  type SchedulerTriggeredPayload,
+  type SchedulerResolvedPayload
+} from './scheduler';
 
 // register policy listeners
 import './policies';
