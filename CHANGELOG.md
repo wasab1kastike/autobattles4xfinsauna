@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh the soldier and archer unit art with high-fidelity 128×128 SVGs,
+  recalibrated sprite metadata, and placement tests so their battlefield
+  silhouettes match the marauder's polish.
+
 - Track sauna structural health in objectives, piping combat-driven
   `saunaDestroyed` defeat events through the tracker and combat manager so runs
   end immediately when enemies raze the structure, with progress summaries now
