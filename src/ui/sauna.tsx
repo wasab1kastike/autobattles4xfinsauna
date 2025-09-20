@@ -1,4 +1,5 @@
 import type { Sauna } from '../sim/sauna.ts';
+import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
 import { ensureHudLayout } from './layout.ts';
 
 export interface SaunaUIOptions {
@@ -6,8 +7,12 @@ export interface SaunaUIOptions {
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 }
 
+const integerFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+
 export type SaunaUIController = {
   update(): void;
+  handleDamage?(payload: SaunaDamagedPayload): void;
+  handleDestroyed?(payload: SaunaDestroyedPayload): void;
   dispose(): void;
 };
 
@@ -38,11 +43,44 @@ export function setupSaunaUI(
   card.classList.add('sauna-card', 'hud-card');
   card.hidden = true;
 
+  const integritySection = document.createElement('section');
+  integritySection.classList.add('sauna-health');
+  const healthLabelId = `sauna-health-label-${Math.floor(Math.random() * 100000)}`;
+  const healthHeader = document.createElement('div');
+  healthHeader.classList.add('sauna-health__header');
+  const healthTitle = document.createElement('span');
+  healthTitle.id = healthLabelId;
+  healthTitle.classList.add('sauna-health__title');
+  healthTitle.textContent = 'Sauna Integrity';
+  healthHeader.appendChild(healthTitle);
+  const healthValue = document.createElement('span');
+  healthValue.classList.add('sauna-health__value');
+  healthValue.setAttribute('aria-live', 'polite');
+  healthHeader.appendChild(healthValue);
+  integritySection.appendChild(healthHeader);
+
+  const healthBar = document.createElement('div');
+  healthBar.classList.add('sauna-health__bar');
+  healthBar.setAttribute('role', 'meter');
+  healthBar.setAttribute('aria-valuemin', '0');
+  healthBar.setAttribute('aria-labelledby', healthLabelId);
+  const healthFill = document.createElement('div');
+  healthFill.classList.add('sauna-health__fill');
+  healthBar.appendChild(healthFill);
+  integritySection.appendChild(healthBar);
+
+  const destructionFx = document.createElement('div');
+  destructionFx.classList.add('sauna-health__destruction');
+  destructionFx.hidden = true;
+  healthBar.appendChild(destructionFx);
+
   const barContainer = document.createElement('div');
   barContainer.classList.add('sauna-progress');
   const barFill = document.createElement('div');
   barFill.classList.add('sauna-progress__fill');
   barContainer.appendChild(barFill);
+
+  card.appendChild(integritySection);
   card.appendChild(barContainer);
 
   const rosterContainer = document.createElement('div');
@@ -113,6 +151,42 @@ export function setupSaunaUI(
 
   container.appendChild(card);
   const { actions } = ensureHudLayout(overlay);
+
+  const reduceMotionQuery =
+    typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  let prefersReducedMotion = Boolean(reduceMotionQuery?.matches);
+
+  const attachMqListener = (
+    mq: MediaQueryList,
+    listener: (event: MediaQueryListEvent) => void
+  ): void => {
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', listener);
+    } else if (typeof (mq as unknown as { addListener?: typeof listener }).addListener === 'function') {
+      (mq as unknown as { addListener: typeof listener }).addListener(listener);
+    }
+  };
+
+  const detachMqListener = (
+    mq: MediaQueryList,
+    listener: (event: MediaQueryListEvent) => void
+  ): void => {
+    if (typeof mq.removeEventListener === 'function') {
+      mq.removeEventListener('change', listener);
+    } else if (typeof (mq as unknown as { removeListener?: typeof listener }).removeListener === 'function') {
+      (mq as unknown as { removeListener: typeof listener }).removeListener(listener);
+    }
+  };
+
+  const handleMotionChange = (event: MediaQueryListEvent) => {
+    prefersReducedMotion = Boolean(event.matches);
+    integritySection.dataset.motion = prefersReducedMotion ? 'reduced' : 'full';
+  };
+
+  integritySection.dataset.motion = prefersReducedMotion ? 'reduced' : 'full';
+  if (reduceMotionQuery) {
+    attachMqListener(reduceMotionQuery, handleMotionChange);
+  }
 
   const resolveLimit = (): number => {
     const limit = options.getRosterCapLimit?.();
@@ -207,7 +281,90 @@ export function setupSaunaUI(
   };
   btn.addEventListener('click', handleToggle);
 
+  const updateHealthDisplay = () => {
+    const sanitizedMax = Math.max(1, Math.floor(sauna.maxHealth));
+    const sanitizedCurrent = Math.max(
+      0,
+      Math.min(sanitizedMax, Math.floor(Number.isFinite(sauna.health) ? sauna.health : 0))
+    );
+    const percent = sanitizedMax > 0 ? sanitizedCurrent / sanitizedMax : 0;
+    const clampedPercent = Math.max(0, Math.min(percent, 1));
+    healthFill.style.width = `${clampedPercent * 100}%`;
+    const formattedCurrent = integerFormatter.format(sanitizedCurrent);
+    const formattedMax = integerFormatter.format(sanitizedMax);
+    healthValue.textContent = `${formattedCurrent} / ${formattedMax}`;
+    healthBar.setAttribute('aria-valuenow', String(sanitizedCurrent));
+    healthBar.setAttribute('aria-valuemax', String(sanitizedMax));
+    healthBar.setAttribute('aria-valuetext', `${formattedCurrent} of ${formattedMax} health`);
+    const level = sauna.destroyed
+      ? 'offline'
+      : clampedPercent <= 0.2
+        ? 'critical'
+        : clampedPercent <= 0.55
+          ? 'warning'
+          : 'stable';
+    healthBar.dataset.level = level;
+    healthValue.dataset.state = level;
+    integritySection.dataset.state = sauna.destroyed ? 'destroyed' : 'active';
+  };
+
+  const hideDestructionFx = () => {
+    destructionFx.classList.remove('sauna-health__destruction--active');
+    destructionFx.hidden = true;
+  };
+
+  let damageFlashTimeout: number | null = null;
+  let destructionTimeout: number | null = null;
+
+  const resetDamageFlash = () => {
+    if (damageFlashTimeout !== null) {
+      window.clearTimeout(damageFlashTimeout);
+      damageFlashTimeout = null;
+    }
+    healthBar.classList.remove('sauna-health__bar--impact');
+  };
+
+  const handleDamageAnimationEnd = () => {
+    healthFill.classList.remove('sauna-health__fill--damage');
+  };
+  healthFill.addEventListener('animationend', handleDamageAnimationEnd);
+
+  const handleDestructionAnimationEnd = () => {
+    hideDestructionFx();
+  };
+  destructionFx.addEventListener('animationend', handleDestructionAnimationEnd);
+
+  const triggerDamageFlash = () => {
+    resetDamageFlash();
+    healthBar.classList.add('sauna-health__bar--impact');
+    if (!prefersReducedMotion) {
+      healthFill.classList.remove('sauna-health__fill--damage');
+      void healthFill.offsetWidth;
+      healthFill.classList.add('sauna-health__fill--damage');
+    }
+    damageFlashTimeout = window.setTimeout(() => {
+      healthBar.classList.remove('sauna-health__bar--impact');
+      damageFlashTimeout = null;
+    }, prefersReducedMotion ? 360 : 560);
+  };
+
+  const triggerDestructionFx = () => {
+    if (destructionTimeout !== null) {
+      window.clearTimeout(destructionTimeout);
+      destructionTimeout = null;
+    }
+    destructionFx.hidden = false;
+    destructionFx.classList.remove('sauna-health__destruction--active');
+    void destructionFx.offsetWidth;
+    destructionFx.classList.add('sauna-health__destruction--active');
+    destructionTimeout = window.setTimeout(() => {
+      hideDestructionFx();
+      destructionTimeout = null;
+    }, prefersReducedMotion ? 720 : 1100);
+  };
+
   const update = () => {
+    updateHealthDisplay();
     const cooldown =
       sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
     const progress = 1 - sauna.playerSpawnTimer / cooldown;
@@ -228,6 +385,21 @@ export function setupSaunaUI(
     }
   };
 
+  updateHealthDisplay();
+
+  const handleDamage = (_payload: SaunaDamagedPayload) => {
+    updateHealthDisplay();
+    triggerDamageFlash();
+  };
+
+  const handleDestroyed = (_payload: SaunaDestroyedPayload) => {
+    card.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    updateHealthDisplay();
+    triggerDamageFlash();
+    triggerDestructionFx();
+  };
+
   const dispose = () => {
     placementObserver?.disconnect();
     placementObserver = null;
@@ -237,11 +409,24 @@ export function setupSaunaUI(
     numericInput.removeEventListener('input', handleNumericInput);
     numericInput.removeEventListener('change', handleNumericCommit);
     numericInput.removeEventListener('blur', handleNumericBlur);
+    if (reduceMotionQuery) {
+      detachMqListener(reduceMotionQuery, handleMotionChange);
+    }
+    healthFill.removeEventListener('animationend', handleDamageAnimationEnd);
+    destructionFx.removeEventListener('animationend', handleDestructionAnimationEnd);
+    resetDamageFlash();
+    if (destructionTimeout !== null) {
+      window.clearTimeout(destructionTimeout);
+      destructionTimeout = null;
+    }
+    hideDestructionFx();
     container.remove();
   };
 
   return {
     update,
+    handleDamage,
+    handleDestroyed,
     dispose
   } satisfies SaunaUIController;
 }

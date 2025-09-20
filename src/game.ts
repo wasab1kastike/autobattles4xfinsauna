@@ -7,6 +7,7 @@ import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { eventBus } from './events';
+import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner } from './sim/EnemySpawner.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
@@ -655,6 +656,17 @@ eventBus.on('modifierAdded', onModifierChanged);
 eventBus.on('modifierRemoved', onModifierChanged);
 eventBus.on('modifierExpired', onModifierChanged);
 
+const onSaunaDamaged = (payload: SaunaDamagedPayload): void => {
+  saunaUiController?.handleDamage?.(payload);
+};
+
+const onSaunaDestroyed = (payload: SaunaDestroyedPayload): void => {
+  saunaUiController?.handleDestroyed?.(payload);
+};
+
+eventBus.on('saunaDamaged', onSaunaDamaged);
+eventBus.on('saunaDestroyed', onSaunaDestroyed);
+
 const onUnitStatsChanged = (): void => {
   updateRosterDisplay();
 };
@@ -1270,6 +1282,8 @@ export function cleanup(): void {
   eventBus.off('modifierRemoved', onModifierChanged);
   eventBus.off('modifierExpired', onModifierChanged);
   eventBus.off('unit:stats:changed', onUnitStatsChanged);
+  eventBus.off('saunaDamaged', onSaunaDamaged);
+  eventBus.off('saunaDestroyed', onSaunaDestroyed);
   eventBus.off('buildingPlaced', invalidateTerrainCache);
   eventBus.off('buildingRemoved', invalidateTerrainCache);
   if (disposeRightPanel) {
