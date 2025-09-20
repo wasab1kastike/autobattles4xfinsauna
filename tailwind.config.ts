@@ -33,6 +33,24 @@ const config = {
         toast: '990',
         scrim: '1000',
       },
+      keyframes: {
+        'hud-shake': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%': { transform: 'translateX(-4px)' },
+          '40%': { transform: 'translateX(4px)' },
+          '60%': { transform: 'translateX(-3px)' },
+          '80%': { transform: 'translateX(3px)' },
+        },
+        'hud-pulse': {
+          '0%': { opacity: '0.55', transform: 'scale(1)' },
+          '70%': { opacity: '0', transform: 'scale(1.18)' },
+          '100%': { opacity: '0', transform: 'scale(1.22)' },
+        },
+      },
+      animation: {
+        'hud-shake': 'hud-shake 0.48s cubic-bezier(0.36,0.07,0.19,0.97)',
+        'hud-pulse': 'hud-pulse 0.68s ease-out forwards',
+      },
     },
   },
   plugins: [],
