@@ -277,6 +277,26 @@ describe('game logging', () => {
     expect(rosterButton?.dataset.status).toBe('downed');
   });
 
+  it('promotes the active sauna tier when NG+ unlocks a higher hall', async () => {
+    window.localStorage?.setItem?.(
+      'progression:ngPlusState',
+      JSON.stringify({ runSeed: 17, ngPlusLevel: 3, unlockSlots: 4 })
+    );
+    window.localStorage?.setItem?.(
+      'autobattles:sauna-settings',
+      JSON.stringify({ maxRosterSize: 2, activeTierId: 'ember-circuit' })
+    );
+
+    const { __getActiveTierIdForTest } = await initGame();
+
+    expect(__getActiveTierIdForTest()).toBe('mythic-conclave');
+
+    const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
+    const parsed = stored ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string }) : null;
+    expect(parsed?.activeTierId).toBe('mythic-conclave');
+    expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
+  });
+
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
     const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();
     const { Unit } = await import('./units/Unit.ts');

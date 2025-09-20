@@ -2,7 +2,11 @@ import { Resource, type GameState } from '../core/GameState.ts';
 import type { Unit } from '../units/Unit.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import type { SaunaHeat } from '../sauna/heat.ts';
-import { processPlayerSpawns, type PlayerSpawnResult } from '../world/spawn/player_spawns.ts';
+import {
+  processPlayerSpawns,
+  type PlayerSpawnResult
+} from '../world/spawn/player_spawns.ts';
+import type { PlayerSpawnTierHelpers } from '../world/spawn/tier_helpers.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 
 function sanitize(value: number, fallback = 0): number {
@@ -25,6 +29,7 @@ export interface EconomyTickOptions {
   maxSpawns?: number;
   rosterCap?: number;
   getRosterCount?: () => number;
+  tierHelpers?: PlayerSpawnTierHelpers;
 }
 
 export interface EconomyTickResult {
@@ -84,7 +89,8 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
     minUpkeepReserve: options.minUpkeepReserve,
     maxSpawns: options.maxSpawns,
     rosterCap: options.rosterCap,
-    getRosterCount: options.getRosterCount
+    getRosterCount: options.getRosterCount,
+    tierHelpers: options.tierHelpers
   });
 
   const cooldown = options.heat.getCooldownSeconds();
