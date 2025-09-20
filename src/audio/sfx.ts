@@ -5,7 +5,12 @@ import {
   onMixerChange,
   setSfxMuted
 } from './mixer.ts';
-import { SFX_PAYLOADS } from './sfxData.ts';
+import {
+  CALMING_SFX,
+  type EnvelopeSpec,
+  type ProceduralSfxVariant,
+  renderVariantSamples
+} from './sfxData.ts';
 
 export type SfxName = 'click' | 'spawn' | 'error' | 'attack' | 'death' | 'sisu';
 
@@ -20,16 +25,45 @@ type DebounceEntry = {
   weight: number;
 };
 
-type SoundDefinition = {
-  loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
-  debounce?: DebounceConfig;
-  polyphony?: number;
-  gain?: number;
+type SoundVariantDefinition = {
+  readonly id: string;
+  readonly label?: string;
+  readonly envelope?: EnvelopeSpec;
+  readonly loader: (ctx: AudioContext) => Promise<AudioBuffer> | AudioBuffer;
+  readonly gain?: number;
 };
+
+type SoundDefinition = {
+  readonly variants: readonly SoundVariantDefinition[];
+  readonly debounce?: DebounceConfig;
+  readonly polyphony?: number;
+};
+
+function createProceduralLoader(variant: ProceduralSfxVariant): SoundVariantDefinition {
+  return {
+    id: variant.id,
+    label: variant.label,
+    envelope: variant.envelope,
+    gain: variant.loudness.gain,
+    loader: (ctx) => {
+      const samples = renderVariantSamples(variant, ctx.sampleRate);
+      const buffer = ctx.createBuffer(1, samples.length, ctx.sampleRate);
+      buffer.getChannelData(0).set(samples);
+      return buffer;
+    }
+  };
+}
 
 const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
   click: {
-    loader: (ctx) => createClick(ctx),
+    variants: [
+      {
+        id: 'ui-click-soft',
+        label: 'UI soft tap',
+        envelope: { attack: 0, decay: 0.05, sustain: 0, release: 0.03, sustainLevel: 0 },
+        loader: (ctx) => createClick(ctx)
+      }
+    ],
     debounce: {
       windowMs: 35,
       weight: 0.5,
@@ -38,7 +72,14 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
     polyphony: 6
   },
   spawn: {
-    loader: (ctx) => createSpawn(ctx),
+    variants: [
+      {
+        id: 'ui-spawn-chime',
+        label: 'Roster invite tone',
+        envelope: { attack: 0, decay: 0.2, sustain: 0.5, release: 0.2, sustainLevel: 0.5 },
+        loader: (ctx) => createSpawn(ctx)
+      }
+    ],
     debounce: {
       windowMs: 150,
       weight: 0.7,
@@ -47,7 +88,14 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
     polyphony: 3
   },
   error: {
-    loader: (ctx) => createError(ctx),
+    variants: [
+      {
+        id: 'ui-error-tone',
+        label: 'Gentle warning tap',
+        envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2, sustainLevel: 0.2 },
+        loader: (ctx) => createError(ctx)
+      }
+    ],
     debounce: {
       windowMs: 220,
       weight: 1,
@@ -56,43 +104,41 @@ const SOUND_DEFINITIONS: Record<SfxName, SoundDefinition> = {
     polyphony: 2
   },
   attack: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.attack.payload, ctx),
+    variants: CALMING_SFX.attack.variants.map(createProceduralLoader),
     debounce: {
       windowMs: 120,
       weight: 0.6,
       maxWeight: 1.2
     },
-    polyphony: 3,
-    gain: SFX_PAYLOADS.attack.loudness.gain
+    polyphony: 3
   },
   death: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.death.payload, ctx),
+    variants: CALMING_SFX.death.variants.map(createProceduralLoader),
     debounce: {
       windowMs: 360,
       weight: 1,
       maxWeight: 1.5
     },
-    polyphony: 3,
-    gain: SFX_PAYLOADS.death.loudness.gain
+    polyphony: 3
   },
   sisu: {
-    loader: (ctx) => decodeAsset(SFX_PAYLOADS.sisu.payload, ctx),
+    variants: CALMING_SFX.sisu.variants.map(createProceduralLoader),
     debounce: {
       windowMs: 900,
       weight: 1,
       maxWeight: 1
     },
-    polyphony: 1,
-    gain: SFX_PAYLOADS.sisu.loudness.gain
+    polyphony: 1
   }
 };
 
 let audioCtx: AudioContext | null = null;
-const buffers = new Map<SfxName, AudioBuffer>();
-const pendingLoads = new Map<SfxName, Promise<AudioBuffer>>();
+const buffers = new Map<string, AudioBuffer>();
+const pendingLoads = new Map<string, Promise<AudioBuffer>>();
 const playbackHistory = new Map<SfxName, DebounceEntry[]>();
 const pendingPolyphony = new Map<SfxName, number>();
 const activeSources = new Map<SfxName, Set<AudioBufferSourceNode>>();
+const variantRotation = new Map<SfxName, number>();
 
 type AttackLimiterState = {
   node: GainNode | null;
@@ -162,43 +208,6 @@ function createError(ctx: AudioContext): AudioBuffer {
   return createBuffer(ctx, 0.3, (t) => Math.sin(2 * Math.PI * 110 * t) * Math.exp(-8 * t));
 }
 
-function base64ToUint8Array(base64: string): Uint8Array {
-  const globalAny = globalThis as typeof globalThis & {
-    atob?: (data: string) => string;
-    Buffer?: {
-      from(data: string, encoding: string): { length: number; [index: number]: number } &
-        ArrayBufferView;
-    };
-  };
-
-  if (typeof globalAny.atob === 'function') {
-    const binaryString = globalAny.atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  }
-
-  if (globalAny.Buffer) {
-    const nodeBuffer = globalAny.Buffer.from(base64, 'base64');
-    const bytes = new Uint8Array(nodeBuffer.length);
-    for (let i = 0; i < nodeBuffer.length; i++) {
-      bytes[i] = nodeBuffer[i];
-    }
-    return bytes;
-  }
-
-  throw new Error('No base64 decoder available for sound payloads.');
-}
-
-async function decodeAsset(base64: string, ctx: AudioContext): Promise<AudioBuffer> {
-  const bytes = base64ToUint8Array(base64);
-  const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-  return await ctx.decodeAudioData(arrayBuffer);
-}
-
 function getNowMs(): number {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
     return performance.now();
@@ -206,13 +215,18 @@ function getNowMs(): number {
   return Date.now();
 }
 
-function getBuffer(name: SfxName): Promise<AudioBuffer> {
-  const cached = buffers.get(name);
+function getVariantKey(name: SfxName, index: number): string {
+  return `${name}:${index}`;
+}
+
+function getBuffer(name: SfxName, variantIndex: number, variant: SoundVariantDefinition): Promise<AudioBuffer> {
+  const key = getVariantKey(name, variantIndex);
+  const cached = buffers.get(key);
   if (cached) {
     return Promise.resolve(cached);
   }
 
-  const pending = pendingLoads.get(name);
+  const pending = pendingLoads.get(key);
   if (pending) {
     return pending;
   }
@@ -222,23 +236,18 @@ function getBuffer(name: SfxName): Promise<AudioBuffer> {
     return Promise.reject(new Error('Audio context unavailable'));
   }
 
-  const definition = SOUND_DEFINITIONS[name];
-  if (!definition) {
-    return Promise.reject(new Error(`No sound registered for ${name}`));
-  }
-
-  const loadPromise = Promise.resolve(definition.loader(ctx))
+  const loadPromise = Promise.resolve(variant.loader(ctx))
     .then((buffer) => {
-      buffers.set(name, buffer);
-      pendingLoads.delete(name);
+      buffers.set(key, buffer);
+      pendingLoads.delete(key);
       return buffer;
     })
     .catch((err) => {
-      pendingLoads.delete(name);
+      pendingLoads.delete(key);
       throw err;
     });
 
-  pendingLoads.set(name, loadPromise);
+  pendingLoads.set(key, loadPromise);
   return loadPromise;
 }
 
@@ -444,6 +453,20 @@ export function playSafe(name: SfxName): void {
     return;
   }
 
+  const variants = definition.variants;
+  if (!variants || variants.length === 0) {
+    return;
+  }
+
+  let variantIndex = 0;
+  let variant = variants[0];
+  if (variants.length > 1) {
+    const last = variantRotation.get(name) ?? Math.floor(Math.random() * variants.length) - 1;
+    variantIndex = (last + 1) % variants.length;
+    variant = variants[variantIndex];
+    variantRotation.set(name, variantIndex);
+  }
+
   const now = getNowMs();
   const debounceResult = evaluateDebounce(name, definition, now);
   if (debounceResult.blocked) {
@@ -464,7 +487,7 @@ export function playSafe(name: SfxName): void {
     }
   };
 
-  void getBuffer(name)
+  void getBuffer(name, variantIndex, variant)
     .then((buffer) => {
       clearPending();
       if (isMuted()) {
@@ -484,7 +507,7 @@ export function playSafe(name: SfxName): void {
       }
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      const soundGain = definition.gain;
+      const soundGain = variant.gain;
       let tail: AudioNode = source;
       if (typeof soundGain === 'number' && soundGain > 0 && soundGain !== 1) {
         const gainNode = ctx.createGain();
@@ -571,6 +594,7 @@ export function resetSfxForTests(): void {
   playbackHistory.clear();
   pendingPolyphony.clear();
   activeSources.clear();
+  variantRotation.clear();
   attackLimiter.node?.disconnect();
   attackLimiter.node = null;
   attackLimiter.destination = null;

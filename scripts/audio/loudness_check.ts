@@ -95,6 +95,12 @@ async function loadSfxData(): Promise<{
   }
 
   for (const [key, entry] of Object.entries(payloadsRaw)) {
+    if (entry && typeof entry === 'object' && 'variants' in entry) {
+      throw new Error(
+        'Procedural SFX palettes detected. Use `npx vite-node scripts/audio/measure_calming_sfx.ts` '
+          + 'to inspect loudness metadata.'
+      );
+    }
     if (typeof entry === 'string') {
       payloads[key] = { payload: entry };
     } else {
