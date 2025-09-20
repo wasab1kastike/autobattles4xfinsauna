@@ -1,4 +1,10 @@
-import { initAudioSafe, isMuted, onMuteChange } from './sfx.ts';
+import {
+  getChannelGainNode,
+  getMixerState,
+  initAudioContext,
+  onMixerChange,
+  setMusicVolume
+} from './mixer.ts';
 
 type AmbienceLayer = {
   source: AudioBufferSourceNode;
@@ -15,7 +21,6 @@ export type AmbienceState = {
 
 const AMBIENCE_SOURCES = ['/assets/sounds/sauna-forest.ogg', '/assets/sounds/sauna-forest.mp3'];
 const ENABLED_KEY = 'audio_enabled';
-const VOLUME_KEY = 'audio_volume';
 
 const listeners = new Set<(state: AmbienceState) => void>();
 const layers = new Set<AmbienceLayer>();
@@ -41,11 +46,11 @@ const storedEnabled = readStoredPreference(ENABLED_KEY);
 let enabled = storedEnabled === 'true';
 let hasExplicitPreference = storedEnabled !== null;
 
-const storedVolume = readStoredPreference(VOLUME_KEY);
-let volume = clampNumber(storedVolume ? Number(storedVolume) : NaN, 0.65);
+const initialMixer = getMixerState();
+let volume = clampNumber(initialMixer.channels.music.volume, 0.65);
 
 let playing = false;
-let globallyMuted = isMuted();
+let globallyMuted = initialMixer.channels.master.muted || initialMixer.channels.music.muted;
 
 const reduceMotionQuery =
   typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -77,16 +82,26 @@ if (typeof window !== 'undefined' && !hasExplicitPreference) {
   window.addEventListener('keydown', grantDefaultAudio, { once: true });
 }
 
-onMuteChange((muted) => {
-  globallyMuted = muted;
-  if (muted) {
-    stop();
-  } else if (enabled) {
-    void play();
-  } else {
-    updateMasterGainTarget(true);
+onMixerChange((state) => {
+  const nextVolume = clampNumber(state.channels.music.volume, volume);
+  const nextGloballyMuted = state.channels.master.muted || state.channels.music.muted;
+  const volumeChanged = Math.abs(nextVolume - volume) > 0.0005;
+  volume = nextVolume;
+  if (nextGloballyMuted !== globallyMuted) {
+    globallyMuted = nextGloballyMuted;
+    if (globallyMuted) {
+      stop();
+    } else if (enabled) {
+      void play();
+    } else {
+      updateMasterGainTarget(true);
+      notifyState();
+    }
+    return;
   }
-  notifyState();
+  if (volumeChanged) {
+    notifyState();
+  }
 });
 
 function clampNumber(value: number, fallback: number): number {
@@ -120,24 +135,18 @@ function saveEnabled(value: boolean): void {
   }
 }
 
-function saveVolume(value: number): void {
-  if (typeof localStorage === 'undefined') {
-    return;
-  }
-  try {
-    localStorage.setItem(VOLUME_KEY, value.toFixed(3));
-  } catch (error) {
-    console.warn('Unable to persist ambience volume', error);
-  }
-}
-
 function ensureMasterGain(ctx: AudioContext): GainNode {
   if (masterGain) {
     return masterGain;
   }
   const node = ctx.createGain();
-  node.gain.value = enabled && !globallyMuted ? volume : 0;
-  node.connect(ctx.destination);
+  node.gain.value = enabled && !globallyMuted ? 1 : 0;
+  const destination = getChannelGainNode('music');
+  if (destination) {
+    node.connect(destination);
+  } else {
+    node.connect(ctx.destination);
+  }
   masterGain = node;
   return node;
 }
@@ -147,7 +156,7 @@ function updateMasterGainTarget(immediate = false): void {
     return;
   }
   const ctx = masterGain.context;
-  const target = enabled && !globallyMuted ? volume : 0;
+  const target = enabled && !globallyMuted ? 1 : 0;
   const now = ctx.currentTime;
   masterGain.gain.cancelScheduledValues(now);
   if (immediate) {
@@ -340,9 +349,7 @@ export function setVolume(value: number): void {
     return;
   }
   volume = clamped;
-  saveVolume(volume);
-  updateMasterGainTarget();
-  notifyState();
+  setMusicVolume(clamped);
 }
 
 export function getVolume(): number {
@@ -363,4 +370,8 @@ export function onStateChange(listener: (state: AmbienceState) => void): () => v
 // Kick off playback if a preference was previously stored.
 if (enabled && !globallyMuted) {
   void play();
+}
+
+function initAudioSafe(): AudioContext | null {
+  return initAudioContext();
 }

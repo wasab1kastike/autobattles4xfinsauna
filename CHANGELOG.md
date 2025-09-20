@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce a dedicated Web Audio mixer with persisted master/music/SFX buses,
+  route ambience loops and combat cues through the shared gains, ship a polished
+  in-game mixer overlay with live sliders and ambience toggles, and cover the
+  mixer persistence and routing with new Vitest suites.
+
 - Rebuild the command console combat log with structured event payloads, polished
   filter chips with persisted preferences, spawn aggregation, and Vitest
   coverage for both the log store and UI filter interactions.
