@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Refresh the inventory stash badge with an inline SVG bag icon, centered
+  styling, and updated palette treatments for a crisper HUD affordance.
+
 - Introduce a combat audio loudness workflow by adding a reusable WAV analysis
   utility, a `vite-node` QA script with auto-normalisation support, runtime
   metadata for cue gain, a Vitest regression that decodes each payload, and
