@@ -106,6 +106,7 @@ import {
 } from './ui/rosterHUD.ts';
 import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
+import { logEvent } from './ui/logging.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -167,7 +168,6 @@ const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
 let playerSpawnSequence = 0;
 let selected: AxialCoord | null = null;
-let log: (msg: string) => void = () => {};
 let addEvent: (event: GameEvent) => void = () => {};
 let disposeRightPanel: (() => void) | null = null;
 let topbarControls: TopbarControls | null = null;
@@ -333,13 +333,32 @@ function grantSaunojaExperience(
     const slayerName = attendant.name?.trim() || 'Our champion';
     const foeLabel = context.label?.trim() || 'their foe';
     const flourish = context.boss ? ' Boss toppled!' : context.elite ? ' Elite threat routed!' : '';
-    log(`${slayerName} earns ${amount} XP for defeating ${foeLabel}.${flourish}`);
+    logEvent({
+      type: 'combat',
+      message: `${slayerName} earns ${amount} XP for defeating ${foeLabel}.${flourish}`,
+      metadata: {
+        slayer: slayerName,
+        foe: foeLabel,
+        xpAward: amount,
+        boss: Boolean(context.boss),
+        elite: Boolean(context.elite)
+      }
+    });
   }
 
   if (levelsGained > 0) {
     const summary = describeStatBonuses(statBonuses);
     const unitName = attendant.name?.trim() || 'Our champion';
-    log(`${unitName} reaches Level ${after.level}! ${summary}.`);
+    logEvent({
+      type: 'progression',
+      message: `${unitName} reaches Level ${after.level}! ${summary}.`,
+      metadata: {
+        unit: unitName,
+        level: after.level,
+        levelsGained,
+        bonuses: statBonuses
+      }
+    });
   }
 
   return {
@@ -411,7 +430,14 @@ const handleObjectiveProgress = (progress: ObjectiveProgress): void => {
     if (grantExperienceToRoster(xpAward, { source: 'objective', label: 'stronghold' })) {
       saveUnits();
       updateRosterDisplay();
-      log(`Strategists toast the captured stronghold — roster gains ${xpAward} XP.`);
+      logEvent({
+        type: 'progression',
+        message: `Strategists toast the captured stronghold — roster gains ${xpAward} XP.`,
+        metadata: {
+          source: 'stronghold',
+          xpAward
+        }
+      });
     }
   }
   if (destroyed < lastStrongholdsDestroyed) {
@@ -652,9 +678,14 @@ export function setupGame(
       const used = useSisuBurst(state, units);
       if (used) {
         playSafe('sisu');
-        log(
-          `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`
-        );
+        logEvent({
+          type: 'ability',
+          message: `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`,
+          metadata: {
+            ability: 'sisu-burst',
+            cost: SISU_BURST_COST
+          }
+        });
       } else {
         playSafe('error');
       }
@@ -663,9 +694,14 @@ export function setupGame(
     torille: () => {
       const used = torille(state, units, sauna.pos, map);
       if (used) {
-        log(
-          `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`
-        );
+        logEvent({
+          type: 'ability',
+          message: `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`,
+          metadata: {
+            ability: 'torille',
+            cost: TORILLE_COST
+          }
+        });
       } else {
         playSafe('error');
       }
@@ -705,7 +741,6 @@ export function setupGame(
       disposeRightPanel();
       disposeRightPanel = null;
     }
-    log = () => {};
     addEvent = () => {};
   }
 }
@@ -917,7 +952,16 @@ function registerUnit(unit: Unit): void {
   }
   if (unit.faction === 'player') {
     const steward = 'Our';
-    log(`${steward} ${describeUnit(unit, persona)} emerges from the steam.`);
+    const unitName = describeUnit(unit, persona);
+    logEvent({
+      type: 'spawn',
+      message: `${steward} ${unitName} emerges from the steam.`,
+      metadata: {
+        unitId: unit.id,
+        unitName,
+        steward
+      }
+    });
     updateRosterDisplay();
   }
 }
@@ -1044,7 +1088,7 @@ const spawnTierQueue = createPlayerSpawnTierQueue({
   getTier: () => getSaunaTier(currentTierId),
   getRosterLimit: () => getActiveTierLimit(),
   getRosterCount: () => getActiveRosterCount(),
-  log: (message) => log(message),
+  log: (event) => logEvent(event),
   queueCapacity: 3
 });
 
@@ -1367,7 +1411,6 @@ function initializeRightPanel(): void {
     onRosterEquipSlot: equipSlotFromStash,
     onRosterUnequipSlot: unequipSlotToStash
   });
-  log = rightPanel.log;
   addEvent = rightPanel.addEvent;
   installRosterRenderer(rightPanel.renderRoster);
   disposeRightPanel = rightPanel.dispose;
@@ -1392,13 +1435,25 @@ function spawn(type: UnitType, coord: AxialCoord): void {
 
 if (!restoredSave) {
   state.addResource(Resource.SAUNA_BEER, INITIAL_SAUNA_BEER);
-  log(
-    `Quartermaster stocks ${INITIAL_SAUNA_BEER} bottles of ${RESOURCE_LABELS[Resource.SAUNA_BEER]} to launch your campaign.`
-  );
+  logEvent({
+    type: 'resource',
+    message: `Quartermaster stocks ${INITIAL_SAUNA_BEER} bottles of ${RESOURCE_LABELS[Resource.SAUNA_BEER]} to launch your campaign.`,
+    metadata: {
+      resource: Resource.SAUNA_BEER,
+      amount: INITIAL_SAUNA_BEER,
+      context: 'initial'
+    }
+  });
   state.addResource(Resource.SAUNAKUNNIA, INITIAL_SAUNAKUNNIA);
-  log(
-    `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`
-  );
+  logEvent({
+    type: 'resource',
+    message: `Sauna elders honor your leadership with ${INITIAL_SAUNAKUNNIA} ${RESOURCE_LABELS[Resource.SAUNAKUNNIA]} to celebrate your arrival.`,
+    metadata: {
+      resource: Resource.SAUNAKUNNIA,
+      amount: INITIAL_SAUNAKUNNIA,
+      context: 'initial'
+    }
+  });
 }
 
 const storedSelection = saunojas.find((unit) => unit.selected);
@@ -1613,7 +1668,14 @@ export function draw(): void {
 }
 
 const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
-  log(`Sauna council toasts a fresh keg for policy: ${policy.name}.`);
+  logEvent({
+    type: 'policy',
+    message: `Sauna council toasts a fresh keg for policy: ${policy.name}.`,
+    metadata: {
+      policy: policy.id,
+      name: policy.name
+    }
+  });
 };
 eventBus.on(POLICY_EVENTS.APPLIED, onPolicyApplied);
 
@@ -1696,9 +1758,26 @@ const onUnitDied = ({
         });
         if (receipt.equipped) {
           const ownerName = selectedAttendant?.name ?? 'our champion';
-          log(`Quartermaster fastens ${drop.item.name} to ${ownerName}.`);
+          logEvent({
+            type: 'loot',
+            message: `Quartermaster fastens ${drop.item.name} to ${ownerName}.`,
+            metadata: {
+              item: drop.item.name,
+              equipped: true,
+              owner: ownerName,
+              source: label
+            }
+          });
         } else {
-          log(`Quartermaster stores ${drop.item.name} recovered from ${label}.`);
+          logEvent({
+            type: 'loot',
+            message: `Quartermaster stores ${drop.item.name} recovered from ${label}.`,
+            metadata: {
+              item: drop.item.name,
+              equipped: false,
+              source: label
+            }
+          });
         }
       }
     }
@@ -1710,13 +1789,28 @@ const onUnitDied = ({
   ) {
     state.addResource(Resource.SAUNAKUNNIA, SAUNAKUNNIA_VICTORY_BONUS);
     state.addResource(Resource.SISU, 1);
-    log('Our grit surges — +1 SISU earned for the vanquished foe.');
+    logEvent({
+      type: 'resource',
+      message: 'Our grit surges — +1 SISU earned for the vanquished foe.',
+      metadata: {
+        resource: Resource.SISU,
+        amount: 1,
+        context: 'victory'
+      }
+    });
   }
   if (fallenCoord) {
     map.revealAround(fallenCoord, 1, { autoFrame: false });
   }
   const side = unitFaction === 'player' ? 'our' : 'a rival';
-  log(`The steam hushes as ${side} ${label} grows still.`);
+  logEvent({
+    type: 'combat',
+    message: `The steam hushes as ${side} ${label} grows still.`,
+    metadata: {
+      side,
+      unit: label
+    }
+  });
 };
 eventBus.on('unitDied', onUnitDied);
 
@@ -1839,7 +1933,7 @@ export async function start(): Promise<void> {
   animationFrameId = requestAnimationFrame(gameLoop);
 }
 
-export { log };
+export { logEvent as log };
 
 export function __rebuildRightPanelForTest(): void {
   initializeRightPanel();
