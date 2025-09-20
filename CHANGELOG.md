@@ -37,6 +37,9 @@
 - Preserve enemy visibility when Saunoja overlays hide player sprites by
   routing friendly vision sources through the renderer and covering the
   regression with a focused Vitest battlefield draw test.
+- Extend the sauna's aura as a vision source so overlapping enemies stay
+  visible even without active scouts, wiring the renderer through the game
+  draw loop and locking the behaviour down with a Vitest regression.
 
 - Ramp enemy progression by tracking spawn cycles, tightening spawn cadence
   beyond the eight-second floor, and feeding a difficulty multiplier into bundle
