@@ -17,6 +17,15 @@ import {
 } from '../state/inventory.ts';
 import { createStashPanel } from './stash/StashPanel.tsx';
 import type { StashPanelCallbacks } from './stash/StashPanel.tsx';
+import artocoinIconUrl from '../../assets/ui/artocoin.svg';
+import {
+  createSaunaShopPanel,
+  type SaunaShopPanelController,
+  type SaunaShopViewModel,
+  type SaunaShopToastVariant
+} from './shop/SaunaShopPanel.tsx';
+import type { SaunaTierId } from '../sauna/tiers.ts';
+import type { PurchaseSaunaTierResult } from '../progression/saunaShop.ts';
 
 export interface InventoryHudOptions {
   readonly getSelectedUnitId?: () => string | null;
@@ -28,6 +37,9 @@ export interface InventoryHudOptions {
   ) => EquipAttemptResult;
   readonly getUseUiV2?: () => boolean;
   readonly onUseUiV2Change?: (enabled: boolean) => void;
+  readonly getSaunaShopViewModel?: () => SaunaShopViewModel | null;
+  readonly onPurchaseSaunaTier?: (tierId: SaunaTierId) => PurchaseSaunaTierResult;
+  readonly subscribeToSaunaShop?: (listener: () => void) => () => void;
 }
 
 const PAGE_SIZE = 24;
@@ -200,6 +212,34 @@ function createBadge(): {
   return { button, count };
 }
 
+function createShopButton(): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className =
+    'group inline-flex items-center gap-2 rounded-hud-pill border border-white/12 bg-[linear-gradient(135deg,rgba(44,32,18,0.92),rgba(68,48,24,0.95))] px-3.5 py-2 font-semibold text-amber-200 shadow-[0_14px_24px_rgba(17,12,6,0.55)] transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300 hover:-translate-y-0.5 hover:shadow-[0_18px_28px_rgba(17,12,6,0.65)]';
+  button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-label', 'Open artocoin shop');
+
+  const iconWrap = document.createElement('span');
+  iconWrap.className =
+    'relative flex h-[1.65rem] w-[1.65rem] flex-shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(255,210,128,0.95),rgba(114,68,17,0.85))] shadow-[inset_0_0_0_1px_rgba(255,236,196,0.55)]';
+  iconWrap.setAttribute('aria-hidden', 'true');
+
+  const icon = document.createElement('img');
+  icon.src = artocoinIconUrl;
+  icon.alt = '';
+  icon.decoding = 'async';
+  icon.className = 'h-[78%] w-[78%] drop-shadow-[0_10px_18px_rgba(255,186,92,0.4)]';
+  iconWrap.appendChild(icon);
+
+  const label = document.createElement('span');
+  label.className = 'text-[0.75rem] uppercase tracking-[0.08em]';
+  label.textContent = 'Shop';
+
+  button.append(iconWrap, label);
+  return button;
+}
+
 export function setupInventoryHud(
   inventory: InventoryState,
   options: InventoryHudOptions = {}
@@ -213,6 +253,9 @@ export function setupInventoryHud(
   const topRegion = regions.top;
   const toastStack = ensureToastStack(overlay, topRegion);
 
+  overlay.querySelector('#inventory-stash-panel')?.remove();
+  overlay.querySelector('#inventory-shop-panel')?.remove();
+
   overlay
     .querySelectorAll<HTMLButtonElement>('[data-testid="inventory-badge"]')
     .forEach((el) => el.remove());
@@ -220,7 +263,117 @@ export function setupInventoryHud(
   badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
   topRegion.appendChild(badgeButton);
 
-  overlay.querySelector('#inventory-stash-panel')?.remove();
+  const shopNumberFormatter = new Intl.NumberFormat('en-US');
+  let shopPanel: SaunaShopPanelController | null = null;
+  let shopButton: HTMLButtonElement | null = null;
+  let isShopOpen = false;
+  let unsubscribeShop: (() => void) | null = null;
+  let onShopButtonClick: (() => void) | null = null;
+  let setShopOpen: (next: boolean) => void = () => {};
+
+  const updateShopButtonState = (view: SaunaShopViewModel | null): void => {
+    if (!shopButton || !view) {
+      return;
+    }
+    const balanceLabel = shopNumberFormatter.format(
+      Math.max(0, Math.floor(Number.isFinite(view.balance) ? view.balance : 0))
+    );
+    shopButton.dataset.balance = balanceLabel;
+    shopButton.title = `Artocoins ${balanceLabel}`;
+    const ready = view.tiers.some((entry) => !entry.status.owned && entry.status.affordable);
+    const locked = view.tiers.some((entry) => !entry.status.owned && !entry.status.affordable);
+    shopButton.dataset.state = ready ? 'ready' : locked ? 'locked' : 'complete';
+  };
+
+  const shopToastVariants: Record<SaunaShopToastVariant, 'loot' | 'info' | 'warn'> = {
+    success: 'loot',
+    info: 'info',
+    warn: 'warn'
+  };
+
+  if (typeof options.getSaunaShopViewModel === 'function') {
+    const resolveView = (): SaunaShopViewModel =>
+      options.getSaunaShopViewModel?.() ?? { balance: 0, tiers: [] };
+    shopButton = createShopButton();
+    shopButton.dataset.state = 'locked';
+    topRegion.appendChild(shopButton);
+
+    const emitShopToast = (message: string, variant: SaunaShopToastVariant) => {
+      const mapped = shopToastVariants[variant] ?? 'info';
+      showToast(toastStack, message, mapped);
+    };
+
+    const handlePurchase = (tierId: SaunaTierId): PurchaseSaunaTierResult => {
+      const handler = options.onPurchaseSaunaTier;
+      if (!handler) {
+        const fallback = resolveView();
+        return {
+          success: false,
+          balance: fallback.balance,
+          purchased: new Set<SaunaTierId>(),
+          reason: 'unsupported'
+        } satisfies PurchaseSaunaTierResult;
+      }
+      return handler(tierId);
+    };
+
+    shopPanel = createSaunaShopPanel({
+      getViewModel: resolveView,
+      callbacks: {
+        onClose: () => setShopOpen(false),
+        onPurchaseTier: handlePurchase,
+        emitToast: emitShopToast
+      }
+    });
+    shopPanel.element.id = 'inventory-shop-panel';
+    shopButton.setAttribute('aria-controls', 'inventory-shop-panel');
+    overlay.appendChild(shopPanel.element);
+
+    const initialView = resolveView();
+    shopPanel.update(initialView);
+    updateShopButtonState(initialView);
+
+    setShopOpen = (next: boolean) => {
+      if (isShopOpen === next) {
+        return;
+      }
+      isShopOpen = next;
+      shopPanel?.setOpen(next);
+      shopButton?.setAttribute('aria-expanded', next ? 'true' : 'false');
+      shopButton?.setAttribute(
+        'aria-label',
+        next ? 'Close artocoin shop' : 'Open artocoin shop'
+      );
+      if (next) {
+        setOpen(false);
+        overlay.classList.add('inventory-shop-open');
+        const view = resolveView();
+        shopPanel?.update(view);
+        updateShopButtonState(view);
+        try {
+          shopPanel?.focus();
+        } catch (error) {
+          console.warn('Unable to focus artocoin shop', error);
+        }
+      } else {
+        overlay.classList.remove('inventory-shop-open');
+        try {
+          shopButton?.focus({ preventScroll: true });
+        } catch (error) {
+          console.warn('Unable to restore focus to artocoin shop button', error);
+        }
+      }
+    };
+
+    onShopButtonClick = () => setShopOpen(!isShopOpen);
+    shopButton.addEventListener('click', onShopButtonClick);
+
+    unsubscribeShop = options.subscribeToSaunaShop?.(() => {
+      const view = resolveView();
+      shopPanel?.update(view);
+      updateShopButtonState(view);
+    });
+  }
 
   const panelCallbacks: StashPanelCallbacks = {
     onClose: () => setOpen(false),
@@ -289,7 +442,7 @@ export function setupInventoryHud(
   panel.element.id = 'inventory-stash-panel';
   overlay.appendChild(panel.element);
 
-  let isOpen = false;
+  let isStashOpen = false;
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();
   let search = '';
@@ -297,17 +450,18 @@ export function setupInventoryHud(
   let page = 1;
 
   function setOpen(next: boolean): void {
-    if (isOpen === next) {
+    if (isStashOpen === next) {
       return;
     }
-    isOpen = next;
-    panel.setOpen(isOpen);
-    badgeButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    isStashOpen = next;
+    panel.setOpen(isStashOpen);
+    badgeButton.setAttribute('aria-expanded', isStashOpen ? 'true' : 'false');
     badgeButton.setAttribute(
       'aria-label',
-      isOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
+      isStashOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
     );
-    if (isOpen) {
+    if (isStashOpen) {
+      setShopOpen(false);
       overlay.classList.add('inventory-panel-open');
       try {
         panel.focus();
@@ -468,7 +622,7 @@ export function setupInventoryHud(
   const unsubscribe = inventory.on((event) => handleInventoryEvent(event));
 
   const onBadgeClick = () => {
-    setOpen(!isOpen);
+    setOpen(!isStashOpen);
   };
   badgeButton.addEventListener('click', onBadgeClick);
 
@@ -478,7 +632,7 @@ export function setupInventoryHud(
     }
     if (event.code === 'KeyI' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
-      setOpen(!isOpen);
+      setOpen(!isStashOpen);
     }
   };
   window.addEventListener('keydown', onKeyDown);
@@ -492,6 +646,13 @@ export function setupInventoryHud(
     badgeButton.remove();
     panel.destroy();
     overlay.classList.remove('inventory-panel-open');
+    if (shopButton && onShopButtonClick) {
+      shopButton.removeEventListener('click', onShopButtonClick);
+    }
+    shopPanel?.destroy();
+    shopButton?.remove();
+    unsubscribeShop?.();
+    overlay.classList.remove('inventory-shop-open');
     if (!toastStack.hasChildNodes()) {
       toastStack.remove();
     }

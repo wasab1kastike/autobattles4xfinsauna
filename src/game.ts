@@ -82,9 +82,20 @@ import {
 } from './progression/ngplus.ts';
 import {
   calculateArtocoinPayout,
+  creditArtocoins,
   loadArtocoinBalance,
-  saveArtocoinBalance
+  onArtocoinChange,
+  type ArtocoinChangeEvent
 } from './progression/artocoin.ts';
+import {
+  getPurchasedSaunaTiers,
+  grantSaunaTier,
+  onSaunaShopChange,
+  purchaseSaunaTier,
+  type PurchaseSaunaTierResult,
+  type SaunaShopChangeEvent
+} from './progression/saunaShop.ts';
+import type { SaunaShopViewModel } from './ui/shop/SaunaShopPanel.tsx';
 import { createPlayerSpawnTierQueue } from './world/spawn/tier_helpers.ts';
 import {
   equip as equipLoadout,
@@ -127,6 +138,21 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNAKUNNIA]: 'Saunakunnia',
   [Resource.SISU]: 'Sisu'
 };
+
+let artocoinBalance = loadArtocoinBalance();
+let purchasedTierIds = new Set<SaunaTierId>(getPurchasedSaunaTiers());
+let artocoinsSpentThisRun = 0;
+const saunaShopListeners = new Set<() => void>();
+
+function notifySaunaShopListeners(): void {
+  saunaShopListeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (error) {
+      console.warn('Sauna shop listener failure', error);
+    }
+  });
+}
 
 function clampRosterCap(value: number, limit: number): number {
   const maxCap = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
@@ -726,7 +752,8 @@ export function setupGame(
     topbarControls = setupTopbar(state, {
       saunakunnia: uiIcons.resource,
       sisu: uiIcons.sisu,
-      saunaBeer: uiIcons.saunaBeer
+      saunaBeer: uiIcons.saunaBeer,
+      artocoin: uiIcons.artocoin
     });
   }
 
@@ -734,13 +761,26 @@ export function setupGame(
 
   inventoryHudController?.destroy();
   inventoryHudController = null;
+  const buildSaunaShopViewModel = (): SaunaShopViewModel => ({
+    balance: artocoinBalance,
+    tiers: listSaunaTiers().map((tier) => ({
+      tier,
+      status: evaluateSaunaTier(tier, resolveTierContext())
+    }))
+  });
   if (useClassicHud) {
     inventoryHudController = setupInventoryHud(inventory, {
       getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
       getComparisonContext: () => getSelectedInventoryContext(),
       onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
       getUseUiV2,
-      onUseUiV2Change: setUseUiV2
+      onUseUiV2Change: setUseUiV2,
+      getSaunaShopViewModel: () => buildSaunaShopViewModel(),
+      onPurchaseSaunaTier: (tierId) => purchaseSaunaTier(getSaunaTier(tierId)),
+      subscribeToSaunaShop: (listener) => {
+        saunaShopListeners.add(listener);
+        return () => saunaShopListeners.delete(listener);
+      }
     });
   }
 
@@ -1026,6 +1066,9 @@ function resolveUnitUpkeep(unit: Unit): number {
 
 const state = new GameState(1000);
 const inventory = new InventoryState();
+artocoinBalance = loadArtocoinBalance();
+purchasedTierIds = new Set(getPurchasedSaunaTiers());
+artocoinsSpentThisRun = 0;
 const restoredSave = state.load(map);
 if (restoredSave) {
   const hydratedNgPlus = state.getNgPlusState();
@@ -1042,9 +1085,22 @@ state.setEnemyScalingBase({
   strength: 1
 });
 const saunaSettings = loadSaunaSettings();
+
+if (currentNgPlusState.unlockSlots >= 2) {
+  purchasedTierIds = new Set(grantSaunaTier('aurora-ward'));
+}
+if (currentNgPlusState.ngPlusLevel >= 3) {
+  purchasedTierIds = new Set(grantSaunaTier('mythic-conclave'));
+}
+if (
+  saunaSettings.activeTierId !== DEFAULT_SAUNA_TIER_ID &&
+  !purchasedTierIds.has(saunaSettings.activeTierId)
+) {
+  purchasedTierIds = new Set(grantSaunaTier(saunaSettings.activeTierId));
+}
 const resolveTierContext = (): SaunaTierContext => ({
-  ngPlusLevel: currentNgPlusState.ngPlusLevel,
-  unlockSlots: currentNgPlusState.unlockSlots
+  artocoinBalance,
+  ownedTierIds: purchasedTierIds
 });
 
 let currentTierId: SaunaTierId = saunaSettings.activeTierId;
@@ -1169,6 +1225,22 @@ syncActiveTierWithUnlocks = (options: { persist?: boolean } = {}): void => {
 };
 
 syncActiveTierWithUnlocks({ persist: true });
+
+onSaunaShopChange((event: SaunaShopChangeEvent) => {
+  purchasedTierIds = new Set(event.purchased);
+  if (event.type === 'purchase' && event.cost && event.spendResult?.success) {
+    artocoinsSpentThisRun += Math.max(0, Math.floor(event.cost));
+  }
+  notifySaunaShopListeners();
+  syncActiveTierWithUnlocks({ persist: true });
+  saunaUiController?.update?.();
+});
+
+onArtocoinChange((change: ArtocoinChangeEvent) => {
+  artocoinBalance = change.balance;
+  notifySaunaShopListeners();
+  saunaUiController?.update?.();
+});
 
 const setActiveTier = (
   tierId: SaunaTierId,
@@ -1306,10 +1378,15 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
     rampStageIndex: snapshot.rampStageIndex
   });
   if (payout.artocoins > 0) {
-    const currentBalance = loadArtocoinBalance();
-    saveArtocoinBalance(currentBalance + payout.artocoins);
+    artocoinBalance = creditArtocoins(payout.artocoins, {
+      reason: 'payout',
+      metadata: {
+        outcome: resolution.outcome,
+        tier: currentTierId
+      },
+      previousBalance: artocoinBalance
+    });
   }
-  const completedNgPlusLevel = currentNgPlusState.ngPlusLevel;
   const nextRunNgPlusState = planNextNgPlusRun(currentNgPlusState, {
     outcome: resolution.outcome
   });
@@ -1319,7 +1396,11 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   const controller = showEndScreen({
     container: overlay,
     resolution,
-    currentNgPlusLevel: completedNgPlusLevel,
+    artocoinSummary: {
+      balance: artocoinBalance,
+      earned: payout.artocoins,
+      spent: artocoinsSpentThisRun
+    },
     resourceLabels: RESOURCE_LABELS,
     onNewRun: () => {
       if (import.meta.env.DEV) {
