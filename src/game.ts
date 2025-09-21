@@ -89,6 +89,7 @@ import {
   onArtocoinChange,
   type ArtocoinChangeEvent
 } from './progression/artocoin.ts';
+import { coerceObjectiveMetric } from './progression/objectivePayout.ts';
 import {
   getPurchasedSaunaTiers,
   grantSaunaTier,
@@ -1420,10 +1421,13 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   const snapshot = enemySpawner.getSnapshot();
   const payout = calculateArtocoinPayout(resolution.outcome, {
     tierId: currentTierId,
-    runSeconds: Math.max(0, resolution.durationMs / 1000),
-    enemyKills: Math.max(0, resolution.summary.enemyKills),
-    tilesExplored: Math.max(0, resolution.summary.exploration.revealedHexes),
-    rosterLosses: Math.max(0, resolution.summary.roster.totalDeaths),
+    runSeconds: Math.max(0, coerceObjectiveMetric(resolution.durationMs) / 1000),
+    enemyKills: Math.max(0, coerceObjectiveMetric(resolution.summary.enemyKills)),
+    tilesExplored: Math.max(
+      0,
+      coerceObjectiveMetric(resolution.summary.exploration.revealedHexes)
+    ),
+    rosterLosses: Math.max(0, coerceObjectiveMetric(resolution.summary.roster.totalDeaths)),
     difficultyScalar: snapshot.effectiveDifficulty,
     rampStageIndex: snapshot.rampStageIndex
   });
