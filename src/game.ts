@@ -1184,7 +1184,7 @@ const resolveSpawnLimit = (): number => Math.max(MIN_SPAWN_LIMIT, sauna.maxRoste
 
 const getUseUiV2 = (): boolean => useUiV2;
 
-const setUseUiV2 = (next: boolean): void => {
+export const setUseUiV2 = (next: boolean): void => {
   const normalized = Boolean(next);
   if (useUiV2 === normalized) {
     return;

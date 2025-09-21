@@ -4,6 +4,8 @@
 
 
 
+- Add an accessible "Return to Classic HUD" control to the experimental overlay, persist the sauna setting when toggled, instantly restore the classic interface, and cover the flow with Vitest regression tests.
+
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
   the latest commit badge and script bundle.
 

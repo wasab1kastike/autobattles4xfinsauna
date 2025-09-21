@@ -19,6 +19,8 @@ const renderShell = () => {
   `;
 };
 
+const nextTick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
 const stubMatchMedia = () =>
   vi.fn((query: string) => ({
     matches: false,
@@ -77,5 +79,45 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
     expect(document.querySelectorAll('[data-testid="inventory-badge"]')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+  });
+
+  it('persists the return-to-classic control and restores the legacy HUD on reload', async () => {
+    window.localStorage?.setItem?.(
+      'autobattles:sauna-settings',
+      JSON.stringify({ maxRosterSize: 3, activeTierId: 'ember-circuit', useUiV2: true })
+    );
+
+    const { init, destroy } = await import('./main.ts');
+
+    init();
+    await nextTick();
+
+    const returnButton = document.querySelector<HTMLButtonElement>('[data-testid="return-to-classic-hud"]');
+    expect(returnButton).toBeTruthy();
+    expect(returnButton?.disabled).toBe(false);
+    expect(document.querySelectorAll('#topbar')).toHaveLength(0);
+
+    returnButton?.click();
+    await nextTick();
+    await nextTick();
+
+    const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
+    const parsed = stored
+      ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string; useUiV2: boolean })
+      : null;
+    expect(parsed?.useUiV2).toBe(false);
+
+    expect(document.querySelectorAll('#topbar')).toHaveLength(1);
+    expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
+
+    destroy();
+    await nextTick();
+    renderShell();
+
+    init();
+    await nextTick();
+
+    expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
+    expect(document.querySelectorAll('#topbar')).toHaveLength(1);
   });
 });
