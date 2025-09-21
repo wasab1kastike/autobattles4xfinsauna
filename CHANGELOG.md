@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Collapse the HUD grid into a single-column mobile stack, stretch the left,
+  right, and bottom regions to full-width trays, and ensure the command console
+  toggle still slides in over the canvas alongside the mobile action bar.
+
 
 
 - Expand the HUD right rail with a clamp-based 420px target, widen the overlay
