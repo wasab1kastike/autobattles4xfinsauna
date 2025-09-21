@@ -188,7 +188,7 @@ describe('runEconomyTick', () => {
     let rosterCount = 1;
     const tier = {
       id: 'aurora-ward',
-      name: 'Aurora Ward',
+      name: 'Modern Wooden Sauna',
       rosterCap: 2,
       description: 'test tier',
       art: { badge: 'badge.svg' },
