@@ -56,6 +56,9 @@ export interface RosterPanelOptions {
   readonly onSelect?: (unitId: string) => void;
   readonly onEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   readonly onUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  readonly getRosterCap?: () => number;
+  readonly getRosterCapLimit?: () => number;
+  readonly updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 }
 
 const rosterStatusLabels: Record<RosterStatus, string> = {
@@ -360,6 +363,128 @@ export function createRosterPanel(
     header.appendChild(count);
 
     container.appendChild(header);
+
+    const renderCapControl = (): void => {
+      if (typeof options.getRosterCapLimit !== 'function' || typeof options.getRosterCap !== 'function') {
+        return;
+      }
+
+      const capSection = document.createElement('section');
+      capSection.classList.add('panel-roster__cap');
+
+      const capHeader = document.createElement('div');
+      capHeader.classList.add('panel-roster__cap-header');
+
+      const capTitle = document.createElement('span');
+      capTitle.classList.add('panel-roster__cap-title');
+      capTitle.textContent = 'Roster Cap';
+      capHeader.appendChild(capTitle);
+
+      const capValue = document.createElement('span');
+      capValue.classList.add('panel-roster__cap-value');
+      capValue.setAttribute('aria-live', 'polite');
+      capHeader.appendChild(capValue);
+
+      capSection.appendChild(capHeader);
+
+      const capDescription = document.createElement('p');
+      capDescription.classList.add('panel-roster__cap-description');
+      capDescription.textContent = 'Tune how many attendants rally before new recruits await the steam.';
+      capSection.appendChild(capDescription);
+
+      const sliderId = `panel-roster-cap-${Math.floor(Math.random() * 100000)}`;
+      const sliderLabel = document.createElement('label');
+      sliderLabel.classList.add('panel-roster__cap-label');
+      sliderLabel.htmlFor = sliderId;
+      sliderLabel.textContent = 'Active attendants';
+
+      const slider = document.createElement('input');
+      slider.type = 'range';
+      slider.id = sliderId;
+      slider.min = '0';
+      slider.step = '1';
+      slider.classList.add('panel-roster__cap-slider');
+      slider.setAttribute('aria-label', 'Roster cap');
+
+      const numericInput = document.createElement('input');
+      numericInput.type = 'number';
+      numericInput.min = '0';
+      numericInput.step = '1';
+      numericInput.inputMode = 'numeric';
+      numericInput.classList.add('panel-roster__cap-number');
+
+      const controls = document.createElement('div');
+      controls.classList.add('panel-roster__cap-controls');
+      controls.append(sliderLabel, slider, numericInput);
+      capSection.appendChild(controls);
+
+      const resolveLimit = (): number => {
+        const rawLimit = options.getRosterCapLimit?.();
+        if (typeof rawLimit !== 'number' || !Number.isFinite(rawLimit)) {
+          return 0;
+        }
+        return Math.max(0, Math.floor(rawLimit));
+      };
+
+      const readCapValue = (): number => {
+        const rawValue = options.getRosterCap?.();
+        if (typeof rawValue !== 'number' || !Number.isFinite(rawValue)) {
+          return 0;
+        }
+        return Math.max(0, Math.floor(rawValue));
+      };
+
+      const updateDisplay = (limit: number, value: number): void => {
+        const cappedValue = Math.max(0, Math.min(limit, Math.floor(value)));
+        const formatted = integerFormatter.format(cappedValue);
+        slider.max = String(limit);
+        slider.value = String(cappedValue);
+        slider.setAttribute('aria-valuemin', '0');
+        slider.setAttribute('aria-valuemax', slider.max);
+        slider.setAttribute('aria-valuenow', slider.value);
+        numericInput.max = String(limit);
+        numericInput.value = String(cappedValue);
+        numericInput.setAttribute('aria-label', `Roster cap set to ${formatted}`);
+        const valueLabel = cappedValue === 0 ? 'Paused' : formatted;
+        capValue.textContent = valueLabel;
+        capValue.dataset.state = cappedValue === 0 ? 'paused' : 'active';
+      };
+
+      const canAdjustCap = typeof options.updateMaxRosterSize === 'function';
+      slider.disabled = !canAdjustCap;
+      numericInput.disabled = !canAdjustCap;
+
+      const applyCap = (raw: number, persist: boolean): void => {
+        const limit = resolveLimit();
+        const sanitized = Math.max(0, Math.min(limit, Number.isFinite(raw) ? Math.floor(raw) : 0));
+        let applied = sanitized;
+        if (canAdjustCap) {
+          applied = options.updateMaxRosterSize!(sanitized, { persist });
+        }
+        updateDisplay(limit, applied);
+      };
+
+      updateDisplay(resolveLimit(), readCapValue());
+
+      if (canAdjustCap) {
+        slider.addEventListener('input', () => {
+          applyCap(Number(slider.value), false);
+        });
+        slider.addEventListener('change', () => {
+          applyCap(Number(slider.value), true);
+        });
+        const handleNumeric = (persist: boolean) => {
+          applyCap(Number(numericInput.value), persist);
+        };
+        numericInput.addEventListener('input', () => handleNumeric(false));
+        numericInput.addEventListener('change', () => handleNumeric(true));
+        numericInput.addEventListener('blur', () => handleNumeric(true));
+      }
+
+      container.appendChild(capSection);
+    };
+
+    renderCapControl();
 
     if (entries.length === 0) {
       const empty = document.createElement('p');

@@ -50,6 +50,9 @@ type RightPanelOptions = {
   onRosterRendererReady?: (renderer: (entries: RosterEntry[]) => void) => void;
   onRosterEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   onRosterUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  getRosterCap?: () => number;
+  getRosterCapLimit?: () => number;
+  updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 };
 
 export function setupRightPanel(
@@ -493,7 +496,10 @@ export function setupRightPanel(
   const rosterPanel = createRosterPanel(rosterTab, {
     onSelect: onRosterSelect,
     onEquipSlot: onRosterEquipSlot,
-    onUnequipSlot: onRosterUnequipSlot
+    onUnequipSlot: onRosterUnequipSlot,
+    getRosterCap: options.getRosterCap,
+    getRosterCapLimit: options.getRosterCapLimit,
+    updateMaxRosterSize: options.updateMaxRosterSize
   });
 
   const renderRoster = (entries: RosterEntry[]): void => {

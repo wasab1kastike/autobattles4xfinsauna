@@ -273,4 +273,55 @@ describe('createRosterPanel', () => {
     expect(ariaLabel).toContain('2 equipped items');
     expect(ariaLabel).toContain('1 active modifier');
   });
+
+  it('renders roster cap controls and routes updates through callbacks', () => {
+    const container = document.createElement('div');
+    let currentCap = 2;
+    const updates: Array<{ value: number; persist?: boolean }> = [];
+    const panel = createRosterPanel(container, {
+      getRosterCap: () => currentCap,
+      getRosterCapLimit: () => 5,
+      updateMaxRosterSize: (value, opts) => {
+        updates.push({ value, persist: opts?.persist });
+        currentCap = value;
+        return value;
+      }
+    });
+
+    panel.render([]);
+
+    const slider = container.querySelector<HTMLInputElement>('.panel-roster__cap-slider');
+    const numberInput = container.querySelector<HTMLInputElement>('.panel-roster__cap-number');
+    const valueLabel = container.querySelector<HTMLSpanElement>('.panel-roster__cap-value');
+    const emptyMessage = container.querySelector('.panel-roster__empty');
+
+    expect(slider).not.toBeNull();
+    expect(numberInput).not.toBeNull();
+    expect(valueLabel?.textContent).toBe('2');
+    expect(slider?.value).toBe('2');
+    expect(slider?.max).toBe('5');
+    expect(numberInput?.max).toBe('5');
+    expect(emptyMessage).not.toBeNull();
+
+    if (!slider || !numberInput || !valueLabel) {
+      throw new Error('Roster cap controls did not render');
+    }
+
+    slider.value = '8';
+    slider.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toEqual({ value: 5, persist: false });
+    expect(valueLabel.textContent).toBe('5');
+
+    slider.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(updates).toHaveLength(2);
+    expect(updates[1]).toEqual({ value: 5, persist: true });
+
+    numberInput.value = '-3';
+    numberInput.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(updates).toHaveLength(3);
+    expect(updates[2]).toEqual({ value: 0, persist: true });
+    expect(valueLabel.textContent).toBe('Paused');
+    expect(valueLabel.dataset.state).toBe('paused');
+  });
 });
