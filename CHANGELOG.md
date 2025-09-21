@@ -4,6 +4,7 @@
 
 
 
+- Rename every sauna tier reference, unlock label, progression table, and test copy to Primitive Smoke Sauna, Modern Wooden Sauna, and Futuristic Fission Sauna for consistent theming.
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
   the latest commit badge and script bundle.
 
