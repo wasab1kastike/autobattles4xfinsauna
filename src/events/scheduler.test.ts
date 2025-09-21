@@ -121,4 +121,42 @@ describe('EventScheduler', () => {
       event: expect.objectContaining({ id: 'choice-event' })
     });
   });
+
+  it('activates default briefing events over time', async () => {
+    vi.resetModules();
+
+    const schedulerModule = await import('./scheduler.ts');
+    const defaultModule = await import('./defaultEvents.ts');
+
+    const seededScheduler = schedulerModule.eventScheduler;
+    const { defaultEvents, seedDefaultEvents } = defaultModule;
+    const [firstBriefing] = defaultEvents;
+    if (!firstBriefing) {
+      throw new Error('Expected at least one default event.');
+    }
+
+    seededScheduler.reset();
+    seedDefaultEvents(seededScheduler);
+
+    const updates: string[][] = [];
+    const unsubscribe = seededScheduler.subscribe((events) => {
+      updates.push(events.map((event) => event.id));
+    });
+
+    expect(seededScheduler.getActiveEvents()).toHaveLength(0);
+
+    seededScheduler.tick(3);
+    const firstWave = seededScheduler.getActiveEvents();
+    expect(firstWave.map((event) => event.id)).toContain(firstBriefing.content.id);
+    expect(updates[updates.length - 1]).toContain(firstBriefing.content.id);
+
+    seededScheduler.tick(30);
+    const allActive = seededScheduler.getActiveEvents();
+    expect(allActive).toHaveLength(defaultEvents.length);
+    expect(allActive.map((event) => event.headline)).toEqual(
+      expect.arrayContaining(defaultEvents.map((spec) => spec.content.headline))
+    );
+
+    unsubscribe();
+  });
 });
