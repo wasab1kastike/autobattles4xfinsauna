@@ -2,25 +2,7 @@
 
 ## Unreleased
 
-- Clarify onboarding win and loss conditions with refreshed tutorial copy, a
-  defeat spotlight on the Sauna Integrity meter, and updated flow docs.
 
-- Pause the game when the onboarding tutorial boots, resume only when the
-  walkthrough owned the pause toggle, and guard dispose flows so teardown no
-  longer leaves the battlefield frozen.
-
-- Extend the onboarding walkthrough with an Enemy Ramp badge spotlight and
-  document the top-bar anchor alongside the flow overview.
-
-- Restore the action tray tutorial anchor so **Command the Fight** hugs the combat
-  controls again, exercise the regression with a HUD Vitest suite, and document
-  the premium highlight behaviour in the onboarding guide.
-
-- Tighten Saunoja upkeep rolls to the 1–4 window with a simplified sampler,
-  refreshed vitest coverage, and documentation of the corrected distribution.
-
-- Rebuild the GitHub Pages mirror from the latest production bundle so the
-  hashed Vite assets and embedded build badge advertise commit 7f9bdcd.
 
 - Expand the HUD right rail with a clamp-based 420px target, widen the overlay
   grid column, and tune the mobile sheet so roster panels breathe on large

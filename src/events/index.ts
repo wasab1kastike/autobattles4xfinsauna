@@ -16,3 +16,5 @@ import './policies';
 import '../buildings/effects.ts';
 // register audio listeners
 import '../audio/events.ts';
+// seed early-game scheduler content
+import './defaultEvents.ts';
