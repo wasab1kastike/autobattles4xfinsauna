@@ -11,7 +11,8 @@ The onboarding flow introduces the polished HUD rhythms for new leaders through 
 | Stockpile SISU | `data-tutorial-target="sisu"` on the SISU meter | SISU fuels heroic bursts. Watch this meter to know when your grit reserves can power signature moves. |
 | Read the Enemy Ramp | `data-tutorial-target="enemy-ramp"` on the top-bar badge | The badge shows current stage markers, multiplier spikes, and calm windows before the next enemy wave. |
 | Command the Fight | `data-tutorial-target="combat"` on the action tray | Trigger a Sisu Burst to supercharge allied attacks or rally everyone home with a Torille call. |
-| Claim Victory | `data-tutorial-target="victory"` on the Saunakunnia badge | Saunakunnia measures renown. Push it ever higher to unlock triumphs and close the campaign in glory. |
+| Claim Victory | `data-tutorial-target="victory"` on the Saunakunnia badge | Destroy every enemy stronghold to win the campaign. The badge tracks your march toward total conquest. |
+| Avert Defeat | `data-tutorial-target="sauna-integrity"` on the Sauna Integrity meter | Defeat strikes if the sauna is razed, every attendant is downed for 8 seconds, or upkeep bankruptcy lingers for 12 seconds. Guard the meter and steady your roster. |
 
 Each tooltip card is fully keyboard navigable (`←`, `→`, `Esc`, or the on-screen controls) and can be dismissed at any time.
 

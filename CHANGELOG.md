@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Clarify onboarding win and loss conditions with refreshed tutorial copy, a
+  defeat spotlight on the Sauna Integrity meter, and updated flow docs.
+
 - Pause the game when the onboarding tutorial boots, resume only when the
   walkthrough owned the pause toggle, and guard dispose flows so teardown no
   longer leaves the battlefield frozen.
