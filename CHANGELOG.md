@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuild the GitHub Pages mirror so the published bundle ships the "Return to
+  Classic HUD" toggle and current commit badge.
+
 - Ship an accessible “Return to Classic HUD” control within the experimental
   overlay, persist the sauna settings toggle when players opt out, and reboot
   the classic layout instantly with fresh regression coverage.
