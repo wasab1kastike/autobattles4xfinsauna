@@ -9,6 +9,7 @@ The onboarding flow introduces the polished HUD rhythms for new leaders through 
 | Heat the Sauna | `data-tutorial-target="heat"` on the sauna control | Keep the sauna fires roaring. This control shows when the next warrior emerges from the steam. |
 | Mind Your Upkeep | `data-tutorial-target="upkeep"` on the roster HUD | Every attendant draws upkeep. Track totals and see a featured roster member to balance your economy. |
 | Stockpile SISU | `data-tutorial-target="sisu"` on the SISU meter | SISU fuels heroic bursts. Watch this meter to know when your grit reserves can power signature moves. |
+| Read the Enemy Ramp | `data-tutorial-target="enemy-ramp"` on the top-bar badge | The badge shows current stage markers, multiplier spikes, and calm windows before the next enemy wave. |
 | Command the Fight | `data-tutorial-target="combat"` on the action tray | Trigger a Sisu Burst to supercharge allied attacks or rally everyone home with a Torille call. |
 | Claim Victory | `data-tutorial-target="victory"` on the Saunakunnia badge | Saunakunnia measures renown. Push it ever higher to unlock triumphs and close the campaign in glory. |
 
