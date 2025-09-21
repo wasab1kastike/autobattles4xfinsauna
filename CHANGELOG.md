@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Pause the game when the onboarding tutorial boots, resume only when the
+  walkthrough owned the pause toggle, and guard dispose flows so teardown no
+  longer leaves the battlefield frozen.
+
 - Extend the onboarding walkthrough with an Enemy Ramp badge spotlight and
   document the top-bar anchor alongside the flow overview.
 
