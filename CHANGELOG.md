@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Separate artocoin progression from NG+ persistence, migrate legacy saves into
+  a dedicated balance slot, adopt the new payout formula for run completion,
+  and reset prestige modifiers so future difficulty tuning flows through
+  purchased upgrades instead of NG+ levels.
+
 - Track objective enemy kill and exploration tallies per run so the end screen
   snapshot captures combat momentum and fog busting progress, backed by fresh
   regression coverage.

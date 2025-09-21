@@ -3,11 +3,6 @@ import {
   DEFAULT_NGPLUS_STATE,
   createNgPlusState,
   ensureNgPlusRunState,
-  getAiAggressionModifier,
-  getEnemyRampModifiers,
-  getEliteOdds,
-  getUnlockSpawnLimit,
-  getUpkeepMultiplier,
   loadNgPlusState,
   planNextNgPlusRun,
   saveNgPlusState,
@@ -93,51 +88,12 @@ describe('ngplus progression helpers', () => {
     expect(restored.runSeed).toBe(7);
   });
 
-  it('advances to the next NG+ run after a victory', () => {
+  it('re-rolls the run seed for the next NG+ attempt', () => {
     const base = ensureNgPlusRunState(createNgPlusState({ runSeed: 11, ngPlusLevel: 2, unlockSlots: 1 }));
     const next = planNextNgPlusRun(base, { outcome: 'win', random: () => 0.9 });
-    expect(next.ngPlusLevel).toBe(3);
-    expect(next.unlockSlots).toBe(2);
     expect(next.runSeed).not.toBe(base.runSeed);
-    expect(next.enemyTuning).toEqual(base.enemyTuning);
-  });
-
-  it('computes modifier helpers from the current NG+ state', () => {
-    const state = createNgPlusState({ runSeed: 19, ngPlusLevel: 4, unlockSlots: 3 });
-    expect(getUpkeepMultiplier(state)).toBeCloseTo(1 + 4 * 0.12 + 3 * 0.02);
-    expect(getEliteOdds(state)).toBeCloseTo(0.1 + 4 * 0.05 + 3 * 0.01);
-    expect(getAiAggressionModifier(state)).toBeCloseTo(1 + 4 * 0.25);
-    expect(getUnlockSpawnLimit(state)).toBe(1 + 3);
-  });
-
-  it('never drops the spawn limit below the base roster capacity', () => {
-    const fresh = createNgPlusState({ unlockSlots: 0 });
-    expect(getUnlockSpawnLimit(fresh)).toBe(3);
-
-    const negative = createNgPlusState({ unlockSlots: -5 });
-    expect(getUnlockSpawnLimit(negative)).toBe(3);
-
-    const overflow = createNgPlusState({ unlockSlots: MAX_UNLOCK_SLOTS + 4 });
-    expect(getUnlockSpawnLimit(overflow)).toBe(1 + MAX_UNLOCK_SLOTS);
-  });
-
-  it('captures enemy tuning multipliers for ramp scaling', () => {
-    const state = createNgPlusState({
-      runSeed: 23,
-      ngPlusLevel: 1,
-      unlockSlots: 0,
-      enemyTuning: {
-        aggressionMultiplier: 1.6,
-        cadenceMultiplier: 1.25,
-        strengthMultiplier: 1.4
-      }
-    });
-    expect(getAiAggressionModifier(state)).toBeCloseTo(
-      Math.min(8, Math.max(0.25, (1 + 1 * 0.25) * 1.6))
-    );
-    const tuning = getEnemyRampModifiers(state);
-    expect(tuning.cadenceMultiplier).toBeCloseTo(1.25);
-    expect(tuning.strengthMultiplier).toBeCloseTo(1.4);
+    expect(next.ngPlusLevel).toBe(base.ngPlusLevel);
+    expect(next.unlockSlots).toBe(base.unlockSlots);
   });
 
   it('clamps unlock slots when advancing repeatedly', () => {

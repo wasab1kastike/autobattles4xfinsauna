@@ -75,17 +75,16 @@ import {
 import {
   createNgPlusRng,
   ensureNgPlusRunState,
-  getAiAggressionModifier,
-  getEnemyRampModifiers,
-  getEliteOdds,
-  getUnlockSpawnLimit,
-  getUpkeepMultiplier,
   loadNgPlusState,
   planNextNgPlusRun,
   saveNgPlusState,
-  type NgPlusEnemyTuning,
   type NgPlusState
 } from './progression/ngplus.ts';
+import {
+  calculateArtocoinPayout,
+  loadArtocoinBalance,
+  saveArtocoinBalance
+} from './progression/artocoin.ts';
 import { createPlayerSpawnTierQueue } from './world/spawn/tier_helpers.ts';
 import {
   equip as equipLoadout,
@@ -138,27 +137,17 @@ function clampRosterCap(value: number, limit: number): number {
   return Math.max(0, Math.min(maxCap, sanitized));
 }
 
+const BASE_ELITE_ODDS = 0.1;
+const MIN_SPAWN_LIMIT = 3;
+const BASE_ENEMY_DIFFICULTY = 1;
+
 let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
-let ngPlusUpkeepMultiplier = 1;
-let ngPlusEliteOdds = 0;
-let ngPlusSpawnLimit = 1;
-let ngPlusEnemyScaling: NgPlusEnemyTuning = {
-  aggressionMultiplier: 1,
-  cadenceMultiplier: 1,
-  strengthMultiplier: 1
-};
-let enemyAggressionModifier = 1;
-let enemyRandom: () => number = Math.random;
-let lootRandom: () => number = Math.random;
+let enemyRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
+let lootRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
 let syncActiveTierWithUnlocks: ((options?: { persist?: boolean }) => void) | null = null;
 
 function applyNgPlusState(next: NgPlusState): void {
   currentNgPlusState = ensureNgPlusRunState(next);
-  ngPlusUpkeepMultiplier = getUpkeepMultiplier(currentNgPlusState);
-  ngPlusEliteOdds = getEliteOdds(currentNgPlusState);
-  ngPlusSpawnLimit = getUnlockSpawnLimit(currentNgPlusState);
-  ngPlusEnemyScaling = getEnemyRampModifiers(currentNgPlusState);
-  enemyAggressionModifier = getAiAggressionModifier(currentNgPlusState);
   enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
   lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
   syncActiveTierWithUnlocks?.({ persist: true });
@@ -1032,7 +1021,7 @@ function resolveUnitUpkeep(unit: Unit): number {
     return 0;
   }
   const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
-  return upkeep > 0 ? upkeep * ngPlusUpkeepMultiplier : 0;
+  return upkeep > 0 ? upkeep : 0;
 }
 
 const state = new GameState(1000);
@@ -1048,17 +1037,11 @@ if (restoredSave) {
   saveNgPlusState(seededNgPlus);
 }
 state.setEnemyScalingBase({
-  aggression: ngPlusEnemyScaling.aggressionMultiplier,
-  cadence: ngPlusEnemyScaling.cadenceMultiplier,
-  strength: ngPlusEnemyScaling.strengthMultiplier
+  aggression: 1,
+  cadence: 1,
+  strength: 1
 });
-if (!restoredSave && currentNgPlusState.ngPlusLevel > 0) {
-  const bonusBeer = Math.round(75 * currentNgPlusState.ngPlusLevel);
-  if (bonusBeer > 0) {
-    state.addResource(Resource.SAUNA_BEER, bonusBeer);
-  }
-}
-const saunaSettings = loadSaunaSettings(ngPlusSpawnLimit);
+const saunaSettings = loadSaunaSettings();
 const resolveTierContext = (): SaunaTierContext => ({
   ngPlusLevel: currentNgPlusState.ngPlusLevel,
   unlockSlots: currentNgPlusState.unlockSlots
@@ -1074,7 +1057,7 @@ if (!initialTierStatus.unlocked) {
 const getActiveTierLimit = (): number => {
   const tier = getSaunaTier(currentTierId);
   const cap = Math.max(0, Math.floor(tier.rosterCap));
-  return Math.min(cap, ngPlusSpawnLimit);
+  return cap;
 };
 
 const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, getActiveTierLimit());
@@ -1097,6 +1080,8 @@ const sauna = createSauna(
   undefined,
   { maxRosterSize: initialRosterCap }
 );
+
+const resolveSpawnLimit = (): number => Math.max(MIN_SPAWN_LIMIT, sauna.maxRosterSize);
 
 const getUseUiV2 = (): boolean => useUiV2;
 
@@ -1216,9 +1201,9 @@ const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
   return unit ?? null;
 };
 const enemySpawner = new EnemySpawner({
-  difficulty: enemyAggressionModifier,
+  difficulty: BASE_ENEMY_DIFFICULTY,
   random: enemyRandom,
-  eliteOdds: ngPlusEliteOdds
+  eliteOdds: BASE_ELITE_ODDS
 });
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
@@ -1236,7 +1221,7 @@ const clock = new GameClock(1000, (deltaMs) => {
     pickSpawnTile: () => pickFreeTileAround(sauna.pos, units),
     spawnBaseUnit: spawnPlayerReinforcement,
     minUpkeepReserve: Math.max(1, SAUNOJA_UPKEEP_MIN),
-    maxSpawns: ngPlusSpawnLimit,
+    maxSpawns: resolveSpawnLimit(),
     rosterCap,
     getRosterCount: getActiveRosterCount,
     tierHelpers: spawnTierQueue
@@ -1309,6 +1294,20 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   if (endScreen) {
     endScreen.destroy();
     endScreen = null;
+  }
+  const snapshot = enemySpawner.getSnapshot();
+  const payout = calculateArtocoinPayout(resolution.outcome, {
+    tierId: currentTierId,
+    runSeconds: Math.max(0, resolution.durationMs / 1000),
+    enemyKills: Math.max(0, resolution.summary.enemyKills),
+    tilesExplored: Math.max(0, resolution.summary.exploration.revealedHexes),
+    rosterLosses: Math.max(0, resolution.summary.roster.totalDeaths),
+    difficultyScalar: snapshot.effectiveDifficulty,
+    rampStageIndex: snapshot.rampStageIndex
+  });
+  if (payout.artocoins > 0) {
+    const currentBalance = loadArtocoinBalance();
+    saveArtocoinBalance(currentBalance + payout.artocoins);
   }
   const completedNgPlusLevel = currentNgPlusState.ngPlusLevel;
   const nextRunNgPlusState = planNextNgPlusRun(currentNgPlusState, {
@@ -1788,7 +1787,7 @@ const onUnitDied = ({
     updateRosterDisplay();
   }
   if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
-    const treatAsElite = isEliteUnit(fallen ?? null) || lootRandom() < ngPlusEliteOdds;
+    const treatAsElite = isEliteUnit(fallen ?? null) || lootRandom() < BASE_ELITE_ODDS;
     const lootResult = rollLoot({ factionId: unitFaction, elite: treatAsElite });
     if (lootResult.rolls.length > 0) {
       const selectedAttendant = saunojas.find((unit) => unit.selected) ?? null;
@@ -1958,8 +1957,9 @@ export async function start(): Promise<void> {
     }
     const delta = now - last;
     last = now;
-    if (!isGamePaused()) {
-      clock.tick(delta);
+    const paused = isGamePaused();
+    clock.tick(paused ? 0 : delta);
+    if (!paused) {
       updateSaunaHud();
       updateTopbarHud(delta);
       refreshRosterPanel();
