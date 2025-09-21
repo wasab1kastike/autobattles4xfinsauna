@@ -57,7 +57,7 @@ describe('processPlayerSpawns', () => {
     const heat = createSaunaHeat({ baseThreshold: 8, initialHeat: 8, heatPerSecond: 0 });
     const tier = {
       id: 'aurora-ward',
-      name: 'Aurora Ward',
+      name: 'Modern Wooden Sauna',
       rosterCap: 2,
       description: 'test tier',
       art: { badge: 'badge.svg' },
