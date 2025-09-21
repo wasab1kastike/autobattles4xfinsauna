@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-
+- Publish the HEAD build to the GitHub Pages mirror in `docs/`, remove the
+  stale `index-DCnV3qwD.js` bundle, and ensure the embedded commit badge points
+  at 14382eb so the live site reflects the newest patch.
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
   the latest commit badge and script bundle.
