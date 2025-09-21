@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Sanitize objective metrics before calculating artocoin payouts so defeat floor
+  rewards appear in the end-screen ledger even when objective summaries omit
+  optional tallies, and backstop the regression with updated coverage.
+
 - Rebuild the GitHub Pages mirror so the published bundle ships the "Return to
   Classic HUD" toggle and current commit badge.
 
