@@ -173,8 +173,8 @@ body > #game-container {
   grid-template-rows: 64px 1fr 80px;
 }
 
-.grid-cols-\[280px_1fr_340px\] {
-  grid-template-columns: 280px 1fr 340px;
+.grid-cols-\[280px_1fr_clamp\(260px\,32vw\,420px\)\] {
+  grid-template-columns: 280px 1fr clamp(260px, 32vw, 420px);
 }
 
 .gap-\[clamp\(16px\,3vw\,28px\)\] {
@@ -289,8 +289,8 @@ body > #game-container {
 }
 
 .hud-right-column {
-  width: fit-content;
-  max-width: min(360px, 32vw);
+  width: min(100%, clamp(260px, 32vw, 420px));
+  max-width: clamp(260px, 32vw, 420px);
 }
 
 #ui-overlay:not(.hud-grid) .hud-right-column {
@@ -1240,7 +1240,7 @@ body > #game-container {
 }
 
 #right-panel {
-  flex: 0 0 clamp(240px, 26vw, 300px);
+  flex: 0 0 clamp(260px, 32vw, 420px);
   max-height: calc(100vh - (var(--hud-padding) * 2));
   color: var(--color-foreground);
   overflow: hidden;
@@ -1329,7 +1329,7 @@ body > #game-container {
 .right-panel-slide__sheet {
   position: relative;
   flex: 0 0 auto;
-  width: min(92vw, 420px);
+  width: min(92vw, clamp(260px, 32vw, 420px));
   max-width: 100%;
   height: 100%;
   padding: clamp(16px, 6vw, 24px);
@@ -3826,8 +3826,8 @@ body > #game-container {
     top: clamp(16px, 4vw, 24px);
     right: clamp(16px, 4vw, 24px);
     bottom: clamp(16px, 4vw, 24px);
-    width: min(420px, calc(100vw - 32px));
-    max-width: 420px;
+    width: min(clamp(260px, 32vw, 420px), calc(100vw - 32px));
+    max-width: clamp(260px, 32vw, 420px);
     max-height: calc(100vh - clamp(32px, 8vw, 48px));
     flex: 0 0 auto;
     transform: translateX(0);
