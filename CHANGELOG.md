@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Redraw the premium Artocoin crest as a high-fidelity SVG, mirror it through
+  the asset and public pipelines, and retarget HUD, inventory, and shop icon
+  references so the published docs serve the vector without binary blobs.
+
 - Rebuild the GitHub Pages mirror so the published bundle ships the "Return to
   Classic HUD" toggle and current commit badge.
 

@@ -17,7 +17,7 @@ import {
 } from '../state/inventory.ts';
 import { createStashPanel } from './stash/StashPanel.tsx';
 import type { StashPanelCallbacks } from './stash/StashPanel.tsx';
-import { ARTOCOIN_CREST_PNG_DATA_URL as artocoinIconUrl } from '../media/artocoinCrest.ts';
+import { uiIcons } from '../game/assets.ts';
 import {
   createSaunaShopPanel,
   type SaunaShopPanelController,
@@ -229,7 +229,7 @@ function createShopButton(): HTMLButtonElement {
   iconWrap.setAttribute('aria-hidden', 'true');
 
   const icon = document.createElement('img');
-  icon.src = artocoinIconUrl;
+  icon.src = uiIcons.artocoin;
   icon.alt = '';
   icon.decoding = 'async';
   icon.className = 'h-[78%] w-[78%] drop-shadow-[0_10px_18px_rgba(255,186,92,0.4)]';

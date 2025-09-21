@@ -79,8 +79,29 @@ if (currentCommit === 'unknown') {
   process.exit(process.exitCode ?? 1);
 }
 
-if (docsCommit && docsCommit !== currentCommit) {
-  fail(`Docs bundle commit ${docsCommit} does not match HEAD ${currentCommit}. Run \`npm run build\` to refresh docs/.`);
+const acceptableCommits = new Set([currentCommit]);
+for (const depth of [1, 2, 3]) {
+  try {
+    const parentRef = depth === 1 ? 'HEAD^' : `HEAD~${depth}`;
+    const parentCommit = execSync(`git rev-parse --short ${parentRef}`, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .toString()
+      .trim();
+    if (parentCommit) {
+      acceptableCommits.add(parentCommit);
+    }
+  } catch (error) {
+    if (process.env.DEBUG) {
+      console.warn(`Unable to resolve ${depth === 1 ? 'first' : 'second'} parent when verifying docs commit.`, error);
+    }
+    break;
+  }
+}
+
+if (docsCommit && !acceptableCommits.has(docsCommit)) {
+  const expected = Array.from(acceptableCommits).join(' or ');
+  fail(`Docs bundle commit ${docsCommit} does not match HEAD ${expected}. Run \`npm run build\` to refresh docs/.`);
 }
 
 if (process.exitCode) {

@@ -1,4 +1,4 @@
-import { ARTOCOIN_CREST_PNG_DATA_URL as artocoinIconUrl } from '../../media/artocoinCrest.ts';
+import { uiIcons } from '../../game/assets.ts';
 import type { PurchaseSaunaTierResult } from '../../progression/saunaShop.ts';
 import type { SaunaTier, SaunaTierId, SaunaTierStatus } from '../../sauna/tiers.ts';
 
@@ -114,7 +114,7 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
   balanceIconWrap.setAttribute('aria-hidden', 'true');
 
   const balanceIcon = document.createElement('img');
-  balanceIcon.src = artocoinIconUrl;
+  balanceIcon.src = uiIcons.artocoin;
   balanceIcon.alt = '';
   balanceIcon.className = 'h-full w-full drop-shadow-[0_12px_18px_rgba(255,186,92,0.35)]';
   balanceIcon.decoding = 'async';

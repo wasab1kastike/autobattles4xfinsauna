@@ -5,7 +5,6 @@ import mine from '../../assets/sprites/mine.svg';
 import soldier from '../../assets/sprites/soldier.svg';
 import archer from '../../assets/sprites/archer.svg';
 import avantoMarauder from '../../assets/sprites/avanto-marauder.svg';
-import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
 const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL ?? '/';
@@ -16,7 +15,7 @@ export const uiIcons = {
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sisu: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`,
-  artocoin: ARTOCOIN_CREST_PNG_DATA_URL
+  artocoin: `${PUBLIC_ASSET_BASE}assets/ui/artocoin.svg`
 } as const;
 
 export const assetPaths: AssetPaths = {
