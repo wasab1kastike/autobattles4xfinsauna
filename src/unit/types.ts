@@ -7,6 +7,8 @@ export interface UnitStats {
   defense?: number;
 }
 
+export type UnitBehavior = 'defend' | 'attack' | 'explore';
+
 export type LevelCurve = 'linear' | 'accelerating' | 'diminishing';
 
 export type RoundingMode = 'floor' | 'ceil' | 'round' | 'none';
@@ -49,4 +51,6 @@ export interface UnitArchetypeDefinition {
 export interface UnitBuildOptions {
   /** Optional level override; defaults to 1. */
   level?: number;
+  /** Preferred battlefield routine. */
+  behavior?: UnitBehavior;
 }

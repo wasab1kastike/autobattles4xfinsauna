@@ -19,7 +19,15 @@ export function createArcher(
   options?: ArcherOptions
 ): Unit {
   const stats = computeUnitStats(ARCHER_ARCHETYPE, options?.level);
-  return new Unit(id, ARCHER_ARCHETYPE.id, coord, faction, stats, ARCHER_ARCHETYPE.priorityFactions);
+  return new Unit(
+    id,
+    ARCHER_ARCHETYPE.id,
+    coord,
+    faction,
+    stats,
+    ARCHER_ARCHETYPE.priorityFactions,
+    options?.behavior
+  );
 }
 
 export function getArcherStats(level?: number): UnitStats {
@@ -29,7 +37,15 @@ export function getArcherStats(level?: number): UnitStats {
 export class Archer extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string, options?: ArcherOptions) {
     const stats = computeUnitStats(ARCHER_ARCHETYPE, options?.level);
-    super(id, ARCHER_ARCHETYPE.id, coord, faction, stats, ARCHER_ARCHETYPE.priorityFactions);
+    super(
+      id,
+      ARCHER_ARCHETYPE.id,
+      coord,
+      faction,
+      stats,
+      ARCHER_ARCHETYPE.priorityFactions,
+      options?.behavior
+    );
   }
 }
 

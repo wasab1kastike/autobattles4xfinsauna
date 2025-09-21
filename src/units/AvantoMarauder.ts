@@ -17,7 +17,15 @@ export function createAvantoMarauder(
   options?: AvantoMarauderOptions
 ): Unit {
   const stats = computeUnitStats(AVANTO_MARAUDER_ARCHETYPE, options?.level);
-  return new Unit(id, AVANTO_MARAUDER_ARCHETYPE.id, coord, faction, stats, AVANTO_MARAUDER_ARCHETYPE.priorityFactions);
+  return new Unit(
+    id,
+    AVANTO_MARAUDER_ARCHETYPE.id,
+    coord,
+    faction,
+    stats,
+    AVANTO_MARAUDER_ARCHETYPE.priorityFactions,
+    options?.behavior
+  );
 }
 
 export function getAvantoMarauderStats(level?: number): UnitStats {
@@ -27,7 +35,15 @@ export function getAvantoMarauderStats(level?: number): UnitStats {
 export class AvantoMarauder extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string, options?: AvantoMarauderOptions) {
     const stats = computeUnitStats(AVANTO_MARAUDER_ARCHETYPE, options?.level);
-    super(id, AVANTO_MARAUDER_ARCHETYPE.id, coord, faction, stats, AVANTO_MARAUDER_ARCHETYPE.priorityFactions);
+    super(
+      id,
+      AVANTO_MARAUDER_ARCHETYPE.id,
+      coord,
+      faction,
+      stats,
+      AVANTO_MARAUDER_ARCHETYPE.priorityFactions,
+      options?.behavior
+    );
   }
 }
 

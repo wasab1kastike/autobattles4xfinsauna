@@ -39,6 +39,7 @@ describe('rosterStorage', () => {
         id: 'saunoja-1',
         name: 'Vapauttaja',
         coord: { q: 3, r: -1 },
+        behavior: 'explore',
         traits: ['Bold', 'Veteran'],
         upkeep: SAUNOJA_UPKEEP_MAX,
         items: [
@@ -70,6 +71,8 @@ describe('rosterStorage', () => {
 
     const stored = window.localStorage?.getItem(SAUNOJA_STORAGE_KEY);
     expect(stored).toBeTypeOf('string');
+    const serialized = JSON.parse(stored ?? '[]');
+    expect(serialized[0]?.behavior).toBe('explore');
 
     const restored = loadUnits();
     expect(restored).toHaveLength(1);
@@ -78,6 +81,7 @@ describe('rosterStorage', () => {
     expect(unit.coord).toEqual({ q: 3, r: -1 });
     expect(unit.traits).toEqual(expect.arrayContaining(['Bold', 'Veteran']));
     expect(unit.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
+    expect(unit.behavior).toBe('explore');
     expect(unit.items).toHaveLength(1);
     expect(unit.items[0]?.id).toBe('emberglass-arrow');
     expect(unit.modifiers).toHaveLength(1);
