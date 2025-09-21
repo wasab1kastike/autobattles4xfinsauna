@@ -15,6 +15,7 @@ export function setupActionBar(
   const layout = ensureHudLayout(overlay);
   const container = overlay.ownerDocument.createElement('div');
   container.dataset.component = 'action-bar';
+  container.dataset.tutorialTarget = 'combat';
   container.className = 'flex w-full justify-center';
 
   const bottomRegion = layout.regions.bottom;
