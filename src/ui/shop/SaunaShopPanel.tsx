@@ -1,4 +1,4 @@
-import artocoinIconUrl from '../../../assets/ui/artocoin.svg';
+import { ARTOCOIN_CREST_PNG_DATA_URL as artocoinIconUrl } from '../../media/artocoinCrest.ts';
 import type { PurchaseSaunaTierResult } from '../../progression/saunaShop.ts';
 import type { SaunaTier, SaunaTierId, SaunaTierStatus } from '../../sauna/tiers.ts';
 
