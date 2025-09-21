@@ -66,7 +66,14 @@ const defaultSteps: readonly TutorialStep[] = [
     target: 'victory',
     title: 'Claim Victory',
     description:
-      'Saunakunnia measures renown. Push it ever higher to unlock triumphs and close the campaign in glory.'
+      'Destroy every enemy stronghold to win the campaign. The Saunakunnia badge tracks your march toward total conquest.'
+  },
+  {
+    id: 'defeat',
+    target: 'sauna-integrity',
+    title: 'Avert Defeat',
+    description:
+      'Defeat strikes if the sauna is razed, every attendant is downed for 8 seconds, or upkeep bankruptcy lingers for 12 seconds. Guard the integrity meter and keep your roster on its feet.'
   }
 ];
 
