@@ -2,8 +2,8 @@
 
 Premium rewards for sauna defense runs now flow through a single, data-backed
 artocoin target. The formula below turns run duration, enemy eliminations,
-exploration, and roster survivability into a payout that feels generous on a
-clean win while keeping unlock pacing near two to three runs per sauna tier.
+exploration, and difficulty into a payout that feels generous on a clean win
+while keeping unlock pacing near two to three runs per sauna tier.
 
 ## Baseline Win Expectations
 
@@ -29,12 +29,13 @@ costly victories still award enough artocoins to feel forward momentum.
    - `exploreFactor = clamp(0.70, 1.25, tilesExplored / tierTileBaseline)`
 3. **Blend the performance multipliers.**
    - `performanceMultiplier = tempoFactor * 0.30 + killFactor * 0.45 + exploreFactor * 0.25`
-4. **Apply the roster attrition penalty.**
-   - `lossPenalty = max(0.40, 1 - rosterLosses * 0.22)`
-5. **Combine the pieces.**
-   - `rawPayout = baselinePayout * performanceMultiplier * lossPenalty`
-6. **Apply the difficulty modifier (see below) and round.**
+4. **Combine the pieces.**
+   - `rawPayout = baselinePayout * performanceMultiplier`
+5. **Apply the difficulty modifier (see below) and round.**
    - `finalPayout = round(rawPayout * difficultyModifier)` (standard banker's rounding to the nearest whole artocoin.)
+
+Loss penalties have been removed. The post-run breakdown continues to surface
+`lossPenalty = 1` to make the change explicit in the UI.
 
 The clamps keep extreme values from running away while still celebrating high
 execution. A perfect, fast Mythic Conclave clear tops out near ~160 artocoins,
@@ -47,14 +48,14 @@ inside the payout pipeline using the following table.
 
 | Difficulty Label | Internal Difficulty Scalar | Artocoin Multiplier | Notes |
 | --- | --- | --- | --- |
-| Relaxed Heat | 0.85 | 0.85× | Training mode pacing; still respects loss penalties. |
+| Relaxed Heat | 0.85 | 0.85× | Training mode pacing with reduced rewards. |
 | Standard Steam | 1.0 | 1.00× | Baseline balance reference. |
 | Veteran Sauna | 1.2 | 1.18× | Mirrors the +18% enemy multiplier curve. |
 | Mythic Heat | 1.4 | 1.32× | Aligns with late-game siege pressure. |
 | Endless Onslaught | ≥1.6 | 1.42× + 0.03× per full ramp stage cleared past Maelstrom (cap 1.58×). |
 
-Difficulty multipliers always apply after performance and loss calculations to
-keep rewards proportional to the heightened risk.
+Difficulty multipliers always apply after performance calculations to keep
+rewards proportional to the heightened risk.
 
 ## Failure Payouts
 
@@ -64,11 +65,12 @@ Defeat runs still deliver progress while reflecting performance:
 2. Establish a **floor payout** equal to `baselinePayout * 0.20 * difficultyModifier`.
 3. Build a **progress ratio**: `progress = clamp01(0.5 * (runSeconds / (tempoTargetMinutes * 60)) + 0.5 * (enemyKills / tierKillBaseline))`.
 4. Calculate the **performance share**: `performanceShare = baselinePayout * 0.45 * progress * difficultyModifier`.
-5. Apply a softer attrition penalty: `lossFloor = max(0.35, 1 - rosterLosses * 0.12)`.
-6. Final defeat payout is `round(max(floorPayout, performanceShare) * lossFloor)`.
+5. Final defeat payout is `round(max(floorPayout, performanceShare))`.
 
 The result is that an early wipe still awards roughly 15–20% of a clear, while a
-boss defeat with solid stats might pay out 45–55% despite the loss.
+boss defeat with solid stats might pay out 45–55% despite the loss. Loss
+penalties no longer reduce the payout, keeping the focus on tempo and combat
+progress.
 
 ## Steamforge Atelier
 
@@ -89,15 +91,15 @@ can reconcile their purchases at a glance before diving back into a fresh run.
 
 - **Average Ember Circuit win** – 12.6 minute run, 152 kills, 86 tiles, one
   roster loss on Standard Steam: `tempoFactor ≈ 0.99`, `killFactor ≈ 1.01`,
-  `exploreFactor ≈ 1.01`, `performanceMultiplier ≈ 1.00`, `lossPenalty = 0.78`,
-  payout `≈ 47 artocoins`.
+  `exploreFactor ≈ 1.01`, `performanceMultiplier ≈ 1.00`, `lossPenalty = 1.00`,
+  payout `≈ 60 artocoins`.
 - **Fast Mythic Conclave win** – 10.8 minute run, 250 kills, 128 tiles, zero
   losses on Mythic Heat: `tempoFactor ≈ 1.06`, `killFactor ≈ 1.09`,
   `exploreFactor ≈ 1.11`, `performanceMultiplier ≈ 1.08`, `lossPenalty = 1.00`,
   payout `≈ 110 * 1.08 * 1.32 ≈ 157 artocoins`.
 - **Aurora Ward defeat** – 9.5 minute wipe before the boss, 140 kills, 72 tiles,
-  two losses on Veteran Sauna: floor `≈ 20`, progress `≈ 0.67`, performance
-  share `≈ 25`, loss floor `= 0.76`, payout `≈ 19 artocoins`.
+  two losses on Veteran Sauna: floor `≈ 20`, progress `≈ 0.76`, performance
+  share `≈ 34`, `lossPenalty = 1.00`, payout `≈ 34 artocoins`.
 
 These targets keep meta progression brisk without trivialising high-heat clears
 or punishing experimentation.

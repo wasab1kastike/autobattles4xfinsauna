@@ -2,7 +2,8 @@
 
 ## Goals
 - Convert battle telemetry (run duration, kill count, tiles explored, roster
-  losses, difficulty scalar, tier) into a deterministic artocoin award.
+  losses for analytics, difficulty scalar, tier) into a deterministic artocoin
+  award.
 - Keep tier unlock pacing at ~2.5 average wins while letting high-skill clears
   accelerate rewards and defeats still contribute.
 - Provide explicit clamps and constants so engineering can implement without
@@ -96,7 +97,7 @@ function calculateWinPayout(input: PayoutInputs): PayoutResult {
   const performanceMultiplier =
     tempoFactor * 0.3 + killFactor * 0.45 + exploreFactor * 0.25;
 
-  const lossPenalty = Math.max(0.4, 1 - input.rosterLosses * 0.22);
+  const lossPenalty = 1;
 
   const difficultyMultiplier = resolveDifficultyMultiplier(
     input.difficultyScalar,
@@ -104,7 +105,7 @@ function calculateWinPayout(input: PayoutInputs): PayoutResult {
   );
 
   const artocoins = Math.round(
-    baseline * performanceMultiplier * lossPenalty * difficultyMultiplier
+    baseline * performanceMultiplier * difficultyMultiplier
   );
 
   return {
@@ -119,6 +120,9 @@ using the tables above and add the Endless bonus when
 `input.difficultyScalar >= 1.5` and the evaluated ramp stage index exceeds the
 Maelstrom stage (index ≥ 4). Each full stage beyond Maelstrom adds `0.03`, capped
 at `maxMultiplier`.
+
+Loss penalties were removed; keep the `lossPenalty` field in the breakdown set to
+`1` so the UI copy signals the updated rules without additional conditionals.
 
 ## Defeat Payout Algorithm
 ```ts
@@ -135,15 +139,15 @@ function calculateDefeatPayout(input: PayoutInputs): PayoutResult {
   const killProgress = input.enemyKills / tuning.baselineKills;
   const progress = clamp01(0.5 * tempoProgress + 0.5 * killProgress);
   const performanceShare = baseline * 0.45 * progress * difficultyMultiplier;
-  const lossFloor = Math.max(0.35, 1 - input.rosterLosses * 0.12);
-  const artocoins = Math.round(Math.max(floorPayout, performanceShare) * lossFloor);
+  const lossPenalty = 1;
+  const artocoins = Math.round(Math.max(floorPayout, performanceShare));
 
   return {
     artocoins,
     breakdown: {
       baseline,
       performanceMultiplier: performanceShare / baseline,
-      lossPenalty: lossFloor,
+      lossPenalty,
       difficultyMultiplier
     }
   };
@@ -162,12 +166,12 @@ objective.
 - Add regression tests covering:
   - Baseline win (should return exactly the baseline payout).
   - Perfect run cap (ensure clamps cap at expected ceilings).
-  - Multi-loss run to verify loss penalty floor.
+  - Loss breakdown reporting `lossPenalty = 1` for both wins and defeats.
   - Endless Onslaught stage bonus accumulation and cap.
   - Defeat payout floor when progress is minimal.
 
 ## Open Questions
 - If additional sauna tiers ship, extend `ArtocoinTierTuning` with new entries
   and adjust the unlock pacing targets; no formula changes required.
-- Should meta upgrades adjust the loss penalty floor? Revisit once roster revive
-  tech ships.
+- Should we surface roster loss counts elsewhere in the UI now that payouts no
+  longer penalize defeats?
