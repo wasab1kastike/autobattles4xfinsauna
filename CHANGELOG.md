@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Document the artocoin payout pipeline with tier baselines, difficulty
+  modifiers, defeat floors, and a companion design note so engineering can wire
+  the formula straight into the economy systems.
+
 - Collapse the HUD grid into a single-column mobile stack, stretch the left,
   right, and bottom regions to full-width trays, and ensure the command console
   toggle still slides in over the canvas alongside the mobile action bar.
