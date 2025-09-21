@@ -1,5 +1,5 @@
 import './style.css';
-import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
+import { setupGame, start, handleCanvasClick, cleanup, disableUiV2 } from './game.ts';
 import { loadSaunaSettings } from './game/saunaSettings.ts';
 import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.ts';
 import { assetPaths, setAssets } from './game/assets.ts';
@@ -30,6 +30,8 @@ let hud: HudController = createHud(null);
 let loaderHandle: LoadingHandle | null = null;
 let hudVariant: 'classic' | 'v2' = 'classic';
 let uiV2Handle: UiV2Handle | null = null;
+let resourceBarRef: HTMLElement | null = null;
+let overlayRef: HTMLElement | null = null;
 
 function applyBuildIdentity(): void {
   if (typeof document === 'undefined') {
@@ -240,8 +242,36 @@ export function destroy(): void {
     canvasRef.style.cursor = '';
   }
   canvasRef = null;
+  resourceBarRef = null;
+  overlayRef = null;
   hud.removeTransientUI();
   cleanup();
+}
+
+export function returnToClassicHud(): void {
+  disableUiV2();
+
+  if (hudVariant === 'classic') {
+    return;
+  }
+
+  const overlay = overlayRef;
+  const resourceBar = resourceBarRef;
+  const canvas = canvasRef;
+
+  if (!overlay || !resourceBar || !canvas) {
+    console.warn('Unable to restore the classic HUD: required DOM references are unavailable.');
+    uiV2Handle?.destroy();
+    uiV2Handle = null;
+    hudVariant = 'classic';
+    return;
+  }
+
+  uiV2Handle?.destroy();
+  uiV2Handle = null;
+  hudVariant = 'classic';
+
+  setupGame(canvas, resourceBar, overlay, { hudVariant: 'classic' });
 }
 
 export function init(): void {
@@ -271,6 +301,8 @@ export function init(): void {
   hudVariant = storedSettings.useUiV2 ? 'v2' : 'classic';
 
   canvasRef = canvas;
+  resourceBarRef = resourceBar;
+  overlayRef = overlay;
   hud = createHud(overlay);
 
   const mobileViewport = useIsMobile();
@@ -278,7 +310,7 @@ export function init(): void {
 
   setupGame(canvas, resourceBar, overlay, { hudVariant });
   if (hudVariant === 'v2') {
-    uiV2Handle = bootstrapUiV2({ overlay, resourceBar, canvas });
+    uiV2Handle = bootstrapUiV2({ overlay, resourceBar, canvas, onReturnToClassic: returnToClassicHud });
   }
   attachCanvasInputs(canvas);
 

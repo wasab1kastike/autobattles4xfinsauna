@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ship an accessible “Return to Classic HUD” control within the experimental
+  overlay, persist the sauna settings toggle when players opt out, and reboot
+  the classic layout instantly with fresh regression coverage.
+
 - Encode the product-supplied Artocoin crest PNG as a base64 data URI so the
   HUD, shop, and build badge render the polished crest without checking a
   binary blob into the repository.
