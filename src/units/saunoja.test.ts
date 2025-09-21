@@ -30,7 +30,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.lastHitAt).toBe(1234);
     expect(saunoja.selected).toBe(true);
     expect(saunoja.traits).toEqual(['Stoic', 'Swift']);
-    expect(saunoja.upkeep).toBe(4.5);
+    expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(27);
     expect(saunoja.baseStats.health).toBe(20);
     expect(saunoja.effectiveStats.health).toBe(20);
