@@ -6,7 +6,11 @@ import { eventBus } from '../events/EventBus.ts';
 import { computeUnitStats } from '../unit/calc.ts';
 import { normalizeLevel } from '../unit/level.ts';
 import { tryGetUnitArchetype } from '../unit/archetypes.ts';
-import type { UnitArchetypeDefinition, UnitArchetypeId, UnitBuildOptions } from '../unit/types.ts';
+import type {
+  UnitArchetypeDefinition,
+  UnitArchetypeId,
+  UnitBuildOptions
+} from '../unit/types.ts';
 
 export type UnitType = UnitArchetypeId;
 
@@ -21,7 +25,15 @@ function instantiateArchetype(
 ): Unit {
   const level = normalizeLevel(options?.level);
   const stats = computeUnitStats(archetype, level);
-  return new Unit(id, archetype.id, coord, faction, stats, archetype.priorityFactions);
+  return new Unit(
+    id,
+    archetype.id,
+    coord,
+    faction,
+    stats,
+    archetype.priorityFactions,
+    options?.behavior
+  );
 }
 
 export function createUnit(

@@ -29,6 +29,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.coord).toEqual({ q: 2, r: -1 });
     expect(saunoja.lastHitAt).toBe(1234);
     expect(saunoja.selected).toBe(true);
+    expect(saunoja.behavior).toBe('defend');
     expect(saunoja.traits).toEqual(['Stoic', 'Swift']);
     expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(27);
@@ -60,6 +61,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.traits).toEqual(['Brash', 'Focused']);
     expect(saunoja.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
     expect(saunoja.xp).toBe(0);
+    expect(saunoja.behavior).toBe('defend');
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
     randomSpy.mockRestore();
