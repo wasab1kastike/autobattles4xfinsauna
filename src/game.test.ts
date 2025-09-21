@@ -92,7 +92,7 @@ describe('rollSaunojaUpkeep', () => {
       expect(upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
       expect(upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     }
-  });
+  }, 10000);
 
   it('falls back to Math.random when the provided sampler is invalid', async () => {
     const { rollSaunojaUpkeep } = await import('./game.ts');

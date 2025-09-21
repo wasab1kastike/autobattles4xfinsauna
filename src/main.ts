@@ -1,7 +1,7 @@
 import './style.css';
 import { setupGame, start, handleCanvasClick, cleanup, disableUiV2 } from './game.ts';
 import { loadSaunaSettings } from './game/saunaSettings.ts';
-import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.ts';
+import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.tsx';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { preloadSaunojaIcon } from './units/renderSaunoja.ts';
