@@ -4,7 +4,7 @@ import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
-import type { UnitStats } from '../unit/types.ts';
+import type { UnitBehavior, UnitStats } from '../unit/types.ts';
 import type {
   CombatParticipant,
   CombatHookMap,
@@ -44,6 +44,7 @@ export class Unit {
   private shield = 0;
   private immortal = false;
   private experience = 0;
+  private behavior: UnitBehavior;
 
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
@@ -57,11 +58,13 @@ export class Unit {
     coord: AxialCoord,
     public readonly faction: string,
     public readonly stats: UnitStats,
-    public readonly priorityFactions: string[] = []
+    public readonly priorityFactions: string[] = [],
+    behavior?: UnitBehavior
   ) {
     this.coord = cloneCoord(coord);
     this.renderCoord = cloneCoord(coord);
     this.maxHealth = stats.health;
+    this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
   }
 
   setCoord(coord: AxialCoord, options?: { snapRender?: boolean }): void {
@@ -107,6 +110,14 @@ export class Unit {
   getVisionRange(): number {
     const { visionRange } = this.stats;
     return Number.isFinite(visionRange) ? (visionRange as number) : 3;
+  }
+
+  getBehavior(): UnitBehavior {
+    return this.behavior;
+  }
+
+  setBehavior(behavior: UnitBehavior): void {
+    this.behavior = behavior;
   }
 
   attack(target: Unit): CombatResolution | null {

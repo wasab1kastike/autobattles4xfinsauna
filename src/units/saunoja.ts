@@ -3,6 +3,7 @@ import { generateSaunojaName } from '../data/names.ts';
 import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
 import { createLoadoutFromItems, loadoutToItems } from '../items/equip.ts';
 import type { EquipmentMap } from '../items/types.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 
 export type SaunojaItemRarity =
   | 'common'
@@ -73,6 +74,8 @@ export interface Saunoja {
   shield: number;
   /** Steam intensity from 0 (idle) to 1 (billowing). */
   steam: number;
+  /** Preferred battlefield routine. */
+  behavior: UnitBehavior;
   /** Collection of flavorful descriptors applied to the Saunoja. */
   traits: string[];
   /** Sauna beer upkeep required to keep the attendant active. */
@@ -108,6 +111,7 @@ export interface SaunojaInit {
   defense?: number;
   shield?: number;
   steam?: number;
+  behavior?: unknown;
   traits?: ReadonlyArray<unknown>;
   upkeep?: number;
   xp?: number;
@@ -129,6 +133,7 @@ const DEFAULT_LAST_HIT_AT = 0;
 export const SAUNOJA_UPKEEP_MIN = 1;
 export const SAUNOJA_UPKEEP_MAX = 4;
 export const SAUNOJA_DEFAULT_UPKEEP = 1;
+const DEFAULT_BEHAVIOR: UnitBehavior = 'defend';
 
 const DEFAULT_STATS: SaunojaStatBlock = {
   health: DEFAULT_MAX_HP,
@@ -138,6 +143,8 @@ const DEFAULT_STATS: SaunojaStatBlock = {
   defense: 0,
   shield: 0
 };
+
+const VALID_BEHAVIORS: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -201,6 +208,19 @@ function sanitizeEquipment(source: unknown, fallbackItems: SaunojaItem[]): Equip
     return createLoadoutFromItems(fallbackItems);
   }
   return createLoadoutFromItems(items);
+}
+
+function sanitizeBehavior(
+  source: unknown,
+  fallback: UnitBehavior = DEFAULT_BEHAVIOR
+): UnitBehavior {
+  if (typeof source === 'string') {
+    const normalized = source.trim().toLowerCase();
+    if ((VALID_BEHAVIORS as readonly string[]).includes(normalized)) {
+      return normalized as UnitBehavior;
+    }
+  }
+  return fallback;
 }
 
 function sanitizeItem(entry: unknown): SaunojaItem | null {
@@ -344,6 +364,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     steam = 0,
     defense,
     shield = 0,
+    behavior: behaviorInput,
     traits = [],
     upkeep = SAUNOJA_DEFAULT_UPKEEP,
     xp = 0,
@@ -380,6 +401,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     normalizedDefenseSource !== undefined ? Math.max(0, normalizedDefenseSource) : undefined;
   const sanitizedItems = sanitizeItems(items);
   const sanitizedModifiers = sanitizeModifiers(modifiers);
+  const resolvedBehavior = sanitizeBehavior(behaviorInput);
 
   const equipment = sanitizeEquipment(init.equipment, sanitizedItems);
   const normalizedItems = loadoutToItems(equipment);
@@ -440,6 +462,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     defense: resolvedDefense,
     shield: resolvedShield,
     steam: clampedSteam,
+    behavior: resolvedBehavior,
     traits: [...sanitizedTraits],
     upkeep: clampedUpkeep,
     xp: clampedXp,
