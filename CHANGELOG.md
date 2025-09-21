@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Thread sauna tier vision radii into fog-of-war by attaching tier metadata,
+  seeding sauna creation with the active tier, updating the renderer to respect
+  the vision field, and covering the regression with new tier and sauna tests.
+
 - Refresh the published docs bundle so the build badge reflects the
   current commit metadata.
 

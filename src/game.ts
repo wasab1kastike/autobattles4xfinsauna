@@ -18,6 +18,7 @@ import {
   evaluateSaunaTier,
   getSaunaTier,
   listSaunaTiers,
+  type SaunaTier,
   type SaunaTierContext,
   type SaunaTierId
 } from './sauna/tiers.ts';
@@ -1109,6 +1110,7 @@ const initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolve
 if (!initialTierStatus.unlocked) {
   currentTierId = DEFAULT_SAUNA_TIER_ID;
 }
+const activeTier = getSaunaTier(currentTierId);
 
 const getActiveTierLimit = (): number => {
   const tier = getSaunaTier(currentTierId);
@@ -1134,8 +1136,23 @@ const sauna = createSauna(
     r: Math.floor(map.height / 2)
   },
   undefined,
-  { maxRosterSize: initialRosterCap }
+  { maxRosterSize: initialRosterCap, tier: activeTier }
 );
+
+const sanitizeVisionRange = (value: number): number =>
+  Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
+
+const updateSaunaVisionFromTier = (tier: SaunaTier, options: { reveal?: boolean } = {}): void => {
+  const resolved = sanitizeVisionRange(tier.visionRange);
+  if (resolved !== sauna.visionRange) {
+    sauna.visionRange = resolved;
+  }
+  if (options.reveal) {
+    map.revealAround(sauna.pos, sauna.visionRange);
+  }
+};
+
+updateSaunaVisionFromTier(activeTier);
 
 const resolveSpawnLimit = (): number => Math.max(MIN_SPAWN_LIMIT, sauna.maxRosterSize);
 
@@ -1209,6 +1226,8 @@ syncActiveTierWithUnlocks = (options: { persist?: boolean } = {}): void => {
   if (tierChanged) {
     const previousTierId = currentTierId;
     currentTierId = highestUnlockedId;
+    const nextTier = getSaunaTier(currentTierId);
+    updateSaunaVisionFromTier(nextTier, { reveal: true });
     spawnTierQueue.clearQueue?.('tier-change');
     updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
     if (previousTierId !== currentTierId) {
@@ -1258,6 +1277,7 @@ const setActiveTier = (
     return true;
   }
   currentTierId = tier.id;
+  updateSaunaVisionFromTier(tier, { reveal: true });
   spawnTierQueue.clearQueue?.('tier-change');
   updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
   return true;
@@ -1476,7 +1496,7 @@ if (!hasActivePlayerUnit) {
     registerUnit(fallbackUnit);
   }
 }
-map.revealAround(sauna.pos, 3);
+map.revealAround(sauna.pos, sauna.visionRange);
 if (import.meta.env.DEV) {
   console.debug('Saunoja roster restored', {
     count: saunojas.length,
@@ -1758,7 +1778,7 @@ export function draw(): void {
   const saunaVision: VisionSource | null = sauna
     ? {
         coord: sauna.pos,
-        range: sauna.auraRadius
+        range: sauna.visionRange
       }
     : null;
   const renderUnits = hasSaunojaOverlays

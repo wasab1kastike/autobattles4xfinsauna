@@ -22,9 +22,7 @@ export interface VisionSource {
   range: number;
 }
 
-type SaunaVisionSource =
-  | VisionSource
-  | (Pick<Sauna, 'pos' | 'auraRadius'> & Partial<Sauna>);
+type SaunaVisionSource = VisionSource | (Pick<Sauna, 'pos'> & Partial<Sauna>);
 
 function isVisionSource(candidate: unknown): candidate is VisionSource {
   if (!candidate || typeof candidate !== 'object') {
@@ -47,10 +45,14 @@ function resolveSaunaVision(sauna?: SaunaVisionSource | null): VisionSource | nu
     const range = Number.isFinite(sauna.range) ? Math.max(0, sauna.range) : 0;
     return { coord: sauna.coord, range };
   }
-  if ('pos' in sauna && 'auraRadius' in sauna) {
-    const range = Number.isFinite(sauna.auraRadius)
-      ? Math.max(0, sauna.auraRadius)
-      : 0;
+  if ('pos' in sauna) {
+    const rawRange =
+      'visionRange' in sauna && Number.isFinite(sauna.visionRange)
+        ? sauna.visionRange
+        : 'auraRadius' in sauna && Number.isFinite(sauna.auraRadius)
+          ? sauna.auraRadius
+          : 0;
+    const range = Math.max(0, Number.isFinite(rawRange) ? (rawRange as number) : 0);
     return { coord: sauna.pos, range } satisfies VisionSource;
   }
   return null;
