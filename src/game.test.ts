@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
+import {
+  SAUNOJA_DEFAULT_UPKEEP,
+  SAUNOJA_UPKEEP_MAX,
+  SAUNOJA_UPKEEP_MIN
+} from './units/saunoja.ts';
 import { NEG, POS } from './data/traits.ts';
 import { GameState, Resource } from './core/GameState.ts';
 import { createSauna } from './sim/sauna.ts';
@@ -66,6 +70,42 @@ beforeEach(() => {
     }))
   });
   renderGameShell();
+});
+
+describe('rollSaunojaUpkeep', () => {
+  it('returns inclusive upkeep rolls between the configured bounds', async () => {
+    const { rollSaunojaUpkeep } = await import('./game.ts');
+    const cases: Array<[number, number]> = [
+      [0, SAUNOJA_UPKEEP_MIN],
+      [0.24, SAUNOJA_UPKEEP_MIN],
+      [0.25, SAUNOJA_UPKEEP_MIN + 1],
+      [0.5, SAUNOJA_UPKEEP_MIN + 2],
+      [0.75, SAUNOJA_UPKEEP_MAX],
+      [0.9999, SAUNOJA_UPKEEP_MAX],
+      [1, SAUNOJA_UPKEEP_MAX]
+    ];
+
+    for (const [sample, expected] of cases) {
+      const upkeep = rollSaunojaUpkeep(() => sample);
+      expect(upkeep).toBe(expected);
+      expect(Number.isInteger(upkeep)).toBe(true);
+      expect(upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
+      expect(upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
+    }
+  });
+
+  it('falls back to Math.random when the provided sampler is invalid', async () => {
+    const { rollSaunojaUpkeep } = await import('./game.ts');
+    const mathRandom = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    try {
+      const upkeepFromNaN = rollSaunojaUpkeep(() => Number.NaN);
+      const upkeepFromNonFunction = rollSaunojaUpkeep(null as unknown as () => number);
+      expect(upkeepFromNaN).toBe(SAUNOJA_UPKEEP_MAX);
+      expect(upkeepFromNonFunction).toBe(SAUNOJA_UPKEEP_MAX);
+    } finally {
+      mathRandom.mockRestore();
+    }
+  });
 });
 
 describe('game logging', () => {
@@ -565,7 +605,7 @@ describe('game lifecycle', () => {
 });
 
 describe('saunoja persistence', () => {
-  it('seeds the starter attendant with zero upkeep and keeps it persisted', async () => {
+  it('seeds the starter attendant with default upkeep and keeps it persisted', async () => {
     const {
       __getAttachedUnitIdForTest,
       __getUnitUpkeepForTest,
@@ -580,13 +620,13 @@ describe('saunoja persistence', () => {
 
     const starter = roster.find((unit) => unit.id === 'saunoja-1');
     expect(starter).toBeDefined();
-    expect(starter?.upkeep).toBe(0);
+    expect(starter?.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
 
     const stored = window.localStorage?.getItem('autobattles:saunojas');
     expect(stored).toBeTypeOf('string');
     const parsed = JSON.parse(stored ?? '[]');
     expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed[0]?.upkeep).toBe(0);
+    expect(parsed[0]?.upkeep).toBe(SAUNOJA_DEFAULT_UPKEEP);
 
     if (starter) {
       const attachedUnitId = __getAttachedUnitIdForTest(starter.id);
@@ -595,7 +635,7 @@ describe('saunoja persistence', () => {
         const { Unit } = await import('./units/Unit.ts');
         const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
         const probe = new Unit(attachedUnitId, 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
-        expect(__getUnitUpkeepForTest(probe)).toBe(0);
+        expect(__getUnitUpkeepForTest(probe)).toBe(SAUNOJA_DEFAULT_UPKEEP);
       }
     }
   });
@@ -674,7 +714,7 @@ describe('saunoja persistence', () => {
       hp: 18,
       steam: 0.2,
       traits: ['Steam Scholar', 'Sisu-Forged Veteran', 'Rust-Prone Gear'],
-      upkeep: 7,
+      upkeep: 3,
       xp: 42,
       selected: true
     };

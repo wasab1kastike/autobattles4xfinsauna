@@ -126,8 +126,8 @@ const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
 const DEFAULT_NAME = 'Saunoja';
 const DEFAULT_MAX_HP = 18;
 const DEFAULT_LAST_HIT_AT = 0;
-export const SAUNOJA_UPKEEP_MIN = 0;
-export const SAUNOJA_UPKEEP_MAX = 10;
+export const SAUNOJA_UPKEEP_MIN = 1;
+export const SAUNOJA_UPKEEP_MAX = 4;
 export const SAUNOJA_DEFAULT_UPKEEP = 1;
 
 const DEFAULT_STATS: SaunojaStatBlock = {
