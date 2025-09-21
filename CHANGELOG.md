@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Encode the product-supplied Artocoin crest PNG as a base64 data URI so the
+  HUD, shop, and build badge render the polished crest without checking a
+  binary blob into the repository.
+
 
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
