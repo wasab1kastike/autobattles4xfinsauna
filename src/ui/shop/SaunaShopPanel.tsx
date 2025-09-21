@@ -1,4 +1,4 @@
-import artocoinIconUrl from '../../../assets/ui/artocoin.svg';
+import artocoinIconUrl from '../../../assets/ui/artocoin.ts';
 import type { PurchaseSaunaTierResult } from '../../progression/saunaShop.ts';
 import type { SaunaTier, SaunaTierId, SaunaTierStatus } from '../../sauna/tiers.ts';
 

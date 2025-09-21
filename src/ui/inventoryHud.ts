@@ -17,7 +17,7 @@ import {
 } from '../state/inventory.ts';
 import { createStashPanel } from './stash/StashPanel.tsx';
 import type { StashPanelCallbacks } from './stash/StashPanel.tsx';
-import artocoinIconUrl from '../../assets/ui/artocoin.svg';
+import artocoinIconUrl from '../../assets/ui/artocoin.ts';
 import {
   createSaunaShopPanel,
   type SaunaShopPanelController,

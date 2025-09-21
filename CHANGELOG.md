@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Inline the production Artocoin crest as a PNG data URI, updating preload and
+  HUD imports so the premium badge renders without storing binary assets in the
+  repository.
+
+- Replace the Artocoin crest with the production-supplied PNG across the
+  preload pipeline, HUD overlays, and published docs mirror so the build loads
+  the premium badge end-to-end.
+
 
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
