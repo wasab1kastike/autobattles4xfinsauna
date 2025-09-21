@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- Refresh the artocoin emblem with a high-fidelity illustrated crest that
-  matches the latest Steamforge Atelier branding across the HUD and shop UI.
+
 
 - Refresh the published docs bundle so the build badge reflects the
   current commit metadata.

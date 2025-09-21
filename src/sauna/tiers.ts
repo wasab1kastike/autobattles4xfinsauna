@@ -24,6 +24,8 @@ export interface SaunaTier {
   description: string;
   art: SaunaTierArt;
   unlock: SaunaTierUnlock;
+  /** Hex radius revealed around the sauna when this tier is active. */
+  visionRange: number;
 }
 
 export interface SaunaTierContext {
@@ -61,6 +63,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       badge: rosterBadgeUrl,
       glow: 'linear-gradient(145deg, rgba(255,161,76,0.65), rgba(255,226,173,0.18))'
     },
+    visionRange: 4,
     unlock: {
       type: 'default',
       label: 'Available from the first steam session'
@@ -75,6 +78,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       badge: saunaBeerUrl,
       glow: 'linear-gradient(140deg, rgba(128,208,255,0.7), rgba(61,184,255,0.2))'
     },
+    visionRange: 10,
     unlock: {
       type: 'artocoin',
       cost: 150,
@@ -90,6 +94,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       badge: resourceBadgeUrl,
       glow: 'linear-gradient(135deg, rgba(176,106,255,0.72), rgba(245,199,255,0.2))'
     },
+    visionRange: 20,
     unlock: {
       type: 'artocoin',
       cost: 275,

@@ -1,8 +1,10 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Unit } from '../units/Unit.ts';
 import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/heat.ts';
+import type { SaunaTier } from '../sauna/tiers.ts';
 
 const DEFAULT_SAUNA_MAX_HEALTH = 500;
+const DEFAULT_SAUNA_VISION_RANGE = 4;
 
 export function pickFreeTileAround(
   origin: AxialCoord,
@@ -40,6 +42,7 @@ export interface Sauna {
   id: 'sauna';
   pos: AxialCoord;
   auraRadius: number;
+  visionRange: number;
   regenPerSec: number;
   rallyToFront: boolean;
   /** Player-selected maximum number of active attendants allowed on the field. */
@@ -67,6 +70,10 @@ export interface SaunaInitOptions {
   maxHealth?: number;
   /** Starting health for the structure. Defaults to the configured max health. */
   health?: number;
+  /** Optional tier descriptor to seed sauna properties such as vision. */
+  tier?: Pick<SaunaTier, 'visionRange'> | null;
+  /** Override the tier-driven vision radius if needed for tests. */
+  visionRange?: number;
 }
 
 export function createSauna(
@@ -87,11 +94,15 @@ export function createSauna(
   const resolvedHealth = Number.isFinite(options.health)
     ? Math.max(0, Math.min(resolvedMaxHealth, Math.floor(options.health ?? resolvedMaxHealth)))
     : resolvedMaxHealth;
+  const resolvedVisionRange = Number.isFinite(options.visionRange)
+    ? Math.max(0, Math.floor(options.visionRange ?? 0))
+    : Math.max(0, Math.floor(options.tier?.visionRange ?? DEFAULT_SAUNA_VISION_RANGE));
 
   return {
     id: 'sauna',
     pos,
     auraRadius: 2,
+    visionRange: resolvedVisionRange,
     regenPerSec: 1,
     rallyToFront: false,
     maxRosterSize: initialRosterCap,
