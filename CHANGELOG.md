@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Extend the onboarding walkthrough with an Enemy Ramp badge spotlight and
+  document the top-bar anchor alongside the flow overview.
+
 - Restore the action tray tutorial anchor so **Command the Fight** hugs the combat
   controls again, exercise the regression with a HUD Vitest suite, and document
   the premium highlight behaviour in the onboarding guide.

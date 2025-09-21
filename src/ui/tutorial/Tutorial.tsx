@@ -48,6 +48,13 @@ const defaultSteps: readonly TutorialStep[] = [
       'SISU fuels heroic bursts. Watch this meter to know when your grit reserves can power signature moves.'
   },
   {
+    id: 'enemy-ramp',
+    target: 'enemy-ramp',
+    title: 'Read the Enemy Ramp',
+    description:
+      'The badge shows the current stage, upcoming multiplier surges, and calm lulls before the next pressure wave.'
+  },
+  {
     id: 'combat',
     target: 'combat',
     title: 'Command the Fight',
