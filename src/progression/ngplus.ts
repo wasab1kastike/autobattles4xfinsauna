@@ -13,7 +13,7 @@ export interface NgPlusEnemyTuning {
   readonly strengthMultiplier: number;
 }
 
-const NG_PLUS_STORAGE_KEY = 'progression:ngPlusState';
+export const NG_PLUS_STORAGE_KEY = 'progression:ngPlusState';
 const MAX_UNLOCK_SLOTS = 5;
 const DEFAULT_RUN_SEED_FALLBACK = 0x6d2b79f5;
 
@@ -176,55 +176,14 @@ export function planNextNgPlusRun(
 ): NgPlusState {
   const sanitized = createNgPlusState(current);
   const random = typeof context.random === 'function' ? context.random : Math.random;
-  let level = sanitized.ngPlusLevel;
-  let unlockSlots = sanitized.unlockSlots;
-  if (context.outcome === 'win') {
-    level += 1;
-    const unlockBonus = Math.max(0, Math.trunc(context.bonusUnlocks ?? 1));
-    if (unlockBonus > 0) {
-      unlockSlots = Math.min(MAX_UNLOCK_SLOTS, unlockSlots + unlockBonus);
-    }
-  }
   const nextSeed = rollRunSeed(random);
   return ensureNgPlusRunState(
     createNgPlusState({
-      runSeed: nextSeed,
-      ngPlusLevel: level,
-      unlockSlots,
-      enemyTuning: sanitized.enemyTuning
+      ...sanitized,
+      runSeed: nextSeed
     }),
     random
   );
-}
-
-export function getUpkeepMultiplier(state: NgPlusState): number {
-  const level = Math.max(0, state.ngPlusLevel);
-  const slotBonus = Math.max(0, state.unlockSlots) * 0.02;
-  return Math.min(3, 1 + level * 0.12 + slotBonus);
-}
-
-export function getEliteOdds(state: NgPlusState): number {
-  const level = Math.max(0, state.ngPlusLevel);
-  const slotBonus = Math.max(0, state.unlockSlots) * 0.01;
-  const odds = 0.1 + level * 0.05 + slotBonus;
-  return Math.max(0, Math.min(0.85, odds));
-}
-
-export function getAiAggressionModifier(state: NgPlusState): number {
-  const level = Math.max(0, state.ngPlusLevel);
-  const base = Math.max(0.5, 1 + level * 0.25);
-  const tuning = sanitizeEnemyTuning(state.enemyTuning ?? DEFAULT_ENEMY_TUNING);
-  return Math.max(0.25, Math.min(8, base * tuning.aggressionMultiplier));
-}
-
-export function getUnlockSpawnLimit(state: NgPlusState): number {
-  const slots = clampInteger(state.unlockSlots, 0, MAX_UNLOCK_SLOTS);
-  const limit = 1 + slots;
-  return Math.max(3, limit);
-}
-
-export function getEnemyRampModifiers(state: NgPlusState): NgPlusEnemyTuning {
-  return sanitizeEnemyTuning(state.enemyTuning ?? DEFAULT_ENEMY_TUNING);
 }
 
 export function createNgPlusRng(seed: number, salt = 0): () => number {
