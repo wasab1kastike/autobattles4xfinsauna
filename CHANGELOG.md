@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Retint the HUD loot toast stack with darker surface gradients, explicit
-  accent-driven text colors, and shared border tokens so sauna theme notices
-  stay legible across loot, info, and warn variants.
 
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
