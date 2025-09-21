@@ -204,6 +204,59 @@ let rosterHud: RosterHudController | null = null;
 let pendingRosterSummary: RosterHudSummary | null = null;
 let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
 let pendingRosterEntries: RosterEntry[] | null = null;
+let lastRosterSummary: RosterHudSummary | null = null;
+let lastRosterEntries: RosterEntry[] = [];
+const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
+const rosterEntriesListeners = new Set<(entries: RosterEntry[]) => void>();
+let hudElapsedMs = 0;
+const hudTimeListeners = new Set<(elapsedMs: number) => void>();
+let lastEnemyRampSummary: EnemyRampSummary | null = null;
+const enemyRampListeners = new Set<(
+  summary: EnemyRampSummary | null
+) => void>();
+
+function notifyRosterSummary(summary: RosterHudSummary): void {
+  lastRosterSummary = summary;
+  for (const listener of rosterSummaryListeners) {
+    try {
+      listener(summary);
+    } catch (error) {
+      console.warn('Failed to notify roster summary listener', error);
+    }
+  }
+}
+
+function notifyRosterEntries(entries: RosterEntry[]): void {
+  lastRosterEntries = entries;
+  for (const listener of rosterEntriesListeners) {
+    try {
+      listener(entries);
+    } catch (error) {
+      console.warn('Failed to notify roster entries listener', error);
+    }
+  }
+}
+
+function notifyHudElapsed(): void {
+  for (const listener of hudTimeListeners) {
+    try {
+      listener(hudElapsedMs);
+    } catch (error) {
+      console.warn('Failed to notify HUD time listener', error);
+    }
+  }
+}
+
+function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
+  lastEnemyRampSummary = summary;
+  for (const listener of enemyRampListeners) {
+    try {
+      listener(summary);
+    } catch (error) {
+      console.warn('Failed to notify enemy ramp listener', error);
+    }
+  }
+}
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
@@ -683,6 +736,11 @@ export function setupGame(
   const hudVariant = options.hudVariant ?? 'classic';
   const useClassicHud = hudVariant === 'classic';
   overlayEl.dataset.hudVariant = hudVariant;
+  hudElapsedMs = 0;
+  notifyHudElapsed();
+  notifyEnemyRamp(null);
+  lastRosterEntries = [];
+  lastRosterSummary = null;
   canvas = canvasEl;
   if (unitFx) {
     unitFx.dispose();
@@ -1365,20 +1423,21 @@ const clock = new GameClock(1000, (deltaMs) => {
     rampModifiers.calmSecondsRemaining,
     scalingSnapshot.calmSecondsRemaining
   );
+  const rampSummary: EnemyRampSummary = {
+    stage: scalingSnapshot.rampStageLabel,
+    stageIndex: scalingSnapshot.rampStageIndex,
+    bundleTier: scalingSnapshot.bundleTier,
+    multiplier: scalingSnapshot.difficultyMultiplier,
+    cadenceSeconds: scalingSnapshot.cadence,
+    effectiveDifficulty: scalingSnapshot.effectiveDifficulty,
+    aggressionMultiplier: scalingSnapshot.aggressionMultiplier,
+    cadenceMultiplier: scalingSnapshot.cadenceMultiplier,
+    strengthMultiplier: scalingSnapshot.strengthMultiplier,
+    calmSecondsRemaining,
+    spawnCycles: scalingSnapshot.spawnCycles
+  } satisfies EnemyRampSummary;
+  notifyEnemyRamp(rampSummary);
   if (topbarControls) {
-    const rampSummary: EnemyRampSummary = {
-      stage: scalingSnapshot.rampStageLabel,
-      stageIndex: scalingSnapshot.rampStageIndex,
-      bundleTier: scalingSnapshot.bundleTier,
-      multiplier: scalingSnapshot.difficultyMultiplier,
-      cadenceSeconds: scalingSnapshot.cadence,
-      effectiveDifficulty: scalingSnapshot.effectiveDifficulty,
-      aggressionMultiplier: scalingSnapshot.aggressionMultiplier,
-      cadenceMultiplier: scalingSnapshot.cadenceMultiplier,
-      strengthMultiplier: scalingSnapshot.strengthMultiplier,
-      calmSecondsRemaining,
-      spawnCycles: scalingSnapshot.spawnCycles
-    } satisfies EnemyRampSummary;
     topbarControls.setEnemyRampSummary(rampSummary);
   }
   const rosterProgress = objectiveTracker?.getProgress().roster;
@@ -1593,6 +1652,10 @@ function updateSaunaHud(): void {
 }
 
 function updateTopbarHud(deltaMs: number): void {
+  if (Number.isFinite(deltaMs) && deltaMs > 0) {
+    hudElapsedMs += deltaMs;
+  }
+  notifyHudElapsed();
   topbarControls?.update(deltaMs);
 }
 
@@ -2341,6 +2404,7 @@ function buildRosterSummary(): RosterHudSummary {
 function refreshRosterPanel(entries?: RosterEntry[]): void {
   const view = entries ?? buildRosterEntries();
   pendingRosterEntries = view;
+  notifyRosterEntries(view);
   if (!rosterHud) {
     return;
   }
@@ -2349,6 +2413,7 @@ function refreshRosterPanel(entries?: RosterEntry[]): void {
 
 function updateRosterDisplay(): void {
   const summary = buildRosterSummary();
+  notifyRosterSummary(summary);
   if (rosterHud) {
     rosterHud.updateSummary(summary);
     pendingRosterSummary = null;
@@ -2356,4 +2421,130 @@ function updateRosterDisplay(): void {
     pendingRosterSummary = summary;
   }
   refreshRosterPanel();
+}
+
+export function getRosterSummarySnapshot(): RosterHudSummary {
+  if (lastRosterSummary) {
+    return lastRosterSummary;
+  }
+  if (pendingRosterSummary) {
+    return pendingRosterSummary;
+  }
+  return buildRosterSummary();
+}
+
+export function getRosterEntriesSnapshot(): RosterEntry[] {
+  if (lastRosterEntries.length > 0) {
+    return lastRosterEntries;
+  }
+  if (pendingRosterEntries && pendingRosterEntries.length > 0) {
+    return pendingRosterEntries;
+  }
+  return buildRosterEntries();
+}
+
+export function subscribeRosterSummary(
+  listener: (summary: RosterHudSummary) => void
+): () => void {
+  rosterSummaryListeners.add(listener);
+  try {
+    listener(getRosterSummarySnapshot());
+  } catch (error) {
+    console.warn('Failed to deliver roster summary snapshot', error);
+  }
+  return () => {
+    rosterSummaryListeners.delete(listener);
+  };
+}
+
+export function subscribeRosterEntries(
+  listener: (entries: RosterEntry[]) => void
+): () => void {
+  rosterEntriesListeners.add(listener);
+  try {
+    listener(getRosterEntriesSnapshot());
+  } catch (error) {
+    console.warn('Failed to deliver roster entries snapshot', error);
+  }
+  return () => {
+    rosterEntriesListeners.delete(listener);
+  };
+}
+
+export function subscribeHudTime(
+  listener: (elapsedMs: number) => void
+): () => void {
+  hudTimeListeners.add(listener);
+  try {
+    listener(hudElapsedMs);
+  } catch (error) {
+    console.warn('Failed to deliver HUD time snapshot', error);
+  }
+  return () => {
+    hudTimeListeners.delete(listener);
+  };
+}
+
+export function getHudElapsedMs(): number {
+  return hudElapsedMs;
+}
+
+export function subscribeEnemyRamp(
+  listener: (summary: EnemyRampSummary | null) => void
+): () => void {
+  enemyRampListeners.add(listener);
+  try {
+    listener(lastEnemyRampSummary);
+  } catch (error) {
+    console.warn('Failed to deliver enemy ramp snapshot', error);
+  }
+  return () => {
+    enemyRampListeners.delete(listener);
+  };
+}
+
+export function getEnemyRampSummarySnapshot(): EnemyRampSummary | null {
+  return lastEnemyRampSummary;
+}
+
+export function getGameStateInstance(): GameState {
+  return state;
+}
+
+export function setExternalSaunaUiController(controller: SaunaUIController | null): void {
+  saunaUiController = controller;
+}
+
+export function getSaunaInstance(): Sauna {
+  return sauna;
+}
+
+export function getActiveSaunaTierId(): SaunaTierId {
+  return currentTierId;
+}
+
+export function setActiveSaunaTier(
+  tierId: SaunaTierId,
+  options: { persist?: boolean } = {}
+): boolean {
+  return setActiveTier(tierId, options);
+}
+
+export function getSaunaTierContextSnapshot(): SaunaTierContext {
+  return getTierContext();
+}
+
+export function getRosterCapValue(): number {
+  return sauna.maxRosterSize;
+}
+
+export function getRosterCapLimit(): number {
+  return getActiveTierLimit();
+}
+
+export function setRosterCapValue(
+  value: number,
+  options: { persist?: boolean } = {}
+): number {
+  return updateRosterCap(value, options);
 }
