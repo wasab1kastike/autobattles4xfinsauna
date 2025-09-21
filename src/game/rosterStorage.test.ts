@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeSaunoja } from '../units/saunoja.ts';
+import { makeSaunoja, SAUNOJA_UPKEEP_MAX } from '../units/saunoja.ts';
 import {
   SAUNOJA_STORAGE_KEY,
   getSaunojaStorage,
@@ -40,7 +40,7 @@ describe('rosterStorage', () => {
         name: 'Vapauttaja',
         coord: { q: 3, r: -1 },
         traits: ['Bold', 'Veteran'],
-        upkeep: 9,
+        upkeep: SAUNOJA_UPKEEP_MAX,
         items: [
           {
             id: 'emberglass-arrow',
@@ -77,7 +77,7 @@ describe('rosterStorage', () => {
     expect(unit.id).toBe('saunoja-1');
     expect(unit.coord).toEqual({ q: 3, r: -1 });
     expect(unit.traits).toEqual(expect.arrayContaining(['Bold', 'Veteran']));
-    expect(unit.upkeep).toBe(9);
+    expect(unit.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(unit.items).toHaveLength(1);
     expect(unit.items[0]?.id).toBe('emberglass-arrow');
     expect(unit.modifiers).toHaveLength(1);

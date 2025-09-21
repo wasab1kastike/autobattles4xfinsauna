@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Tighten Saunoja upkeep rolls to the 1–4 window with a simplified sampler,
+  refreshed vitest coverage, and documentation of the corrected distribution.
+
 - Rebuild the GitHub Pages mirror from the latest production bundle so the
   hashed Vite assets and embedded build badge advertise commit 7f9bdcd.
 

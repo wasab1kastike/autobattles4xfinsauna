@@ -38,7 +38,12 @@ import { Animator } from './render/Animator.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
-import { makeSaunoja, SAUNOJA_UPKEEP_MAX, SAUNOJA_UPKEEP_MIN } from './units/saunoja.ts';
+import {
+  makeSaunoja,
+  SAUNOJA_DEFAULT_UPKEEP,
+  SAUNOJA_UPKEEP_MAX,
+  SAUNOJA_UPKEEP_MIN
+} from './units/saunoja.ts';
 import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
@@ -566,18 +571,18 @@ export function saveUnits(): void {
   persistRosterToStorage(saunojas);
 }
 
-function rollSaunojaUpkeep(random: () => number = Math.random): number {
-  if (typeof random !== 'function') {
-    random = Math.random;
-  }
-  const min = Math.max(0, Math.floor(SAUNOJA_UPKEEP_MIN));
-  const max = Math.max(min, Math.floor(SAUNOJA_UPKEEP_MAX));
-  if (max === min) {
-    return Math.max(SAUNOJA_UPKEEP_MIN, Math.min(SAUNOJA_UPKEEP_MAX, min));
-  }
-  const span = max - min + 1;
-  const roll = Math.floor(random() * span) + min;
-  return Math.max(SAUNOJA_UPKEEP_MIN, Math.min(SAUNOJA_UPKEEP_MAX, roll));
+export function rollSaunojaUpkeep(random: () => number = Math.random): number {
+  const rng = typeof random === 'function' ? random : Math.random;
+  const lowerBound = Math.ceil(Math.min(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
+  const upperBound = Math.floor(Math.max(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
+  const span = Math.max(1, upperBound - lowerBound + 1);
+
+  const rawSample = Number(rng());
+  const sample = Number.isFinite(rawSample) ? rawSample : Math.random();
+  const normalized = Math.min(Math.max(sample, 0), 1);
+  const index = Math.min(Math.floor(normalized * span), span - 1);
+
+  return lowerBound + index;
 }
 
 function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
@@ -1330,10 +1335,10 @@ if (saunojas.length === 0) {
     id: 'saunoja-1',
     coord: sauna.pos,
     selected: true,
-    upkeep: 0
+    upkeep: SAUNOJA_DEFAULT_UPKEEP
   });
   refreshSaunojaPersona(seeded);
-  seeded.upkeep = 0;
+  seeded.upkeep = SAUNOJA_DEFAULT_UPKEEP;
   saunojas.push(seeded);
   saveUnits();
   if (import.meta.env.DEV) {
