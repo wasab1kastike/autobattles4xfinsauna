@@ -91,6 +91,7 @@ describe('artocoin progression helpers', () => {
       rampStageIndex: 0
     });
     expect(result.artocoins).toBe(60);
+    expect(result.breakdown.lossPenalty).toBe(1);
   });
 
   it('caps performance multipliers for exceptional clears', () => {
@@ -117,8 +118,8 @@ describe('artocoin progression helpers', () => {
       difficultyScalar: 1,
       rampStageIndex: 1
     });
-    expect(result.artocoins).toBeGreaterThan(0);
-    expect(result.artocoins).toBeLessThan(30);
+    expect(result.artocoins).toBe(17);
+    expect(result.breakdown.lossPenalty).toBe(1);
   });
 
   it('adds Endless Onslaught bonuses based on completed ramp stages', () => {
