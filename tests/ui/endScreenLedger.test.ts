@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Resource } from '../../src/core/GameState.ts';
 import { calculateArtocoinPayout } from '../../src/progression/artocoin.ts';
-import { extractObjectiveMetrics } from '../../src/progression/objectivePayout.ts';
 import type { ObjectiveResolution } from '../../src/progression/objectives.ts';
 import { showEndScreen } from '../../src/ui/overlays/EndScreen.tsx';
 
@@ -31,6 +30,10 @@ function makeResolution(): ObjectiveResolution {
   } satisfies ObjectiveResolution;
 }
 
+function sanitizeMetric(value: number | null | undefined): number {
+  return Number.isFinite(value) ? (value as number) : 0;
+}
+
 describe('EndScreen artocoin ledger', () => {
   let container: HTMLDivElement | null = null;
 
@@ -45,13 +48,15 @@ describe('EndScreen artocoin ledger', () => {
 
     const resolution = makeResolution();
     const snapshot = { effectiveDifficulty: 1, rampStageIndex: 0 } as const;
-    const metrics = extractObjectiveMetrics(resolution);
     const payout = calculateArtocoinPayout(resolution.outcome, {
       tierId: 'ember-circuit',
-      runSeconds: Math.max(0, metrics.runSeconds),
-      enemyKills: Math.max(0, metrics.enemyKills),
-      tilesExplored: Math.max(0, metrics.tilesExplored),
-      rosterLosses: Math.max(0, metrics.rosterLosses),
+      runSeconds: Math.max(0, sanitizeMetric(resolution.durationMs) / 1000),
+      enemyKills: Math.max(0, sanitizeMetric(resolution.summary.enemyKills)),
+      tilesExplored: Math.max(
+        0,
+        sanitizeMetric(resolution.summary.exploration.revealedHexes)
+      ),
+      rosterLosses: Math.max(0, sanitizeMetric(resolution.summary.roster.totalDeaths)),
       difficultyScalar: snapshot.effectiveDifficulty,
       rampStageIndex: snapshot.rampStageIndex
     });
@@ -72,6 +77,7 @@ describe('EndScreen artocoin ledger', () => {
     const earnedIndex = labels.findIndex((label) => label.textContent === 'Earned');
     expect(earnedIndex).toBeGreaterThanOrEqual(0);
     expect(values[earnedIndex]?.textContent).toBe('12');
+    expect(values[earnedIndex]?.textContent).not.toBe('0');
 
     controller.destroy();
   });

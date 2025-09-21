@@ -89,7 +89,6 @@ import {
   onArtocoinChange,
   type ArtocoinChangeEvent
 } from './progression/artocoin.ts';
-import { coerceObjectiveMetric } from './progression/objectivePayout.ts';
 import {
   getPurchasedSaunaTiers,
   grantSaunaTier,
@@ -164,6 +163,10 @@ function clampRosterCap(value: number, limit: number): number {
   }
   const sanitized = Math.max(0, Math.floor(value));
   return Math.max(0, Math.min(maxCap, sanitized));
+}
+
+function sanitizeObjectiveMetric(value: number | null | undefined): number {
+  return Number.isFinite(value) ? (value as number) : 0;
 }
 
 const BASE_ELITE_ODDS = 0.1;
@@ -1421,13 +1424,13 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   const snapshot = enemySpawner.getSnapshot();
   const payout = calculateArtocoinPayout(resolution.outcome, {
     tierId: currentTierId,
-    runSeconds: Math.max(0, coerceObjectiveMetric(resolution.durationMs) / 1000),
-    enemyKills: Math.max(0, coerceObjectiveMetric(resolution.summary.enemyKills)),
+    runSeconds: Math.max(0, sanitizeObjectiveMetric(resolution.durationMs) / 1000),
+    enemyKills: Math.max(0, sanitizeObjectiveMetric(resolution.summary.enemyKills)),
     tilesExplored: Math.max(
       0,
-      coerceObjectiveMetric(resolution.summary.exploration.revealedHexes)
+      sanitizeObjectiveMetric(resolution.summary.exploration.revealedHexes)
     ),
-    rosterLosses: Math.max(0, coerceObjectiveMetric(resolution.summary.roster.totalDeaths)),
+    rosterLosses: Math.max(0, sanitizeObjectiveMetric(resolution.summary.roster.totalDeaths)),
     difficultyScalar: snapshot.effectiveDifficulty,
     rampStageIndex: snapshot.rampStageIndex
   });
