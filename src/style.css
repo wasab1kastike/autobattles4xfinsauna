@@ -237,6 +237,42 @@ body > #game-container {
   gap: clamp(12px, 4vw, 18px);
 }
 
+.is-mobile #ui-overlay.hud-grid {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 4vw, 18px);
+}
+
+.is-mobile #ui-overlay.hud-grid [data-hud-region] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.is-mobile #ui-overlay.hud-grid [data-hud-region="content"] {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.is-mobile #ui-overlay.hud-grid [data-hud-region="left"],
+.is-mobile #ui-overlay.hud-grid [data-hud-region="right"],
+.is-mobile #ui-overlay.hud-grid [data-hud-region="bottom"] {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(12px, 4vw, 18px);
+}
+
+.is-mobile #ui-overlay.hud-grid [data-hud-region="left"],
+.is-mobile #ui-overlay.hud-grid [data-hud-region="right"] {
+  flex: 0 0 auto;
+}
+
+.is-mobile #ui-overlay.hud-grid [data-hud-region="bottom"] {
+  justify-content: flex-end;
+  flex: 0 0 auto;
+}
+
 .ui-floater-layer {
   position: absolute;
   inset: 0;
@@ -355,23 +391,29 @@ body > #game-container {
   flex: 1 1 0;
 }
 
-.is-mobile #ui-overlay:not(.hud-grid) .hud-top-row {
+.is-mobile #ui-overlay .hud-top-row {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: clamp(12px, 4vw, 18px);
 }
 
-.is-mobile #ui-overlay:not(.hud-grid) .hud-actions {
+.is-mobile #ui-overlay .hud-actions {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: none;
   align-items: stretch;
   gap: clamp(12px, 4vw, 16px);
 }
 
-.is-mobile #ui-overlay:not(.hud-grid) .hud-right-column {
+.is-mobile #ui-overlay .hud-right-column {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: none;
   align-items: stretch;
+  gap: clamp(12px, 4vw, 18px);
 }
 
 .hud-right-column > * {
