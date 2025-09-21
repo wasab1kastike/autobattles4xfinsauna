@@ -6,6 +6,10 @@
   grid column, and tune the mobile sheet so roster panels breathe on large
   monitors without regressing slide-out behavior.
 
+- Introduce a K-weighted audio QA workflow with `npm run audio:lint`, upgrade
+  the loudness utilities, retune procedural combat cue metadata to hit the
+  -16 LUFS target, and document the tooling in the README and audio guides.
+
 - Upgrade the enemy frontline with aurora-lit SVGs for the soldier, archer, and
   Avanto marauder, recalibrate their sprite anchors/scales, and refresh renderer
   tests so battlefield placement matches the premium art.

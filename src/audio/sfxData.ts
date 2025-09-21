@@ -160,7 +160,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'sine', ratio: 2.97, gain: 0.18, vibrato: { speed: 7, depth: 0.001 } }
         ],
         seed: 421,
-        loudness: { lufs: -13.839, peakDb: -2.134, gain: 0.7797 }
+        loudness: { lufs: -14.775, peakDb: -2.134, gain: 0.8684 }
       },
       {
         id: 'attack-b',
@@ -175,7 +175,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'sine', ratio: 2.97, gain: 0.18, vibrato: { speed: 7, depth: 0.001 } }
         ],
         seed: 947,
-        loudness: { lufs: -13.839, peakDb: -2.101, gain: 0.7797 }
+        loudness: { lufs: -14.758, peakDb: -2.101, gain: 0.8667 }
       },
       {
         id: 'attack-c',
@@ -190,7 +190,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'sine', ratio: 2.97, gain: 0.18, vibrato: { speed: 7, depth: 0.001 } }
         ],
         seed: 1337,
-        loudness: { lufs: -13.838, peakDb: -2.076, gain: 0.7796 }
+        loudness: { lufs: -14.731, peakDb: -2.076, gain: 0.8641 }
       }
     ]
   },
@@ -212,7 +212,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.22 }
         ],
         seed: 615,
-        loudness: { lufs: -12.772, peakDb: -0.218, gain: 0.6896 }
+        loudness: { lufs: -14.365, peakDb: -0.218, gain: 0.8284 }
       },
       {
         id: 'death-b',
@@ -228,7 +228,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.22 }
         ],
         seed: 274,
-        loudness: { lufs: -12.792, peakDb: -0.185, gain: 0.6912 }
+        loudness: { lufs: -14.204, peakDb: -0.185, gain: 0.8132 }
       },
       {
         id: 'death-c',
@@ -244,7 +244,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.22 }
         ],
         seed: 978,
-        loudness: { lufs: -12.777, peakDb: -0.160, gain: 0.6900 }
+        loudness: { lufs: -14.079, peakDb: -0.160, gain: 0.8015 }
       }
     ]
   },
@@ -267,7 +267,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.12 }
         ],
         seed: 1204,
-        loudness: { lufs: -12.561, peakDb: -0.501, gain: 0.6730 }
+        loudness: { lufs: -12.754, peakDb: -0.501, gain: 0.6882 }
       },
       {
         id: 'sisu-b',
@@ -284,7 +284,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.12 }
         ],
         seed: 1642,
-        loudness: { lufs: -12.566, peakDb: -0.271, gain: 0.6734 }
+        loudness: { lufs: -12.943, peakDb: -0.271, gain: 0.7033 }
       },
       {
         id: 'sisu-c',
@@ -301,7 +301,7 @@ export const CALMING_SFX: Record<EncodedSfxName, ProceduralSfxCollection> = {
           { type: 'noise', gain: 0.12 }
         ],
         seed: 2019,
-        loudness: { lufs: -12.575, peakDb: -0.235, gain: 0.6742 }
+        loudness: { lufs: -12.888, peakDb: -0.235, gain: 0.6989 }
       }
     ]
   }

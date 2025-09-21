@@ -83,7 +83,10 @@ npm install
 - `npm run build` – compile TypeScript and emit the production bundle to
   `dist/`.
 - `npm run preview` – serve the production bundle locally.
-- `npm test` – run the Vitest suite and the live demo availability check.
+- `npm run audio:lint` – render every procedural cue and authored WAV to verify
+  LUFS and peak compliance.
+- `npm test` – run the loudness QA, Vitest suite, live demo availability check,
+  and documentation verification.
 - `npm run check:demo` – verify the README demo link resolves the Pages build
   and still advertises `<title>Autobattles4xFinsauna</title>`.
 - `npm run simulate` – execute the deterministic balance sweep described below
@@ -119,6 +122,9 @@ bundle is refreshed.
 ```bash
 npm test
 ```
+
+This command executes the loudness QA (`npm run audio:lint`) before running the
+Vitest suite and auxiliary documentation checks.
 
 ## Balance Simulation
 
