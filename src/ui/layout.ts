@@ -24,7 +24,7 @@ const OVERLAY_GRID_CLASSES = [
   'hud-grid',
   'grid',
   'grid-rows-[64px_1fr_80px]',
-  'grid-cols-[280px_1fr_340px]',
+  'grid-cols-[280px_1fr_clamp(260px,32vw,420px)]',
   'gap-[clamp(16px,3vw,28px)]',
 ];
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Expand the HUD right rail with a clamp-based 420px target, widen the overlay
+  grid column, and tune the mobile sheet so roster panels breathe on large
+  monitors without regressing slide-out behavior.
+
 - Upgrade the enemy frontline with aurora-lit SVGs for the soldier, archer, and
   Avanto marauder, recalibrate their sprite anchors/scales, and refresh renderer
   tests so battlefield placement matches the premium art.
