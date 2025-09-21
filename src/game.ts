@@ -28,7 +28,7 @@ import {
   type ActionBarAbilityHandlers,
   type ActionBarController
 } from './ui/action-bar/index.tsx';
-import { isGamePaused, resetGamePause } from './game/pause.ts';
+import { isGamePaused, resetGamePause, setGamePaused } from './game/pause.ts';
 import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
@@ -189,6 +189,7 @@ let unitFx: UnitFxManager | null = null;
 let objectiveTracker: ObjectiveTracker | null = null;
 let endScreen: EndScreenController | null = null;
 let tutorial: TutorialController | null = null;
+let tutorialForcedPause = false;
 let lastStrongholdsDestroyed = 0;
 
 function getAttachedUnitFor(attendant: Saunoja): Unit | null {
@@ -524,12 +525,22 @@ function updateBaseStatsFromUnit(attendant: Saunoja, unit: Unit | null): void {
   recomputeEffectiveStats(attendant);
 }
 
+function resumeTutorialPause(): void {
+  if (!tutorialForcedPause) {
+    return;
+  }
+  setGamePaused(false);
+  tutorialForcedPause = false;
+}
+
 function disposeTutorial(): void {
   if (!tutorial) {
+    resumeTutorialPause();
     return;
   }
   tutorial.destroy();
   tutorial = null;
+  resumeTutorialPause();
 }
 
 function startTutorialIfNeeded(): void {
@@ -538,13 +549,22 @@ function startTutorialIfNeeded(): void {
     return;
   }
   disposeTutorial();
+  const wasPaused = isGamePaused();
+  if (!wasPaused) {
+    setGamePaused(true);
+    tutorialForcedPause = true;
+  } else {
+    tutorialForcedPause = false;
+  }
   tutorial = createTutorialController({
     onComplete: () => {
       setTutorialDone(true);
+      resumeTutorialPause();
       disposeTutorial();
     },
     onSkip: () => {
       setTutorialDone(true);
+      resumeTutorialPause();
       disposeTutorial();
     }
   });
