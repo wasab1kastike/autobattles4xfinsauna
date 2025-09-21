@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Refresh the published docs bundle so the build badge reflects the
+  current commit metadata.
+
 - Launch the Steamforge Atelier artocoin shop with a dedicated top-bar badge,
   refreshed end-screen ledger, updated UI regression coverage, and expanded
   documentation so sauna tiers commission with artocoins instead of NG+ stats.
