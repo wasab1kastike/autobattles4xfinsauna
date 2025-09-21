@@ -18,13 +18,13 @@ describe('combat cue loudness', () => {
     for (const variant of collection.variants) {
       it(`${name}/${variant.id} meets loudness target`, () => {
         const samples = renderVariantSamples(variant, TEST_SAMPLE_RATE);
-        const rawStats = computeLoudness([samples]);
+        const rawStats = computeLoudness([samples], TEST_SAMPLE_RATE);
         const gain = variant.loudness.gain ?? 1;
         const scaled = new Float32Array(samples.length);
         for (let i = 0; i < samples.length; i++) {
           scaled[i] = samples[i] * gain;
         }
-        const scaledStats = computeLoudness([scaled]);
+        const scaledStats = computeLoudness([scaled], TEST_SAMPLE_RATE);
 
         if (Number.isFinite(scaledStats.lufs)) {
           const deviation = Math.abs(scaledStats.lufs - TARGET_LUFS);
