@@ -675,6 +675,7 @@ describe('saunoja persistence', () => {
     expect(restored[0].upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
     expect(restored[0].upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     expect(restored[0].xp).toBe(0);
+    expect(restored[0].behavior).toBe('defend');
 
     saveUnits();
 
@@ -694,6 +695,7 @@ describe('saunoja persistence', () => {
     expect(stored.upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
     expect(stored.upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     expect(stored.xp).toBe(0);
+    expect(stored.behavior).toBe('defend');
   });
 
   it('preserves stored Saunoja personas across reloads', async () => {
@@ -716,7 +718,8 @@ describe('saunoja persistence', () => {
       traits: ['Steam Scholar', 'Sisu-Forged Veteran', 'Rust-Prone Gear'],
       upkeep: 3,
       xp: 42,
-      selected: true
+      selected: true,
+      behavior: 'explore'
     };
 
     window.localStorage?.setItem('autobattles:saunojas', JSON.stringify([storedPersona]));
@@ -732,6 +735,7 @@ describe('saunoja persistence', () => {
       expect(first?.traits).toEqual(storedPersona.traits);
       expect(first?.upkeep).toBe(storedPersona.upkeep);
       expect(first?.xp).toBe(storedPersona.xp);
+      expect(first?.behavior).toBe('explore');
 
       const { Unit } = await import('./units/Unit.ts');
       const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
@@ -739,11 +743,14 @@ describe('saunoja persistence', () => {
       eventBus.emit('unitSpawned', { unit: ally });
       await flushLogs();
 
+      expect(ally.getBehavior()).toBe('explore');
+
       const afterAttach = loadUnits();
       const attached = afterAttach.find((unit) => unit.id === storedPersona.id);
       expect(attached?.traits).toEqual(storedPersona.traits);
       expect(attached?.upkeep).toBe(storedPersona.upkeep);
       expect(attached?.xp).toBe(storedPersona.xp);
+      expect(attached?.behavior).toBe('explore');
 
       vi.resetModules();
       renderGameShell();
@@ -756,6 +763,7 @@ describe('saunoja persistence', () => {
       expect(rehydrated?.traits).toEqual(storedPersona.traits);
       expect(rehydrated?.upkeep).toBe(storedPersona.upkeep);
       expect(rehydrated?.xp).toBe(storedPersona.xp);
+      expect(rehydrated?.behavior).toBe('explore');
 
       const { Unit: UnitReloaded } = await import('./units/Unit.ts');
       const reloadAlly = new UnitReloaded('legacy-ally-2', 'soldier', { q: 1, r: 0 }, 'player', {
@@ -769,9 +777,56 @@ describe('saunoja persistence', () => {
       expect(final?.traits).toEqual(storedPersona.traits);
       expect(final?.upkeep).toBe(storedPersona.upkeep);
       expect(final?.xp).toBe(storedPersona.xp);
+      expect(final?.behavior).toBe('explore');
     } finally {
       vi.doUnmock('./unit/index.ts');
     }
+  });
+
+  it('synchronizes live units when behavior preferences change', async () => {
+    const {
+      eventBus,
+      loadUnits,
+      saveUnits,
+      setSaunojaBehaviorPreference,
+      __getAttachedUnitIdForTest
+    } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const baseStats = getSoldierStats();
+    const ally = new Unit('behavior-check', 'soldier', { q: 0, r: 0 }, 'player', { ...baseStats });
+    eventBus.emit('unitSpawned', { unit: ally });
+    await flushLogs();
+
+    const roster = loadUnits();
+    expect(roster).not.toHaveLength(0);
+    const attachedEntry =
+      roster.find((unit) => __getAttachedUnitIdForTest(unit.id) === ally.id) ?? roster[0];
+    const targetId = attachedEntry.id;
+    expect(__getAttachedUnitIdForTest(targetId)).toBe(ally.id);
+    expect(attachedEntry.behavior).toBe('defend');
+    expect(ally.getBehavior()).toBe('defend');
+
+    const changed = setSaunojaBehaviorPreference(targetId, 'attack');
+    expect(changed).toBe(true);
+    expect(ally.getBehavior()).toBe('attack');
+
+    saveUnits();
+
+    const stored = window.localStorage?.getItem('autobattles:saunojas');
+    expect(stored).toBeTypeOf('string');
+    const serializedRoster = JSON.parse(stored ?? '[]') as Array<{
+      id?: string;
+      behavior?: string;
+    }>;
+    const storedEntry = serializedRoster.find((entry) => entry?.id === targetId);
+    expect(storedEntry?.behavior).toBe('attack');
+
+    const reloaded = loadUnits();
+    const updated = reloaded.find((unit) => unit.id === targetId);
+    expect(updated?.behavior).toBe('attack');
+
+    const unchanged = setSaunojaBehaviorPreference(targetId, 'attack');
+    expect(unchanged).toBe(false);
   });
 });
 

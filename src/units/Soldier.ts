@@ -19,7 +19,15 @@ export function createSoldier(
   options?: SoldierOptions
 ): Unit {
   const stats = computeUnitStats(SOLDIER_ARCHETYPE, options?.level);
-  return new Unit(id, SOLDIER_ARCHETYPE.id, coord, faction, stats, SOLDIER_ARCHETYPE.priorityFactions);
+  return new Unit(
+    id,
+    SOLDIER_ARCHETYPE.id,
+    coord,
+    faction,
+    stats,
+    SOLDIER_ARCHETYPE.priorityFactions,
+    options?.behavior
+  );
 }
 
 export function getSoldierStats(level?: number): UnitStats {
@@ -29,7 +37,15 @@ export function getSoldierStats(level?: number): UnitStats {
 export class Soldier extends Unit {
   constructor(id: string, coord: AxialCoord, faction: string, options?: SoldierOptions) {
     const stats = computeUnitStats(SOLDIER_ARCHETYPE, options?.level);
-    super(id, SOLDIER_ARCHETYPE.id, coord, faction, stats, SOLDIER_ARCHETYPE.priorityFactions);
+    super(
+      id,
+      SOLDIER_ARCHETYPE.id,
+      coord,
+      faction,
+      stats,
+      SOLDIER_ARCHETYPE.priorityFactions,
+      options?.behavior
+    );
   }
 }
 

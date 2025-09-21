@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Remove artocoin loss penalties so both victories and defeats pay their full
-  performance-based rewards.
-
 
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references

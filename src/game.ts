@@ -52,6 +52,7 @@ import { advanceModifiers } from './mods/runtime.ts';
 import { runEconomyTick } from './economy/tick.ts';
 import { InventoryState } from './inventory/state.ts';
 import type { InventoryComparisonContext } from './state/inventory.ts';
+import type { UnitBehavior } from './unit/types.ts';
 import type {
   EquipAttemptResult,
   InventoryComparison,
@@ -216,6 +217,29 @@ function getAttachedUnitFor(attendant: Saunoja): Unit | null {
   return unitsById.get(attachedUnitId) ?? null;
 }
 
+function applySaunojaBehaviorPreference(
+  attendant: Saunoja,
+  behavior: UnitBehavior,
+  attachedUnit?: Unit | null
+): boolean {
+  const unit = attachedUnit ?? getAttachedUnitFor(attendant);
+  const normalized = behavior;
+  const changed = attendant.behavior !== normalized;
+  attendant.behavior = normalized;
+  if (unit) {
+    unit.setBehavior(normalized);
+  }
+  return changed;
+}
+
+export function setSaunojaBehaviorPreference(unitId: string, behavior: UnitBehavior): boolean {
+  const attendant = saunojas.find((unit) => unit.id === unitId);
+  if (!attendant) {
+    return false;
+  }
+  return applySaunojaBehaviorPreference(attendant, behavior);
+}
+
 function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void {
   attendant.effectiveStats = { ...stats };
   attendant.maxHp = Math.max(1, Math.round(stats.health));
@@ -225,6 +249,7 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
 
   const unit = getAttachedUnitFor(attendant);
   if (unit) {
+    applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
     const nextStats: UnitStats = {
       health: attendant.effectiveStats.health,
       attackDamage: attendant.effectiveStats.attackDamage,
@@ -905,6 +930,7 @@ function claimSaunoja(
   unitToSaunoja.set(unit.id, match);
   saunojaToUnit.set(match.id, unit.id);
 
+  applySaunojaBehaviorPreference(match, match.behavior, unit);
   updateBaseStatsFromUnit(match, unit);
   applyEffectiveStats(match, match.effectiveStats);
   unit.setExperience(match.xp);
