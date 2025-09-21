@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restore the action tray tutorial anchor so **Command the Fight** hugs the combat
+  controls again, exercise the regression with a HUD Vitest suite, and document
+  the premium highlight behaviour in the onboarding guide.
+
 - Tighten Saunoja upkeep rolls to the 1–4 window with a simplified sampler,
   refreshed vitest coverage, and documentation of the corrected distribution.
 
