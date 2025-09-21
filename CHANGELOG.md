@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Sync the artocoin crest into the published UI bundle so preload checks and
+  the GitHub Pages mirror both serve the refreshed iconography.
+
 
 - Refresh the GitHub Pages mirror in `docs/` so the published build references
   the latest commit badge and script bundle.
