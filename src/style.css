@@ -33,6 +33,7 @@
   --tile-highlight-ring: rgba(56, 189, 248, 0.85);
   --tile-highlight-glow: rgba(56, 189, 248, 0.45);
   --radius-panel: 24px;
+  --radius-lg: 20px;
   --radius-pill: 999px;
   --transition-snappy: 180ms ease;
   --hud-padding: clamp(12px, 2vw, 28px);
@@ -225,12 +226,52 @@ body > #game-container {
   pointer-events: auto;
 }
 
-#ui-overlay.inventory-panel-open {
+#ui-overlay.inventory-panel-open,
+#ui-overlay.inventory-shop-open {
   pointer-events: auto;
 }
 
-#ui-overlay.inventory-panel-open #inventory-stash-panel {
+#ui-overlay.inventory-panel-open #inventory-stash-panel,
+#ui-overlay.inventory-shop-open #inventory-shop-panel {
   pointer-events: auto;
+}
+
+#inventory-shop-panel {
+  position: fixed;
+  top: clamp(18px, 4vw, 28px);
+  right: clamp(18px, 4vw, 32px);
+  width: min(26rem, 92vw);
+  max-height: min(86vh, 720px);
+  overflow-y: auto;
+  z-index: 980;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 12px, 0);
+  transition:
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+#inventory-shop-panel[data-open='true'] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+#inventory-shop-panel:focus {
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  #inventory-shop-panel {
+    left: 50%;
+    right: auto;
+    transform: translate3d(-50%, 12px, 0);
+  }
+
+  #inventory-shop-panel[data-open='true'] {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
 .is-mobile #ui-overlay:not(.hud-grid) {
@@ -4102,25 +4143,44 @@ body > #game-container {
   max-width: 52ch;
 }
 
-.end-screen__badges {
-  display: flex;
-  gap: 12px;
+.end-screen__artocoin {
+  margin: 16px 0;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 214, 161, 0.35);
+  background:
+    linear-gradient(135deg, rgba(255, 235, 200, 0.14), rgba(255, 197, 120, 0.08));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 235, 0.25),
+    0 18px 32px rgba(18, 12, 4, 0.3);
 }
 
-.end-screen__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 16px;
-  border-radius: var(--radius-pill);
-  background:
-    linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.18));
-  border: 1px solid rgba(148, 197, 255, 0.35);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.04em;
+.end-screen__artocoin-ledger {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
+  margin: 12px 0 0;
+}
+
+.end-screen__artocoin-label {
+  font-size: 12px;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--color-foreground) 90%, white 10%);
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--color-muted) 65%, white 25%);
+}
+
+.end-screen__artocoin-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--color-foreground) 85%, white 15%);
+}
+
+.end-screen__artocoin-value[data-polarity='positive'] {
+  color: color-mix(in srgb, rgb(74, 222, 128) 70%, white 20%);
+}
+
+.end-screen__artocoin-value[data-polarity='negative'] {
+  color: color-mix(in srgb, rgb(248, 113, 113) 75%, white 15%);
 }
 
 .end-screen__metrics {

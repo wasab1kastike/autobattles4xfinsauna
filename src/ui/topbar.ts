@@ -1,6 +1,11 @@
 import { eventBus } from '../events';
 import { GameState, Resource } from '../core/GameState.ts';
 import { ensureHudLayout } from './layout.ts';
+import {
+  loadArtocoinBalance,
+  onArtocoinChange,
+  type ArtocoinChangeEvent
+} from '../progression/artocoin.ts';
 
 type Badge = {
   container: HTMLDivElement;
@@ -19,6 +24,7 @@ type TopbarIcons = {
   saunakunnia?: string;
   sisu?: string;
   saunaBeer?: string;
+  artocoin?: string;
 };
 
 export interface EnemyRampSummary {
@@ -144,6 +150,12 @@ export function setupTopbar(
   });
   saunakunnia.container.classList.add('badge-sauna');
   saunakunnia.container.dataset.tutorialTarget = 'victory';
+  const artocoinBadge = createBadge('Artocoins', {
+    iconSrc: icons.artocoin,
+    description: 'Artocoin treasury minted from triumphant campaigns.',
+    srLabel: 'Artocoin balance'
+  });
+  artocoinBadge.container.classList.add('badge-artocoin');
   const time = createBadge('Time');
   time.container.classList.add('badge-time');
   time.delta.style.display = 'none';
@@ -158,6 +170,7 @@ export function setupTopbar(
   badgeRow.appendChild(saunaBeer.container);
   badgeRow.appendChild(sisuResource.container);
   badgeRow.appendChild(saunakunnia.container);
+  badgeRow.appendChild(artocoinBadge.container);
   badgeRow.appendChild(enemyRamp.container);
   badgeRow.appendChild(time.container);
 
@@ -186,6 +199,8 @@ export function setupTopbar(
   };
 
   const deltaTimers: Partial<Record<Resource, ReturnType<typeof setTimeout>>> = {};
+  let artocoinBalanceValue = loadArtocoinBalance();
+  let artocoinDeltaTimer: ReturnType<typeof setTimeout> | null = null;
 
   let currentRampSummary: EnemyRampSummary | null = null;
 
@@ -333,12 +348,48 @@ export function setupTopbar(
     badge.container.setAttribute('aria-label', labelParts.join(' — '));
   }
 
+  function updateArtocoinBadge(total: number, amount = 0): void {
+    artocoinBalanceValue = Math.max(0, Math.floor(Number.isFinite(total) ? total : 0));
+    const formattedValue = numberFormatter.format(artocoinBalanceValue);
+    artocoinBadge.value.textContent = formattedValue;
+
+    if (amount !== 0) {
+      artocoinBadge.delta.textContent = `${deltaFormatter.format(amount)}\u202fⒶ`;
+      artocoinBadge.delta.style.opacity = '1';
+      artocoinBadge.delta.style.transform = 'translateY(0)';
+      if (artocoinDeltaTimer) {
+        clearTimeout(artocoinDeltaTimer);
+      }
+      artocoinDeltaTimer = setTimeout(() => {
+        artocoinBadge.delta.style.opacity = '0';
+        artocoinBadge.delta.style.transform = 'translateY(-6px)';
+        artocoinDeltaTimer = null;
+      }, 1000);
+    } else {
+      artocoinBadge.delta.textContent = '';
+      artocoinBadge.delta.style.opacity = '0';
+      artocoinBadge.delta.style.transform = 'translateY(-6px)';
+    }
+
+    const announcement = amount === 0
+      ? ''
+      : amount > 0
+        ? `Gained ${numberFormatter.format(amount)} artocoins`
+        : `Spent ${numberFormatter.format(Math.abs(amount))} artocoins`;
+    const labelParts = [`${artocoinBadge.label} ${formattedValue}`];
+    if (announcement) {
+      labelParts.push(announcement);
+    }
+    artocoinBadge.container.setAttribute('aria-label', labelParts.join(' — '));
+  }
+
   updateResourceBadge(Resource.SAUNA_BEER, state.getResource(Resource.SAUNA_BEER));
   updateResourceBadge(
     Resource.SAUNAKUNNIA,
     state.getResource(Resource.SAUNAKUNNIA)
   );
   updateResourceBadge(Resource.SISU, state.getResource(Resource.SISU));
+  updateArtocoinBadge(artocoinBalanceValue);
   renderEnemyRamp(currentRampSummary);
 
   const resourceChanged = ({
@@ -356,6 +407,10 @@ export function setupTopbar(
     updateResourceBadge(resource, total, amount);
   };
   eventBus.on('resourceChanged', resourceChanged);
+  const artocoinChanged = (event: ArtocoinChangeEvent) => {
+    updateArtocoinBadge(event.balance, event.delta);
+  };
+  const unsubscribeArtocoin = onArtocoinChange(artocoinChanged);
 
   let elapsed = 0;
   return {
@@ -376,6 +431,10 @@ export function setupTopbar(
           clearTimeout(timer);
         }
       });
+      if (artocoinDeltaTimer) {
+        clearTimeout(artocoinDeltaTimer);
+      }
+      unsubscribeArtocoin();
       bar.remove();
     }
   };

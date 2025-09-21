@@ -61,7 +61,6 @@ describe('showEndScreen', () => {
     const controller = showEndScreen({
       container,
       resolution: baseResolution,
-      currentNgPlusLevel: 2,
       onNewRun: vi.fn(),
       onDismiss: vi.fn()
     });
@@ -70,6 +69,27 @@ describe('showEndScreen', () => {
     expect(subtitle?.textContent).toBe(
       'The sauna collapsed under relentless assault—the sacred steamline has fallen silent.'
     );
+
+    controller.destroy();
+  });
+
+  it('summarises artocoin earnings, spending, and balance', () => {
+    const controller = showEndScreen({
+      container,
+      resolution: baseResolution,
+      onNewRun: vi.fn(),
+      artocoinSummary: { balance: 480, earned: 135, spent: 90 }
+    });
+
+    const ledgerValues = Array.from(
+      container.querySelectorAll<HTMLElement>('.end-screen__artocoin-value')
+    ).map((node) => ({ text: node.textContent, polarity: node.dataset.polarity }));
+
+    expect(ledgerValues).toEqual([
+      { text: '135', polarity: 'positive' },
+      { text: '90', polarity: 'negative' },
+      { text: '480', polarity: 'neutral' }
+    ]);
 
     controller.destroy();
   });
