@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Rebuild the GitHub Pages mirror from the latest production bundle so the
+  hashed Vite assets and embedded build badge advertise commit 7f9bdcd.
+
 - Expand the HUD right rail with a clamp-based 420px target, widen the overlay
   grid column, and tune the mobile sheet so roster panels breathe on large
   monitors without regressing slide-out behavior.
