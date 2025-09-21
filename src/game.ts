@@ -1192,6 +1192,10 @@ const setUseUiV2 = (next: boolean): void => {
   persistSaunaSettings(sauna.maxRosterSize, { useUiV2: normalized });
 };
 
+export const disableUiV2 = (): void => {
+  setUseUiV2(false);
+};
+
 const spawnTierQueue = createPlayerSpawnTierQueue({
   getTier: () => getSaunaTier(currentTierId),
   getRosterLimit: () => getActiveTierLimit(),
