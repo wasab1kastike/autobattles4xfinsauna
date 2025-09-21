@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Seed the command console with curated early-game briefing events, complete
+  with premium art treatments and scheduler coverage so the right-rail cards
+  light up the moment a new profile boots.
+
 - Expand the HUD right rail with a clamp-based 420px target, widen the overlay
   grid column, and tune the mobile sheet so roster panels breathe on large
   monitors without regressing slide-out behavior.
