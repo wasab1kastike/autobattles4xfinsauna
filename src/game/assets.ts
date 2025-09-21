@@ -14,7 +14,8 @@ export const uiIcons = {
   saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
   resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
   sisu: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`
+  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`,
+  artocoin: `${PUBLIC_ASSET_BASE}assets/ui/artocoin.svg`
 } as const;
 
 export const assetPaths: AssetPaths = {
@@ -31,7 +32,8 @@ export const assetPaths: AssetPaths = {
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,
-    'icon-sound': uiIcons.sound
+    'icon-sound': uiIcons.sound,
+    'icon-artocoin': uiIcons.artocoin
   }
 };
 

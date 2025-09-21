@@ -21,8 +21,10 @@ with cinematic UI flourishes.
 - **Glass HUD overlays** (resource bar, build badge, and right-panel cards)
   are layered over the canvas with high-end gradients, blur, and accessible
   aria labels.
-- **NG+ progression end screen** tallies liberated strongholds, roster attrition,
-  and resource rewards in a glassmorphism overlay that invites the next prestige run.
+- **Steamforge Atelier shop** lives beside the stash badge so you can commission
+  new sauna tiers mid-run with artocoins earned on the frontline.
+- **Artocoin ledger end screen** tallies liberated strongholds, roster attrition,
+  resources, and artocoin earnings/spend so the next commission is always within reach.
 - **NG+ scaling** now seeds each run, escalates upkeep and enemy aggression with
   every prestige level, and unlocks additional reinforcement slots for polished
   late-game pacing.

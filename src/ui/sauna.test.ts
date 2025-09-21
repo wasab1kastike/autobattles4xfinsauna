@@ -122,13 +122,18 @@ describe('setupSaunaUI', () => {
     const overlay = createOverlay();
     const sauna = createTestSauna();
     let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
+    const ownedTierIds = new Set<SaunaTierId>([
+      'ember-circuit',
+      'aurora-ward',
+      'mythic-conclave'
+    ]);
     const controller = setupSaunaUI(sauna, {
       getActiveTierId: () => activeTierId,
       setActiveTierId: (tierId) => {
         activeTierId = tierId;
         return true;
       },
-      getTierContext: () => ({ ngPlusLevel: 4, unlockSlots: 4 })
+      getTierContext: () => ({ artocoinBalance: 999, ownedTierIds })
     });
 
     try {
@@ -163,7 +168,10 @@ describe('setupSaunaUI', () => {
     const controller = setupSaunaUI(sauna, {
       getActiveTierId: () => activeTierId,
       setActiveTierId: () => false,
-      getTierContext: () => ({ ngPlusLevel: 0, unlockSlots: 0 })
+      getTierContext: () => ({
+        artocoinBalance: 40,
+        ownedTierIds: new Set<SaunaTierId>(['ember-circuit'])
+      })
     });
 
     try {
