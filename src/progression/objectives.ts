@@ -4,7 +4,11 @@ import type { BuildingType } from '../hex/HexTile.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexTile } from '../hex/HexTile.ts';
 import type { Sauna } from '../sim/sauna.ts';
-import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
+import type {
+  SaunaDamagedPayload,
+  SaunaDestroyedPayload,
+  UnitDiedPayload
+} from '../events/types.ts';
 import type { Unit } from '../units/Unit.ts';
 import { eventBus } from '../events';
 
@@ -37,6 +41,8 @@ export interface ObjectiveProgress {
   roster: RosterProgress;
   economy: EconomyProgress;
   sauna: SaunaProgress;
+  enemyKills: number;
+  exploration: ExplorationProgress;
   startedAt: number;
 }
 
@@ -45,6 +51,10 @@ export interface SaunaProgress {
   health: number;
   destroyed: boolean;
   destroyedAt: number | null;
+}
+
+export interface ExplorationProgress {
+  revealedHexes: number;
 }
 
 export interface ResourceSummary {
@@ -113,6 +123,8 @@ function cloneProgress(progress: ObjectiveProgress): ObjectiveProgress {
     roster: { ...progress.roster },
     economy: { ...progress.economy },
     sauna: { ...progress.sauna },
+    enemyKills: progress.enemyKills,
+    exploration: { ...progress.exploration },
     startedAt: progress.startedAt
   });
 }
@@ -141,6 +153,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
   private readonly progress: ObjectiveProgress;
   private readonly startResources: Record<Resource, number>;
   private readonly strongholds = new Map<string, { alive: boolean }>();
+  private readonly revealedTiles = new Set<string>();
   private readonly progressListeners = new Set<ObjectiveProgressListener>();
   private readonly resolutionListeners = new Set<ObjectiveResolutionListener>();
   private mapDisposer: (() => void) | null = null;
@@ -182,6 +195,8 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
         bankruptDurationMs: 0
       },
       sauna: this.createSaunaProgress(),
+      enemyKills: 0,
+      exploration: { revealedHexes: 0 },
       startedAt: this.timeSource()
     } satisfies ObjectiveProgress;
 
@@ -240,6 +255,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
 
   private bootstrapStrongholds(): void {
     this.map.forEachTile((tile, coord) => {
+      this.captureExploration(coord, tile);
       if (this.isStronghold(tile.building)) {
         const key = this.coordKey(coord);
         this.strongholds.set(key, { alive: true });
@@ -250,25 +266,46 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
 
   private attachMapListener(): void {
     this.mapDisposer = this.map.addTileChangeListener((coord: AxialCoord, tile: HexTile, change) => {
-      if (change !== 'building' && change !== 'created') {
-        return;
-      }
-      const key = this.coordKey(coord);
-      const entry = this.strongholds.get(key);
-      const isStrongholdNow = this.isStronghold(tile.building);
-      if (isStrongholdNow) {
-        if (!entry) {
-          this.strongholds.set(key, { alive: true });
-        } else if (!entry.alive) {
-          entry.alive = true;
+      let shouldEmit = false;
+      if (change === 'fog' || change === 'created') {
+        if (this.captureExploration(coord, tile)) {
+          shouldEmit = true;
         }
-      } else if (entry?.alive) {
-        entry.alive = false;
       }
-      this.updateStrongholdTotals();
-      this.emitProgress();
-      this.evaluateResolution();
+      if (change === 'building' || change === 'created') {
+        const key = this.coordKey(coord);
+        const entry = this.strongholds.get(key);
+        const isStrongholdNow = this.isStronghold(tile.building);
+        if (isStrongholdNow) {
+          if (!entry) {
+            this.strongholds.set(key, { alive: true });
+          } else if (!entry.alive) {
+            entry.alive = true;
+          }
+        } else if (entry?.alive) {
+          entry.alive = false;
+        }
+        this.updateStrongholdTotals();
+        shouldEmit = true;
+      }
+      if (shouldEmit) {
+        this.emitProgress();
+        this.evaluateResolution();
+      }
     });
+  }
+
+  private captureExploration(coord: AxialCoord, tile: HexTile): boolean {
+    if (tile.isFogged) {
+      return false;
+    }
+    const key = this.coordKey(coord);
+    const sizeBefore = this.revealedTiles.size;
+    if (!this.revealedTiles.has(key)) {
+      this.revealedTiles.add(key);
+      this.progress.exploration.revealedHexes = this.revealedTiles.size;
+    }
+    return this.revealedTiles.size !== sizeBefore;
   }
 
   private attachEventListeners(): void {
@@ -279,14 +316,16 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     eventBus.on('saunaDestroyed', this.handleSaunaDestroyed);
   }
 
-  private readonly handleUnitDied = ({ unitFaction }: { unitFaction: string }): void => {
-    if (unitFaction !== 'player') {
+  private readonly handleUnitDied = ({ unitFaction }: UnitDiedPayload): void => {
+    if (unitFaction === 'player') {
+      this.progress.roster.totalDeaths += 1;
+      this.refreshRosterStatus();
+      this.emitProgress();
+      this.evaluateResolution();
       return;
     }
-    this.progress.roster.totalDeaths += 1;
-    this.refreshRosterStatus();
+    this.progress.enemyKills += 1;
     this.emitProgress();
-    this.evaluateResolution();
   };
 
   private readonly handleUnitSpawned = ({ unit }: { unit: Unit }): void => {

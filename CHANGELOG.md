@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Track objective enemy kill and exploration tallies per run so the end screen
+  snapshot captures combat momentum and fog busting progress, backed by fresh
+  regression coverage.
+
 - Document the artocoin payout pipeline with tier baselines, difficulty
   modifiers, defeat floors, and a companion design note so engineering can wire
   the formula straight into the economy systems.
