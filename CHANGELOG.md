@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Replace the experimental HUD bootstrap with a polished React shell that docks
+  the classic resource bar, streams live roster/log/resource updates from the
+  core controllers, and backstop the v2 layout with Vitest + Testing Library
+  coverage.
+
 - Sanitize objective metrics before calculating artocoin payouts so defeat floor
   rewards appear in the end-screen ledger even when objective summaries omit
   optional tallies, and backstop the regression with updated coverage.
