@@ -654,15 +654,14 @@ export function setupGame(
   saunaUiController = null;
   if (useClassicHud) {
     saunaUiController = setupSaunaUI(sauna, {
-      getRosterCapLimit: () => getActiveTierLimit(),
-      updateMaxRosterSize: (value, opts) => updateRosterCap(value, { persist: opts?.persist }),
       getActiveTierId: () => currentTierId,
       setActiveTierId: (tierId, opts) => {
         const unlocked = setActiveTier(tierId, { persist: opts?.persist });
         if (unlocked) {
           saunaUiController?.update();
+          updateRosterDisplay();
         }
-        return currentTierId;
+        return unlocked;
       },
       getTierContext: () => getTierContext()
     });
@@ -1149,11 +1148,13 @@ syncActiveTierWithUnlocks = (options: { persist?: boolean } = {}): void => {
     if (previousTierId !== currentTierId) {
       saunaUiController?.update?.();
     }
+    updateRosterDisplay();
     return;
   }
 
   if (options.persist) {
     updateRosterCap(sauna.maxRosterSize, { persist: true });
+    updateRosterDisplay();
   }
 };
 
@@ -1409,7 +1410,16 @@ function initializeRightPanel(): void {
     onRosterSelect: focusSaunojaById,
     onRosterRendererReady: installRosterRenderer,
     onRosterEquipSlot: equipSlotFromStash,
-    onRosterUnequipSlot: unequipSlotToStash
+    onRosterUnequipSlot: unequipSlotToStash,
+    getRosterCap: () => Math.max(0, Math.floor(sauna.maxRosterSize)),
+    getRosterCapLimit: () => getActiveTierLimit(),
+    updateMaxRosterSize: (value, opts) => {
+      const next = updateRosterCap(value, { persist: opts?.persist });
+      if (opts?.persist) {
+        updateRosterDisplay();
+      }
+      return next;
+    }
   });
   addEvent = rightPanel.addEvent;
   installRosterRenderer(rightPanel.renderRoster);

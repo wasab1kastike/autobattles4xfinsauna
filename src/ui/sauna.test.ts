@@ -123,8 +123,6 @@ describe('setupSaunaUI', () => {
     const sauna = createTestSauna();
     let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
     const controller = setupSaunaUI(sauna, {
-      getRosterCapLimit: () => 6,
-      updateMaxRosterSize: (value) => value,
       getActiveTierId: () => activeTierId,
       setActiveTierId: (tierId) => {
         activeTierId = tierId;
@@ -176,60 +174,6 @@ describe('setupSaunaUI', () => {
       expect(lockedTier?.dataset.state).toBe('locked');
       lockedTier?.click();
       expect(lockedTier?.classList.contains('sauna-tier__option--denied')).toBe(true);
-    } finally {
-      controller.dispose();
-      overlay.remove();
-    }
-  });
-
-  it('limits roster controls to the baseline unlock allowance for new profiles', () => {
-    const overlay = createOverlay();
-    const sauna = createTestSauna();
-    sauna.maxRosterSize = 0;
-    const controller = setupSaunaUI(sauna, {
-      getRosterCapLimit: () => 3,
-      getActiveTierId: () => DEFAULT_SAUNA_TIER_ID,
-      getTierContext: () => ({ ngPlusLevel: 0, unlockSlots: 0 })
-    });
-
-    try {
-      controller.update();
-      const slider = overlay.querySelector<HTMLInputElement>('.sauna-roster__slider');
-      expect(slider?.max).toBe('3');
-      const numeric = overlay.querySelector<HTMLInputElement>('.sauna-roster__number');
-      expect(numeric?.max).toBe('3');
-    } finally {
-      controller.dispose();
-      overlay.remove();
-    }
-  });
-
-  it('caps roster controls by the active tier even with excess unlocks', () => {
-    const overlay = createOverlay();
-    const sauna = createTestSauna();
-    sauna.maxRosterSize = 4;
-    let activeTierId: SaunaTierId = 'aurora-ward';
-    const controller = setupSaunaUI(sauna, {
-      getRosterCapLimit: () => 6,
-      getActiveTierId: () => activeTierId,
-      setActiveTierId: (tierId) => {
-        activeTierId = tierId;
-        return true;
-      },
-      getTierContext: () => ({ ngPlusLevel: 5, unlockSlots: 5 })
-    });
-
-    try {
-      controller.update();
-      const slider = overlay.querySelector<HTMLInputElement>('.sauna-roster__slider');
-      const numeric = overlay.querySelector<HTMLInputElement>('.sauna-roster__number');
-      expect(slider?.max).toBe('4');
-      expect(numeric?.max).toBe('4');
-
-      activeTierId = DEFAULT_SAUNA_TIER_ID;
-      controller.update();
-      expect(slider?.max).toBe('3');
-      expect(numeric?.max).toBe('3');
     } finally {
       controller.dispose();
       overlay.remove();
