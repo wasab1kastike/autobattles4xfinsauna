@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh sauna tier naming to Primitive Smoke Sauna, Modern Wooden Sauna, and
+  Futuristic Fission Sauna across UI copy, progression tables, and docs so the
+  artocoin flow matches the updated commissioning fantasy.
+
 - Launch the Steamforge Atelier artocoin shop with a dedicated top-bar badge,
   refreshed end-screen ledger, updated UI regression coverage, and expanded
   documentation so sauna tiers commission with artocoins instead of NG+ stats.

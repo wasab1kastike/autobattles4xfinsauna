@@ -9,9 +9,9 @@ clean win while keeping unlock pacing near two to three runs per sauna tier.
 
 | Active Sauna Tier | Next Unlock Target | Unlock Cost (Artocoins) | Baseline Run Duration (min) | Baseline Enemy Kills | Baseline Tiles Explored | Baseline Roster Losses | Baseline Payout (Artocoins) | Runs to Unlock (Avg) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Ember Circuit | Aurora Ward key engraving | 150 | 12.5 | 150 | 85 | 1 | 60 | 2.5 |
-| Aurora Ward | Mythic Conclave rite | 210 | 12.0 | 190 | 100 | 1 | 84 | 2.5 |
-| Mythic Conclave | Prestige cache rotation | 275 | 11.5 | 230 | 115 | 1 | 110 | 2.5 |
+| Primitive Smoke Sauna | Modern Wooden Sauna key engraving | 150 | 12.5 | 150 | 85 | 1 | 60 | 2.5 |
+| Modern Wooden Sauna | Futuristic Fission Sauna ignition rite | 210 | 12.0 | 190 | 100 | 1 | 84 | 2.5 |
+| Futuristic Fission Sauna | Futuristic Fission Sauna prestige rotation | 275 | 11.5 | 230 | 115 | 1 | 110 | 2.5 |
 
 The baselines establish the "average win" reference used in the payout formula.
 Players who exceed the targets accelerate their unlock cadence, while slower or
@@ -37,8 +37,8 @@ costly victories still award enough artocoins to feel forward momentum.
    - `finalPayout = round(rawPayout * difficultyModifier)` (standard banker's rounding to the nearest whole artocoin.)
 
 The clamps keep extreme values from running away while still celebrating high
-execution. A perfect, fast Mythic Conclave clear tops out near ~160 artocoins,
-while a scrappy Ember Circuit hold that lost two attendants still clears ~40.
+execution. A perfect, fast Futuristic Fission Sauna clear tops out near ~160 artocoins,
+while a scrappy Primitive Smoke Sauna hold that lost two attendants still clears ~40.
 
 ## Difficulty Modifiers
 
@@ -87,15 +87,15 @@ can reconcile their purchases at a glance before diving back into a fresh run.
 
 ## Worked Examples
 
-- **Average Ember Circuit win** – 12.6 minute run, 152 kills, 86 tiles, one
+- **Average Primitive Smoke Sauna win** – 12.6 minute run, 152 kills, 86 tiles, one
   roster loss on Standard Steam: `tempoFactor ≈ 0.99`, `killFactor ≈ 1.01`,
   `exploreFactor ≈ 1.01`, `performanceMultiplier ≈ 1.00`, `lossPenalty = 0.78`,
   payout `≈ 47 artocoins`.
-- **Fast Mythic Conclave win** – 10.8 minute run, 250 kills, 128 tiles, zero
+- **Fast Futuristic Fission Sauna win** – 10.8 minute run, 250 kills, 128 tiles, zero
   losses on Mythic Heat: `tempoFactor ≈ 1.06`, `killFactor ≈ 1.09`,
   `exploreFactor ≈ 1.11`, `performanceMultiplier ≈ 1.08`, `lossPenalty = 1.00`,
   payout `≈ 110 * 1.08 * 1.32 ≈ 157 artocoins`.
-- **Aurora Ward defeat** – 9.5 minute wipe before the boss, 140 kills, 72 tiles,
+- **Modern Wooden Sauna defeat** – 9.5 minute wipe before the boss, 140 kills, 72 tiles,
   two losses on Veteran Sauna: floor `≈ 20`, progress `≈ 0.67`, performance
   share `≈ 25`, loss floor `= 0.76`, payout `≈ 19 artocoins`.
 

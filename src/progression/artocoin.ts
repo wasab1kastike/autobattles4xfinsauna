@@ -44,7 +44,7 @@ interface DifficultyModifier {
 const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   'ember-circuit': {
     tierId: 'ember-circuit',
-    nextUnlockLabel: 'Aurora Ward key engraving',
+    nextUnlockLabel: 'Modern Wooden Sauna key engraving',
     unlockCost: 150,
     baselinePayout: 60,
     baselineDurationMinutes: 12.5,
@@ -53,7 +53,7 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   },
   'aurora-ward': {
     tierId: 'aurora-ward',
-    nextUnlockLabel: 'Mythic Conclave rite',
+    nextUnlockLabel: 'Futuristic Fission Sauna ignition rite',
     unlockCost: 210,
     baselinePayout: 84,
     baselineDurationMinutes: 12,
@@ -62,7 +62,7 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   },
   'mythic-conclave': {
     tierId: 'mythic-conclave',
-    nextUnlockLabel: 'Prestige cache rotation',
+    nextUnlockLabel: 'Futuristic Fission Sauna prestige rotation',
     unlockCost: 275,
     baselinePayout: 110,
     baselineDurationMinutes: 11.5,

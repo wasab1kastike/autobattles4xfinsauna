@@ -25,9 +25,9 @@ Populate the table with:
 
 | tierId | nextUnlockLabel | unlockCost | baselinePayout | baselineDurationMinutes | baselineKills | baselineTiles |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ember-circuit` | "Aurora Ward key engraving" | `150` | `60` | `12.5` | `150` | `85` |
-| `aurora-ward` | "Mythic Conclave rite" | `210` | `84` | `12.0` | `190` | `100` |
-| `mythic-conclave` | "Prestige cache rotation" | `275` | `110` | `11.5` | `230` | `115` |
+| `ember-circuit` | "Modern Wooden Sauna key engraving" | `150` | `60` | `12.5` | `150` | `85` |
+| `aurora-ward` | "Futuristic Fission Sauna ignition rite" | `210` | `84` | `12.0` | `190` | `100` |
+| `mythic-conclave` | "Futuristic Fission Sauna prestige rotation" | `275` | `110` | `11.5` | `230` | `115` |
 
 Difficulty modifiers mirror the existing difficulty scalar exposed by the enemy
 ramp system.

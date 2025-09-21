@@ -54,23 +54,23 @@ const DEFAULT_UNLOCK_LABELS: Record<SaunaTierUnlock['type'], string> = {
 export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
   {
     id: 'ember-circuit',
-    name: 'Ember Circuit',
+    name: 'Primitive Smoke Sauna',
     rosterCap: 3,
-    description: 'Classic cedar benches with a loyal trio of attendants.',
+    description: 'Hand-hewn log benches and smoke-softened rafters shelter a devoted trio of attendants.',
     art: {
       badge: rosterBadgeUrl,
       glow: 'linear-gradient(145deg, rgba(255,161,76,0.65), rgba(255,226,173,0.18))'
     },
     unlock: {
       type: 'default',
-      label: 'Available from the first steam session'
+      label: 'Included with the Primitive Smoke Sauna key'
     }
   },
   {
     id: 'aurora-ward',
-    name: 'Aurora Ward',
+    name: 'Modern Wooden Sauna',
     rosterCap: 4,
-    description: 'Glacial glass benches and a quartet ready to repel sieges.',
+    description: 'Polished timber tiers with warm backlighting keep a four-attendant squad on standby.',
     art: {
       badge: saunaBeerUrl,
       glow: 'linear-gradient(140deg, rgba(128,208,255,0.7), rgba(61,184,255,0.2))'
@@ -78,14 +78,14 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     unlock: {
       type: 'artocoin',
       cost: 150,
-      label: 'Commission with 150 artocoins'
+      label: 'Commission the Modern Wooden Sauna for 150 artocoins'
     }
   },
   {
     id: 'mythic-conclave',
-    name: 'Mythic Conclave',
+    name: 'Futuristic Fission Sauna',
     rosterCap: 6,
-    description: 'Runic obsidian tiers where six legends guard the löyly.',
+    description: 'Iridescent reactor coils and carbon fiber lounges empower six guardians to defend the löyly.',
     art: {
       badge: resourceBadgeUrl,
       glow: 'linear-gradient(135deg, rgba(176,106,255,0.72), rgba(245,199,255,0.2))'
@@ -93,7 +93,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     unlock: {
       type: 'artocoin',
       cost: 275,
-      label: 'Fund with 275 artocoins'
+      label: 'Fund the Futuristic Fission Sauna for 275 artocoins'
     }
   }
 ] satisfies readonly SaunaTier[]);
