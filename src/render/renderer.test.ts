@@ -89,7 +89,8 @@ describe('drawUnits', () => {
     const enemy = createStubUnit('enemy', 'enemy', { q: 0, r: 0 }, 'marauder');
     const sauna = {
       pos: enemy.coord,
-      auraRadius: 2
+      auraRadius: 0,
+      visionRange: 2
     } as unknown as Sauna;
     const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
     const origin: PixelCoord = { x: 0, y: 0 };
