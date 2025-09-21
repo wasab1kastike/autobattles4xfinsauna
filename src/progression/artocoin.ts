@@ -5,6 +5,24 @@ import { NG_PLUS_STORAGE_KEY } from './ngplus.ts';
 export const ARTOCOIN_STORAGE_KEY = 'progression:artocoinBalance';
 const DEFAULT_ARTOCOIN_BALANCE = 0;
 
+export type ArtocoinChangeReason =
+  | 'set'
+  | 'payout'
+  | 'purchase'
+  | 'refund'
+  | 'migration';
+
+export interface ArtocoinChangeEvent {
+  readonly balance: number;
+  readonly delta: number;
+  readonly reason: ArtocoinChangeReason;
+  readonly metadata?: Record<string, unknown>;
+}
+
+type ArtocoinListener = (event: ArtocoinChangeEvent) => void;
+
+const artocoinListeners = new Set<ArtocoinListener>();
+
 interface ArtocoinTierTuning {
   readonly tierId: SaunaTierId;
   readonly nextUnlockLabel: string;
@@ -80,12 +98,36 @@ function storageOrNull(): Storage | null {
   }
 }
 
+function emitArtocoinChange(event: ArtocoinChangeEvent): void {
+  for (const listener of artocoinListeners) {
+    try {
+      listener(event);
+    } catch (error) {
+      console.warn('Artocoin listener failure', error);
+    }
+  }
+}
+
+export function onArtocoinChange(listener: ArtocoinListener): () => void {
+  artocoinListeners.add(listener);
+  return () => {
+    artocoinListeners.delete(listener);
+  };
+}
+
 function sanitizeBalance(value: unknown): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric) || numeric < 0) {
     return DEFAULT_ARTOCOIN_BALANCE;
   }
   return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(numeric));
+}
+
+export interface WriteArtocoinOptions {
+  readonly reason?: ArtocoinChangeReason;
+  readonly metadata?: Record<string, unknown>;
+  readonly previousBalance?: number;
+  readonly silent?: boolean;
 }
 
 function extractLegacyArtocoins(record: Record<string, unknown> | null): number {
@@ -142,28 +184,109 @@ export function loadArtocoinBalance(): number {
   }
   const migrated = migrateLegacyBalance(storage);
   if (migrated !== DEFAULT_ARTOCOIN_BALANCE) {
-    saveArtocoinBalance(migrated);
+    saveArtocoinBalance(migrated, {
+      reason: 'migration',
+      previousBalance: DEFAULT_ARTOCOIN_BALANCE
+    });
     return migrated;
   }
   return DEFAULT_ARTOCOIN_BALANCE;
 }
 
-export function saveArtocoinBalance(balance: number): void {
+export function saveArtocoinBalance(
+  balance: number,
+  options: WriteArtocoinOptions = {}
+): void {
   const storage = storageOrNull();
-  if (!storage) {
-    return;
-  }
   const sanitized = sanitizeBalance(balance);
-  try {
-    storage.setItem(ARTOCOIN_STORAGE_KEY, sanitized.toString());
-  } catch (error) {
-    console.warn('Failed to persist artocoin balance', error);
+
+  let previous =
+    typeof options.previousBalance === 'number'
+      ? sanitizeBalance(options.previousBalance)
+      : DEFAULT_ARTOCOIN_BALANCE;
+
+  if (storage) {
+    if (typeof options.previousBalance !== 'number') {
+      try {
+        const rawPrevious = storage.getItem(ARTOCOIN_STORAGE_KEY);
+        if (rawPrevious !== null) {
+          previous = sanitizeBalance(rawPrevious);
+        }
+      } catch (error) {
+        console.warn('Failed to read previous artocoin balance', error);
+      }
+    }
+
+    try {
+      storage.setItem(ARTOCOIN_STORAGE_KEY, sanitized.toString());
+    } catch (error) {
+      console.warn('Failed to persist artocoin balance', error);
+    }
+  }
+
+  if (!options.silent) {
+    const delta = sanitized - previous;
+    emitArtocoinChange({
+      balance: sanitized,
+      delta,
+      reason: options.reason ?? 'set',
+      metadata: options.metadata
+    });
   }
 }
 
 export function resetArtocoinBalance(): void {
   const storage = storageOrNull();
   storage?.removeItem(ARTOCOIN_STORAGE_KEY);
+}
+
+export interface SpendArtocoinResult {
+  readonly success: boolean;
+  readonly balance: number;
+  readonly shortfall?: number;
+}
+
+export function creditArtocoins(
+  amount: number,
+  options: WriteArtocoinOptions = {}
+): number {
+  const credit = Math.max(0, Math.floor(Number.isFinite(amount) ? amount : 0));
+  if (credit === 0) {
+    return loadArtocoinBalance();
+  }
+  const previous = loadArtocoinBalance();
+  const next = Math.min(Number.MAX_SAFE_INTEGER, previous + credit);
+  saveArtocoinBalance(next, {
+    ...options,
+    previousBalance: previous,
+    reason: options.reason ?? 'payout'
+  });
+  return next;
+}
+
+export function spendArtocoins(
+  cost: number,
+  options: WriteArtocoinOptions = {}
+): SpendArtocoinResult {
+  const price = Math.max(0, Math.floor(Number.isFinite(cost) ? cost : 0));
+  const previous = loadArtocoinBalance();
+  if (price === 0) {
+    return { success: true, balance: previous } satisfies SpendArtocoinResult;
+  }
+  if (previous < price) {
+    return {
+      success: false,
+      balance: previous,
+      shortfall: price - previous
+    } satisfies SpendArtocoinResult;
+  }
+  const next = previous - price;
+  saveArtocoinBalance(next, {
+    ...options,
+    previousBalance: previous,
+    reason: options.reason ?? 'purchase'
+  });
+  return { success: true, balance: next } satisfies SpendArtocoinResult;
 }
 
 function clamp(min: number, max: number, value: number): number {

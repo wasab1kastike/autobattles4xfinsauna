@@ -4,10 +4,16 @@ import type { ObjectiveResolution } from '../../progression/objectives.ts';
 export interface EndScreenOptions {
   container: HTMLElement | null;
   resolution: ObjectiveResolution;
-  currentNgPlusLevel: number;
   onNewRun: () => void;
   onDismiss?: () => void;
   resourceLabels?: Record<Resource, string>;
+  artocoinSummary?: EndScreenArtocoinSummary;
+}
+
+export interface EndScreenArtocoinSummary {
+  readonly balance: number;
+  readonly earned: number;
+  readonly spent: number;
 }
 
 export interface EndScreenController {
@@ -20,6 +26,8 @@ const DEFAULT_RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNAKUNNIA]: 'Saunakunnia',
   [Resource.SISU]: 'Sisu'
 };
+
+const artocoinFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 const FOCUSABLE_SELECTORS =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -136,7 +144,7 @@ function createFocusTrap(
 }
 
 export function showEndScreen(options: EndScreenOptions): EndScreenController {
-  const { container, resolution, onNewRun, onDismiss, currentNgPlusLevel } = options;
+  const { container, resolution, onNewRun, onDismiss } = options;
   if (!container) {
     return {
       destroy() {
@@ -193,13 +201,31 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
   metric('Roster losses', `${resolution.summary.roster.totalDeaths}`);
   metric('Deepest beer reserve', `${Math.round(resolution.summary.economy.worstBeer)}`);
 
-  const badgeRow = document.createElement('div');
-  badgeRow.className = 'end-screen__badges';
+  const artSummary = options.artocoinSummary ?? { balance: 0, earned: 0, spent: 0 };
+  const artocoinSection = document.createElement('section');
+  artocoinSection.className = 'end-screen__artocoin';
+  const artocoinHeading = document.createElement('h3');
+  artocoinHeading.className = 'end-screen__section-title';
+  artocoinHeading.textContent = 'Artocoin ledger';
+  const ledger = document.createElement('dl');
+  ledger.className = 'end-screen__artocoin-ledger';
 
-  const badge = document.createElement('span');
-  badge.className = 'end-screen__badge';
-  badge.textContent = `NG+ ${Math.max(0, currentNgPlusLevel)}`;
-  badgeRow.append(badge);
+  const ledgerEntry = (label: string, value: number, polarity: 'positive' | 'negative' | 'neutral') => {
+    const term = document.createElement('dt');
+    term.className = 'end-screen__artocoin-label';
+    term.textContent = label;
+    const detail = document.createElement('dd');
+    detail.className = 'end-screen__artocoin-value';
+    detail.dataset.polarity = polarity;
+    detail.textContent = artocoinFormatter.format(Math.max(0, Math.floor(Number.isFinite(value) ? value : 0)));
+    ledger.append(term, detail);
+  };
+
+  ledgerEntry('Earned', artSummary.earned, artSummary.earned > 0 ? 'positive' : 'neutral');
+  ledgerEntry('Spent', artSummary.spent, artSummary.spent > 0 ? 'negative' : 'neutral');
+  ledgerEntry('Balance', artSummary.balance, 'neutral');
+
+  artocoinSection.append(artocoinHeading, ledger);
 
   const rewardHeading = document.createElement('h3');
   rewardHeading.className = 'end-screen__section-title';
@@ -213,7 +239,7 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
   const newRunButton = document.createElement('button');
   newRunButton.type = 'button';
   newRunButton.className = 'end-screen__button end-screen__button--primary';
-  newRunButton.textContent = 'New run (NG+)';
+  newRunButton.textContent = 'New run';
   newRunButton.addEventListener('click', () => {
     onNewRun();
   });
@@ -228,7 +254,7 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
 
   actions.append(newRunButton, dismissButton);
 
-  panel.append(title, subtitle, badgeRow, metrics, rewardHeading, rewards, actions);
+  panel.append(title, subtitle, metrics, artocoinSection, rewardHeading, rewards, actions);
   overlay.append(panel);
   container.append(overlay);
 

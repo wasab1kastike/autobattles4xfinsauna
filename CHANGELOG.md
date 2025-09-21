@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Launch the Steamforge Atelier artocoin shop with a dedicated top-bar badge,
+  refreshed end-screen ledger, updated UI regression coverage, and expanded
+  documentation so sauna tiers commission with artocoins instead of NG+ stats.
+
 - Separate artocoin progression from NG+ persistence, migrate legacy saves into
   a dedicated balance slot, adopt the new payout formula for run completion,
   and reset prestige modifiers so future difficulty tuning flows through

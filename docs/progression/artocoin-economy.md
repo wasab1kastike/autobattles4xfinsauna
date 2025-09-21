@@ -70,6 +70,21 @@ Defeat runs still deliver progress while reflecting performance:
 The result is that an early wipe still awards roughly 15–20% of a clear, while a
 boss defeat with solid stats might pay out 45–55% despite the loss.
 
+## Steamforge Atelier
+
+Artocoins now flow into the Steamforge Atelier—an in-run shop pinned beside the
+inventory stash. Each tier upgrade advertises its commission cost and unlocks
+instantly once purchased, letting players convert a streak of victories into new
+roster capacity without chasing legacy NG+ milestones. The top bar exposes the
+treasury through a dedicated artocoin badge that mirrors the resource animation
+language (delta ticks, accessible announcements) used for beer, sisu, and
+saunakunnia.
+
+Run summaries close with an "Artocoin ledger" panel that breaks down how many
+coins were earned, spent, and banked during the session. The ledger uses the
+same gradient styling and positive/negative color cues as the badge so players
+can reconcile their purchases at a glance before diving back into a fresh run.
+
 ## Worked Examples
 
 - **Average Ember Circuit win** – 12.6 minute run, 152 kills, 86 tiles, one
