@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Refresh the GitHub Pages mirror in `docs/` so the published build references
+  the latest commit badge and script bundle.
+
+
 
 - Refresh the published docs bundle so the build badge reflects the
   current commit metadata.
