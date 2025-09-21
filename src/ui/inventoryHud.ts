@@ -58,11 +58,14 @@ const STAT_LABELS: Record<string, string> = {
 const TOAST_STACK_CLASSES =
   'pointer-events-none ml-auto flex w-full max-w-[min(22rem,90vw)] flex-col gap-[clamp(6px,1vw,12px)]';
 const TOAST_BASE_CLASSES =
-  'pointer-events-auto flex w-full items-center gap-[clamp(4px,0.8vw,12px)] rounded-hud-md border border-white/15 px-4 py-3 text-[0.9rem] font-semibold leading-[1.35] shadow-[0_18px_32px_rgba(15,23,42,0.22)] backdrop-blur-[14px] backdrop-saturate-[135%] transition-all duration-300 ease-out';
+  'pointer-events-auto flex w-full items-center gap-[clamp(4px,0.8vw,12px)] rounded-hud-md border border-[color:var(--hud-border)] px-4 py-3 text-[0.9rem] font-semibold leading-[1.35] shadow-hud-lg backdrop-blur-[14px] backdrop-saturate-[135%] transition-all duration-300 ease-out';
 const TOAST_VARIANT_CLASSES: Record<'loot' | 'info' | 'warn', string> = {
-  loot: 'bg-[linear-gradient(135deg,rgba(255,255,255,0.95),rgba(215,229,255,0.95))] text-slate-900',
-  info: 'bg-[linear-gradient(135deg,rgba(219,245,255,0.95),rgba(197,228,255,0.95))] text-slate-900',
-  warn: 'bg-[linear-gradient(135deg,rgba(255,231,217,0.95),rgba(255,214,196,0.95))] text-amber-900',
+  loot:
+    'bg-[linear-gradient(140deg,color-mix(in_srgb,var(--color-surface-strong)_82%,rgba(15,23,42,0.18))_0%,color-mix(in_srgb,var(--color-accent-gold)_46%,var(--color-surface))_100%)] text-[color:color-mix(in_srgb,var(--color-foreground)_95%,rgba(255,250,235,0.12))]',
+  info:
+    'bg-[linear-gradient(140deg,color-mix(in_srgb,var(--color-surface-strong)_84%,rgba(12,22,38,0.2))_0%,color-mix(in_srgb,var(--color-accent-blue)_48%,var(--color-surface))_100%)] text-[color:color-mix(in_srgb,var(--color-foreground)_95%,rgba(224,247,255,0.1))]',
+  warn:
+    'bg-[linear-gradient(140deg,color-mix(in_srgb,var(--color-surface-strong)_82%,rgba(40,18,12,0.35))_0%,color-mix(in_srgb,var(--color-accent-red)_52%,var(--color-surface))_100%)] text-[color:color-mix(in_srgb,var(--color-foreground)_92%,rgba(255,234,221,0.22))]',
 };
 const TOAST_EXIT_CLASSES = ['-translate-y-2', 'opacity-0'] as const;
 
