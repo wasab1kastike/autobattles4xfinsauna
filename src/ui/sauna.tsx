@@ -65,6 +65,7 @@ export function setupSaunaUI(
 
   const integritySection = document.createElement('section');
   integritySection.classList.add('sauna-health');
+  integritySection.dataset.tutorialTarget = 'sauna-integrity';
   const healthLabelId = `sauna-health-label-${Math.floor(Math.random() * 100000)}`;
   const healthHeader = document.createElement('div');
   healthHeader.classList.add('sauna-health__header');

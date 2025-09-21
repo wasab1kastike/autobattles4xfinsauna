@@ -1,18 +1,24 @@
 # Onboarding Experience
 
-The onboarding flow introduces the core HUD rhythms for new leaders through a guided tutorial. It automatically launches on fresh saves unless the local `tutorial_done` flag is set in `localStorage`.
+The onboarding flow introduces the polished HUD rhythms for new leaders through a guided tutorial. It automatically launches on fresh saves unless the local `tutorial_done` flag is set in `localStorage`.
 
 ## Flow overview
 
 | Step | Anchor | Purpose |
 | --- | --- | --- |
-| Heat | `data-tutorial-target="heat"` on the sauna control | Highlights the sauna heat controls so players understand how reinforcements arrive. |
-| Upkeep | `data-tutorial-target="upkeep"` on the roster HUD | Emphasises upkeep pressure and introduces the featured attendant card. |
-| SISU | `data-tutorial-target="sisu"` on the SISU meter | Shows how grit accumulates and fuels abilities. |
-| Combat | `data-tutorial-target="combat"` on the action tray | Demonstrates the burst and rally buttons that shape battles. |
-| Victory | `data-tutorial-target="victory"` on the Saunakunnia badge | Frames long-term success through renown tracking. |
+| Heat the Sauna | `data-tutorial-target="heat"` on the sauna control | Keep the sauna fires roaring. This control shows when the next warrior emerges from the steam. |
+| Mind Your Upkeep | `data-tutorial-target="upkeep"` on the roster HUD | Every attendant draws upkeep. Track totals and see a featured roster member to balance your economy. |
+| Stockpile SISU | `data-tutorial-target="sisu"` on the SISU meter | SISU fuels heroic bursts. Watch this meter to know when your grit reserves can power signature moves. |
+| Read the Enemy Ramp | `data-tutorial-target="enemy-ramp"` on the top-bar badge | The badge shows current stage markers, multiplier spikes, and calm windows before the next enemy wave. |
+| Command the Fight | `data-tutorial-target="combat"` on the action tray | Trigger a Sisu Burst to supercharge allied attacks or rally everyone home with a Torille call. |
+| Claim Victory | `data-tutorial-target="victory"` on the Saunakunnia badge | Destroy every enemy stronghold to win the campaign. The badge tracks your march toward total conquest. |
+| Avert Defeat | `data-tutorial-target="sauna-integrity"` on the Sauna Integrity meter | Defeat strikes if the sauna is razed, every attendant is downed for 8 seconds, or upkeep bankruptcy lingers for 12 seconds. Guard the meter and steady your roster. |
 
 Each tooltip card is fully keyboard navigable (`←`, `→`, `Esc`, or the on-screen controls) and can be dismissed at any time.
+
+With the combat anchor restored on the action tray, the **Command the Fight** spotlight now locks to the tray chrome instead of floating, immersing leaders in the premium rally controls during that beat of the tour.
+
+The refreshed sauna HUD now anchors the opening step with the Sauna Integrity meter and animated progress bar introduced in `src/ui/sauna.tsx`. The Premium Tiers grid showcased later in the tutorial reinforces how leaders unlock expanded roster capacity, while updated SISU and combat cues echo their in-game meters and rally buttons.
 
 ## Skip and reset
 
@@ -20,4 +26,4 @@ Selecting **Skip tutorial** or finishing the final step marks the `tutorial_done
 
 ## Visual polish
 
-The tooltip overlay uses blurred glass cards, accent lighting around anchors, and responsive positioning to maintain a premium presentation on both desktop and handheld layouts.
+The tooltip overlay uses blurred glass cards, accent lighting around anchors, and responsive positioning to maintain a premium presentation on both desktop and handheld layouts. Those cards mirror the sauna HUD styling, complete with badge-forward Premium Tier options, realtime progress labels, and the destruction FX woven into the Sauna Integrity meter.
