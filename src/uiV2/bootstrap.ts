@@ -8,10 +8,11 @@ export interface UiV2BootstrapOptions {
   overlay: HTMLElement;
   resourceBar: HTMLElement;
   canvas: HTMLCanvasElement;
+  onReturnToClassic: () => void;
 }
 
 export function bootstrapUiV2(options: UiV2BootstrapOptions): UiV2Handle {
-  const { overlay, resourceBar } = options;
+  const { overlay, resourceBar, onReturnToClassic } = options;
   const layout = ensureHudLayout(overlay);
   const { regions } = layout;
 
@@ -37,9 +38,41 @@ export function bootstrapUiV2(options: UiV2BootstrapOptions): UiV2Handle {
   card.appendChild(copy);
 
   const hint = document.createElement('p');
+  hint.id = 'ui-v2-classic-hint';
   hint.className = 'm-0 text-sm leading-relaxed text-slate-200/75';
-  hint.textContent = 'Toggle the experimental HUD off from the quartermaster settings to return to the classic layout.';
+  hint.textContent = 'Need the familiar layout? Use the control below to restore the classic HUD instantly. You can always revisit the experimental overlay from the quartermaster.';
   card.appendChild(hint);
+
+  const returnButton = document.createElement('button');
+  returnButton.type = 'button';
+  returnButton.dataset.testid = 'return-to-classic-hud';
+  returnButton.setAttribute('aria-describedby', hint.id);
+  returnButton.className =
+    'inline-flex items-center justify-center self-start rounded-full border border-[rgba(122,170,255,0.45)] bg-[rgba(16,24,38,0.92)] px-5 py-2 text-sm font-semibold uppercase tracking-[0.12em] text-slate-100 shadow-[0_14px_40px_rgba(8,12,24,0.45)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[rgba(90,164,255,0.85)] hover:border-[rgba(164,202,255,0.65)] hover:bg-[rgba(24,34,52,0.97)] disabled:cursor-progress disabled:opacity-80';
+  returnButton.textContent = 'Return to Classic HUD';
+
+  const handleReturnClick = () => {
+    if (returnButton.disabled) {
+      return;
+    }
+
+    returnButton.disabled = true;
+    returnButton.setAttribute('aria-busy', 'true');
+    const originalLabel = 'Return to Classic HUD';
+    returnButton.textContent = 'Restoring Classic HUD…';
+
+    try {
+      onReturnToClassic();
+    } catch (error) {
+      console.error('Failed to restore the classic HUD', error);
+      returnButton.disabled = false;
+      returnButton.removeAttribute('aria-busy');
+      returnButton.textContent = originalLabel;
+    }
+  };
+
+  returnButton.addEventListener('click', handleReturnClick);
+  card.appendChild(returnButton);
 
   const accent = document.createElement('div');
   accent.className =
@@ -57,6 +90,7 @@ export function bootstrapUiV2(options: UiV2BootstrapOptions): UiV2Handle {
 
   return {
     destroy() {
+      returnButton.removeEventListener('click', handleReturnClick);
       if (resourceDock.contains(resourceBar)) {
         overlay.prepend(resourceBar);
       }

@@ -78,4 +78,42 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-testid="inventory-badge"]')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
   });
+
+  it('restores the classic HUD and persists the flag when the V2 exit control is used', async () => {
+    const { DEFAULT_SAUNA_TIER_ID } = await import('./sauna/tiers.ts');
+    const { SAUNA_SETTINGS_STORAGE_KEY } = await import('./game/saunaSettings.ts');
+
+    window.localStorage.setItem(
+      SAUNA_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ maxRosterSize: 6, activeTierId: DEFAULT_SAUNA_TIER_ID, useUiV2: true })
+    );
+
+    const { init, destroy } = await import('./main.ts');
+
+    init();
+    await Promise.resolve();
+
+    const overlay = document.getElementById('ui-overlay');
+    expect(overlay?.dataset.hudVariant).toBe('v2');
+
+    const returnControl = document.querySelector<HTMLButtonElement>('[data-testid="return-to-classic-hud"]');
+    expect(returnControl).toBeTruthy();
+
+    returnControl?.click();
+    await Promise.resolve();
+
+    const saved = window.localStorage.getItem(SAUNA_SETTINGS_STORAGE_KEY);
+    expect(saved).toBeTruthy();
+    const parsed = saved ? (JSON.parse(saved) as { useUiV2?: boolean }) : null;
+    expect(parsed?.useUiV2).toBe(false);
+
+    expect(overlay?.dataset.hudVariant).toBe('classic');
+    expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
+    expect(document.querySelector('#topbar')).not.toBeNull();
+    expect(document.querySelector('[data-testid="inventory-badge"]')).not.toBeNull();
+    expect(document.querySelector('#right-panel')).not.toBeNull();
+
+    destroy();
+    await Promise.resolve();
+  });
 });
