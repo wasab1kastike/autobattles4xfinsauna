@@ -13,6 +13,128 @@ export interface LoudnessStats {
   readonly peakDb: number;
 }
 
+type BiquadCoefficients = {
+  readonly b0: number;
+  readonly b1: number;
+  readonly b2: number;
+  readonly a1: number;
+  readonly a2: number;
+};
+
+const ABSOLUTE_GATE_LUFS = -70;
+const RELATIVE_GATE_OFFSET = 10;
+const BLOCK_DURATION_SECONDS = 0.4;
+const BLOCK_STEP_SECONDS = 0.1;
+
+function designBiquad(
+  numerator: readonly [number, number, number],
+  denominator: readonly [number, number, number],
+  sampleRate: number
+): BiquadCoefficients {
+  const k = 2 * sampleRate;
+  const [b0, b1, b2] = numerator;
+  const [a0, a1, a2] = denominator;
+
+  const a0z = a0 * k * k + a1 * k + a2;
+  const a1z = 2 * (a2 - a0 * k * k);
+  const a2z = a0 * k * k - a1 * k + a2;
+
+  const b0z = b0 * k * k + b1 * k + b2;
+  const b1z = 2 * (b2 - b0 * k * k);
+  const b2z = b0 * k * k - b1 * k + b2;
+
+  if (a0z === 0) {
+    throw new Error('Invalid biquad design: zero normalising coefficient');
+  }
+
+  return {
+    b0: b0z / a0z,
+    b1: b1z / a0z,
+    b2: b2z / a0z,
+    a1: a1z / a0z,
+    a2: a2z / a0z
+  };
+}
+
+function applyBiquad(input: Float32Array | Float64Array, coeffs: BiquadCoefficients): Float64Array {
+  const output = new Float64Array(input.length);
+  let x1 = 0;
+  let x2 = 0;
+  let y1 = 0;
+  let y2 = 0;
+  const { b0, b1, b2, a1, a2 } = coeffs;
+
+  for (let i = 0; i < input.length; i++) {
+    const x0 = input[i];
+    const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+    output[i] = y0;
+    x2 = x1;
+    x1 = x0;
+    y2 = y1;
+    y1 = y0;
+  }
+
+  return output;
+}
+
+function applyKWeighting(channel: Float32Array, sampleRate: number): Float64Array {
+  if (Math.abs(sampleRate - 48000) < 1) {
+    const preFilter: BiquadCoefficients = {
+      b0: 1.53512485958697,
+      b1: -2.69169618940638,
+      b2: 1.19839281085285,
+      a1: -1.69065929318241,
+      a2: 0.73248077421585
+    };
+    const highPass: BiquadCoefficients = {
+      b0: 1,
+      b1: -2,
+      b2: 1,
+      a1: -1.99004745483398,
+      a2: 0.99007225036621
+    };
+    const stage1 = applyBiquad(channel, preFilter);
+    return applyBiquad(stage1, highPass);
+  }
+
+  const highShelfZero = 2 * Math.PI * 1681.974450955533;
+  const highShelfPole = 2 * Math.PI * 38.13547087602444;
+
+  const preFilter = designBiquad(
+    [1, 2 * highShelfZero, highShelfZero * highShelfZero],
+    [1, 2 * highShelfPole, highShelfPole * highShelfPole],
+    sampleRate
+  );
+
+  const highPass = designBiquad([1, 0, 0], [1, 2 * highShelfPole, highShelfPole * highShelfPole], sampleRate);
+
+  const stage1 = applyBiquad(channel, preFilter);
+  return applyBiquad(stage1, highPass);
+}
+
+function lufsFromMeanSquare(meanSquare: number): number {
+  if (meanSquare <= 0) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return -0.691 + 10 * Math.log10(meanSquare);
+}
+
+function meanSquareFromBlock(
+  channels: readonly Float64Array[],
+  start: number,
+  blockSize: number
+): number {
+  let sum = 0;
+  for (const channel of channels) {
+    for (let i = 0; i < blockSize; i++) {
+      const sample = channel[start + i];
+      sum += sample * sample;
+    }
+  }
+  const divisor = blockSize * channels.length;
+  return divisor > 0 ? sum / divisor : 0;
+}
+
 function readChunkId(view: DataView, offset: number): string {
   return String.fromCharCode(
     view.getUint8(offset),
@@ -185,16 +307,20 @@ export function encodeWavToBase64(data: DecodedWav): string {
   return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
 }
 
-export function computeLoudness(channels: Float32Array[]): LoudnessStats {
-  let sumSquares = 0;
-  let count = 0;
+export function computeLoudness(channels: Float32Array[], sampleRate = 48000): LoudnessStats {
+  if (channels.length === 0) {
+    return { rms: 0, lufs: Number.NEGATIVE_INFINITY, peak: 0, peakDb: Number.NEGATIVE_INFINITY };
+  }
+
   let peak = 0;
+  let sumSquares = 0;
+  let sampleCount = 0;
 
   for (const channel of channels) {
     for (let i = 0; i < channel.length; i++) {
       const value = channel[i];
       sumSquares += value * value;
-      count++;
+      sampleCount++;
       const abs = Math.abs(value);
       if (abs > peak) {
         peak = abs;
@@ -202,8 +328,46 @@ export function computeLoudness(channels: Float32Array[]): LoudnessStats {
     }
   }
 
-  const rms = count > 0 ? Math.sqrt(sumSquares / count) : 0;
-  const lufs = rms > 0 ? 20 * Math.log10(rms) : Number.NEGATIVE_INFINITY;
+  const rms = sampleCount > 0 ? Math.sqrt(sumSquares / sampleCount) : 0;
+
+  const filtered = channels.map((channel) => applyKWeighting(channel, sampleRate));
+  const blockSize = Math.max(1, Math.round(sampleRate * BLOCK_DURATION_SECONDS));
+  const stepSize = Math.max(1, Math.round(sampleRate * BLOCK_STEP_SECONDS));
+  const length = filtered[0].length;
+  const blockSquares: number[] = [];
+
+  for (let start = 0; start + blockSize <= length; start += stepSize) {
+    blockSquares.push(meanSquareFromBlock(filtered, start, blockSize));
+  }
+
+  if (blockSquares.length === 0) {
+    const fallbackMean = meanSquareFromBlock(filtered, 0, length);
+    const fallbackLufs = lufsFromMeanSquare(fallbackMean);
+    const peakDb = peak > 0 ? 20 * Math.log10(peak) : Number.NEGATIVE_INFINITY;
+    return { rms, lufs: fallbackLufs, peak, peakDb };
+  }
+
+  const aboveAbsolute = blockSquares.filter((ms) => lufsFromMeanSquare(ms) >= ABSOLUTE_GATE_LUFS);
+  if (aboveAbsolute.length === 0) {
+    const peakDb = peak > 0 ? 20 * Math.log10(peak) : Number.NEGATIVE_INFINITY;
+    return { rms, lufs: Number.NEGATIVE_INFINITY, peak, peakDb };
+  }
+
+  const initialMean = aboveAbsolute.reduce((acc, ms) => acc + ms, 0) / aboveAbsolute.length;
+  const initialLufs = lufsFromMeanSquare(initialMean);
+  const relativeThreshold = initialLufs - RELATIVE_GATE_OFFSET;
+
+  let gatedSquares = blockSquares.filter((ms) => {
+    const lufs = lufsFromMeanSquare(ms);
+    return lufs >= ABSOLUTE_GATE_LUFS && lufs >= relativeThreshold;
+  });
+
+  if (gatedSquares.length === 0) {
+    gatedSquares = aboveAbsolute;
+  }
+
+  const gatedMean = gatedSquares.reduce((acc, ms) => acc + ms, 0) / gatedSquares.length;
+  const lufs = lufsFromMeanSquare(gatedMean);
   const peakDb = peak > 0 ? 20 * Math.log10(peak) : Number.NEGATIVE_INFINITY;
 
   return { rms, lufs, peak, peakDb };
@@ -234,7 +398,7 @@ export function normaliseToTarget(
   readonly stats: LoudnessStats;
   readonly postStats: LoudnessStats;
 } {
-  const stats = computeLoudness(data.channelData);
+  const stats = computeLoudness(data.channelData, data.sampleRate);
   if (!Number.isFinite(stats.lufs)) {
     return {
       updated: data,
@@ -250,6 +414,6 @@ export function normaliseToTarget(
     : gainForTarget;
   const appliedGain = Math.min(gainForTarget, peakGainLimit);
   const updated = applyGain(data, appliedGain);
-  const postStats = computeLoudness(updated.channelData);
+  const postStats = computeLoudness(updated.channelData, data.sampleRate);
   return { updated, appliedGain, stats, postStats };
 }
