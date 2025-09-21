@@ -365,13 +365,13 @@ function calculateWinPayout(input: ArtocoinPayoutInputs): ArtocoinPayoutResult {
   const killFactor = clamp(0.6, 1.45, input.enemyKills / tuning.baselineKills);
   const exploreFactor = clamp(0.7, 1.25, input.tilesExplored / tuning.baselineTiles);
   const performanceMultiplier = tempoFactor * 0.3 + killFactor * 0.45 + exploreFactor * 0.25;
-  const lossPenalty = Math.max(0.4, 1 - Math.max(0, input.rosterLosses) * 0.22);
+  const lossPenalty = 1;
   const difficultyMultiplier = resolveDifficultyMultiplier(
     input.difficultyScalar,
     input.rampStageIndex
   );
   const artocoins = Math.round(
-    baseline * performanceMultiplier * lossPenalty * difficultyMultiplier
+    baseline * performanceMultiplier * difficultyMultiplier
   );
   return {
     artocoins,
@@ -396,14 +396,14 @@ function calculateDefeatPayout(input: ArtocoinPayoutInputs): ArtocoinPayoutResul
   const killProgress = input.enemyKills / tuning.baselineKills;
   const progress = clamp01(0.5 * tempoProgress + 0.5 * killProgress);
   const performanceShare = baseline * 0.45 * progress * difficultyMultiplier;
-  const lossFloor = Math.max(0.35, 1 - Math.max(0, input.rosterLosses) * 0.12);
-  const artocoins = Math.round(Math.max(floorPayout, performanceShare) * lossFloor);
+  const lossPenalty = 1;
+  const artocoins = Math.round(Math.max(floorPayout, performanceShare));
   return {
     artocoins,
     breakdown: {
       baseline,
       performanceMultiplier: performanceShare / baseline,
-      lossPenalty: lossFloor,
+      lossPenalty,
       difficultyMultiplier
     }
   } satisfies ArtocoinPayoutResult;
