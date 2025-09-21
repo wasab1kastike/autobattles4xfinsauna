@@ -6,7 +6,7 @@ const SAMPLE_RATE = 48000;
 for (const [name, collection] of Object.entries(CALMING_SFX)) {
   for (const variant of collection.variants) {
     const samples = renderVariantSamples(variant, SAMPLE_RATE);
-    const stats = computeLoudness([samples]);
+    const stats = computeLoudness([samples], SAMPLE_RATE);
     const gain = Number.isFinite(stats.lufs)
       ? Math.pow(10, (TARGET_LUFS - stats.lufs) / 20)
       : 1;
