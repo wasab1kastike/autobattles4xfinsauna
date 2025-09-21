@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { Resource } from '../../src/core/GameState.ts';
 import { calculateArtocoinPayout } from '../../src/progression/artocoin.ts';
-import { extractObjectiveMetrics } from '../../src/progression/objectivePayout.ts';
 import type { ObjectiveResolution } from '../../src/progression/objectives.ts';
 
 function makeResolutionWithMissingMetrics(): ObjectiveResolution {
@@ -30,17 +29,23 @@ function makeResolutionWithMissingMetrics(): ObjectiveResolution {
   } satisfies ObjectiveResolution;
 }
 
+function sanitizeMetric(value: number | null | undefined): number {
+  return Number.isFinite(value) ? (value as number) : 0;
+}
+
 describe('objective payout sanitization', () => {
   it('falls back to the defeat floor when metrics are missing', () => {
     const resolution = makeResolutionWithMissingMetrics();
     const snapshot = { effectiveDifficulty: 1, rampStageIndex: 0 } as const;
-    const metrics = extractObjectiveMetrics(resolution);
     const payout = calculateArtocoinPayout(resolution.outcome, {
       tierId: 'ember-circuit',
-      runSeconds: Math.max(0, metrics.runSeconds),
-      enemyKills: Math.max(0, metrics.enemyKills),
-      tilesExplored: Math.max(0, metrics.tilesExplored),
-      rosterLosses: Math.max(0, metrics.rosterLosses),
+      runSeconds: Math.max(0, sanitizeMetric(resolution.durationMs) / 1000),
+      enemyKills: Math.max(0, sanitizeMetric(resolution.summary.enemyKills)),
+      tilesExplored: Math.max(
+        0,
+        sanitizeMetric(resolution.summary.exploration.revealedHexes)
+      ),
+      rosterLosses: Math.max(0, sanitizeMetric(resolution.summary.roster.totalDeaths)),
       difficultyScalar: snapshot.effectiveDifficulty,
       rampStageIndex: snapshot.rampStageIndex
     });
