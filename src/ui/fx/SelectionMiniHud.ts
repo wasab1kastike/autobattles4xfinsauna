@@ -1,5 +1,6 @@
 import type { PixelCoord } from '../../hex/HexUtils.ts';
 import { axialToPixel } from '../../hex/HexUtils.ts';
+import { getFactionAccent } from '../../theme/factionPalette.ts';
 import type {
   SelectionItemSlot,
   SelectionStatusChip,
@@ -47,11 +48,7 @@ const rarityAccents = new Map<string, { base: string; glow: string }>([
   ['mythic', { base: 'rgba(236, 72, 153, 0.65)', glow: 'rgba(217, 70, 239, 0.38)' }]
 ]);
 
-const factionAccents: Record<string, { tint: string; halo: string }> = {
-  player: { tint: 'rgba(56, 189, 248, 0.85)', halo: 'rgba(14, 165, 233, 0.35)' },
-  enemy: { tint: 'rgba(248, 113, 113, 0.85)', halo: 'rgba(239, 68, 68, 0.35)' },
-  neutral: { tint: 'rgba(165, 180, 252, 0.85)', halo: 'rgba(129, 140, 248, 0.35)' }
-};
+const neutralAccent = { tint: 'rgba(165, 180, 252, 0.85)', halo: 'rgba(129, 140, 248, 0.35)' } as const;
 
 const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
@@ -347,7 +344,13 @@ function clamp(value: number, min: number, max: number): number {
 
 function resolveFactionAccent(faction: string): { tint: string; halo: string } {
   const normalized = faction?.toLowerCase?.() ?? '';
-  return factionAccents[normalized] ?? {
+  if (normalized === 'player' || normalized === 'enemy') {
+    return getFactionAccent(normalized);
+  }
+  if (normalized === 'neutral') {
+    return neutralAccent;
+  }
+  return {
     tint: 'rgba(148, 163, 184, 0.82)',
     halo: 'rgba(148, 163, 184, 0.32)'
   };
