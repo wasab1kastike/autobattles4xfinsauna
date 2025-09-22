@@ -5,6 +5,8 @@ import mine from '../../assets/sprites/mine.svg';
 import soldier from '../../assets/sprites/soldier.svg';
 import archer from '../../assets/sprites/archer.svg';
 import avantoMarauder from '../../assets/sprites/avanto-marauder.svg';
+import saunojaGuardian from '../../assets/sprites/saunoja-guardian.svg';
+import saunojaSeer from '../../assets/sprites/saunoja-seer.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
@@ -30,6 +32,8 @@ export const assetPaths: AssetPaths = {
     'unit-soldier': soldier,
     'unit-archer': archer,
     'unit-avanto-marauder': avantoMarauder,
+    'unit-saunoja-guardian': saunojaGuardian,
+    'unit-saunoja-seer': saunojaSeer,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,
