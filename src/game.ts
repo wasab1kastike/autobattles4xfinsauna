@@ -52,7 +52,7 @@ import {
   SAUNOJA_UPKEEP_MAX,
   SAUNOJA_UPKEEP_MIN
 } from './units/saunoja.ts';
-import { drawSaunojas, preloadSaunojaIcon } from './units/renderSaunoja.ts';
+import { drawSaunojas } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
@@ -2177,7 +2177,12 @@ export function draw(): void {
                 return null;
               }
               return unit.renderCoord ?? unit.coord;
-            }
+            },
+            resolveSpriteId: (attendant) => {
+              const unit = getAttachedUnitFor(attendant);
+              return unit?.type ?? null;
+            },
+            fallbackSpriteId: 'saunoja-guardian'
           }
         : undefined,
     sauna,
@@ -2425,15 +2430,6 @@ export async function start(): Promise<void> {
   running = true;
   updateRosterDisplay();
   draw();
-  try {
-    await preloadSaunojaIcon(() => {
-      draw();
-    }).then(() => {
-      draw();
-    });
-  } catch (error) {
-    console.warn('Failed to preload Saunoja icon before starting the game', error);
-  }
   let last = performance.now();
   function gameLoop(now: number) {
     if (!running) {

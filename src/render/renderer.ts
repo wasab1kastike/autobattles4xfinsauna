@@ -119,6 +119,8 @@ export interface DrawOptions {
     units: Saunoja[];
     draw: DrawSaunojaFn;
     resolveRenderCoord?: DrawSaunojasOptions['resolveRenderCoord'];
+    resolveSpriteId?: DrawSaunojasOptions['resolveSpriteId'];
+    fallbackSpriteId?: DrawSaunojasOptions['fallbackSpriteId'];
   };
   sauna?: Sauna | null;
   saunaVision?: VisionSource | null;
@@ -158,11 +160,14 @@ export function draw(
   const saunojaLayer = options?.saunojas;
   if (saunojaLayer && Array.isArray(saunojaLayer.units) && saunojaLayer.units.length > 0) {
     saunojaLayer.draw(ctx, saunojaLayer.units, {
+      assets,
       originX: origin.x,
       originY: origin.y,
       hexRadius: mapRenderer.hexSize,
       zoom: camera.zoom,
       resolveRenderCoord: saunojaLayer.resolveRenderCoord,
+      resolveSpriteId: saunojaLayer.resolveSpriteId,
+      fallbackSpriteId: saunojaLayer.fallbackSpriteId,
       pushStatus: options?.fx?.pushUnitStatus
     });
   }
