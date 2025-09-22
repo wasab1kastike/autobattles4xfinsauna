@@ -181,6 +181,8 @@ body > #game-container {
   inset: 0;
   padding: var(--hud-padding);
   padding-bottom: calc(var(--hud-padding) + env(safe-area-inset-bottom, 0px));
+  --inventory-panel-width: clamp(320px, 32vw, 420px);
+  --inventory-panel-gap: clamp(16px, 2.4vw, 32px);
 }
 
 #ui-overlay:not(.hud-grid) {
@@ -424,6 +426,13 @@ body > #game-container {
   overflow: hidden;
 }
 
+@media (min-width: 721px) {
+  #ui-overlay.inventory-panel-open .hud-anchor--command-dock {
+    margin-right: calc(var(--inventory-panel-width) + var(--inventory-panel-gap));
+    max-width: calc(100% - var(--inventory-panel-width) - var(--inventory-panel-gap));
+  }
+}
+
 .hud-anchor--command-dock::after {
   content: '';
   position: absolute;
@@ -514,6 +523,13 @@ body > #game-container {
     linear-gradient(140deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.64));
   box-shadow: 0 42px 80px rgba(8, 25, 53, 0.52);
   backdrop-filter: blur(28px) saturate(165%);
+}
+
+@media (min-width: 721px) {
+  #ui-overlay.inventory-panel-open .hud-bottom-tabs__chrome {
+    margin-right: calc(var(--inventory-panel-width) + var(--inventory-panel-gap));
+    max-width: calc(100% - var(--inventory-panel-width) - var(--inventory-panel-gap));
+  }
 }
 
 .hud-bottom-tabs__chrome::before {
