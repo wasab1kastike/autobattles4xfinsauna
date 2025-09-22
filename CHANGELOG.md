@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Relocate the policy cards into the bottom HUD tab: extract a reusable
+  renderer that feeds `tabs.panels.policies`, wire it into the command-console
+  setup to avoid duplicate mounts, and extend the HUD tab tests so the polished
+  policy grid only appears in the dock.
+
 - Route the battlefield selection overlay through unit identifiers so enemy
   clicks stream polished payloads into the mini HUD: add a unit-driven
   selection builder, teach the canvas handler to surface hostile focus, keep the
