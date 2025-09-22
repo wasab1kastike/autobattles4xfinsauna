@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 212" role="img" aria-labelledby="title desc">
+  <title id="title">Avanto Raider Shaman</title>
+  <desc id="desc">Mystic raider shaman channeling aurora flame through a crystal staff with drifting runes.</desc>
+  <defs>
+    <linearGradient id="shaman-sky" x1="0%" x2="0%" y1="0%" y2="100%">
+      <stop offset="0" stop-color="#050811" />
+      <stop offset="0.55" stop-color="#152843" />
+      <stop offset="1" stop-color="#080d16" />
+    </linearGradient>
+    <radialGradient id="shaman-halo" cx="48%" cy="20%" r="80%">
+      <stop offset="0" stop-color="#eefbff" stop-opacity="0.95" />
+      <stop offset="0.45" stop-color="#a9ddff" stop-opacity="0.65" />
+      <stop offset="1" stop-color="#060d18" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="shaman-cloak" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0" stop-color="#4c5a75" />
+      <stop offset="1" stop-color="#1b222d" />
+    </linearGradient>
+    <linearGradient id="shaman-robe" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0" stop-color="#f6fdff" />
+      <stop offset="0.35" stop-color="#d1eaff" />
+      <stop offset="1" stop-color="#78a9dc" />
+    </linearGradient>
+    <linearGradient id="shaman-belt" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0" stop-color="#472b35" />
+      <stop offset="1" stop-color="#2a131a" />
+    </linearGradient>
+    <radialGradient id="shaman-crystal" cx="50%" cy="30%" r="50%">
+      <stop offset="0" stop-color="#9efaff" />
+      <stop offset="0.5" stop-color="#4dd5ff" />
+      <stop offset="1" stop-color="#0c385c" />
+    </radialGradient>
+    <linearGradient id="shaman-staff" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0" stop-color="#f8fdff" />
+      <stop offset="0.4" stop-color="#b3d5ff" />
+      <stop offset="1" stop-color="#e4f5ff" />
+    </linearGradient>
+    <radialGradient id="shaman-rune" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffc091" />
+      <stop offset="0.6" stop-color="#ff6b7f" stop-opacity="0.8" />
+      <stop offset="1" stop-color="#f53b52" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="180" height="212" rx="20" ry="20" fill="url(#shaman-sky)" />
+  <rect width="180" height="212" fill="url(#shaman-halo)" />
+  <g transform="translate(18 10)">
+    <path d="M66 18c13-7 30-7 42 0 12 7 18 24 12 38-5 15-26 26-42 26S40 71 34 56c-6-14 1-31 12-38 12-7 27-7 38 0z" fill="#0f1827" opacity="0.78" />
+    <path d="M62 28c9-6 23-6 32 0 9 6 14 20 9 32-5 12-20 20-32 20s-26-8-31-20c-5-12-1-26 9-32z" fill="url(#shaman-cloak)" />
+    <path d="M72 40c6-4 15-4 20 0s8 12 5 18c-3 8-11 12-20 12s-17-4-20-12c-3-6-1-14 5-18z" fill="#eef7ff" opacity="0.9" />
+    <path d="M58 60c14 6 28 6 40 0l10 18c-14 20-40 22-60 0z" fill="url(#shaman-robe)" />
+    <path d="M40 74c18 20 44 20 62 0l18 16-12 40c-20 10-56 10-76 0l-12-40z" fill="url(#shaman-belt)" />
+    <path d="M56 86c10 6 20 6 30 0l12 34c-16 10-38 10-54 0z" fill="url(#shaman-robe)" />
+    <path d="M32 76c-8 8-16 26-14 38 2 10 10 20 20 26l6-22z" fill="#20131a" />
+    <path d="M112 76c8 8 16 26 14 38-2 10-10 20-20 26l-6-22z" fill="#20131a" />
+    <path d="M28 36c-9 8-12 24-8 36 4 14 18 22 28 18l-12-20c-2-9 0-20 4-28 4-6 8-12 14-14-10-2-20 0-26 8z" fill="#0d1520" />
+    <path d="M116 36c9 8 12 24 8 36-4 14-18 22-28 18l12-20c2-9 0-20-4-28-4-6-8-12-14-14 10-2 20 0 26 8z" fill="#0d1520" />
+    <path d="M42 110c-6 16-8 34-6 46 12 8 54 10 74 0 2-12 0-30-6-46-18 12-44 12-62 0z" fill="#0d090f" opacity="0.9" />
+    <path d="M34 164c20 8 64 8 84 0l-6 14c-24 10-48 10-72 0z" fill="#050407" opacity="0.85" />
+    <path d="M-6 96c0 4 10 12 20 16 7 2 12 2 14 0l6-10-20-12c-8-2-18 2-20 6z" fill="#1f2430" />
+    <path d="M144 96c0 4-10 12-20 16-7 2-12 2-14 0l-6-10 20-12c8-2 18 2 20 6z" fill="#1f2430" />
+    <path d="M-4 86c-2 8 4 14 14 18 6 2 14 4 18 0s4-10-2-12c-10-4-20-10-30-6z" fill="url(#shaman-staff)" transform="rotate(-10 16 96)" />
+    <path d="M148 86c2 8-4 14-14 18-6 2-14 4-18 0s-4-10 2-12c10-4 20-10 30-6z" fill="url(#shaman-staff)" transform="rotate(10 128 96)" />
+    <path d="M80 48c3-5 9-5 12 0 2 4 0 8-6 8s-8-4-6-8z" fill="#f3fbff" />
+    <path d="M92 48c3-5 9-5 12 0 2 4 0 8-6 8s-8-4-6-8z" fill="#f3fbff" />
+    <path d="M82 60c6 4 12 4 16 0 0 6-4 10-8 10s-8-4-8-10z" fill="#101622" opacity="0.6" />
+    <path d="M50 144c12 10 40 10 52 0l-10 20c-12 4-20 4-32 0z" fill="#170c12" />
+    <path d="M130 8c8 0 18 6 20 14-14 12-26 26-34 42l-12-6z" fill="url(#shaman-staff)" />
+    <circle cx="140" cy="12" r="12" fill="url(#shaman-crystal)" />
+    <path d="M22 8C14 8 4 14 2 22c14 12 26 26 34 42l12-6z" fill="url(#shaman-staff)" />
+    <circle cx="12" cy="12" r="10" fill="url(#shaman-crystal)" />
+  </g>
+  <g opacity="0.8">
+    <circle cx="32" cy="170" r="8" fill="url(#shaman-rune)" />
+    <circle cx="150" cy="160" r="6" fill="url(#shaman-rune)" />
+    <circle cx="120" cy="186" r="5" fill="url(#shaman-rune)" />
+  </g>
+</svg>
