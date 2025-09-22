@@ -110,12 +110,12 @@ export function setupTopbar(
     };
   }
 
-  const { regions } = ensureHudLayout(overlay);
-  const topRegion = regions.top;
+  const { anchors } = ensureHudLayout(overlay);
+  const topLeftCluster = anchors.topLeftCluster;
 
   const bar = document.createElement('div');
   bar.id = 'topbar';
-  topRegion.prepend(bar);
+  topLeftCluster.appendChild(bar);
 
   const badgeRow = document.createElement('div');
   badgeRow.className = 'topbar-badge-row';

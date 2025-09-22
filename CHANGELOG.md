@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Reanchor the HUD around explicit top-left, top-right, and command-dock mounts,
+  move the resource bar, topbar, action tray, and alerts into those anchors, and
+  restyle the trays with glassy gradients plus refreshed tests for the new
+  layout order.
+
 - Introduce dedicated UI v2 controllers for the roster, top bar, inventory, log,
   and sauna experiences, bootstrap them from `setupGame` alongside variant-aware
   cleanup, and extend the Vitest suite so both classic and v2 HUDs mount the

@@ -252,9 +252,9 @@ export function setupInventoryHud(
     return { destroy: () => {} };
   }
 
-  const { regions } = ensureHudLayout(overlay);
-  const topRegion = regions.top;
-  const toastStack = ensureToastStack(overlay, topRegion);
+  const { anchors } = ensureHudLayout(overlay);
+  const topLeftCluster = anchors.topLeftCluster;
+  const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
   overlay.querySelector('#inventory-shop-panel')?.remove();
@@ -264,7 +264,7 @@ export function setupInventoryHud(
     .forEach((el) => el.remove());
   const { button: badgeButton, count: badgeCount } = createBadge();
   badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
-  topRegion.appendChild(badgeButton);
+  topLeftCluster.appendChild(badgeButton);
 
   const shopNumberFormatter = new Intl.NumberFormat('en-US');
   let shopPanel: SaunaShopPanelController | null = null;
@@ -299,7 +299,7 @@ export function setupInventoryHud(
       options.getSaunaShopViewModel?.() ?? { balance: 0, tiers: [] };
     shopButton = createShopButton();
     shopButton.dataset.state = 'locked';
-    topRegion.appendChild(shopButton);
+    topLeftCluster.appendChild(shopButton);
 
     const emitShopToast = (message: string, variant: SaunaShopToastVariant) => {
       const mapped = shopToastVariants[variant] ?? 'info';
