@@ -91,6 +91,18 @@ img {
   max-width: 100%;
 }
 
+.sauna-shop-panel__crest,
+.sauna-shop-panel__tier-badge {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+}
+
+.sauna-shop-panel__crest img {
+  width: 100%;
+  height: 100%;
+}
+
 button,
 .btn {
   min-height: 44px;
