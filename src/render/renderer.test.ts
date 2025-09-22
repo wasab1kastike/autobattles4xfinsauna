@@ -6,6 +6,7 @@ import type { PixelCoord } from '../hex/HexUtils.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import type { DrawUnitSpriteOptions, UnitSpriteRenderResult } from './units/UnitSprite.ts';
 import { camera } from '../camera/autoFrame.ts';
+import type { UnitSpriteAtlas, SpriteAtlasSlice } from './units/spriteAtlas.ts';
 
 const isSisuBurstActive = vi.fn(() => false);
 vi.mock('../sisu/burst.ts', () => ({
@@ -43,11 +44,51 @@ function createMockContext(): CanvasRenderingContext2D {
     restore: vi.fn(),
     strokeRect: vi.fn(),
     filter: '',
+    shadowColor: 'rgba(0,0,0,0)',
+    shadowBlur: 0,
     globalAlpha: 1,
     strokeStyle: '',
     lineWidth: 1
   } as unknown as CanvasRenderingContext2D;
   return ctx;
+}
+
+function createAtlasSlice(id: string, index: number, size = 32): SpriteAtlasSlice {
+  const sx = index * size;
+  return {
+    id,
+    sx,
+    sy: 0,
+    sw: size,
+    sh: size,
+    u0: 0,
+    v0: 0,
+    u1: 0,
+    v1: 0
+  } satisfies SpriteAtlasSlice;
+}
+
+function createStubAtlas(keys: string[]): UnitSpriteAtlas {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const slices: Record<string, SpriteAtlasSlice> = {};
+  keys.forEach((key, index) => {
+    slices[key] = {
+      ...createAtlasSlice(key, index),
+      u0: (index * 32) / canvas.width,
+      v0: 0,
+      u1: (index * 32 + 32) / canvas.width,
+      v1: 32 / canvas.height
+    } satisfies SpriteAtlasSlice;
+  });
+  return {
+    canvas,
+    width: canvas.width,
+    height: canvas.height,
+    padding: 2,
+    slices
+  } satisfies UnitSpriteAtlas;
 }
 
 function createStubUnit(
@@ -117,43 +158,90 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 0, y: 0 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-soldier', 'unit-marauder']);
     const assets = {
-      'unit-soldier': makeImage(),
-      'unit-marauder': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-soldier': makeImage(),
+        'unit-marauder': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
     drawUnits(ctx, mapRenderer, assets, [friendly, enemy], origin, undefined, [friendly], null, null);
 
-    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
-    const [friendlyCall, enemyCall] = drawUnitSpriteMock.fn.mock.calls;
-    expect(friendlyCall[1]).toBe(friendly);
-    expect(friendlyCall[2]).toMatchObject({
-      faction: 'player',
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(4);
+    const calls = drawUnitSpriteMock.fn.mock.calls;
+    const friendlyBase = calls.find(([, unit, opts]) => unit === friendly && opts.renderSprite === false);
+    const friendlySprite = calls.find(([, unit, opts]) => unit === friendly && opts.renderSprite !== false);
+    const enemyBase = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite === false);
+    const enemySprite = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite !== false);
+
+    expect(friendlyBase).toBeDefined();
+    expect(friendlySprite).toBeDefined();
+    expect(enemyBase).toBeDefined();
+    expect(enemySprite).toBeDefined();
+
+    const [, , friendlyBaseOpts] = friendlyBase!;
+    expect(friendlyBaseOpts).toMatchObject({
+      drawBase: true,
+      renderSprite: false,
+      atlas: null,
+      slice: null,
       placement: {
         coord: friendly.coord,
         hexSize: 32,
         origin,
         zoom: 1,
         type: 'soldier'
-      },
-      drawBase: true,
-      anchorHint: null,
-      offset: null
+      }
     });
-    expect(enemyCall[1]).toBe(enemy);
-    expect(enemyCall[2]).toMatchObject({
-      faction: 'enemy',
+
+    const [, , friendlySpriteOpts] = friendlySprite!;
+    expect(friendlySpriteOpts).toMatchObject({
+      drawBase: false,
+      renderSprite: true,
+      faction: 'player',
+      atlas: atlas.canvas,
+      slice: atlas.slices['unit-soldier'],
+      placement: {
+        coord: friendly.coord,
+        hexSize: 32,
+        origin,
+        zoom: 1,
+        type: 'soldier'
+      }
+    });
+
+    const [, , enemyBaseOpts] = enemyBase!;
+    expect(enemyBaseOpts).toMatchObject({
+      drawBase: true,
+      renderSprite: false,
+      atlas: null,
+      slice: null,
       placement: {
         coord: enemy.coord,
         hexSize: 32,
         origin,
         zoom: 1,
         type: 'marauder'
-      },
-      drawBase: true,
-      anchorHint: null,
-      offset: null
+      }
+    });
+
+    const [, , enemySpriteOpts] = enemySprite!;
+    expect(enemySpriteOpts).toMatchObject({
+      drawBase: false,
+      renderSprite: true,
+      faction: 'enemy',
+      atlas: atlas.canvas,
+      slice: atlas.slices['unit-marauder'],
+      placement: {
+        coord: enemy.coord,
+        hexSize: 32,
+        origin,
+        zoom: 1,
+        type: 'marauder'
+      }
     });
   });
 
@@ -164,10 +252,14 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 0, y: 0 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-soldier']);
     const assets = {
-      'unit-soldier': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-soldier': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
     drawUnits(
       ctx,
@@ -181,18 +273,37 @@ describe('drawUnits', () => {
       frontliner.coord
     );
 
-    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
-    const baseCall = drawUnitSpriteMock.fn.mock.calls[0];
-    const stackedCall = drawUnitSpriteMock.fn.mock.calls[1];
-    const baseResult = drawUnitSpriteMock.fn.mock.results[0]?.value as UnitSpriteRenderResult;
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(3);
+    const calls = drawUnitSpriteMock.fn.mock.calls;
+    const baseCall = calls.find(([, unit, opts]) => unit === frontliner && opts.renderSprite === false);
+    const primarySpriteCall = calls.find(([, unit, opts]) => unit === frontliner && opts.renderSprite !== false);
+    const stackedSpriteCall = calls.find(([, unit, opts]) => unit === support && opts.renderSprite !== false);
+
+    expect(baseCall).toBeDefined();
+    expect(primarySpriteCall).toBeDefined();
+    expect(stackedSpriteCall).toBeDefined();
+
+    const baseResult = drawUnitSpriteMock.fn.mock.results[calls.indexOf(baseCall!)].value as UnitSpriteRenderResult;
     expect(baseResult).toBeDefined();
 
-    expect(baseCall[2].drawBase).toBe(true);
-    expect(baseCall[2].offset).toBeNull();
-    expect(stackedCall[2].drawBase).toBe(false);
-    expect(stackedCall[2].anchorHint).toEqual(baseResult.center);
-    expect(stackedCall[2].offset).not.toBeNull();
-    const stackedOffset = stackedCall[2].offset as PixelCoord;
+    const [, , baseOpts] = baseCall!;
+    expect(baseOpts.drawBase).toBe(true);
+    expect(baseOpts.renderSprite).toBe(false);
+    expect(baseOpts.offset).toBeNull();
+
+    const [, , primaryOpts] = primarySpriteCall!;
+    expect(primaryOpts.drawBase).toBe(false);
+    expect(primaryOpts.renderSprite).toBe(true);
+    expect(primaryOpts.offset).toBeNull();
+    expect(primaryOpts.atlas).toBe(atlas.canvas);
+    expect(primaryOpts.slice).toBe(atlas.slices['unit-soldier']);
+
+    const [, , stackedOpts] = stackedSpriteCall!;
+    expect(stackedOpts.drawBase).toBe(false);
+    expect(stackedOpts.renderSprite).toBe(true);
+    expect(stackedOpts.anchorHint).toEqual(baseResult.center);
+    expect(stackedOpts.offset).not.toBeNull();
+    const stackedOffset = stackedOpts.offset as PixelCoord;
     expect(Math.abs(stackedOffset.x) + Math.abs(stackedOffset.y)).toBeGreaterThan(0);
   });
 
@@ -207,19 +318,31 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 0, y: 0 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-marauder']);
     const assets = {
-      'unit-marauder': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-marauder': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
     drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, [], sauna, null);
 
-    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(1);
-    const [, , opts] = drawUnitSpriteMock.fn.mock.calls[0];
-    expect(opts.placement.coord).toEqual(enemy.coord);
-    expect(opts.selection?.isSelected).toBe(false);
-    expect(opts.drawBase).toBe(true);
-    expect(opts.offset).toBeNull();
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
+    const calls = drawUnitSpriteMock.fn.mock.calls;
+    const baseCall = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite === false);
+    const spriteCall = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite !== false);
+    expect(baseCall).toBeDefined();
+    expect(spriteCall).toBeDefined();
+    const [, , baseOpts] = baseCall!;
+    expect(baseOpts.drawBase).toBe(true);
+    expect(baseOpts.offset).toBeNull();
+    const [, , spriteOpts] = spriteCall!;
+    expect(spriteOpts.drawBase).toBe(false);
+    expect(spriteOpts.atlas).toBe(atlas.canvas);
+    expect(spriteOpts.slice).toBe(atlas.slices['unit-marauder']);
+    expect(spriteOpts.selection?.isSelected).toBe(false);
   });
 
   it('passes selection flags and exposes placement for Sisu burst outlines', () => {
@@ -229,10 +352,14 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 0, y: 0 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-soldier']);
     const assets = {
-      'unit-soldier': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-soldier': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
     isSisuBurstActive.mockReturnValue(true);
     drawUnitSpriteMock.fn.mockReturnValue({
@@ -263,7 +390,11 @@ describe('drawUnits', () => {
 
     drawUnits(ctx, mapRenderer, assets, [player], origin, undefined, [player], null, player.coord);
 
-    const [, , opts] = drawUnitSpriteMock.fn.mock.calls[0];
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
+    const calls = drawUnitSpriteMock.fn.mock.calls;
+    const spriteCall = calls.find(([, unit, options]) => unit === player && options.renderSprite !== false);
+    expect(spriteCall).toBeDefined();
+    const [, , opts] = spriteCall!;
     expect(opts.selection).toEqual({ isSelected: true, isPrimary: true });
     expect(ctx.strokeRect).toHaveBeenCalledWith(10, 20, 30, 40);
   });
@@ -280,10 +411,14 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 12, y: -6 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-soldier']);
     const assets = {
-      'unit-soldier': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-soldier': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
     const pushUnitStatus = vi.fn();
 
     drawUnits(
@@ -327,10 +462,14 @@ describe('drawUnits', () => {
     const origin: PixelCoord = { x: 0, y: 0 };
     const ctx = createMockContext();
     const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const atlas = createStubAtlas(['unit-marauder']);
     const assets = {
-      'unit-marauder': makeImage(),
-      placeholder: makeImage()
-    };
+      images: {
+        'unit-marauder': makeImage(),
+        placeholder: makeImage()
+      },
+      atlas
+    } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
     const pushUnitStatus = vi.fn();
 
     drawUnits(

@@ -4,6 +4,7 @@ import type { SpritePlacement, SpritePlacementInput } from './draw.ts';
 import { getSpritePlacement } from './draw.ts';
 import { snapForZoom } from '../zoom.ts';
 import type { PixelCoord } from '../../hex/HexUtils.ts';
+import type { SpriteAtlasSlice } from './spriteAtlas.ts';
 
 export interface UnitSpriteFootprint {
   readonly centerX: number;
@@ -28,6 +29,9 @@ export interface UnitSelectionState {
 export interface DrawUnitSpriteOptions {
   readonly placement: SpritePlacementInput;
   readonly sprite: CanvasImageSource | null | undefined;
+  readonly atlas?: CanvasImageSource | null;
+  readonly slice?: SpriteAtlasSlice | null;
+  readonly renderSprite?: boolean;
   readonly faction?: Unit['faction'];
   readonly motionStrength?: number;
   readonly cameraZoom?: number;
@@ -256,26 +260,42 @@ export function drawUnitSprite(
     }
   }
 
+  const shouldDrawBase = options.drawBase ?? true;
   const footprint = drawBase(
     ctx,
     nextPlacement,
     options.placement.hexSize,
     zoom,
     palette,
-    options.drawBase ?? true
+    shouldDrawBase
   );
 
+  const shouldRenderSprite = options.renderSprite !== false;
+  const atlas = options.atlas ?? null;
+  const slice = options.slice ?? null;
   const sprite = options.sprite;
-  if (sprite) {
-    const previousFilter = ctx.filter;
-    ctx.filter = previousFilter;
-    ctx.drawImage(
-      sprite,
-      nextPlacement.drawX,
-      nextPlacement.drawY,
-      nextPlacement.width,
-      nextPlacement.height
-    );
+  if (shouldRenderSprite) {
+    if (atlas && slice) {
+      ctx.drawImage(
+        atlas,
+        slice.sx,
+        slice.sy,
+        slice.sw,
+        slice.sh,
+        nextPlacement.drawX,
+        nextPlacement.drawY,
+        nextPlacement.width,
+        nextPlacement.height
+      );
+    } else if (sprite) {
+      ctx.drawImage(
+        sprite,
+        nextPlacement.drawX,
+        nextPlacement.drawY,
+        nextPlacement.width,
+        nextPlacement.height
+      );
+    }
   }
 
   return {
