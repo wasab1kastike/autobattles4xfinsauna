@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 176" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
   <title id="title">Saunoja Seer v1</title>
   <desc id="desc">First production badge of a Saunoja seer with crystal focus and drifting steam.</desc>
   <defs>
@@ -35,21 +35,23 @@
       <stop offset="1" stop-color="rgba(10,20,40,0)" />
     </radialGradient>
   </defs>
-  <rect width="160" height="176" rx="28" fill="url(#seer-panel)" />
-  <circle cx="78" cy="72" r="72" fill="url(#seer-halo)" />
-  <ellipse cx="80" cy="144" rx="54" ry="18" fill="url(#seer-shadow)" />
-  <path d="M64 40 42 68c-10 12-16 28-16 46v24l24 46h44l24-46v-24c0-18-6-34-16-46L92 40H64Z" fill="url(#seer-robe)" stroke="#1a2c46" stroke-width="2.6" stroke-linejoin="round" />
-  <path d="M60 110h40l6 18c-12 14-24 20-26 20s-16-6-28-20l8-18Z" fill="#f2f4ff" opacity="0.9" />
-  <path d="M78 50c-10 0-22 6-30 14l10 12c12-8 34-8 46 0l10-12c-8-8-16-14-28-14Z" fill="#fbf9ff" stroke="#ccd7ff" stroke-width="2" />
-  <path d="M68 34h20l8 10-18 12-18-12 8-10Z" fill="#ecefff" stroke="#9cb5e0" stroke-width="1.8" />
-  <path d="M56 130l12 30-20 12-18-36 14-8 12 2Z" fill="url(#seer-sash)" opacity="0.94" />
-  <path d="M100 128l18-8-8 34-18-10 8-16Z" fill="#e8f3ff" opacity="0.74" />
-  <path d="M74 90c-16 0-26-12-26-26 0-10 8-18 18-18s18 8 18 18c0 14-8 26-10 26Z" fill="url(#seer-hair)" />
-  <path d="M52 118l18 26-16 10-18-30 16-6Z" fill="url(#seer-crystal)" />
-  <circle cx="66" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
-  <circle cx="90" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
-  <path d="M66 74c-6 0-10 6-10 14 8-4 16-6 24-6s16 2 24 6c0-8-4-14-10-14H66Z" fill="#18233a" opacity="0.82" />
-  <path d="M68 96h16l4 10-12 8-12-8 4-10Z" fill="#172034" />
-  <circle cx="76" cy="98" r="7" fill="#f7faff" stroke="#cad6f3" stroke-width="1.6" />
-  <circle cx="104" cy="122" r="10" fill="url(#seer-crystal)" stroke="#4c85ff" stroke-width="1.6" />
+  <g transform="translate(2.909090909, 0) scale(0.363636364)">
+      <rect width="160" height="176" rx="28" fill="url(#seer-panel)" />
+      <circle cx="78" cy="72" r="72" fill="url(#seer-halo)" />
+      <ellipse cx="80" cy="144" rx="54" ry="18" fill="url(#seer-shadow)" />
+      <path d="M64 40 42 68c-10 12-16 28-16 46v24l24 46h44l24-46v-24c0-18-6-34-16-46L92 40H64Z" fill="url(#seer-robe)" stroke="#1a2c46" stroke-width="2.6" stroke-linejoin="round" />
+      <path d="M60 110h40l6 18c-12 14-24 20-26 20s-16-6-28-20l8-18Z" fill="#f2f4ff" opacity="0.9" />
+      <path d="M78 50c-10 0-22 6-30 14l10 12c12-8 34-8 46 0l10-12c-8-8-16-14-28-14Z" fill="#fbf9ff" stroke="#ccd7ff" stroke-width="2" />
+      <path d="M68 34h20l8 10-18 12-18-12 8-10Z" fill="#ecefff" stroke="#9cb5e0" stroke-width="1.8" />
+      <path d="M56 130l12 30-20 12-18-36 14-8 12 2Z" fill="url(#seer-sash)" opacity="0.94" />
+      <path d="M100 128l18-8-8 34-18-10 8-16Z" fill="#e8f3ff" opacity="0.74" />
+      <path d="M74 90c-16 0-26-12-26-26 0-10 8-18 18-18s18 8 18 18c0 14-8 26-10 26Z" fill="url(#seer-hair)" />
+      <path d="M52 118l18 26-16 10-18-30 16-6Z" fill="url(#seer-crystal)" />
+      <circle cx="66" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
+      <circle cx="90" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
+      <path d="M66 74c-6 0-10 6-10 14 8-4 16-6 24-6s16 2 24 6c0-8-4-14-10-14H66Z" fill="#18233a" opacity="0.82" />
+      <path d="M68 96h16l4 10-12 8-12-8 4-10Z" fill="#172034" />
+      <circle cx="76" cy="98" r="7" fill="#f7faff" stroke="#cad6f3" stroke-width="1.6" />
+      <circle cx="104" cy="122" r="10" fill="url(#seer-crystal)" stroke="#4c85ff" stroke-width="1.6" />
+  </g>
 </svg>

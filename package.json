@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "audio:lint": "vite-node scripts/audio/loudness-check.ts",
+    "export:sprites": "vite-node scripts/export-sprites.ts",
     "test": "npm run audio:lint && vitest run && node scripts/check-demo-link.js && npm run verify:docs",
     "check:demo": "node scripts/check-demo-link.js",
     "verify:docs": "node scripts/check-docs-commit.js",

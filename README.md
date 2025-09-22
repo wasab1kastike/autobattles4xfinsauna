@@ -94,6 +94,13 @@ npm install
 - `npm run simulate` – execute the deterministic balance sweep described below
   and write `/tmp/balance.csv` with 20 seeded battle snapshots.
 
+### Design Documentation
+
+- [Unit visual standards](docs/design/unit-visuals.md) – 64×64 sprite canvas
+  requirements, metadata math, and the export helper workflow.
+- [Sauna artocoin formula](docs/design/sauna-artocoin-formula.md) – the ledger
+  balancing model for artocoin generation and spend.
+
 ### Build Output
 
 Running `npm run build` produces the Vite output in `dist/`. The custom domain
