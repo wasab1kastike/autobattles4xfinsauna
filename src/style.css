@@ -346,11 +346,78 @@ body > #game-container {
   gap: clamp(16px, 2vw, 28px);
 }
 
+.hud-anchor {
+  pointer-events: none;
+  display: flex;
+}
+
+.hud-anchor > * {
+  pointer-events: auto;
+}
+
+.hud-anchor--top-left {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(12px, 2vw, 20px);
+  width: min(100%, clamp(360px, 48vw, 720px));
+}
+
+.hud-anchor--top-left > * {
+  max-width: 100%;
+}
+
+.hud-anchor--top-right {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(12px, 2vw, 20px);
+  width: min(100%, clamp(280px, 32vw, 420px));
+}
+
+.hud-anchor--command-dock {
+  pointer-events: auto;
+  position: relative;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(12px, 2.6vw, 20px);
+  width: min(100%, clamp(600px, 78vw, 960px));
+  margin: 0 auto;
+  padding: clamp(14px, 3.6vw, 22px) clamp(18px, 4.4vw, 30px);
+  border-radius: clamp(20px, 4vw, 32px);
+  border: 1px solid color-mix(in srgb, var(--hud-border-strong) 65%, rgba(94, 234, 212, 0.22));
+  background:
+    radial-gradient(circle at 18% -30%, rgba(59, 130, 246, 0.28), transparent 68%),
+    radial-gradient(circle at 82% 130%, rgba(253, 164, 175, 0.26), transparent 72%),
+    linear-gradient(170deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.58));
+  box-shadow:
+    0 24px 40px rgba(8, 25, 53, 0.46),
+    0 36px 72px rgba(8, 25, 53, 0.58);
+  backdrop-filter: blur(26px) saturate(155%);
+  overflow: hidden;
+}
+
+.hud-anchor--command-dock::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 65%);
+  opacity: 0.3;
+  pointer-events: none;
+  transition: opacity var(--transition-snappy);
+}
+
+.hud-anchor--command-dock:hover::after,
+.hud-anchor--command-dock:focus-within::after {
+  opacity: 0.55;
+}
+
 #ui-overlay:not(.hud-grid) .hud-top-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: clamp(20px, 3vw, 36px);
+  flex-wrap: wrap;
+  gap: clamp(18px, 3vw, 32px);
   width: 100%;
 }
 
@@ -387,9 +454,9 @@ body > #game-container {
 
 .hud-bottom-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: flex-end;
-  gap: clamp(12px, 2.4vw, 20px);
+  gap: clamp(12px, 2.8vw, 22px);
 }
 
 .hud-mobile-bar {
@@ -402,6 +469,13 @@ body > #game-container {
   display: flex;
   justify-content: center;
   margin-top: auto;
+}
+
+.is-mobile #ui-overlay .hud-anchor--command-dock {
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(10px, 4vw, 18px);
+  padding: clamp(12px, 6vw, 20px);
 }
 
 .hud-mobile-bar__tray {
@@ -461,6 +535,14 @@ body > #game-container {
   pointer-events: auto;
 }
 
+#topbar,
+.hud-command-tray,
+.hud-panel-toggle,
+.hud-mobile-bar {
+  position: relative;
+  z-index: 1;
+}
+
 #topbar {
   pointer-events: auto;
   display: flex;
@@ -474,9 +556,23 @@ body > #game-container {
   background:
     linear-gradient(140deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.64));
   backdrop-filter: blur(18px) saturate(140%);
-  box-shadow: var(--shadow-soft);
+  box-shadow: 0 26px 48px rgba(8, 25, 53, 0.48);
   color: var(--color-foreground);
   width: min(100%, 680px);
+}
+
+.hud-command-tray {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1 1 100%;
+  gap: clamp(12px, 3vw, 18px);
+  flex-wrap: wrap;
+  min-width: min(100%, 460px);
+}
+
+.hud-command-tray > * {
+  pointer-events: auto;
 }
 
 .topbar-badge-row {
@@ -518,6 +614,8 @@ body > #game-container {
   padding: 0 clamp(6px, 1.4vw, 12px);
   min-width: clamp(108px, 28vw, 140px);
   flex: 1 1 clamp(108px, 28vw, 160px);
+  opacity: 0.9;
+  transition: opacity var(--transition-snappy), transform var(--transition-snappy);
 }
 
 .topbar-badge-icon {
@@ -928,17 +1026,19 @@ body > #game-container {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 18px;
-  width: 100%;
-  padding: 14px 24px;
+  gap: clamp(14px, 2.6vw, 20px);
+  flex: 0 0 auto;
+  width: auto;
+  min-width: clamp(220px, 28vw, 320px);
+  padding: clamp(12px, 2.8vw, 18px) clamp(18px, 3vw, 26px);
   position: relative;
   z-index: 180;
-  border-radius: var(--radius-panel);
-  border: 1px solid color-mix(in srgb, var(--hud-border) 60%, rgba(56, 189, 248, 0.35));
+  border-radius: clamp(18px, 4vw, 26px);
+  border: 1px solid color-mix(in srgb, var(--hud-border) 60%, rgba(56, 189, 248, 0.45));
   background:
-    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.18), transparent 65%),
-    linear-gradient(155deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.7));
-  box-shadow: var(--shadow-soft);
+    radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.22), transparent 65%),
+    linear-gradient(158deg, rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.68));
+  box-shadow: 0 22px 48px rgba(8, 25, 53, 0.48);
   color: var(--color-foreground);
   text-align: left;
   letter-spacing: 0.08em;
@@ -1031,6 +1131,8 @@ body > #game-container {
   flex: 1 1 0;
   justify-content: center;
   gap: clamp(8px, 3.5vw, 12px);
+  width: 100%;
+  min-width: 0;
   padding: 12px clamp(12px, 5vw, 18px);
   border-radius: var(--radius-pill);
 }
@@ -1055,7 +1157,7 @@ body > #game-container {
 
 #resource-bar {
   pointer-events: auto;
-  align-self: flex-end;
+  align-self: stretch;
 }
 
 .sauna-roster {
@@ -1071,7 +1173,7 @@ body > #game-container {
     radial-gradient(circle at -40% 0%, rgba(251, 191, 36, 0.18), transparent 60%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.65));
   backdrop-filter: blur(20px) saturate(165%);
-  box-shadow: 0 28px 52px rgba(8, 25, 53, 0.55);
+  box-shadow: 0 20px 44px rgba(8, 25, 53, 0.42);
   color: var(--color-foreground);
   position: relative;
   overflow: hidden;
@@ -1085,9 +1187,10 @@ body > #game-container {
   position: absolute;
   inset: 0;
   background: radial-gradient(circle at 110% 50%, rgba(56, 189, 248, 0.16), transparent 55%);
-  opacity: 0.85;
+  opacity: 0.45;
   pointer-events: none;
   z-index: -1;
+  transition: opacity var(--transition-snappy);
 }
 
 .sauna-roster:hover,
@@ -1096,6 +1199,11 @@ body > #game-container {
   box-shadow: 0 36px 64px rgba(8, 25, 53, 0.6);
   border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
   outline: none;
+}
+
+.sauna-roster:hover::after,
+.sauna-roster:focus-visible::after {
+  opacity: 0.9;
 }
 
 .sauna-roster__summary {
