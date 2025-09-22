@@ -1,11 +1,18 @@
+import { buildUnitSpriteAtlas, type UnitSpriteAtlas } from './render/units/spriteAtlas.ts';
+
 export type AssetPaths = {
   images?: Record<string, string>;
   sounds?: Record<string, string>;
 };
 
+export type LoadedAtlases = {
+  units: UnitSpriteAtlas | null;
+};
+
 export type LoadedAssets = {
   images: Record<string, HTMLImageElement>;
   sounds: Record<string, HTMLAudioElement>;
+  atlases: LoadedAtlases;
 };
 
 export type AssetLoadResult = {
@@ -54,7 +61,17 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
   });
 
   await Promise.all([...imagePromises, ...soundPromises]);
-  return { assets: { images, sounds }, failures };
+
+  const unitAtlas = buildUnitSpriteAtlas(images);
+
+  return {
+    assets: {
+      images,
+      sounds,
+      atlases: { units: unitAtlas }
+    },
+    failures
+  } satisfies AssetLoadResult;
 }
 
 /**
