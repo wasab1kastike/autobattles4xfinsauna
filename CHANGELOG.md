@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Slash the Modern Wooden and Futuristic Fission Sauna commission costs to 60
+  and 130 artocoins, update progression tuning plus docs to reflect the faster
+  cadence, and refresh the published bundles with the new pricing copy.
+
 - Pull the stash drawer inside the HUD padding: clamp the inventory panel
   width, align it with the overlay offsets, and teach the command dock plus
   bottom tabs to respect the reserved space so the controls stay visible on

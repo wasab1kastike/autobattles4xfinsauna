@@ -83,8 +83,8 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     visionRange: 10,
     unlock: {
       type: 'artocoin',
-      cost: 150,
-      label: 'Commission the Modern Wooden Sauna for 150 artocoins'
+      cost: 60,
+      label: 'Commission the Modern Wooden Sauna for 60 artocoins'
     }
   },
   {
@@ -100,8 +100,8 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     visionRange: 20,
     unlock: {
       type: 'artocoin',
-      cost: 275,
-      label: 'Fund the Futuristic Fission Sauna with 275 artocoins'
+      cost: 130,
+      label: 'Fund the Futuristic Fission Sauna with 130 artocoins'
     }
   }
 ] satisfies readonly SaunaTier[]);
