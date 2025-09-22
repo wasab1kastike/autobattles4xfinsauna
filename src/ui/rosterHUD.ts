@@ -1,3 +1,4 @@
+import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -68,6 +69,27 @@ export function setupRosterHUD(
   const { rosterIcon, summaryLabel = 'Saunoja Roster' } = options;
 
   const doc = container.ownerDocument ?? document;
+  const overlay =
+    container.closest<HTMLElement>('#ui-overlay') ?? doc.getElementById('ui-overlay');
+  const layout = overlay ? ensureHudLayout(overlay) : null;
+  const bottomTabs = layout?.tabs ?? null;
+  let suppressTabSync = false;
+
+  const syncBottomTab = (id: HudBottomTabId): void => {
+    if (!bottomTabs) {
+      return;
+    }
+    if (bottomTabs.getActive() === id) {
+      return;
+    }
+    suppressTabSync = true;
+    try {
+      bottomTabs.setActive(id);
+    } finally {
+      suppressTabSync = false;
+    }
+  };
+
   container.classList.add('hud-bottom-tabs__panel');
   container.classList.add('hud-bottom-tabs__panel--roster');
   container.replaceChildren();
@@ -216,18 +238,29 @@ export function setupRosterHUD(
   }
 
   const handleToggleClick = () => {
-    setExpanded(!isExpanded);
+    const next = !isExpanded;
+    if (next && !suppressTabSync) {
+      syncBottomTab('roster');
+    }
+    setExpanded(next);
   };
   toggle.addEventListener('click', handleToggleClick);
 
   const handleExpandRequest = () => {
+    if (!suppressTabSync) {
+      syncBottomTab('roster');
+    }
     setExpanded(true);
   };
   const handleCollapseRequest = () => {
     setExpanded(false);
   };
   const handleToggleRequest = () => {
-    setExpanded(!isExpanded);
+    const next = !isExpanded;
+    if (next && !suppressTabSync) {
+      syncBottomTab('roster');
+    }
+    setExpanded(next);
   };
 
   container.addEventListener('sauna-roster:expand', handleExpandRequest);
