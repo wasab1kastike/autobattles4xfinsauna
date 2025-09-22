@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EnemySpawner } from './EnemySpawner.ts';
 import type { Unit } from '../units/Unit.ts';
-import { getAvantoMarauderStats } from '../units/AvantoMarauder.ts';
 import * as enemySpawns from '../world/spawn/enemy_spawns.ts';
 import type { FactionBundleDefinition } from '../factions/bundles.ts';
+import { getUnitArchetype } from '../unit/archetypes.ts';
+import { computeUnitStats } from '../unit/calc.ts';
 
 function makeRandomSource(values: number[]): () => number {
   const queue = [...values];
@@ -25,7 +26,10 @@ describe('EnemySpawner', () => {
       id: 'raiding-party',
       label: 'Raiding Party',
       weight: 2,
-      units: Object.freeze([{ unit: 'avanto-marauder', level: 1, quantity: 2 }]),
+      units: Object.freeze([
+        { unit: 'raider', level: 1, quantity: 1 },
+        { unit: 'raider-shaman', level: 1, quantity: 1 }
+      ]),
       items: Object.freeze([]),
       modifiers: Object.freeze([]),
       minRampTier: 0
@@ -34,7 +38,7 @@ describe('EnemySpawner', () => {
       id: 'frost-champion',
       label: 'Frost Champion',
       weight: 1,
-      units: Object.freeze([{ unit: 'avanto-marauder', level: 2, quantity: 1 }]),
+      units: Object.freeze([{ unit: 'raider-captain', level: 2, quantity: 1 }]),
       items: Object.freeze([]),
       modifiers: Object.freeze([]),
       minRampTier: 0
@@ -63,6 +67,9 @@ describe('EnemySpawner', () => {
       { q: 1, r: 0 }
     ]);
     expect(units.every((unit) => unit.faction === 'enemy')).toBe(true);
+    expect(new Set(units.map((unit) => unit.type))).toEqual(
+      new Set(['raider', 'raider-shaman'])
+    );
 
     spawner.update(5, units, registerUnit, pickEdge);
     expect(units).toHaveLength(2);
@@ -75,8 +82,9 @@ describe('EnemySpawner', () => {
     const lastUnit = units.at(-1);
     expect(lastUnit?.coord).toEqual({ q: 4, r: 0 });
     if (lastUnit) {
-      const levelTwoStats = getAvantoMarauderStats(2);
+      const levelTwoStats = computeUnitStats(getUnitArchetype('raider-captain'), 2);
       expect(lastUnit.stats.health).toBe(levelTwoStats.health);
+      expect(lastUnit.type).toBe('raider-captain');
     }
     bundleSpy.mockRestore();
   });
@@ -96,7 +104,7 @@ describe('EnemySpawner', () => {
       id: 'enemy-ramp-test',
       label: 'Enemy Ramp Test',
       weight: 1,
-      units: Object.freeze([{ unit: 'avanto-marauder', level: 2, quantity: 1 }]),
+      units: Object.freeze([{ unit: 'raider', level: 2, quantity: 1 }]),
       items: Object.freeze([]),
       modifiers: Object.freeze([])
     };
@@ -143,8 +151,8 @@ describe('EnemySpawner', () => {
       label: 'Test Bundle',
       weight: 1,
       units: [
-        { unit: 'avanto-marauder', level: 1, quantity: 1 },
-        { unit: 'avanto-marauder', level: 2, quantity: 1 }
+        { unit: 'raider', level: 1, quantity: 1 },
+        { unit: 'raider-captain', level: 2, quantity: 1 }
       ],
       items: Object.freeze([]),
       modifiers: Object.freeze([])
@@ -168,10 +176,13 @@ describe('EnemySpawner', () => {
 
     expect(result.spawned).toHaveLength(6);
     expect(added).toHaveLength(6);
-    const levelFourStats = getAvantoMarauderStats(4);
-    const levelSixStats = getAvantoMarauderStats(6);
-    const spawnedHealth = added.map((unit) => unit.stats.health);
-    expect(spawnedHealth.some((value) => value >= levelSixStats.health)).toBe(true);
-    expect(spawnedHealth.every((value) => value >= levelFourStats.health)).toBe(true);
+    const raiderLevelFour = computeUnitStats(getUnitArchetype('raider'), 4);
+    const captainLevelSix = computeUnitStats(getUnitArchetype('raider-captain'), 6);
+    const raiders = added.filter((unit) => unit.type === 'raider');
+    const captains = added.filter((unit) => unit.type === 'raider-captain');
+    expect(raiders).not.toHaveLength(0);
+    expect(captains).not.toHaveLength(0);
+    expect(raiders.every((unit) => unit.stats.health >= raiderLevelFour.health)).toBe(true);
+    expect(captains.some((unit) => unit.stats.health >= captainLevelSix.health)).toBe(true);
   });
 });
