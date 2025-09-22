@@ -4,7 +4,7 @@
 - Convert battle telemetry (run duration, kill count, tiles explored, roster
   losses for analytics, difficulty scalar, tier) into a deterministic artocoin
   award.
-- Keep tier unlock pacing at ~2.5 average wins while letting high-skill clears
+- Keep tier unlock pacing near a one-to-one-and-a-half win cadence while letting high-skill clears
   accelerate rewards and defeats still contribute.
 - Provide explicit clamps and constants so engineering can implement without
   additional balancing passes.
@@ -26,9 +26,9 @@ Populate the table with:
 
 | tierId | nextUnlockLabel | unlockCost | baselinePayout | baselineDurationMinutes | baselineKills | baselineTiles |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ember-circuit` | "Modern Wooden Sauna commission" | `150` | `60` | `12.5` | `150` | `85` |
-| `aurora-ward` | "Futuristic Fission Sauna ignition" | `210` | `84` | `12.0` | `190` | `100` |
-| `mythic-conclave` | "Futuristic Fission Sauna prestige rotation" | `275` | `110` | `11.5` | `230` | `115` |
+| `ember-circuit` | "Modern Wooden Sauna commission" | `60` | `60` | `12.5` | `150` | `85` |
+| `aurora-ward` | "Futuristic Fission Sauna ignition" | `130` | `84` | `12.0` | `190` | `100` |
+| `mythic-conclave` | "Futuristic Fission Sauna prestige rotation" | `130` | `110` | `11.5` | `230` | `115` |
 
 Difficulty modifiers mirror the existing difficulty scalar exposed by the enemy
 ramp system.

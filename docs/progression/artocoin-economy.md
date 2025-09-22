@@ -3,15 +3,15 @@
 Premium rewards for sauna defense runs now flow through a single, data-backed
 artocoin target. The formula below turns run duration, enemy eliminations,
 exploration, and difficulty into a payout that feels generous on a clean win
-while keeping unlock pacing near two to three runs per sauna tier.
+while keeping unlock pacing near one to one-and-a-half runs per sauna tier.
 
 ## Baseline Win Expectations
 
 | Active Sauna Tier | Next Unlock Target | Unlock Cost (Artocoins) | Baseline Run Duration (min) | Baseline Enemy Kills | Baseline Tiles Explored | Baseline Roster Losses | Baseline Payout (Artocoins) | Runs to Unlock (Avg) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Primitive Smoke Sauna | Modern Wooden Sauna commission | 150 | 12.5 | 150 | 85 | 1 | 60 | 2.5 |
-| Modern Wooden Sauna | Futuristic Fission Sauna ignition | 210 | 12.0 | 190 | 100 | 1 | 84 | 2.5 |
-| Futuristic Fission Sauna | Futuristic Fission Sauna prestige rotation | 275 | 11.5 | 230 | 115 | 1 | 110 | 2.5 |
+| Primitive Smoke Sauna | Modern Wooden Sauna commission | 60 | 12.5 | 150 | 85 | 1 | 60 | 1.0 |
+| Modern Wooden Sauna | Futuristic Fission Sauna ignition | 130 | 12.0 | 190 | 100 | 1 | 84 | 1.6 |
+| Futuristic Fission Sauna | Futuristic Fission Sauna prestige rotation | 130 | 11.5 | 230 | 115 | 1 | 110 | 1.2 |
 
 The baselines establish the "average win" reference used in the payout formula.
 Players who exceed the targets accelerate their unlock cadence, while slower or
