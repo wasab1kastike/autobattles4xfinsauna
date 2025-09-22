@@ -45,7 +45,7 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   'ember-circuit': {
     tierId: 'ember-circuit',
     nextUnlockLabel: 'Modern Wooden Sauna commission',
-    unlockCost: 150,
+    unlockCost: 60,
     baselinePayout: 60,
     baselineDurationMinutes: 12.5,
     baselineKills: 150,
@@ -54,7 +54,7 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   'aurora-ward': {
     tierId: 'aurora-ward',
     nextUnlockLabel: 'Futuristic Fission Sauna ignition',
-    unlockCost: 210,
+    unlockCost: 130,
     baselinePayout: 84,
     baselineDurationMinutes: 12,
     baselineKills: 190,
@@ -63,7 +63,7 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   'mythic-conclave': {
     tierId: 'mythic-conclave',
     nextUnlockLabel: 'Futuristic Fission Sauna prestige rotation',
-    unlockCost: 275,
+    unlockCost: 130,
     baselinePayout: 110,
     baselineDurationMinutes: 11.5,
     baselineKills: 230,
