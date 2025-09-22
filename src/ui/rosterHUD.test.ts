@@ -37,34 +37,37 @@ describe('rosterHUD', () => {
         }
       });
 
-      const value = container.querySelector('.sauna-roster__value');
-      expect(value?.textContent).toBe('5');
-      expect(container.getAttribute('aria-label')).toBe('Saunoja roster: 5 active attendants');
-      expect(container.getAttribute('title')).toBe('Saunoja roster • 5 active attendants');
+      const root = container.querySelector('.sauna-roster');
+      expect(root).not.toBeNull();
 
-      const card = container.querySelector<HTMLDivElement>('.saunoja-card');
+      const value = root?.querySelector('.sauna-roster__value');
+      expect(value?.textContent).toBe('5');
+      expect(root?.getAttribute('aria-label')).toBe('Saunoja roster: 5 active attendants');
+      expect(root?.getAttribute('title')).toBe('Saunoja roster • 5 active attendants');
+
+      const card = root?.querySelector<HTMLDivElement>('.saunoja-card');
       expect(card?.hidden).toBe(false);
       expect(card?.dataset.unitId).toBe('saunoja-7');
 
-      const name = container.querySelector('.saunoja-card__name');
+      const name = root?.querySelector('.saunoja-card__name');
       expect(name?.textContent).toBe('Aurora Kallio');
 
-      const levelBadge = container.querySelector('.saunoja-card__level-value');
+      const levelBadge = root?.querySelector('.saunoja-card__level-value');
       expect(levelBadge?.textContent).toBe('4');
 
-      const xpRow = container.querySelector('.saunoja-card__xp');
+      const xpRow = root?.querySelector('.saunoja-card__xp');
       expect(xpRow?.textContent).toContain('40 / 320');
 
-      const callouts = container.querySelector('.saunoja-card__callouts');
+      const callouts = root?.querySelector('.saunoja-card__callouts');
       expect(callouts?.textContent).toContain('+13 Vigor');
       expect(callouts?.textContent).toContain('+7 Focus');
       expect(callouts?.textContent).toContain('+5 Resolve');
 
-      const traits = container.querySelector('.saunoja-card__traits');
+      const traits = root?.querySelector('.saunoja-card__traits');
       expect(traits?.textContent).toBe('Brave, Sage');
       expect(traits?.title).toBe('Brave, Sage');
 
-      const upkeep = container.querySelector('.saunoja-card__upkeep');
+      const upkeep = root?.querySelector('.saunoja-card__upkeep');
       expect(upkeep?.textContent).toBe('Upkeep: 17 Beer');
       expect(upkeep?.title).toBe('Upkeep: 17 Beer');
     } finally {

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Merge the roster, stash, and policies HUD panes into a unified glass dock with
+  a shared tab strip, route the stash renderer through the new panel, and refresh
+  HUD tests to reflect the tab-driven layout.
+
 - Land a glassmorphic Selection Mini HUD that listens to the FX manager for
   focus payloads, anchors above the battlefield sprites with faction-aware
   gradients, and surfaces HP, equipment, and status chips with fresh Vitest

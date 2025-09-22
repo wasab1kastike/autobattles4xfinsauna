@@ -69,15 +69,20 @@ describe('setupInventoryHud', () => {
 
     const hud = setupInventoryHud(inventory);
 
-    const badge = overlay.querySelector<HTMLButtonElement>('[data-testid="inventory-badge"]');
-    expect(badge).not.toBeNull();
+    const stashTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="stash"]');
+    const rosterTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="roster"]');
 
-    badge!.click();
+    expect(stashTab).not.toBeNull();
+    expect(rosterTab).not.toBeNull();
+
+    setOpenMock.mockClear();
+
+    stashTab!.click();
 
     expect(setOpenMock).toHaveBeenCalledWith(true);
     expect(overlay.classList.contains('inventory-panel-open')).toBe(true);
 
-    badge!.click();
+    rosterTab!.click();
 
     expect(setOpenMock).toHaveBeenCalledWith(false);
     expect(overlay.classList.contains('inventory-panel-open')).toBe(false);
