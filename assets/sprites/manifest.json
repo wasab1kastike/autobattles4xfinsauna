@@ -1,0 +1,277 @@
+{
+  "generatedAt": "2025-09-22T12:27:32.849Z",
+  "sprites": [
+    {
+      "id": "archer",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 3.404255319,
+        "translateY": 0,
+        "scaleX": 0.340425532,
+        "scaleY": 0.340425532
+      },
+      "source": {
+        "width": 168,
+        "height": 188
+      }
+    },
+    {
+      "id": "avanto-marauder",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 3.265306122,
+        "translateY": 0,
+        "scaleX": 0.326530612,
+        "scaleY": 0.326530612
+      },
+      "source": {
+        "width": 176,
+        "height": 196
+      }
+    },
+    {
+      "id": "barracks",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "city",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "farm",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "forest",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "hills",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "lake",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "mine",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "plains",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 0,
+        "translateY": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "source": {
+        "width": 64,
+        "height": 64
+      }
+    },
+    {
+      "id": "raider-captain",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 3.417475728,
+        "translateY": 0,
+        "scaleX": 0.310679612,
+        "scaleY": 0.310679612
+      },
+      "source": {
+        "width": 184,
+        "height": 206
+      }
+    },
+    {
+      "id": "raider-shaman",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 4.830188679,
+        "translateY": 0,
+        "scaleX": 0.301886792,
+        "scaleY": 0.301886792
+      },
+      "source": {
+        "width": 180,
+        "height": 212
+      }
+    },
+    {
+      "id": "raider",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 3.555555556,
+        "translateY": 0,
+        "scaleX": 0.323232323,
+        "scaleY": 0.323232323
+      },
+      "source": {
+        "width": 176,
+        "height": 198
+      }
+    },
+    {
+      "id": "saunoja-guardian",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 2.909090909,
+        "translateY": 0,
+        "scaleX": 0.363636364,
+        "scaleY": 0.363636364
+      },
+      "source": {
+        "width": 160,
+        "height": 176
+      }
+    },
+    {
+      "id": "saunoja-seer",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 2.909090909,
+        "translateY": 0,
+        "scaleX": 0.363636364,
+        "scaleY": 0.363636364
+      },
+      "source": {
+        "width": 160,
+        "height": 176
+      }
+    },
+    {
+      "id": "soldier",
+      "canvas": {
+        "width": 64,
+        "height": 64
+      },
+      "transform": {
+        "translateX": 4.173913043,
+        "translateY": 0,
+        "scaleX": 0.347826087,
+        "scaleY": 0.347826087
+      },
+      "source": {
+        "width": 160,
+        "height": 184
+      }
+    }
+  ]
+}
