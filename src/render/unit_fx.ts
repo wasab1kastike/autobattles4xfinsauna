@@ -10,7 +10,12 @@ import type { HexMapRenderer } from './HexMapRenderer.ts';
 import type { Unit } from '../units/Unit.ts';
 import { createFloaterLayer, type FloaterLayer } from '../ui/fx/Floater.tsx';
 import { createUnitStatusLayer, type UnitStatusLayer } from '../ui/fx/UnitStatusLayer.ts';
-import type { SaunaStatusPayload, UnitStatusPayload } from '../ui/fx/types.ts';
+import { createSelectionMiniHud, type SelectionMiniHud } from '../ui/fx/SelectionMiniHud.ts';
+import type {
+  SaunaStatusPayload,
+  UnitSelectionPayload,
+  UnitStatusPayload
+} from '../ui/fx/types.ts';
 
 export interface UnitFxOptions {
   canvas: HTMLCanvasElement;
@@ -28,6 +33,7 @@ export interface UnitFxManager {
   pushUnitStatus(status: UnitStatusPayload): void;
   pushSaunaStatus(status: SaunaStatusPayload | null): void;
   commitStatusFrame(): void;
+  setSelection(selection: UnitSelectionPayload | null): void;
   dispose(): void;
 }
 
@@ -98,6 +104,12 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     root: overlay,
     project: projectWorld,
     getZoom: () => camera.zoom
+  });
+  const selectionHud: SelectionMiniHud = createSelectionMiniHud({
+    root: overlay,
+    project: projectWorld,
+    getVerticalLift: () => -mapRenderer.hexSize * camera.zoom * 1.6,
+    getHexSize: () => mapRenderer.hexSize
   });
   const fades = new Map<string, FadeState>();
   const alphas = new Map<string, number>();
@@ -228,6 +240,8 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
       }
       alphas.set(unitId, clamp(alpha, 0, 1));
     }
+
+    selectionHud.refreshPosition();
   };
 
   const getShakeOffset = () => ({ x: offset.x, y: offset.y });
@@ -245,6 +259,8 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     alphas.clear();
     floaterLayer.destroy();
     statusLayer.destroy();
+    selectionHud.setSelection(null);
+    selectionHud.destroy();
   };
 
   const unitStatuses = new Map<string, UnitStatusPayload>();
@@ -281,6 +297,57 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     });
     const sauna = saunaStatus && saunaStatus.visible === false ? null : saunaStatus;
     statusLayer.render({ units: entries, sauna: sauna ?? null });
+
+    if (currentSelection && currentSelectionId) {
+      const selectedStatus = unitStatuses.get(currentSelectionId) ?? null;
+      if (selectedStatus) {
+        selectionHud.updateStatus(
+          selectedStatus.world,
+          selectedStatus.hp,
+          selectedStatus.maxHp,
+          selectedStatus.shield ?? 0
+        );
+        currentSelection = {
+          ...currentSelection,
+          hp: selectedStatus.hp,
+          maxHp: selectedStatus.maxHp,
+          shield: selectedStatus.shield ?? 0
+        } satisfies UnitSelectionPayload;
+      } else {
+        selectionHud.updateStatus(
+          null,
+          currentSelection.hp,
+          currentSelection.maxHp,
+          currentSelection.shield ?? 0
+        );
+      }
+    } else {
+      selectionHud.updateStatus(null);
+    }
+  };
+
+  let currentSelection: UnitSelectionPayload | null = null;
+  let currentSelectionId: string | null = null;
+
+  const setSelection = (selection: UnitSelectionPayload | null) => {
+    if (!selection) {
+      currentSelection = null;
+      currentSelectionId = null;
+      selectionHud.setSelection(null);
+      return;
+    }
+    const sanitized: UnitSelectionPayload = {
+      ...selection,
+      coord: { q: selection.coord.q, r: selection.coord.r },
+      hp: Number.isFinite(selection.hp) ? selection.hp : 0,
+      maxHp: Number.isFinite(selection.maxHp) ? Math.max(1, selection.maxHp) : 1,
+      shield: Number.isFinite(selection.shield ?? 0) ? Math.max(0, selection.shield ?? 0) : 0,
+      items: Array.isArray(selection.items) ? [...selection.items] : [],
+      statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : []
+    } satisfies UnitSelectionPayload;
+    currentSelection = sanitized;
+    currentSelectionId = sanitized.id;
+    selectionHud.setSelection(sanitized);
   };
 
   return {
@@ -291,6 +358,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     pushUnitStatus,
     pushSaunaStatus,
     commitStatusFrame,
+    setSelection,
     dispose
   } satisfies UnitFxManager;
 }

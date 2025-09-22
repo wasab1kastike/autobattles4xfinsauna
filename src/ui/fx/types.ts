@@ -1,4 +1,4 @@
-import type { PixelCoord } from '../../hex/HexUtils.ts';
+import type { AxialCoord, PixelCoord } from '../../hex/HexUtils.ts';
 
 export interface UnitStatusBuff {
   id: string;
@@ -29,4 +29,32 @@ export interface SaunaStatusPayload {
   label?: string;
   unitLabel?: string;
   visible?: boolean;
+}
+
+export interface SelectionItemSlot {
+  id: string;
+  name: string;
+  icon?: string;
+  rarity?: string;
+  quantity?: number;
+}
+
+export interface SelectionStatusChip {
+  id: string;
+  label: string;
+  remaining?: number | typeof Infinity;
+  duration?: number | typeof Infinity;
+  stacks?: number;
+}
+
+export interface UnitSelectionPayload {
+  id: string;
+  name: string;
+  faction: string;
+  coord: AxialCoord;
+  hp: number;
+  maxHp: number;
+  shield?: number;
+  items: readonly SelectionItemSlot[];
+  statuses: readonly SelectionStatusChip[];
 }
