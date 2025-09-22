@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Lock the Steamforge Atelier crest and tier badges to dedicated 3rem wrappers
+  so the shop assets render at the intended proportions inside the sauna panel.
+
 - Route battlefield status overlays through a fresh FX manager frame buffer so
   the renderer pushes live HP, shield, and modifier data for visible units,
   drive the sauna countdown ring via the shared UnitStatusLayer payloads, and
