@@ -9,7 +9,8 @@ import { camera } from '../camera/autoFrame.ts';
 import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
-import { getSpritePlacement } from './units/draw.ts';
+import type { SpritePlacementInput } from './units/draw.ts';
+import { drawUnitSprite } from './units/UnitSprite.ts';
 import type { SaunaStatusPayload, UnitStatusPayload } from '../ui/fx/types.ts';
 
 type DrawSaunojaFn = (
@@ -127,7 +128,8 @@ export function draw(
     origin,
     options?.fx,
     options?.friendlyVisionSources,
-    options?.saunaVision ?? options?.sauna ?? null
+    options?.saunaVision ?? options?.sauna ?? null,
+    selected
   );
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
@@ -149,7 +151,8 @@ export function drawUnits(
   origin: PixelCoord,
   fx?: FxLayerOptions,
   visionSources?: readonly Unit[],
-  saunaVision?: SaunaVisionSource | null
+  saunaVision?: SaunaVisionSource | null,
+  selectedCoord?: AxialCoord | null
 ): void {
   const visionUnits = visionSources ?? units;
   const friendlyVisionSources: VisionSource[] = visionUnits
@@ -188,13 +191,13 @@ export function drawUnits(
       ctx.filter = 'saturate(0)';
     }
     const renderCoord = unit.renderCoord ?? unit.coord;
-    const placement = getSpritePlacement({
+    const placementInput: SpritePlacementInput = {
       coord: renderCoord,
       hexSize: mapRenderer.hexSize,
       origin,
       zoom: camera.zoom,
       type: unit.type
-    });
+    };
     const filters: string[] = [];
     if (unit.stats.health / maxHealth < 0.5) {
       filters.push('saturate(0)');
@@ -211,11 +214,29 @@ export function drawUnits(
       ctx.shadowBlur = 0;
     }
     ctx.filter = filters.length > 0 ? filters.join(' ') : 'none';
-    ctx.drawImage(img, placement.drawX, placement.drawY, placement.width, placement.height);
+    const selectionState = {
+      isSelected:
+        Boolean((unit as Partial<{ selected: boolean }>).selected) ||
+        (selectedCoord?.q === unit.coord.q && selectedCoord?.r === unit.coord.r),
+      isPrimary: Boolean((unit as Partial<{ selected: boolean }>).selected)
+    };
+    const renderResult = drawUnitSprite(ctx, unit, {
+      placement: placementInput,
+      sprite: img,
+      faction: unit.faction,
+      motionStrength,
+      cameraZoom: camera.zoom,
+      selection: selectionState
+    });
     if (isSisuBurstActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
-      ctx.strokeRect(placement.drawX, placement.drawY, placement.width, placement.height);
+      ctx.strokeRect(
+        renderResult.placement.drawX,
+        renderResult.placement.drawY,
+        renderResult.placement.width,
+        renderResult.placement.height
+      );
     }
     ctx.restore();
   }
