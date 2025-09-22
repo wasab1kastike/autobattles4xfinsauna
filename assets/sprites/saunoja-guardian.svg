@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 176" role="img" aria-labelledby="title desc">
+  <title id="title">Saunoja Guardian v1</title>
+  <desc id="desc">First production badge of a Saunoja guardian wrapped in steamlight with herbal satchel.</desc>
+  <defs>
+    <radialGradient id="guardian-halo" cx="50%" cy="34%" r="80%">
+      <stop offset="0" stop-color="#fefaf5" stop-opacity="0.92" />
+      <stop offset="0.48" stop-color="#dbe9ff" stop-opacity="0.54" />
+      <stop offset="1" stop-color="#18223a" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="guardian-panel" x1="0%" x2="0%" y1="0%" y2="100%">
+      <stop offset="0" stop-color="#1a0f2f" />
+      <stop offset="1" stop-color="#1c2747" />
+    </linearGradient>
+    <linearGradient id="guardian-robe" x1="20%" x2="80%" y1="14%" y2="92%">
+      <stop offset="0" stop-color="#f8f3ff" />
+      <stop offset="0.44" stop-color="#d8c9ff" />
+      <stop offset="1" stop-color="#9a86ff" />
+    </linearGradient>
+    <linearGradient id="guardian-trim" x1="22%" x2="78%" y1="0%" y2="100%">
+      <stop offset="0" stop-color="#fde49a" />
+      <stop offset="0.52" stop-color="#f2a94d" />
+      <stop offset="1" stop-color="#de6f28" />
+    </linearGradient>
+    <linearGradient id="guardian-hair" x1="18%" x2="82%" y1="22%" y2="88%">
+      <stop offset="0" stop-color="#251138" />
+      <stop offset="1" stop-color="#532d7f" />
+    </linearGradient>
+    <radialGradient id="guardian-shadow" cx="50%" cy="86%" r="48%">
+      <stop offset="0" stop-color="rgba(12,18,36,0.55)" />
+      <stop offset="1" stop-color="rgba(12,18,36,0)" />
+    </radialGradient>
+  </defs>
+  <rect width="160" height="176" rx="28" fill="url(#guardian-panel)" />
+  <circle cx="80" cy="70" r="70" fill="url(#guardian-halo)" />
+  <ellipse cx="82" cy="142" rx="54" ry="18" fill="url(#guardian-shadow)" />
+  <path d="M66 42 44 70c-10 12-16 28-16 46v22l24 46h44l24-48v-20c0-18-6-34-16-46L94 42H66Z" fill="url(#guardian-robe)" stroke="#1a2742" stroke-width="2.6" stroke-linejoin="round" />
+  <path d="M62 110h40l6 16c-12 14-24 20-26 20s-16-6-28-20l8-16Z" fill="#f3f4ff" opacity="0.92" />
+  <path d="M80 50c-10 0-20 6-28 14l10 12c12-8 36-8 48 0l10-12c-8-8-18-14-30-14Z" fill="#fff9ff" stroke="#d3c9ff" stroke-width="2" />
+  <path d="M70 34h20l8 10-18 12-18-12 8-10Z" fill="#ede7ff" stroke="#9f9fe0" stroke-width="1.8" />
+  <path d="M58 128l10 30-18 12-18-36 16-8 10 2Z" fill="url(#guardian-trim)" opacity="0.96" />
+  <path d="M102 126l20-8-10 34-18-10 8-16Z" fill="#ffe8c8" opacity="0.76" />
+  <path d="M88 92c-18 0-30-14-30-30 0-12 10-22 22-22s22 10 22 22c0 16-10 30-14 30Z" fill="url(#guardian-hair)" />
+  <circle cx="70" cy="90" r="6" fill="#2b1b3f" opacity="0.8" />
+  <circle cx="96" cy="90" r="6" fill="#2b1b3f" opacity="0.8" />
+  <path d="M70 74c-6 0-10 6-10 14 8-4 16-6 24-6s16 2 24 6c0-8-4-14-10-14H70Z" fill="#1f1733" opacity="0.82" />
+  <path d="M72 98h16l4 10-12 8-12-8 4-10Z" fill="#1b2036" />
+  <circle cx="80" cy="100" r="8" fill="#f6f9ff" stroke="#cfd7f5" stroke-width="1.6" />
+</svg>
