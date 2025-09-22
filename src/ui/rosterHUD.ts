@@ -25,6 +25,8 @@ export type RosterHudController = {
   updateSummary(summary: RosterHudSummary): void;
   installRenderer(renderer: (entries: RosterEntry[]) => void): void;
   renderRoster(entries: RosterEntry[]): void;
+  setExpanded(expanded: boolean): void;
+  toggleExpanded(): void;
   destroy(): void;
 };
 
@@ -67,14 +69,19 @@ export function setupRosterHUD(
 
   const doc = container.ownerDocument ?? document;
   container.classList.add('hud-bottom-tabs__panel');
+  container.classList.add('hud-bottom-tabs__panel--roster');
   container.replaceChildren();
 
-  const root = doc.createElement('div');
+  const root = doc.createElement('section');
   root.classList.add('sauna-roster');
+  root.dataset.expanded = 'false';
   root.setAttribute('role', 'status');
   root.setAttribute('aria-live', 'polite');
   root.setAttribute('title', 'Active sauna battalion on the field');
   root.dataset.tutorialTarget = 'upkeep';
+
+  const header = document.createElement('div');
+  header.classList.add('sauna-roster__header');
 
   const summary = document.createElement('div');
   summary.classList.add('sauna-roster__summary');
@@ -98,6 +105,31 @@ export function setupRosterHUD(
 
   textContainer.append(labelSpan, rosterValue);
   summary.append(icon, textContainer);
+
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.classList.add('sauna-roster__toggle');
+  toggle.setAttribute('aria-expanded', 'false');
+  const detailsId = `sauna-roster-details-${Math.floor(Math.random() * 100000)}`;
+  toggle.setAttribute('aria-controls', detailsId);
+
+  const toggleLabel = document.createElement('span');
+  toggleLabel.classList.add('sauna-roster__toggle-label');
+  toggleLabel.textContent = 'Show details';
+
+  const toggleIcon = document.createElement('span');
+  toggleIcon.classList.add('sauna-roster__toggle-icon');
+  toggleIcon.setAttribute('aria-hidden', 'true');
+
+  toggle.append(toggleLabel, toggleIcon);
+
+  header.append(summary, toggle);
+
+  const details = document.createElement('div');
+  details.classList.add('sauna-roster__details');
+  details.id = detailsId;
+  details.hidden = true;
+  details.setAttribute('aria-hidden', 'true');
 
   const rosterCard = document.createElement('div');
   rosterCard.classList.add('saunoja-card');
@@ -141,15 +173,73 @@ export function setupRosterHUD(
   rosterCardUpkeep.classList.add('saunoja-card__upkeep');
 
   rosterCard.append(rosterCardHeader, rosterCardTraits, rosterCardStats, rosterCardUpkeep);
-  root.append(summary, rosterCard);
+  details.appendChild(rosterCard);
+  root.append(header, details);
   container.append(root);
 
   let rosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
   let rosterSignature: string | null = null;
+  let isExpanded = false;
+  let hasFeaturedCard = false;
+
+  function applyDetailVisibility(): void {
+    const allowDetails = hasFeaturedCard && isExpanded;
+    root.dataset.expanded = allowDetails ? 'true' : 'false';
+    root.classList.toggle('sauna-roster--expanded', allowDetails);
+    details.hidden = !allowDetails;
+    details.setAttribute('aria-hidden', allowDetails ? 'false' : 'true');
+    rosterCard.hidden = !hasFeaturedCard || !allowDetails;
+
+    if (!hasFeaturedCard) {
+      toggle.disabled = true;
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Roster details unavailable');
+      toggle.title = 'Roster details unavailable';
+      toggleLabel.textContent = 'Details unavailable';
+      toggleIcon.dataset.state = 'closed';
+      return;
+    }
+
+    toggle.disabled = false;
+    toggle.setAttribute('aria-expanded', allowDetails ? 'true' : 'false');
+    const verb = allowDetails ? 'Hide' : 'Show';
+    const label = `${verb} roster details`;
+    toggle.setAttribute('aria-label', label);
+    toggle.title = label;
+    toggleLabel.textContent = `${verb} details`;
+    toggleIcon.dataset.state = allowDetails ? 'open' : 'closed';
+  }
+
+  function setExpanded(next: boolean): void {
+    isExpanded = next && hasFeaturedCard;
+    applyDetailVisibility();
+  }
+
+  const handleToggleClick = () => {
+    setExpanded(!isExpanded);
+  };
+  toggle.addEventListener('click', handleToggleClick);
+
+  const handleExpandRequest = () => {
+    setExpanded(true);
+  };
+  const handleCollapseRequest = () => {
+    setExpanded(false);
+  };
+  const handleToggleRequest = () => {
+    setExpanded(!isExpanded);
+  };
+
+  container.addEventListener('sauna-roster:expand', handleExpandRequest);
+  container.addEventListener('sauna-roster:collapse', handleCollapseRequest);
+  container.addEventListener('sauna-roster:toggle', handleToggleRequest);
+
+  applyDetailVisibility();
 
   function renderCard(card: RosterCardViewModel | null): void {
+    hasFeaturedCard = Boolean(card);
     if (!card) {
-      rosterCard.hidden = true;
+      setExpanded(false);
       return;
     }
 
@@ -184,6 +274,8 @@ export function setupRosterHUD(
     const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
     rosterCardUpkeep.textContent = upkeepLabel;
     rosterCardUpkeep.title = upkeepLabel;
+
+    applyDetailVisibility();
   }
 
   function encodeTimerValue(value: number | typeof Infinity): string {
@@ -276,9 +368,17 @@ export function setupRosterHUD(
       rosterSignature = signature;
       rosterRenderer(entries);
     },
+    setExpanded,
+    toggleExpanded() {
+      setExpanded(!isExpanded);
+    },
     destroy() {
       rosterRenderer = null;
       rosterSignature = null;
+      toggle.removeEventListener('click', handleToggleClick);
+      container.removeEventListener('sauna-roster:expand', handleExpandRequest);
+      container.removeEventListener('sauna-roster:collapse', handleCollapseRequest);
+      container.removeEventListener('sauna-roster:toggle', handleToggleRequest);
       container.replaceChildren();
     }
   } satisfies RosterHudController;
