@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce dedicated Frost Raider, Captain, and Shaman archetypes with tuned
+  stat progressions, thread them through the enemy faction bundles and spawn
+  logic so encounters request the new `unit-raider*` sprites, and expand the
+  test coverage to lock in the atlas metadata for the added IDs.
+
 - Harden the sprite export pipeline so PNG rasterization finishes before the
   manifest updates, keeping the JSON and bitmap artifacts synchronized when the
   helper runs via `npm run export:sprites`.
