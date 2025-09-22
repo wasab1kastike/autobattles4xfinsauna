@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Route the battlefield selection overlay through unit identifiers so enemy
+  clicks stream polished payloads into the mini HUD: add a unit-driven
+  selection builder, teach the canvas handler to surface hostile focus, keep the
+  FX status frame syncing across sources, and expand Vitest coverage to lock the
+  enemy show/hide flow.
+
 - Carve the command dock into explicit tab and action slots, mount the stash
   panel inside a dedicated bottom-tab pane alongside roster and policies,
   restyle the dock with deeper glassmorphic gradients, and update roster plus
