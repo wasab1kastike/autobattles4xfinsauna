@@ -16,15 +16,10 @@ export function setupActionBar(
   const container = overlay.ownerDocument.createElement('div');
   container.dataset.component = 'action-bar';
   container.dataset.tutorialTarget = 'combat';
-  container.className = 'flex w-full justify-center';
+  container.className = 'hud-command-tray';
 
-  const bottomRegion = layout.regions.bottom;
-  const buildId = bottomRegion.querySelector<HTMLElement>('#build-id');
-  if (buildId) {
-    bottomRegion.insertBefore(container, buildId);
-  } else {
-    bottomRegion.appendChild(container);
-  }
+  const commandDock = layout.anchors.commandDock;
+  commandDock.appendChild(container);
 
   const root: Root = createRoot(container);
   root.render(<ActionBar state={state} abilities={abilities} />);

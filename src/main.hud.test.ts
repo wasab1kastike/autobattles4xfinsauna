@@ -6,13 +6,18 @@ const renderShell = () => {
       <canvas id="game-canvas"></canvas>
       <div id="ui-overlay">
         <div class="hud-layout-root" data-hud-root>
-          <div class="hud-region hud-top-row" data-hud-region="top"></div>
+          <div class="hud-region hud-top-row" data-hud-region="top">
+            <div class="hud-anchor hud-anchor--top-left" data-hud-anchor="top-left-cluster">
+              <div id="resource-bar"></div>
+            </div>
+            <div class="hud-anchor hud-anchor--top-right" data-hud-anchor="top-right-cluster"></div>
+          </div>
           <div class="hud-region hud-actions" data-hud-region="left"></div>
           <div class="hud-region hud-content" data-hud-region="content"></div>
-          <div class="hud-region hud-right-column" data-hud-region="right">
-            <div id="resource-bar"></div>
+          <div class="hud-region hud-right-column" data-hud-region="right"></div>
+          <div class="hud-region hud-bottom-row" data-hud-region="bottom">
+            <div class="hud-anchor hud-anchor--command-dock" data-hud-anchor="command-dock"></div>
           </div>
-          <div class="hud-region hud-bottom-row" data-hud-region="bottom"></div>
         </div>
       </div>
     </div>

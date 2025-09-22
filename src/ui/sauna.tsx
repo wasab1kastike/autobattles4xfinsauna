@@ -218,8 +218,8 @@ export function setupSaunaUI(
   card.appendChild(label);
 
   container.appendChild(card);
-  const { regions } = ensureHudLayout(overlay);
-  const topRegion = regions.top;
+  const { anchors } = ensureHudLayout(overlay);
+  const topLeftCluster = anchors.topLeftCluster;
 
   const reduceMotionQuery =
     typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -293,13 +293,13 @@ export function setupSaunaUI(
   }
 
   const placeControl = (): boolean => {
-    if (container.parentElement !== topRegion) {
-      topRegion.appendChild(container);
+    if (container.parentElement !== topLeftCluster) {
+      topLeftCluster.appendChild(container);
     }
-    const topbar = topRegion.querySelector<HTMLDivElement>('#topbar');
-    if (topbar && topbar.parentElement === topRegion) {
+    const topbar = topLeftCluster.querySelector<HTMLDivElement>('#topbar');
+    if (topbar && topbar.parentElement === topLeftCluster) {
       if (topbar.nextSibling !== container) {
-        topRegion.insertBefore(container, topbar.nextSibling);
+        topLeftCluster.insertBefore(container, topbar.nextSibling);
       }
       return true;
     }
@@ -313,7 +313,7 @@ export function setupSaunaUI(
         placementObserver?.disconnect();
       }
     });
-    placementObserver.observe(topRegion, { childList: true });
+    placementObserver.observe(topLeftCluster, { childList: true });
   }
 
   const handleToggle = () => {
