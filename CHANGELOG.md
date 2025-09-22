@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Move the sprite export helper into `tools/export-sprites.ts`, extend it to
+  rasterize polished 64×64 PNG outputs (including 2× retina variants) into
+  `public/sprites/`, and update the docs plus npm script so art drops ship with
+  synchronized vector and bitmap artifacts.
+
 - Collapse unit sprite rendering into a packed atlas: stitch every `unit-*`
   image into a shared canvas at load time, feed UV metadata into the renderer,
   split the base and sprite passes to minimize canvas state churn, expand the
