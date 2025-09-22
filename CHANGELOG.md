@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Carve the command dock into explicit tab and action slots, mount the stash
+  panel inside a dedicated bottom-tab pane alongside roster and policies,
+  restyle the dock with deeper glassmorphic gradients, and update roster plus
+  inventory HUD tests to cover the synced tab behavior.
+
 - Slash the Modern Wooden and Futuristic Fission Sauna commission costs to 60
   and 130 artocoins, update progression tuning plus docs to reflect the faster
   cadence, and refresh the published bundles with the new pricing copy.

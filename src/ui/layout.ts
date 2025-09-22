@@ -12,6 +12,12 @@ export type HudLayoutAnchors = {
   commandDock: HTMLDivElement;
 };
 
+export type HudLayoutDock = {
+  root: HTMLDivElement;
+  tabs: HTMLDivElement;
+  actions: HTMLDivElement;
+};
+
 export type HudBottomTabId = 'roster' | 'stash' | 'policies';
 
 export type HudBottomTabs = {
@@ -28,6 +34,7 @@ export type HudLayout = {
   root: HTMLDivElement;
   regions: HudLayoutRegions;
   anchors: HudLayoutAnchors;
+  dock: HudLayoutDock;
   tabs: HudBottomTabs;
   /**
    * @deprecated Prefer {@link regions.left}. Maintained for backwards compatibility.
@@ -84,6 +91,8 @@ type BottomTabState = {
 
 const bottomTabStates = new WeakMap<HTMLDivElement, BottomTabState>();
 
+type CommandDockSection = 'tabs' | 'actions';
+
 function ensureRoot(overlay: HTMLElement, doc: Document): HTMLDivElement {
   let root = overlay.querySelector<HTMLDivElement>('[data-hud-root]');
   if (!root) {
@@ -132,6 +141,28 @@ function ensureAnchor(
     region.appendChild(anchor);
   }
   return anchor;
+}
+
+function ensureCommandDockSection(
+  anchor: HTMLDivElement,
+  doc: Document,
+  section: CommandDockSection,
+): HTMLDivElement {
+  const selector = `[data-hud-command-dock-section="${section}"]`;
+  let element = anchor.querySelector<HTMLDivElement>(selector);
+  if (!element) {
+    element = doc.createElement('div');
+    element.dataset.hudCommandDockSection = section;
+    anchor.appendChild(element);
+  }
+  element.dataset.hudCommandDockSection = section;
+  const baseClass =
+    section === 'tabs' ? 'hud-command-dock__tabs' : 'hud-command-dock__actions';
+  element.classList.add('hud-command-dock__section', baseClass);
+  if (element.parentElement !== anchor) {
+    anchor.appendChild(element);
+  }
+  return element;
 }
 
 function applyVariantClasses(
@@ -266,6 +297,8 @@ function ensureBottomTabs(
     if (tabId === 'roster') {
       panel.id = 'resource-bar';
       panel.classList.add('hud-bottom-tabs__panel--roster');
+    } else if (tabId === 'stash') {
+      panel.classList.add('hud-bottom-tabs__panel--stash');
     } else if (!panel.id) {
       panel.id = `hud-bottom-panel-${tabId}`;
     }
@@ -460,13 +493,36 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     ]),
   } satisfies HudLayoutAnchors;
 
+  const commandDockTabs = ensureCommandDockSection(anchors.commandDock, doc, 'tabs');
+  const commandDockActions = ensureCommandDockSection(
+    anchors.commandDock,
+    doc,
+    'actions',
+  );
+
   const tabs = ensureBottomTabs(regions.bottom, doc, overlay);
 
   regions.top.append(anchors.topLeftCluster, anchors.topRightCluster);
-  if (tabs.container.parentElement !== regions.bottom) {
-    regions.bottom.appendChild(tabs.container);
-  }
   regions.bottom.appendChild(anchors.commandDock);
+  anchors.commandDock.append(commandDockTabs, commandDockActions);
+
+  if (tabs.container.parentElement !== commandDockTabs) {
+    commandDockTabs.appendChild(tabs.container);
+  }
+
+  for (const child of Array.from(anchors.commandDock.children)) {
+    if (child === commandDockTabs || child === commandDockActions) {
+      continue;
+    }
+    if (
+      child instanceof HTMLElement &&
+      child.dataset?.hudBottomTabs === 'true'
+    ) {
+      commandDockTabs.appendChild(child);
+      continue;
+    }
+    commandDockActions.appendChild(child);
+  }
 
   const isUiV2 = overlay.dataset.hudVariant === 'v2';
   applyVariantClasses(overlay, regions, isUiV2);
@@ -486,16 +542,18 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     regions.bottom.appendChild(buildId);
   }
 
-  const actionBarMounts = overlay.querySelectorAll<HTMLElement>('[data-component="action-bar"]');
+  const actionBarMounts = overlay.querySelectorAll<HTMLElement>(
+    '[data-component="action-bar"]',
+  );
   for (const mount of actionBarMounts) {
-    if (mount.parentElement !== anchors.commandDock) {
-      anchors.commandDock.appendChild(mount);
+    if (mount.parentElement !== commandDockActions) {
+      commandDockActions.appendChild(mount);
     }
   }
 
   const commandToggle = overlay.querySelector<HTMLElement>('#right-panel-toggle');
-  if (commandToggle && commandToggle.parentElement !== anchors.commandDock) {
-    anchors.commandDock.prepend(commandToggle);
+  if (commandToggle && commandToggle.parentElement !== commandDockActions) {
+    commandDockActions.prepend(commandToggle);
   }
 
   let mobileBar = overlay.querySelector<HTMLDivElement>('.hud-mobile-bar__tray');
@@ -508,14 +566,19 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     mobileWrapper.appendChild(mobileBar);
   }
 
-  if (mobileWrapper.parentElement !== anchors.commandDock) {
-    anchors.commandDock.appendChild(mobileWrapper);
+  if (mobileWrapper.parentElement !== commandDockActions) {
+    commandDockActions.appendChild(mobileWrapper);
   }
 
   return {
     root,
     regions,
     anchors,
+    dock: {
+      root: anchors.commandDock,
+      tabs: commandDockTabs,
+      actions: commandDockActions,
+    },
     tabs,
     actions: regions.left,
     side: regions.right,
