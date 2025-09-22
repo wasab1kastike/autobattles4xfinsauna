@@ -1,4 +1,5 @@
 import type { Unit } from '../../unit/index.ts';
+import { getFactionPalette } from '../../theme/factionPalette.ts';
 import type { SpritePlacement, SpritePlacementInput } from './draw.ts';
 import { getSpritePlacement } from './draw.ts';
 import { snapForZoom } from '../zoom.ts';
@@ -78,22 +79,7 @@ function resolveBasePalette(
 } {
   const normalizedMotion = Math.min(1, Math.max(0, motionStrength));
   const glowOpacity = 0.12 + normalizedMotion * 0.38;
-  const playerPalette = {
-    shell: 'rgba(30, 38, 58, 0.95)',
-    mid: 'rgba(45, 60, 98, 0.94)',
-    rim: 'rgba(118, 214, 255, 0.7)',
-    highlight: 'rgba(190, 230, 255, 0.65)',
-    ring: 'rgba(86, 151, 255, 0.65)',
-    motionGlow: `rgba(124, 215, 255, ${glowOpacity.toFixed(3)})`
-  } as const;
-  const enemyPalette = {
-    shell: 'rgba(46, 24, 32, 0.95)',
-    mid: 'rgba(66, 36, 44, 0.95)',
-    rim: 'rgba(248, 140, 120, 0.7)',
-    highlight: 'rgba(250, 190, 170, 0.55)',
-    ring: 'rgba(255, 128, 96, 0.6)',
-    motionGlow: `rgba(255, 140, 110, ${glowOpacity.toFixed(3)})`
-  } as const;
+  const normalizedFaction = faction?.toLowerCase?.();
   const neutralPalette = {
     shell: 'rgba(36, 36, 42, 0.9)',
     mid: 'rgba(56, 56, 68, 0.92)',
@@ -103,7 +89,11 @@ function resolveBasePalette(
     motionGlow: `rgba(210, 210, 230, ${glowOpacity.toFixed(3)})`
   } as const;
 
-  const palette = faction === 'player' ? playerPalette : faction === 'enemy' ? enemyPalette : neutralPalette;
+  const palette = normalizedFaction === 'player'
+    ? getFactionPalette('player', glowOpacity)
+    : normalizedFaction === 'enemy'
+      ? getFactionPalette('enemy', glowOpacity)
+      : neutralPalette;
 
   if (selection?.isSelected) {
     const emphasis = selection.isPrimary ? 0.95 : 0.7;
@@ -182,10 +172,22 @@ function drawBase(
 
   ctx.save();
   ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'screen';
   ctx.beginPath();
-  ctx.ellipse(centerX, centerY, radiusX * 0.96, radiusY * 0.92, 0, 0, Math.PI * 2);
+  ctx.ellipse(centerX, centerY, radiusX * 0.99, radiusY * 0.95, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = palette.rim;
+  ctx.lineWidth = snapForZoom(Math.max(2.4, zoom * 1.8), zoom);
+  ctx.shadowColor = palette.highlight;
+  ctx.shadowBlur = snapForZoom(Math.max(6, zoom * 3.2), zoom);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, radiusX * 0.94, radiusY * 0.9, 0, 0, Math.PI * 2);
   ctx.strokeStyle = palette.ring;
-  ctx.lineWidth = snapForZoom(Math.max(1.5, zoom * 1.2), zoom);
+  ctx.lineWidth = snapForZoom(Math.max(1.6, zoom * 1.15), zoom);
   ctx.stroke();
   ctx.restore();
 
