@@ -1,6 +1,7 @@
 import type { SaunaTier, SaunaTierId } from '../sauna/tiers.ts';
 import {
   loadArtocoinBalance,
+  saveArtocoinBalance,
   spendArtocoins,
   type SpendArtocoinResult
 } from './artocoin.ts';
@@ -111,12 +112,44 @@ export interface PurchaseSaunaTierResult {
   readonly reason?: 'already-owned' | 'insufficient-funds' | 'unsupported';
 }
 
-export function purchaseSaunaTier(tier: SaunaTier): PurchaseSaunaTierResult {
-  const balance = loadArtocoinBalance();
+export interface PurchaseSaunaTierOptions {
+  readonly getCurrentBalance?: () => number;
+}
+
+function sanitizeRuntimeBalance(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.floor(numeric));
+}
+
+function readSuppliedBalance(getter?: () => number): number | undefined {
+  if (typeof getter !== 'function') {
+    return undefined;
+  }
+  try {
+    return sanitizeRuntimeBalance(getter());
+  } catch (error) {
+    console.warn('Failed to read supplied artocoin balance', error);
+    return undefined;
+  }
+}
+
+export function purchaseSaunaTier(
+  tier: SaunaTier,
+  options: PurchaseSaunaTierOptions = {}
+): PurchaseSaunaTierResult {
+  const storedBalance = loadArtocoinBalance();
+  const suppliedBalance = readSuppliedBalance(options.getCurrentBalance);
+  const storageAvailable = Boolean(getStorage());
+  const fallbackBalance = !storageAvailable ? suppliedBalance : undefined;
+  const effectiveBalance =
+    typeof fallbackBalance === 'number' ? fallbackBalance : storedBalance;
   if (!tier || typeof tier !== 'object') {
     return {
       success: false,
-      balance,
+      balance: effectiveBalance,
       purchased: getPurchasedSaunaTiers(),
       reason: 'unsupported'
     } satisfies PurchaseSaunaTierResult;
@@ -135,7 +168,7 @@ export function purchaseSaunaTier(tier: SaunaTier): PurchaseSaunaTierResult {
     }
     return {
       success: true,
-      balance,
+      balance: effectiveBalance,
       purchased: getPurchasedSaunaTiers()
     } satisfies PurchaseSaunaTierResult;
   }
@@ -143,25 +176,48 @@ export function purchaseSaunaTier(tier: SaunaTier): PurchaseSaunaTierResult {
   if (purchasedTierIds.has(tier.id)) {
     return {
       success: false,
-      balance,
+      balance: effectiveBalance,
       purchased: getPurchasedSaunaTiers(),
       reason: 'already-owned'
     } satisfies PurchaseSaunaTierResult;
   }
 
   const cost = Math.max(0, Math.floor(tier.unlock.cost));
-  const spendResult = spendArtocoins(cost, {
-    reason: 'purchase',
-    metadata: { tierId: tier.id, type: 'sauna-tier' }
-  });
-  if (!spendResult.success) {
-    return {
-      success: false,
-      balance: spendResult.balance,
-    purchased: getPurchasedSaunaTiers(),
-    shortfall: spendResult.shortfall,
-      reason: 'insufficient-funds'
-    } satisfies PurchaseSaunaTierResult;
+  const metadata = { tierId: tier.id, type: 'sauna-tier' } as const;
+  let spendResult: SpendArtocoinResult;
+  if (cost === 0) {
+    spendResult = { success: true, balance: effectiveBalance } satisfies SpendArtocoinResult;
+  } else if (typeof fallbackBalance === 'number') {
+    if (fallbackBalance < cost) {
+      return {
+        success: false,
+        balance: effectiveBalance,
+        purchased: getPurchasedSaunaTiers(),
+        shortfall: cost - fallbackBalance,
+        reason: 'insufficient-funds'
+      } satisfies PurchaseSaunaTierResult;
+    }
+    const nextBalance = fallbackBalance - cost;
+    saveArtocoinBalance(nextBalance, {
+      reason: 'purchase',
+      metadata,
+      previousBalance: fallbackBalance
+    });
+    spendResult = { success: true, balance: nextBalance } satisfies SpendArtocoinResult;
+  } else {
+    spendResult = spendArtocoins(cost, {
+      reason: 'purchase',
+      metadata
+    });
+    if (!spendResult.success) {
+      return {
+        success: false,
+        balance: spendResult.balance,
+        purchased: getPurchasedSaunaTiers(),
+        shortfall: spendResult.shortfall,
+        reason: 'insufficient-funds'
+      } satisfies PurchaseSaunaTierResult;
+    }
   }
 
   purchasedTierIds.add(tier.id);

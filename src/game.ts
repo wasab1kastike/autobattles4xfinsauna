@@ -1016,7 +1016,10 @@ export function setupGame(
       getUseUiV2,
       onUseUiV2Change: setUseUiV2,
       getSaunaShopViewModel: () => buildSaunaShopViewModel(),
-      onPurchaseSaunaTier: (tierId) => purchaseSaunaTier(getSaunaTier(tierId)),
+      onPurchaseSaunaTier: (tierId) =>
+        purchaseSaunaTier(getSaunaTier(tierId), {
+          getCurrentBalance: () => artocoinBalance
+        }),
       subscribeToSaunaShop: (listener) => {
         saunaShopListeners.add(listener);
         return () => saunaShopListeners.delete(listener);
