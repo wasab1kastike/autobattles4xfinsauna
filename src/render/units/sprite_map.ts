@@ -19,6 +19,10 @@ export interface UnitSpriteMetadata {
 
 type UnitSpriteId =
   | UnitArchetypeId
+  | 'marauder'
+  | 'raider'
+  | 'raider-captain'
+  | 'raider-shaman'
   | 'saunoja'
   | 'saunoja-guardian'
   | 'saunoja-seer'
@@ -29,6 +33,13 @@ const DEFAULT_SPRITE: UnitSpriteMetadata = {
   anchor: { x: 0.5, y: 0.92 },
   scale: { x: 1, y: 1 },
   nudge: { x: 0, y: -0.05 }
+};
+
+const AVANTO_MARAUDER_META: UnitSpriteMetadata = {
+  nativeSize: { width: 176, height: 196 },
+  anchor: { x: 0.5, y: 0.836 },
+  scale: { x: 1.5553109292455225, y: 1.5 },
+  nudge: { x: 0, y: -0.03 }
 };
 
 export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
@@ -45,11 +56,25 @@ export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
     scale: { x: 1.4510532031494585, y: 1.40625 },
     nudge: { x: 0, y: -0.015 }
   },
-  'avanto-marauder': {
-    nativeSize: { width: 176, height: 196 },
-    anchor: { x: 0.5, y: 0.836 },
-    scale: { x: 1.5553109292455225, y: 1.5 },
-    nudge: { x: 0, y: -0.03 }
+  'avanto-marauder': AVANTO_MARAUDER_META,
+  marauder: AVANTO_MARAUDER_META,
+  raider: {
+    nativeSize: { width: 176, height: 198 },
+    anchor: { x: 0.5, y: 0.832 },
+    scale: { x: 1.524, y: 1.47 },
+    nudge: { x: 0, y: -0.028 }
+  },
+  'raider-captain': {
+    nativeSize: { width: 184, height: 206 },
+    anchor: { x: 0.5, y: 0.838 },
+    scale: { x: 1.598, y: 1.556 },
+    nudge: { x: 0, y: -0.034 }
+  },
+  'raider-shaman': {
+    nativeSize: { width: 180, height: 212 },
+    anchor: { x: 0.5, y: 0.842 },
+    scale: { x: 1.548, y: 1.532 },
+    nudge: { x: 0, y: -0.036 }
   },
   saunoja: {
     nativeSize: { width: 128, height: 128 },
