@@ -1,10 +1,26 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { GameState } from '../../src/core/GameState.ts';
 import { ensureHudLayout, type HudBottomTabId } from '../../src/ui/layout.ts';
+import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
 
 describe('HUD bottom tabs', () => {
   let overlay: HTMLDivElement;
 
   beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
     overlay = document.createElement('div');
     overlay.id = 'ui-overlay';
     document.body.appendChild(overlay);
@@ -12,6 +28,7 @@ describe('HUD bottom tabs', () => {
 
   afterEach(() => {
     overlay.remove();
+    vi.restoreAllMocks();
   });
 
   it('creates roster, stash, and policies panels with roster active by default', () => {
@@ -51,5 +68,18 @@ describe('HUD bottom tabs', () => {
     unsubscribe();
 
     expect(received).toEqual(['policies', 'roster']);
+  });
+
+  it('renders policies inside the bottom tab without duplicating in the right panel', () => {
+    const state = new GameState(1000);
+    const controller = setupRightPanel(state);
+
+    const policyPanel = overlay.querySelector<HTMLDivElement>('[data-hud-tab-panel="policies"]');
+    expect(policyPanel).not.toBeNull();
+    expect(policyPanel?.querySelector('.policy-card')).not.toBeNull();
+
+    expect(overlay.querySelector('#right-panel-policies')).toBeNull();
+
+    controller.dispose();
   });
 });
