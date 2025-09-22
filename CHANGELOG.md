@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Ship the Avanto raider art drop: replace the placeholder raider sprite with
+  the production SVGs from art, add captain and shaman variants, register their
+  renderer metadata, and expand sprite tests so the anchors and scale ratios
+  stay locked.
+
 - Unify battlefield and HUD faction palettes behind new CSS tokens, teach the
   canvas renderer to read the shared values, layer in a softened rim light for
   premium unit bases, and extend sprite tests to lock the faction styling
