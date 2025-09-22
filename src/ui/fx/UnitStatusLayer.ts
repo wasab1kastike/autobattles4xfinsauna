@@ -171,7 +171,8 @@ function ensureStyles(): void {
       pointer-events: none;
       font-family: "Inter", "Manrope", "Segoe UI", sans-serif;
       color: #e2e8f0;
-      text-shadow: 0 6px 16px rgba(2, 6, 23, 0.55);
+      text-shadow: 0 8px 22px rgba(2, 6, 23, 0.55);
+      contain: layout style;
     }
 
     .ui-unit-status__sauna-anchor {
@@ -179,86 +180,141 @@ function ensureStyles(): void {
       transform: translate(-50%, -50%);
     }
 
-    .ui-unit-status__sauna-gauge {
-      position: relative;
-      width: calc(var(--radius) * 2.4);
-      height: calc(var(--radius) * 2.4);
-      padding: calc(var(--radius) * 0.28);
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.92);
-      box-shadow: 0 14px 40px rgba(8, 25, 53, 0.58);
-    }
-
     .ui-unit-status__sauna-ring {
       position: relative;
-      width: 100%;
-      height: 100%;
+      width: calc(var(--ring-radius, var(--radius)) * 2);
+      height: calc(var(--ring-radius, var(--radius)) * 2);
       border-radius: 999px;
-      background: rgba(148, 163, 184, 0.18);
-      box-shadow: inset 0 0 0 max(1.5px, var(--radius) * 0.08) rgba(148, 163, 184, 0.42);
-      overflow: hidden;
+      filter: drop-shadow(0 18px 44px rgba(8, 25, 53, 0.55));
+    }
+
+    .ui-unit-status__sauna-ring::before,
+    .ui-unit-status__sauna-ring::after,
+    .ui-unit-status__sauna-progress,
+    .ui-unit-status__sauna-ring-glow {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - var(--ring-thickness, 14px)),
+        rgba(0, 0, 0, 0.9) calc(100% - var(--ring-thickness, 14px))
+      );
+      -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - var(--ring-thickness, 14px)),
+        rgba(0, 0, 0, 0.9) calc(100% - var(--ring-thickness, 14px))
+      );
+    }
+
+    .ui-unit-status__sauna-ring::before {
+      background: conic-gradient(
+        from var(--ring-start, -90deg),
+        rgba(30, 41, 59, 0.88) 0deg,
+        rgba(30, 41, 59, 0.88) 360deg
+      );
+      box-shadow: inset 0 0 0 max(1px, var(--ring-thickness, 14px) * 0.12) rgba(148, 197, 255, 0.32);
+      opacity: 0.92;
+    }
+
+    .ui-unit-status__sauna-ring::after {
+      background: conic-gradient(
+        from var(--ring-start, -90deg),
+        rgba(56, 189, 248, 0.16) 0deg,
+        rgba(56, 189, 248, 0.5) calc(var(--progress, 0) * 360deg),
+        rgba(56, 189, 248, 0) calc(var(--progress, 0) * 360deg)
+      );
+      filter: blur(calc(var(--ring-thickness, 14px) * 0.9));
+      opacity: 0.55;
+      mix-blend-mode: screen;
     }
 
     .ui-unit-status__sauna-progress {
-      position: absolute;
-      inset: 0;
-      border-radius: 999px;
       background: conic-gradient(
-        from -90deg,
-        rgba(56, 189, 248, 0.12) 0deg,
-        rgba(56, 189, 248, 0.12) calc(var(--progress, 0) * 360deg),
-        rgba(56, 189, 248, 0) calc(var(--progress, 0) * 360deg),
-        rgba(56, 189, 248, 0) 360deg
+        from var(--ring-start, -90deg),
+        rgba(56, 189, 248, 0.2) 0deg,
+        rgba(56, 189, 248, 0.96) calc(var(--progress, 0) * 360deg),
+        rgba(56, 189, 248, 0) calc(var(--progress, 0) * 360deg)
+      );
+      mix-blend-mode: screen;
+      filter: drop-shadow(0 0 calc(var(--ring-thickness, 14px) * 1.15) rgba(56, 189, 248, 0.68));
+    }
+
+    .ui-unit-status__sauna-ring-glow {
+      inset: calc(var(--ring-thickness, 14px) * 0.65);
+      background: radial-gradient(
+        circle,
+        rgba(56, 189, 248, 0.26),
+        rgba(56, 189, 248, 0.05) 55%,
+        rgba(15, 23, 42, 0) 70%
       );
       mix-blend-mode: screen;
     }
 
-    .ui-unit-status__sauna-progress::after {
-      content: '';
+    .ui-unit-status__sauna-marker {
       position: absolute;
-      inset: 6%;
-      border-radius: inherit;
-      background: conic-gradient(
-        from -90deg,
-        rgba(56, 189, 248, 0.92) 0deg,
-        rgba(14, 165, 233, 0.95) calc(var(--progress, 0) * 360deg),
-        rgba(244, 114, 182, 0.85) calc(var(--progress, 0) * 360deg)
-      );
-      filter: blur(1px);
-      opacity: 0.94;
-      mask: radial-gradient(circle, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0) 70%);
+      top: 50%;
+      left: 50%;
+      width: calc(var(--ring-thickness, 14px) * 0.7);
+      height: calc(var(--ring-thickness, 14px) * 0.7);
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(226, 232, 240, 0.98), rgba(56, 189, 248, 0.25));
+      box-shadow: 0 0 calc(var(--ring-thickness, 14px)) rgba(56, 189, 248, 0.65);
+      transform: rotate(calc(var(--ring-start, -90deg) + var(--progress, 0) * 360deg))
+        translateX(var(--marker-radius, var(--ring-radius, var(--radius))))
+        translate(-50%, -50%);
+      mix-blend-mode: screen;
+      opacity: clamp(0, calc(var(--progress, 0) * 4), 1);
+      transition: opacity 120ms ease-out;
     }
 
-    .ui-unit-status__sauna-countdown {
+    .ui-unit-status__sauna-badge {
       position: absolute;
-      inset: 0;
+      top: 50%;
+      left: 50%;
+      transform: rotate(var(--badge-angle, 0deg))
+        translateX(var(--badge-radius, calc(var(--ring-radius, var(--radius)) * 1.4)))
+        rotate(calc(-1 * var(--badge-angle, 0deg)));
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      gap: 2px;
+      gap: 4px;
+      min-width: clamp(76px, var(--ring-radius, var(--radius)) * 1.22, 140px);
+      padding: clamp(6px, var(--ring-thickness, 14px) * 0.45, 10px)
+        clamp(12px, var(--ring-thickness, 14px) * 0.9, 18px);
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.88));
+      border: 1px solid rgba(148, 197, 255, 0.35);
+      box-shadow: 0 12px 34px rgba(8, 25, 53, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+    }
+
+    .ui-unit-status__sauna-countdown {
+      display: flex;
+      align-items: baseline;
+      gap: clamp(4px, var(--ring-thickness, 14px) * 0.28, 8px);
+      font-feature-settings: 'tnum' 1;
     }
 
     .ui-unit-status__sauna-countdown strong {
       font-weight: 600;
-      font-size: clamp(14px, var(--radius) * 0.9, 24px);
-      letter-spacing: 0.02em;
+      font-size: clamp(18px, var(--ring-thickness, 14px) * 1.2, 30px);
+      letter-spacing: 0.04em;
     }
 
     .ui-unit-status__sauna-countdown span {
-      font-size: clamp(10px, var(--radius) * 0.45, 13px);
-      color: rgba(148, 163, 184, 0.78);
+      font-size: clamp(11px, var(--ring-thickness, 14px) * 0.6, 14px);
+      color: rgba(148, 163, 184, 0.82);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
     }
 
     .ui-unit-status__sauna-label {
-      margin-top: calc(var(--radius) * 0.6);
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.88));
-      box-shadow: 0 8px 20px rgba(8, 25, 53, 0.45);
-      border: 1px solid rgba(148, 197, 255, 0.28);
       font-weight: 600;
-      font-size: clamp(12px, var(--radius) * 0.65, 18px);
+      font-size: clamp(12px, var(--ring-thickness, 14px) * 0.72, 16px);
+      letter-spacing: 0.06em;
     }
   `;
 
@@ -309,8 +365,9 @@ export function createUnitStatusLayer(options: UnitStatusLayerOptions): UnitStat
   let saunaElement: {
     host: HTMLElement;
     progress: HTMLElement;
-    label: HTMLElement;
     countdown: HTMLElement;
+    unit: HTMLElement;
+    label: HTMLElement;
   } | null = null;
 
   const renderUnit = (status: UnitStatusPayload): void => {
@@ -404,8 +461,19 @@ export function createUnitStatusLayer(options: UnitStatusLayerOptions): UnitStat
       return;
     }
     const zoom = getZoom();
-    const radiusPx = Math.max(4, status.radius * zoom);
+    const geometry = status.geometry;
+    const ringRadiusWorld = geometry?.ringRadius ?? status.radius;
+    const ringThicknessWorld = geometry?.ringThickness ?? ringRadiusWorld * 0.3;
+    const badgeRadiusWorld = geometry?.badgeRadius ?? ringRadiusWorld + ringThicknessWorld * 0.9;
+    const markerRadiusWorld = geometry?.markerRadius ?? Math.max(ringRadiusWorld - ringThicknessWorld * 0.45, ringThicknessWorld);
+    const startAngleRad = geometry?.startAngle ?? -Math.PI / 2;
+    const badgeAngleRad = geometry?.badgeAngle ?? startAngleRad;
+    const ringRadiusPx = Math.max(4, ringRadiusWorld * zoom);
+    const ringThicknessPx = Math.max(3, ringThicknessWorld * zoom);
+    const badgeRadiusPx = Math.max(ringRadiusPx, badgeRadiusWorld * zoom);
+    const markerRadiusPx = Math.max(0, markerRadiusWorld * zoom);
     const progress = clamp(status.progress ?? 0, 0, 1);
+    const progressValue = progress.toFixed(4);
 
     if (!saunaElement) {
       const hostEl = document.createElement('div');
@@ -414,45 +482,58 @@ export function createUnitStatusLayer(options: UnitStatusLayerOptions): UnitStat
       const anchor = document.createElement('div');
       anchor.className = 'ui-unit-status__sauna-anchor';
 
-      const gauge = document.createElement('div');
-      gauge.className = 'ui-unit-status__sauna-gauge';
-
       const ring = document.createElement('div');
       ring.className = 'ui-unit-status__sauna-ring';
 
       const progressEl = document.createElement('div');
       progressEl.className = 'ui-unit-status__sauna-progress';
-      ring.appendChild(progressEl);
+      const glow = document.createElement('div');
+      glow.className = 'ui-unit-status__sauna-ring-glow';
+      const marker = document.createElement('div');
+      marker.className = 'ui-unit-status__sauna-marker';
+      ring.append(progressEl, glow, marker);
+
+      const badge = document.createElement('div');
+      badge.className = 'ui-unit-status__sauna-badge';
 
       const countdown = document.createElement('div');
       countdown.className = 'ui-unit-status__sauna-countdown';
 
-      const labelStrong = document.createElement('strong');
-      countdown.appendChild(labelStrong);
+      const countdownValue = document.createElement('strong');
+      countdown.appendChild(countdownValue);
       const unitLabel = document.createElement('span');
-      unitLabel.textContent = status.unitLabel ?? 'sec';
       countdown.appendChild(unitLabel);
-
-      gauge.append(ring, countdown);
 
       const label = document.createElement('div');
       label.className = 'ui-unit-status__sauna-label';
-      label.textContent = status.label ?? 'Sauna ♨️';
 
-      anchor.append(gauge, label);
+      badge.append(countdown, label);
+      anchor.append(ring, badge);
       hostEl.appendChild(anchor);
       host.appendChild(hostEl);
 
-      saunaElement = { host: hostEl, progress: progressEl, label, countdown: labelStrong };
+      saunaElement = {
+        host: hostEl,
+        progress: progressEl,
+        countdown: countdownValue,
+        unit: unitLabel,
+        label
+      };
     }
 
     saunaElement.host.style.transform = `translate3d(${center.x}px, ${center.y}px, 0)`;
-    saunaElement.host.style.setProperty('--radius', `${radiusPx}px`);
-    saunaElement.progress.style.setProperty('--progress', progress.toFixed(4));
+    saunaElement.host.style.setProperty('--radius', `${ringRadiusPx + ringThicknessPx}px`);
+    saunaElement.host.style.setProperty('--ring-radius', `${ringRadiusPx}px`);
+    saunaElement.host.style.setProperty('--ring-thickness', `${ringThicknessPx}px`);
+    saunaElement.host.style.setProperty('--badge-radius', `${badgeRadiusPx}px`);
+    saunaElement.host.style.setProperty('--marker-radius', `${markerRadiusPx}px`);
+    saunaElement.host.style.setProperty('--ring-start', `${(startAngleRad * 180) / Math.PI}deg`);
+    saunaElement.host.style.setProperty('--badge-angle', `${(badgeAngleRad * 180) / Math.PI}deg`);
+    saunaElement.host.style.setProperty('--progress', progressValue);
+    saunaElement.progress.style.setProperty('--progress', progressValue);
     saunaElement.countdown.textContent = String(Math.max(0, Math.ceil(status.countdown ?? 0)));
-    if (status.label) {
-      saunaElement.label.textContent = status.label;
-    }
+    saunaElement.unit.textContent = status.unitLabel ?? 'sec';
+    saunaElement.label.textContent = status.label ?? 'Sauna ♨️';
   };
 
   const render = (frame: UnitStatusFrame): void => {
