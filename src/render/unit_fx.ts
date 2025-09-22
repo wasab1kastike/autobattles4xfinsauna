@@ -257,36 +257,54 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     shakes.length = 0;
     fades.clear();
     alphas.clear();
+    committedUnitStatuses.clear();
+    committedSaunaStatus = null;
+    frameUnitStatuses = null;
+    frameSaunaStatus = null;
     floaterLayer.destroy();
     statusLayer.destroy();
     selectionHud.setSelection(null);
     selectionHud.destroy();
   };
 
-  const unitStatuses = new Map<string, UnitStatusPayload>();
-  let saunaStatus: SaunaStatusPayload | null = null;
+  let committedUnitStatuses = new Map<string, UnitStatusPayload>();
+  let committedSaunaStatus: SaunaStatusPayload | null = null;
+  let frameUnitStatuses: Map<string, UnitStatusPayload> | null = null;
+  let frameSaunaStatus: SaunaStatusPayload | null = null;
 
   const beginStatusFrame = () => {
-    unitStatuses.clear();
-    saunaStatus = null;
+    frameUnitStatuses = new Map<string, UnitStatusPayload>();
+    frameSaunaStatus = null;
   };
 
   const pushUnitStatus = (status: UnitStatusPayload) => {
     if (!status || typeof status.id !== 'string') {
       return;
     }
-    unitStatuses.set(status.id, status);
+    if (!frameUnitStatuses) {
+      frameUnitStatuses = new Map<string, UnitStatusPayload>();
+    }
+    frameUnitStatuses.set(status.id, status);
   };
 
   const pushSaunaStatus = (status: SaunaStatusPayload | null) => {
-    saunaStatus = status;
+    frameSaunaStatus = status;
   };
 
   const commitStatusFrame = () => {
     if (!statusLayer) {
       return;
     }
-    const entries = Array.from(unitStatuses.values()).filter((entry) => {
+    const buffer = frameUnitStatuses ?? new Map<string, UnitStatusPayload>();
+    const sauna = frameSaunaStatus ?? null;
+
+    frameUnitStatuses = null;
+    frameSaunaStatus = null;
+
+    committedUnitStatuses = buffer;
+    committedSaunaStatus = sauna;
+
+    const entries = Array.from(committedUnitStatuses.values()).filter((entry) => {
       if (entry.visible === false) {
         return false;
       }
@@ -295,11 +313,14 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
       }
       return entry.hp > 0;
     });
-    const sauna = saunaStatus && saunaStatus.visible === false ? null : saunaStatus;
-    statusLayer.render({ units: entries, sauna: sauna ?? null });
+    const resolvedSauna =
+      committedSaunaStatus && committedSaunaStatus.visible === false
+        ? null
+        : committedSaunaStatus;
+    statusLayer.render({ units: entries, sauna: resolvedSauna ?? null });
 
     if (currentSelection && currentSelectionId) {
-      const selectedStatus = unitStatuses.get(currentSelectionId) ?? null;
+      const selectedStatus = committedUnitStatuses.get(currentSelectionId) ?? null;
       if (selectedStatus) {
         selectionHud.updateStatus(
           selectedStatus.world,

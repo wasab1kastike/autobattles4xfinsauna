@@ -165,4 +165,24 @@ describe('SelectionMiniHud integration', () => {
     const entry = overlay.querySelector('.ui-selection-mini-hud') as HTMLElement | null;
     expect(entry?.dataset.visible).toBe('false');
   });
+
+  it('only renders unit status overlays from the active frame', () => {
+    manager.beginStatusFrame();
+    manager.pushUnitStatus({
+      id: 'scout-1',
+      world: { x: 200, y: 260 },
+      radius: 20,
+      hp: 8,
+      maxHp: 12,
+      faction: 'enemy'
+    });
+    manager.commitStatusFrame();
+
+    expect(overlay.querySelector('[data-unit-id="scout-1"]')).toBeTruthy();
+
+    manager.beginStatusFrame();
+    manager.commitStatusFrame();
+
+    expect(overlay.querySelector('[data-unit-id="scout-1"]')).toBeNull();
+  });
 });

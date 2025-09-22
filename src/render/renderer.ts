@@ -11,7 +11,9 @@ import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
 import type { SpritePlacementInput } from './units/draw.ts';
 import { drawUnitSprite } from './units/UnitSprite.ts';
-import type { SaunaStatusPayload, UnitStatusPayload } from '../ui/fx/types.ts';
+import type { SaunaStatusPayload, UnitStatusPayload, UnitStatusBuff } from '../ui/fx/types.ts';
+import type { CombatKeywordEntry, CombatKeywordRegistry } from '../combat/resolve.ts';
+import type { KeywordState } from '../keywords/index.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -58,6 +60,50 @@ function resolveSaunaVision(sauna?: SaunaVisionSource | null): VisionSource | nu
     return { coord: sauna.pos, range } satisfies VisionSource;
   }
   return null;
+}
+
+function isKeywordStateEntry(
+  entry: CombatKeywordEntry | null | undefined
+): entry is KeywordState {
+  if (!entry || typeof entry !== 'object') {
+    return false;
+  }
+  const candidate = entry as Partial<KeywordState>;
+  return typeof candidate.keyword === 'string' && typeof candidate.stacks === 'number';
+}
+
+function collectKeywordBuffs(
+  registry: CombatKeywordRegistry | null | undefined
+): UnitStatusBuff[] {
+  if (!registry) {
+    return [];
+  }
+
+  const buffs: UnitStatusBuff[] = [];
+  const addEntry = (entry: CombatKeywordEntry | null | undefined) => {
+    if (!isKeywordStateEntry(entry)) {
+      return;
+    }
+    buffs.push({
+      id: entry.keyword,
+      remaining: Infinity,
+      duration: Infinity,
+      stacks: Number.isFinite(entry.stacks) ? entry.stacks : undefined
+    });
+  };
+
+  if (typeof (registry as Iterable<CombatKeywordEntry | null | undefined>)[Symbol.iterator] === 'function') {
+    for (const entry of registry as Iterable<CombatKeywordEntry | null | undefined>) {
+      addEntry(entry);
+    }
+  } else {
+    const record = registry as Record<string, CombatKeywordEntry | null | undefined>;
+    for (const value of Object.values(record)) {
+      addEntry(value);
+    }
+  }
+
+  return buffs;
 }
 
 export interface FxLayerOptions {
@@ -228,6 +274,32 @@ export function drawUnits(
       cameraZoom: camera.zoom,
       selection: selectionState
     });
+    if (fx?.pushUnitStatus) {
+      const baseRadius = Math.max(renderResult.footprint.radiusX, renderResult.footprint.radiusY);
+      const radius = Math.max(
+        mapRenderer.hexSize * 0.32,
+        Math.min(mapRenderer.hexSize * 0.72, baseRadius * 0.92)
+      );
+      const worldX = renderResult.footprint.centerX + origin.x;
+      const worldY = renderResult.footprint.centerY + origin.y;
+      const hp = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
+      const shieldValue = typeof unit.getShield === 'function' ? unit.getShield() : 0;
+      const shield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
+      const buffs = collectKeywordBuffs(unit.combatKeywords ?? null);
+
+      fx.pushUnitStatus({
+        id: unit.id,
+        world: { x: worldX, y: worldY },
+        radius,
+        hp,
+        maxHp: maxHealth,
+        shield,
+        faction: unit.faction,
+        selected: selectionState.isSelected,
+        buffs,
+        visible: true
+      });
+    }
     if (isSisuBurstActive() && unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
