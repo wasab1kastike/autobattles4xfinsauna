@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Land a glassmorphic Selection Mini HUD that listens to the FX manager for
+  focus payloads, anchors above the battlefield sprites with faction-aware
+  gradients, and surfaces HP, equipment, and status chips with fresh Vitest
+  coverage for show/hide flows.
+
 - Reanchor the HUD around explicit top-left, top-right, and command-dock mounts,
   move the resource bar, topbar, action tray, and alerts into those anchors, and
   restyle the trays with glassy gradients plus refreshed tests for the new
