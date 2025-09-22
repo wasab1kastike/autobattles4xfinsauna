@@ -65,12 +65,16 @@ export function setupRosterHUD(
 ): RosterHudController {
   const { rosterIcon, summaryLabel = 'Saunoja Roster' } = options;
 
-  container.classList.add('sauna-roster');
-  container.setAttribute('role', 'status');
-  container.setAttribute('aria-live', 'polite');
-  container.setAttribute('title', 'Active sauna battalion on the field');
-  container.dataset.tutorialTarget = 'upkeep';
+  const doc = container.ownerDocument ?? document;
+  container.classList.add('hud-bottom-tabs__panel');
   container.replaceChildren();
+
+  const root = doc.createElement('div');
+  root.classList.add('sauna-roster');
+  root.setAttribute('role', 'status');
+  root.setAttribute('aria-live', 'polite');
+  root.setAttribute('title', 'Active sauna battalion on the field');
+  root.dataset.tutorialTarget = 'upkeep';
 
   const summary = document.createElement('div');
   summary.classList.add('sauna-roster__summary');
@@ -137,7 +141,8 @@ export function setupRosterHUD(
   rosterCardUpkeep.classList.add('saunoja-card__upkeep');
 
   rosterCard.append(rosterCardHeader, rosterCardTraits, rosterCardStats, rosterCardUpkeep);
-  container.append(summary, rosterCard);
+  root.append(summary, rosterCard);
+  container.append(root);
 
   let rosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
   let rosterSignature: string | null = null;
@@ -252,8 +257,8 @@ export function setupRosterHUD(
       const total = Math.max(0, Math.floor(summary.count));
       const formatted = rosterCountFormatter.format(total);
       rosterValue.textContent = formatted;
-      container.setAttribute('aria-label', `Saunoja roster: ${formatted} active attendants`);
-      container.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
+      root.setAttribute('aria-label', `Saunoja roster: ${formatted} active attendants`);
+      root.setAttribute('title', `Saunoja roster • ${formatted} active attendants`);
       renderCard(summary.card);
     },
     installRenderer(renderer) {

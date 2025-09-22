@@ -150,71 +150,6 @@ function formatLocation(location: InventoryCollection | 'equipped'): string {
   }
 }
 
-function createBadge(): {
-  button: HTMLButtonElement;
-  count: HTMLSpanElement;
-} {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.dataset.testid = 'inventory-badge';
-  button.dataset.ui = 'inventory-badge';
-  button.className =
-    'group inline-flex items-center gap-2 rounded-hud-pill border border-white/15 bg-[linear-gradient(135deg,rgba(27,36,56,0.9),rgba(39,74,110,0.9))] px-3.5 py-2 font-semibold text-sky-50 shadow-hud-sm transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent hover:-translate-y-0.5 hover:shadow-hud-md data-[autoequip=off]:bg-[linear-gradient(135deg,rgba(56,44,25,0.9),rgba(92,72,40,0.9))]';
-  button.setAttribute('aria-expanded', 'false');
-  button.setAttribute('aria-controls', 'inventory-stash-panel');
-  button.setAttribute('aria-label', 'Open quartermaster stash');
-
-  const icon = document.createElement('span');
-  icon.className =
-    'relative flex h-[1.65rem] w-[1.65rem] flex-shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.9),rgba(225,235,255,0.2))] text-slate-900 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.35)]';
-  icon.setAttribute('aria-hidden', 'true');
-
-  const svgNs = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNs, 'svg');
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('focusable', 'false');
-  svg.setAttribute('class', 'h-[76%] w-[76%]');
-
-  const bagOutline = document.createElementNS(svgNs, 'path');
-  bagOutline.setAttribute(
-    'd',
-    'M8.25 7V6a3.75 3.75 0 0 1 7.5 0v1m3 0h-14.25a1.5 1.5 0 0 0-1.485 1.342l-.75 9a3 3 0 0 0 2.985 3.158h9.78a3 3 0 0 0 2.985-3.158l-.75-9A1.5 1.5 0 0 0 18.75 7Z'
-  );
-  bagOutline.setAttribute('fill', 'rgba(194, 216, 255, 0.32)');
-  bagOutline.setAttribute('stroke', 'rgba(255, 255, 255, 0.92)');
-  bagOutline.setAttribute('stroke-width', '1.6');
-  bagOutline.setAttribute('stroke-linecap', 'round');
-  bagOutline.setAttribute('stroke-linejoin', 'round');
-
-  const bagDetail = document.createElementNS(svgNs, 'path');
-  bagDetail.setAttribute('d', 'M9.75 12.25h4.5');
-  bagDetail.setAttribute('fill', 'none');
-  bagDetail.setAttribute('stroke', 'rgba(255, 255, 255, 0.85)');
-  bagDetail.setAttribute('stroke-width', '1.4');
-  bagDetail.setAttribute('stroke-linecap', 'round');
-  bagDetail.setAttribute('stroke-linejoin', 'round');
-  bagDetail.setAttribute('opacity', '0.9');
-
-  svg.append(bagOutline, bagDetail);
-  icon.appendChild(svg);
-  button.appendChild(icon);
-
-  const label = document.createElement('span');
-  label.className = 'text-[0.75rem] uppercase tracking-[0.08em]';
-  label.textContent = 'Stash';
-  button.appendChild(label);
-
-  const count = document.createElement('span');
-  count.className =
-    'min-w-[1.5rem] rounded-full bg-white/15 px-2 py-[0.1rem] text-center text-xs font-semibold text-white/90';
-  count.textContent = '0';
-  count.setAttribute('aria-hidden', 'true');
-  button.appendChild(count);
-
-  return { button, count };
-}
-
 function createShopButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -252,19 +187,19 @@ export function setupInventoryHud(
     return { destroy: () => {} };
   }
 
-  const { anchors } = ensureHudLayout(overlay);
+  const { anchors, tabs } = ensureHudLayout(overlay);
   const topLeftCluster = anchors.topLeftCluster;
   const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
   overlay.querySelector('#inventory-shop-panel')?.remove();
 
-  overlay
-    .querySelectorAll<HTMLButtonElement>('[data-testid="inventory-badge"]')
-    .forEach((el) => el.remove());
-  const { button: badgeButton, count: badgeCount } = createBadge();
-  badgeButton.dataset.autoequip = inventory.isAutoEquipEnabled() ? 'on' : 'off';
-  topLeftCluster.appendChild(badgeButton);
+  const stashSlot = tabs.panels.stash;
+  stashSlot.replaceChildren();
+
+  const updateStashBadge = (count: number): void => {
+    tabs.setBadge('stash', count > 0 ? count : null);
+  };
 
   const shopNumberFormatter = new Intl.NumberFormat('en-US');
   let shopPanel: SaunaShopPanelController | null = null;
@@ -348,7 +283,9 @@ export function setupInventoryHud(
         next ? 'Close artocoin shop' : 'Open artocoin shop'
       );
       if (next) {
-        setOpen(false);
+        if (tabs.getActive() === 'stash') {
+          tabs.setActive('roster');
+        }
         overlay.classList.add('inventory-shop-open');
         const view = resolveView();
         shopPanel?.update(view);
@@ -379,7 +316,11 @@ export function setupInventoryHud(
   }
 
   const panelCallbacks: StashPanelCallbacks = {
-    onClose: () => setOpen(false),
+    onClose: () => {
+      if (tabs.getActive() === 'stash') {
+        tabs.setActive('roster');
+      }
+    },
     onCollectionChange: (next) => {
       if (collection !== next) {
         collection = next;
@@ -419,7 +360,6 @@ export function setupInventoryHud(
     getAutoEquipState: () => inventory.isAutoEquipEnabled(),
     onAutoEquipChange: (enabled) => {
       inventory.setAutoEquip(enabled);
-      badgeButton.dataset.autoequip = enabled ? 'on' : 'off';
       showToast(
         toastStack,
         enabled
@@ -443,38 +383,39 @@ export function setupInventoryHud(
 
   const panel = createStashPanel(panelCallbacks);
   panel.element.id = 'inventory-stash-panel';
-  overlay.appendChild(panel.element);
+  stashSlot.appendChild(panel.element);
 
-  let isStashOpen = false;
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();
   let search = '';
   let sort: InventorySort = 'newest';
   let page = 1;
 
-  function setOpen(next: boolean): void {
-    if (isStashOpen === next) {
-      return;
-    }
-    isStashOpen = next;
-    panel.setOpen(isStashOpen);
-    badgeButton.setAttribute('aria-expanded', isStashOpen ? 'true' : 'false');
-    badgeButton.setAttribute(
-      'aria-label',
-      isStashOpen ? 'Close quartermaster stash' : 'Open quartermaster stash'
-    );
-    if (isStashOpen) {
-      setShopOpen(false);
+  const applyStashOpen = (open: boolean, focusPanel: boolean): void => {
+    panel.setOpen(open);
+    if (open) {
       overlay.classList.add('inventory-panel-open');
-      try {
-        panel.focus();
-      } catch (error) {
-        console.warn('Unable to focus stash panel', error);
+      if (focusPanel) {
+        try {
+          panel.focus();
+        } catch (error) {
+          console.warn('Unable to focus stash panel', error);
+        }
       }
     } else {
       overlay.classList.remove('inventory-panel-open');
     }
-  }
+  };
+
+  const unsubscribeTabs = tabs.onChange((tabId) => {
+    const open = tabId === 'stash';
+    if (open) {
+      setShopOpen(false);
+    }
+    applyStashOpen(open, open);
+  });
+
+  applyStashOpen(tabs.getActive() === 'stash', false);
 
   function computeView(): InventoryPanelView {
     const comparisonContext = options.getComparisonContext?.() ?? null;
@@ -513,8 +454,7 @@ export function setupInventoryHud(
     const view = computeView();
     const stashSummary = view.collections.find((entry) => entry.id === 'stash');
     const stashCount = stashSummary?.count ?? 0;
-    badgeCount.textContent = String(stashCount);
-    badgeButton.dataset.count = String(stashCount);
+    updateStashBadge(stashCount);
     panel.render(view);
   }
 
@@ -614,7 +554,6 @@ export function setupInventoryHud(
         break;
       }
       case 'settings-updated':
-        badgeButton.dataset.autoequip = event.autoEquip ? 'on' : 'off';
         panel.setAutoEquip(event.autoEquip);
         break;
       default:
@@ -624,18 +563,14 @@ export function setupInventoryHud(
 
   const unsubscribe = inventory.on((event) => handleInventoryEvent(event));
 
-  const onBadgeClick = () => {
-    setOpen(!isStashOpen);
-  };
-  badgeButton.addEventListener('click', onBadgeClick);
-
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.defaultPrevented) {
       return;
     }
     if (event.code === 'KeyI' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
-      setOpen(!isStashOpen);
+      const active = tabs.getActive();
+      tabs.setActive(active === 'stash' ? 'roster' : 'stash');
     }
   };
   window.addEventListener('keydown', onKeyDown);
@@ -644,10 +579,10 @@ export function setupInventoryHud(
 
   const destroy = (): void => {
     unsubscribe();
-    badgeButton.removeEventListener('click', onBadgeClick);
+    unsubscribeTabs();
     window.removeEventListener('keydown', onKeyDown);
-    badgeButton.remove();
     panel.destroy();
+    updateStashBadge(0);
     overlay.classList.remove('inventory-panel-open');
     if (shopButton && onShopButtonClick) {
       shopButton.removeEventListener('click', onShopButtonClick);
