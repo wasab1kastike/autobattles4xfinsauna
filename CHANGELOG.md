@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Harden the sprite export pipeline so PNG rasterization finishes before the
+  manifest updates, keeping the JSON and bitmap artifacts synchronized when the
+  helper runs via `npm run export:sprites`.
+
 - Relax the sprite transform parser to accept whitespace-separated translate
   and scale values, cover the `parseTransform` helper with Vitest to lock in
   the tolerant spacing, and refresh the generated sprite manifest to confirm
