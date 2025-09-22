@@ -70,7 +70,9 @@ function createStubUnit(
     },
     isDead: () => false,
     getMaxHealth: () => 10,
-    getVisionRange: () => visionRange
+    getVisionRange: () => visionRange,
+    getShield: () => 0,
+    combatKeywords: null
   } as unknown as Unit;
 }
 
@@ -206,5 +208,85 @@ describe('drawUnits', () => {
     const [, , opts] = drawUnitSpriteMock.fn.mock.calls[0];
     expect(opts.selection).toEqual({ isSelected: true, isPrimary: true });
     expect(ctx.strokeRect).toHaveBeenCalledWith(10, 20, 30, 40);
+  });
+
+  it('pushes status overlays for visible units', () => {
+    const player = createStubUnit('player', 'player', { q: 0, r: 0 }, 'soldier');
+    (player as { selected?: boolean }).selected = true;
+    player.stats.health = 6;
+    (player as unknown as { getShield: () => number }).getShield = () => 2;
+    (player as unknown as { combatKeywords: unknown }).combatKeywords = [
+      { keyword: 'Shield', stacks: 2 }
+    ];
+    const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
+    const origin: PixelCoord = { x: 12, y: -6 };
+    const ctx = createMockContext();
+    const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const assets = {
+      'unit-soldier': makeImage(),
+      placeholder: makeImage()
+    };
+    const pushUnitStatus = vi.fn();
+
+    drawUnits(
+      ctx,
+      mapRenderer,
+      assets,
+      [player],
+      origin,
+      { pushUnitStatus },
+      [player],
+      null,
+      player.coord
+    );
+
+    expect(pushUnitStatus).toHaveBeenCalledTimes(1);
+    const payload = pushUnitStatus.mock.calls[0][0];
+    expect(payload).toMatchObject({
+      id: 'player',
+      hp: 6,
+      maxHp: 10,
+      shield: 2,
+      faction: 'player',
+      selected: true
+    });
+    expect(payload.world).toEqual({ x: 48, y: 72 });
+    expect(payload.radius).toBeGreaterThan(10);
+    expect(payload.buffs).toEqual([
+      {
+        id: 'Shield',
+        remaining: Infinity,
+        duration: Infinity,
+        stacks: 2
+      }
+    ]);
+  });
+
+  it('skips status overlays for enemies outside of vision', () => {
+    const friendly = createStubUnit('friendly', 'player', { q: 0, r: 0 }, 'soldier');
+    const enemy = createStubUnit('enemy', 'enemy', { q: 6, r: 0 }, 'marauder');
+    const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
+    const origin: PixelCoord = { x: 0, y: 0 };
+    const ctx = createMockContext();
+    const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const assets = {
+      'unit-marauder': makeImage(),
+      placeholder: makeImage()
+    };
+    const pushUnitStatus = vi.fn();
+
+    drawUnits(
+      ctx,
+      mapRenderer,
+      assets,
+      [enemy],
+      origin,
+      { pushUnitStatus },
+      [friendly],
+      null,
+      null
+    );
+
+    expect(pushUnitStatus).not.toHaveBeenCalled();
   });
 });
