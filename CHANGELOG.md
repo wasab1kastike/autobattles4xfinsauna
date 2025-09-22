@@ -308,9 +308,10 @@
   `saunaDestroyed` defeat events through the tracker and combat manager so runs
   end immediately when enemies raze the structure, with progress summaries now
   reporting sauna durability.
-- Prevent Saunoja overlays from double-rendering player combatants by omitting
-  player-faction units from battlefield draw passes whenever attendants are
-  projected on top of the map.
+- Restore friendly sprite rendering alongside Saunoja overlays by feeding the
+  full unit roster into the battlefield renderer, retargeting the overlay hook
+  to unattached attendants for HUD/status duties, and extending renderer and
+  game-loop Vitest coverage so the FX layer still captures friendly payloads.
 - Preserve enemy visibility when Saunoja overlays hide player sprites by
   routing friendly vision sources through the renderer and covering the
   regression with a focused Vitest battlefield draw test.

@@ -110,7 +110,7 @@ describe('drawUnits', () => {
     });
   });
 
-  it('renders enemies within friendly vision when Saunoja overlay hides player sprites', () => {
+  it('renders friendly and enemy units that share vision', () => {
     const friendly = createStubUnit('friendly', 'player', { q: 0, r: 0 }, 'soldier');
     const enemy = createStubUnit('enemy', 'enemy', { q: 1, r: 0 }, 'marauder');
     const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
@@ -123,12 +123,23 @@ describe('drawUnits', () => {
       placeholder: makeImage()
     };
 
-    drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, [friendly], null, null);
+    drawUnits(ctx, mapRenderer, assets, [friendly, enemy], origin, undefined, [friendly], null, null);
 
-    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(1);
-    const call = drawUnitSpriteMock.fn.mock.calls[0];
-    expect(call[1]).toBe(enemy);
-    expect(call[2]).toMatchObject({
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
+    const [friendlyCall, enemyCall] = drawUnitSpriteMock.fn.mock.calls;
+    expect(friendlyCall[1]).toBe(friendly);
+    expect(friendlyCall[2]).toMatchObject({
+      faction: 'player',
+      placement: {
+        coord: friendly.coord,
+        hexSize: 32,
+        origin,
+        zoom: 1,
+        type: 'soldier'
+      }
+    });
+    expect(enemyCall[1]).toBe(enemy);
+    expect(enemyCall[2]).toMatchObject({
       faction: 'enemy',
       placement: {
         coord: enemy.coord,

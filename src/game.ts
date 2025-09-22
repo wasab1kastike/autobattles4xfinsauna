@@ -2140,36 +2140,46 @@ export function draw(): void {
         commitOverlayFrame: () => unitFx!.commitStatusFrame()
       }
     : undefined;
-  const hasSaunojaOverlays = Array.isArray(saunojas) && saunojas.length > 0;
   const friendlyVisionSources = units.filter(
     (unit) => unit.faction === 'player' && !unit.isDead()
   );
+  const overlaySaunojas = saunojas.filter((attendant) => {
+    const attachedId = saunojaToUnit.get(attendant.id);
+    if (!attachedId) {
+      return false;
+    }
+    const attachedUnit = unitsById.get(attachedId) ?? null;
+    if (!attachedUnit) {
+      return true;
+    }
+    return attachedUnit.isDead();
+  });
   const saunaVision: VisionSource | null = sauna
     ? {
         coord: sauna.pos,
         range: sauna.visionRange
       }
     : null;
-  const renderUnits = hasSaunojaOverlays
-    ? units.filter((unit) => unit.faction !== 'player')
-    : units;
 
   ctx.save();
   if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
     ctx.translate(shakeOffset.x, shakeOffset.y);
   }
-  render(ctx, mapRenderer, assets.images, renderUnits, selected, {
-    saunojas: {
-      units: saunojas,
-      draw: drawSaunojas,
-      resolveRenderCoord: (attendant) => {
-        const unit = getAttachedUnitFor(attendant);
-        if (!unit) {
-          return null;
-        }
-        return unit.renderCoord ?? unit.coord;
-      }
-    },
+  render(ctx, mapRenderer, assets.images, units, selected, {
+    saunojas:
+      overlaySaunojas.length > 0
+        ? {
+            units: overlaySaunojas,
+            draw: drawSaunojas,
+            resolveRenderCoord: (attendant) => {
+              const unit = getAttachedUnitFor(attendant);
+              if (!unit) {
+                return null;
+              }
+              return unit.renderCoord ?? unit.coord;
+            }
+          }
+        : undefined,
     sauna,
     saunaVision,
     fx: fxOptions,
