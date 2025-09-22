@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
 interface SpriteTransform {
   readonly translateX: number;
@@ -116,6 +117,75 @@ async function loadSprites(directory: string): Promise<SpriteManifestEntry[]> {
   return manifestEntries;
 }
 
+interface SpriteScaleDefinition {
+  readonly suffix: string;
+  readonly multiplier: number;
+}
+
+const PNG_BASE_SIZE = 64;
+const PNG_SCALES: readonly SpriteScaleDefinition[] = [
+  { suffix: '', multiplier: 1 },
+  { suffix: '@2x', multiplier: 2 }
+];
+
+async function pruneObsoletePngs(
+  outputDirectory: string,
+  expectedFiles: ReadonlySet<string>
+): Promise<void> {
+  const entries = await readdir(outputDirectory, { withFileTypes: true });
+
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.png'))
+      .filter((entry) => !expectedFiles.has(entry.name))
+      .map(async (entry) => {
+        const filePath = path.join(outputDirectory, entry.name);
+        await unlink(filePath);
+      })
+  );
+}
+
+async function exportSpritePngs(
+  sprites: readonly SpriteManifestEntry[],
+  spriteDirectory: string,
+  outputDirectory: string
+): Promise<void> {
+  await mkdir(outputDirectory, { recursive: true });
+
+  const expectedFiles = new Set<string>();
+  for (const sprite of sprites) {
+    for (const { suffix } of PNG_SCALES) {
+      const fileName = `${sprite.id}${suffix}.png`;
+      expectedFiles.add(fileName);
+    }
+  }
+
+  await pruneObsoletePngs(outputDirectory, expectedFiles);
+
+  for (const sprite of sprites) {
+    const svgPath = path.join(spriteDirectory, `${sprite.id}.svg`);
+    const svgBuffer = await readFile(svgPath);
+
+    for (const { suffix, multiplier } of PNG_SCALES) {
+      const dimension = PNG_BASE_SIZE * multiplier;
+      const outputPath = path.join(outputDirectory, `${sprite.id}${suffix}.png`);
+
+      await sharp(svgBuffer)
+        .resize({
+          width: dimension,
+          height: dimension,
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0 }
+        })
+        .png({
+          compressionLevel: 9,
+          adaptiveFiltering: true
+        })
+        .toFile(outputPath);
+    }
+  }
+}
+
 async function writeManifest(manifestPath: string, entries: SpriteManifestEntry[]): Promise<void> {
   const manifest = {
     generatedAt: new Date().toISOString(),
@@ -131,11 +201,19 @@ async function main(): Promise<void> {
   const root = path.resolve(scriptDir, '..');
   const spriteDir = path.join(root, 'assets', 'sprites');
   const manifestPath = path.join(spriteDir, 'manifest.json');
+  const pngOutputDir = path.join(root, 'public', 'sprites');
 
   try {
     const entries = await loadSprites(spriteDir);
     await writeManifest(manifestPath, entries);
-    console.log(`Exported ${entries.length} sprite definitions to ${path.relative(root, manifestPath)}.`);
+    await exportSpritePngs(entries, spriteDir, pngOutputDir);
+
+    console.log(
+      `Exported ${entries.length} sprite definitions to ${path.relative(
+        root,
+        manifestPath
+      )} and rendered PNG sprites to ${path.relative(root, pngOutputDir)}.`
+    );
   } catch (error) {
     console.error('Failed to export sprite metadata:', error);
     process.exitCode = 1;
