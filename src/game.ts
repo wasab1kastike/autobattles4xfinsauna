@@ -123,7 +123,21 @@ import {
 } from './ui/rosterHUD.ts';
 import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
-import { logEvent } from './ui/logging.ts';
+import { getLogHistory, logEvent, subscribeToLogs } from './ui/logging.ts';
+import {
+  createUiV2RosterController,
+  type UiV2RosterController
+} from './uiV2/rosterController.ts';
+import {
+  createUiV2TopbarController,
+  type UiV2TopbarController
+} from './uiV2/topbarController.ts';
+import {
+  createUiV2InventoryController,
+  type UiV2InventoryController
+} from './uiV2/inventoryController.ts';
+import { createUiV2LogController, type UiV2LogController } from './uiV2/logController.ts';
+import { createUiV2SaunaController, type UiV2SaunaController } from './uiV2/saunaController.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -214,6 +228,11 @@ let lastEnemyRampSummary: EnemyRampSummary | null = null;
 const enemyRampListeners = new Set<(
   summary: EnemyRampSummary | null
 ) => void>();
+let uiV2RosterController: UiV2RosterController | null = null;
+let uiV2TopbarController: UiV2TopbarController | null = null;
+let uiV2InventoryController: UiV2InventoryController | null = null;
+let uiV2LogController: UiV2LogController | null = null;
+let uiV2SaunaController: UiV2SaunaController | null = null;
 
 function notifyRosterSummary(summary: RosterHudSummary): void {
   lastRosterSummary = summary;
@@ -256,6 +275,19 @@ function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
       console.warn('Failed to notify enemy ramp listener', error);
     }
   }
+}
+
+function disposeUiV2Controllers(): void {
+  uiV2RosterController?.dispose();
+  uiV2RosterController = null;
+  uiV2TopbarController?.dispose();
+  uiV2TopbarController = null;
+  uiV2InventoryController?.dispose();
+  uiV2InventoryController = null;
+  uiV2LogController?.dispose();
+  uiV2LogController = null;
+  uiV2SaunaController?.dispose();
+  uiV2SaunaController = null;
 }
 let animationFrameId: number | null = null;
 let running = false;
@@ -736,6 +768,7 @@ export function setupGame(
   const hudVariant = options.hudVariant ?? 'classic';
   const useClassicHud = hudVariant === 'classic';
   overlayEl.dataset.hudVariant = hudVariant;
+  disposeUiV2Controllers();
   hudElapsedMs = 0;
   notifyHudElapsed();
   notifyEnemyRamp(null);
@@ -869,6 +902,57 @@ export function setupGame(
         saunaShopListeners.add(listener);
         return () => saunaShopListeners.delete(listener);
       }
+    });
+  }
+
+  if (!useClassicHud) {
+    uiV2RosterController = createUiV2RosterController({
+      getSummary: () => getRosterSummarySnapshot(),
+      subscribeSummary: (listener) => subscribeRosterSummary(listener),
+      getEntries: () => getRosterEntriesSnapshot(),
+      subscribeEntries: (listener) => subscribeRosterEntries(listener)
+    });
+    uiV2TopbarController = createUiV2TopbarController({
+      getResource: (resource) => state.getResource(resource),
+      subscribeResourceChange: (listener) => {
+        const handler = (
+          payload: { resource: Resource; total: number; amount: number }
+        ) => {
+          listener(payload);
+        };
+        eventBus.on('resourceChanged', handler);
+        return () => {
+          eventBus.off('resourceChanged', handler);
+        };
+      },
+      getArtocoinBalance: () => artocoinBalance,
+      subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
+      getElapsedMs: () => getHudElapsedMs(),
+      subscribeHudTime: (listener) => subscribeHudTime(listener),
+      getEnemyRamp: () => lastEnemyRampSummary,
+      subscribeEnemyRamp: (listener) => subscribeEnemyRamp(listener)
+    });
+    uiV2InventoryController = createUiV2InventoryController({
+      buildSaunaShopViewModel,
+      subscribeToSaunaShop: (listener) => {
+        saunaShopListeners.add(listener);
+        return () => saunaShopListeners.delete(listener);
+      },
+      getUseUiV2,
+      setUseUiV2
+    });
+    uiV2LogController = createUiV2LogController({
+      getHistory: () => getLogHistory(),
+      subscribe: (listener) => subscribeToLogs(listener)
+    });
+    uiV2SaunaController = createUiV2SaunaController({
+      getSauna: () => sauna,
+      setupSaunaUi: (saunaInstance, controllerOptions) =>
+        setupSaunaUI(saunaInstance, controllerOptions),
+      setExternalController: setExternalSaunaUiController,
+      getActiveTierId: () => currentTierId,
+      setActiveTierId: (tierId, opts) => setActiveTier(tierId, opts),
+      getTierContext: () => getTierContext()
     });
   }
 
@@ -2547,4 +2631,24 @@ export function setRosterCapValue(
   options: { persist?: boolean } = {}
 ): number {
   return updateRosterCap(value, options);
+}
+
+export function getUiV2RosterController(): UiV2RosterController | null {
+  return uiV2RosterController;
+}
+
+export function getUiV2TopbarController(): UiV2TopbarController | null {
+  return uiV2TopbarController;
+}
+
+export function getUiV2InventoryController(): UiV2InventoryController | null {
+  return uiV2InventoryController;
+}
+
+export function getUiV2LogController(): UiV2LogController | null {
+  return uiV2LogController;
+}
+
+export function getUiV2SaunaController(): UiV2SaunaController | null {
+  return uiV2SaunaController;
 }
