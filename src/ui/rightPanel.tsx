@@ -7,7 +7,7 @@ import {
   type SchedulerEventContent,
   type SchedulerTriggeredPayload
 } from '../events';
-import { ensureHudLayout } from './layout.ts';
+import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
@@ -69,9 +69,9 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
-  const { regions, anchors, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
+  const { regions, anchors, dock, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
   const rightRegion = regions.right;
-  const commandDock = anchors.commandDock;
+  const commandDock = dock.actions;
   const rosterHudPanel = bottomTabs.panels.roster;
 
   const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle') => {
@@ -118,6 +118,17 @@ export function setupRightPanel(
 
   const smallViewportQuery = window.matchMedia('(max-width: 1040px)');
   const disposers: Array<() => void> = [];
+
+  const applyRosterState = (tabId: HudBottomTabId): void => {
+    if (tabId === 'roster') {
+      dispatchRosterEvent('expand');
+    } else {
+      dispatchRosterEvent('collapse');
+    }
+  };
+
+  applyRosterState(bottomTabs.getActive());
+  disposers.push(bottomTabs.onChange(applyRosterState));
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
@@ -464,6 +475,11 @@ export function setupRightPanel(
     Log: logSection
   };
 
+  const bottomTabTargets: Partial<Record<string, HudBottomTabId>> = {
+    Roster: 'roster',
+    Policies: 'policies',
+  };
+
   const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
   for (const [name, section] of Object.entries(tabs)) {
     section.classList.add('panel-section', 'panel-section--scroll');
@@ -482,8 +498,13 @@ export function setupRightPanel(
       b.disabled = isActive;
       b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     }
-    if (tab === 'Roster') {
-      dispatchRosterEvent('expand');
+    const targetBottomTab = bottomTabTargets[tab];
+    if (targetBottomTab) {
+      if (bottomTabs.getActive() !== targetBottomTab) {
+        bottomTabs.setActive(targetBottomTab);
+      } else {
+        applyRosterState(targetBottomTab);
+      }
     } else {
       dispatchRosterEvent('collapse');
     }

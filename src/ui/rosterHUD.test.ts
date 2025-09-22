@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ensureHudLayout } from './layout.ts';
 import type { RosterEntry } from './rightPanel.tsx';
 import { setupRosterHUD } from './rosterHUD.ts';
 
@@ -147,6 +148,31 @@ describe('rosterHUD', () => {
       expect(renderer).toHaveBeenCalledTimes(2);
     } finally {
       destroyContainer(container);
+    }
+  });
+
+  it('activates the roster tab when expand events fire', () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    try {
+      const layout = ensureHudLayout(overlay);
+      const rosterContainer = layout.tabs.panels.roster;
+      const hud = setupRosterHUD(rosterContainer, { rosterIcon: '/icon.svg' });
+
+      layout.tabs.setActive('stash');
+      expect(layout.tabs.getActive()).toBe('stash');
+
+      rosterContainer.dispatchEvent(
+        new CustomEvent('sauna-roster:expand', { bubbles: true })
+      );
+
+      expect(layout.tabs.getActive()).toBe('roster');
+
+      hud.destroy();
+    } finally {
+      overlay.remove();
     }
   });
 });

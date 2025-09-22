@@ -18,7 +18,7 @@ export function setupActionBar(
   container.dataset.tutorialTarget = 'combat';
   container.className = 'hud-command-tray';
 
-  const commandDock = layout.anchors.commandDock;
+  const commandDock = layout.dock?.actions ?? layout.anchors.commandDock;
   commandDock.appendChild(container);
 
   const root: Root = createRoot(container);

@@ -406,23 +406,25 @@ body > #game-container {
 .hud-anchor--command-dock {
   pointer-events: auto;
   position: relative;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: clamp(12px, 2.6vw, 20px);
-  width: min(100%, clamp(600px, 78vw, 960px));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(18px, 2.6vw, 28px);
+  width: min(100%, clamp(720px, 88vw, 1180px));
   margin: 0 auto;
-  padding: clamp(14px, 3.6vw, 22px) clamp(18px, 4.4vw, 30px);
-  border-radius: clamp(20px, 4vw, 32px);
-  border: 1px solid color-mix(in srgb, var(--hud-border-strong) 65%, rgba(94, 234, 212, 0.22));
+  padding: clamp(20px, 3.2vw, 34px);
+  border-radius: clamp(28px, 4.2vw, 42px);
+  border: 1px solid color-mix(in srgb, rgba(148, 163, 184, 0.55) 60%, rgba(59, 130, 246, 0.3));
   background:
-    radial-gradient(circle at 18% -30%, rgba(59, 130, 246, 0.28), transparent 68%),
-    radial-gradient(circle at 82% 130%, rgba(253, 164, 175, 0.26), transparent 72%),
-    linear-gradient(170deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.58));
+    radial-gradient(circle at 18% -32%, rgba(59, 130, 246, 0.35), transparent 62%),
+    radial-gradient(circle at 90% 128%, rgba(236, 72, 153, 0.32), transparent 68%),
+    radial-gradient(circle at 52% 118%, rgba(14, 116, 144, 0.26), transparent 74%),
+    linear-gradient(165deg, rgba(10, 16, 28, 0.92), rgba(17, 25, 44, 0.66));
   box-shadow:
-    0 24px 40px rgba(8, 25, 53, 0.46),
-    0 36px 72px rgba(8, 25, 53, 0.58);
-  backdrop-filter: blur(26px) saturate(155%);
+    0 36px 72px rgba(8, 25, 53, 0.58),
+    0 18px 36px rgba(8, 25, 53, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(30px) saturate(170%);
   overflow: hidden;
 }
 
@@ -436,17 +438,49 @@ body > #game-container {
 .hud-anchor--command-dock::after {
   content: '';
   position: absolute;
-  inset: 1px;
+  inset: 0;
   border-radius: inherit;
-  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 65%);
-  opacity: 0.3;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.16), transparent 45%),
+    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.2), transparent 50%);
+  opacity: 0.35;
   pointer-events: none;
-  transition: opacity var(--transition-snappy);
+  transition: opacity var(--transition-snappy), transform var(--transition-snappy);
 }
 
 .hud-anchor--command-dock:hover::after,
 .hud-anchor--command-dock:focus-within::after {
   opacity: 0.55;
+  transform: translateY(-1px);
+}
+
+.hud-command-dock__section {
+  display: flex;
+  width: 100%;
+}
+
+.hud-command-dock__tabs {
+  flex-direction: column;
+  gap: clamp(18px, 2.4vw, 26px);
+}
+
+.hud-command-dock__actions {
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: clamp(12px, 2vw, 18px);
+}
+
+.hud-command-dock__actions > * {
+  pointer-events: auto;
+}
+
+@media (max-width: 720px) {
+  .hud-command-dock__actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: clamp(10px, 4vw, 16px);
+  }
 }
 
 #ui-overlay:not(.hud-grid) .hud-top-row {
@@ -504,25 +538,24 @@ body > #game-container {
   justify-content: center;
   pointer-events: auto;
   width: 100%;
-  padding: 0 clamp(18px, 4vw, 48px);
 }
 
 .hud-bottom-tabs__chrome {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: clamp(16px, 2.4vw, 26px);
-  width: min(100%, 1120px);
-  padding: clamp(20px, 3vw, 32px);
-  margin: 0 auto;
-  border-radius: clamp(26px, 3.6vw, 36px);
-  border: 1px solid color-mix(in srgb, rgba(148, 163, 184, 0.42) 55%, rgba(56, 189, 248, 0.42));
+  gap: clamp(16px, 2vw, 22px);
+  width: 100%;
+  padding: clamp(18px, 2.6vw, 28px);
+  border-radius: clamp(24px, 3.2vw, 32px);
+  border: 1px solid color-mix(in srgb, rgba(148, 163, 184, 0.45) 60%, rgba(59, 130, 246, 0.35));
   background:
-    radial-gradient(circle at 0% -18%, rgba(56, 189, 248, 0.26), transparent 60%),
-    radial-gradient(circle at 102% 128%, rgba(236, 72, 153, 0.24), transparent 62%),
-    linear-gradient(140deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.64));
-  box-shadow: 0 42px 80px rgba(8, 25, 53, 0.52);
-  backdrop-filter: blur(28px) saturate(165%);
+    linear-gradient(150deg, rgba(15, 23, 42, 0.82), rgba(30, 41, 59, 0.58)),
+    radial-gradient(circle at 110% -10%, rgba(236, 72, 153, 0.18), transparent 55%),
+    radial-gradient(circle at 0% 120%, rgba(56, 189, 248, 0.18), transparent 58%);
+  box-shadow:
+    0 32px 64px rgba(8, 25, 53, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 @media (min-width: 721px) {
@@ -535,12 +568,12 @@ body > #game-container {
 .hud-bottom-tabs__chrome::before {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 1px;
   border-radius: inherit;
-  border: 1px solid rgba(148, 163, 184, 0.2);
   pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 60%);
   mix-blend-mode: screen;
-  opacity: 0.55;
+  opacity: 0.4;
 }
 
 .hud-bottom-tabs__list {
@@ -626,6 +659,10 @@ body > #game-container {
 }
 
 .hud-bottom-tabs__panel--roster {
+  display: block;
+}
+
+.hud-bottom-tabs__panel--stash {
   display: block;
 }
 
