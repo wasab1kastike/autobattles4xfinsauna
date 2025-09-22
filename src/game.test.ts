@@ -530,7 +530,7 @@ describe('setupGame HUD variants', () => {
 });
 
 describe('rendering', () => {
-  it('omits player units from the render pass when Saunoja overlays are active', async () => {
+  it('passes all active units to the renderer while Saunoja overlays target unattached attendants', async () => {
     const assetsModule = await import('./game/assets.ts');
     assetsModule.resetAssetsForTest();
     const fakeImage = document.createElement('img') as HTMLImageElement;
@@ -589,19 +589,9 @@ describe('rendering', () => {
 
       expect(renderSpy).toHaveBeenCalledTimes(1);
       const [, , , unitsArg, , drawOptions] = renderSpy.mock.calls[0]!;
-      expect(unitsArg.some((unit) => unit.faction === 'player')).toBe(false);
+      expect(unitsArg.some((unit) => unit.id === playerUnit.id)).toBe(true);
       expect(unitsArg.some((unit) => unit.id === enemyUnit.id)).toBe(true);
-      const saunojaOverlay = drawOptions?.saunojas;
-      expect(saunojaOverlay?.units?.length ?? 0).toBeGreaterThan(0);
-      expect(typeof saunojaOverlay?.resolveRenderCoord).toBe('function');
-      const resolvedCoords = saunojaOverlay?.units
-        ?.map((attendant) => saunojaOverlay.resolveRenderCoord?.(attendant) ?? null)
-        .filter((coord): coord is { q: number; r: number } => !!coord);
-      expect(
-        resolvedCoords?.some(
-          (coord) => coord.q === playerUnit.renderCoord?.q && coord.r === playerUnit.renderCoord?.r
-        )
-      ).toBe(true);
+      expect(drawOptions?.saunojas).toBeUndefined();
     } finally {
       renderSpy.mockRestore();
       assetsModule.resetAssetsForTest();
