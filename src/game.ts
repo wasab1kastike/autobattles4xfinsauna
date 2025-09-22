@@ -13,6 +13,7 @@ import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
+import type { SaunaStatusPayload, UnitStatusPayload } from './ui/fx/types.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
@@ -1953,7 +1954,14 @@ export function draw(): void {
   }
   const shakeOffset = unitFx?.getShakeOffset() ?? { x: 0, y: 0 };
   const fxOptions = unitFx
-    ? { getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id) }
+    ? {
+        getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id),
+        beginOverlayFrame: () => unitFx!.beginStatusFrame(),
+        pushUnitStatus: (status: UnitStatusPayload) => unitFx!.pushUnitStatus(status),
+        pushSaunaStatus: (status: SaunaStatusPayload | null) =>
+          unitFx!.pushSaunaStatus(status),
+        commitOverlayFrame: () => unitFx!.commitStatusFrame()
+      }
     : undefined;
   const hasSaunojaOverlays = Array.isArray(saunojas) && saunojas.length > 0;
   const friendlyVisionSources = units.filter(
