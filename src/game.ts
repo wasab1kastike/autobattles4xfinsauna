@@ -13,7 +13,13 @@ import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
-import type { SaunaStatusPayload, UnitStatusPayload } from './ui/fx/types.ts';
+import type {
+  SaunaStatusPayload,
+  SelectionItemSlot,
+  SelectionStatusChip,
+  UnitSelectionPayload,
+  UnitStatusPayload
+} from './ui/fx/types.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
@@ -293,6 +299,67 @@ function disposeUiV2Controllers(): void {
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
+
+function getSelectedSaunoja(): Saunoja | null {
+  return saunojas.find((unit) => unit.selected) ?? null;
+}
+
+function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
+  const itemsSource = Array.isArray(attendant.items) ? attendant.items : [];
+  const modifiersSource = Array.isArray(attendant.modifiers) ? attendant.modifiers : [];
+  const items: SelectionItemSlot[] = itemsSource.map((item, index) => ({
+    id: typeof item.id === 'string' && item.id.length > 0 ? item.id : `${attendant.id}-item-${index}`,
+    name: item.name?.trim() || 'Artifact',
+    icon: item.icon || undefined,
+    rarity: item.rarity || undefined,
+    quantity:
+      Number.isFinite(item.quantity) && item.quantity > 1
+        ? Math.max(1, Math.round(item.quantity))
+        : undefined
+  }));
+  const statuses: SelectionStatusChip[] = modifiersSource.map((modifier, index) => ({
+    id:
+      typeof modifier.id === 'string' && modifier.id.length > 0
+        ? modifier.id
+        : `modifier-${index}`,
+    label: modifier.name?.trim() || modifier.id || 'Status',
+    remaining: Number.isFinite(modifier.remaining) ? Math.max(0, modifier.remaining) : Infinity,
+    duration: Number.isFinite(modifier.duration) ? Math.max(0, modifier.duration) : Infinity,
+    stacks:
+      Number.isFinite(modifier.stacks) && (modifier.stacks as number) > 1
+        ? Math.max(1, Math.round(modifier.stacks as number))
+        : undefined
+  }));
+
+  const hpValue = Number.isFinite(attendant.hp) ? Math.max(0, attendant.hp) : 0;
+  const maxHpValue = Number.isFinite(attendant.maxHp) ? Math.max(1, attendant.maxHp) : 1;
+  const shieldValue = Number.isFinite(attendant.shield) ? Math.max(0, attendant.shield) : 0;
+
+  return {
+    id: attendant.id,
+    name: attendant.name?.trim() || 'Saunoja',
+    faction: 'player',
+    coord: { q: attendant.coord.q, r: attendant.coord.r },
+    hp: hpValue,
+    maxHp: maxHpValue,
+    shield: shieldValue,
+    items,
+    statuses
+  } satisfies UnitSelectionPayload;
+}
+
+function syncSelectionOverlay(): void {
+  if (!unitFx) {
+    return;
+  }
+  const selectedSaunoja = getSelectedSaunoja();
+  if (!selectedSaunoja) {
+    unitFx.setSelection(null);
+    return;
+  }
+  unitFx.setSelection(buildSelectionPayload(selectedSaunoja));
+}
+
 let objectiveTracker: ObjectiveTracker | null = null;
 let endScreen: EndScreenController | null = null;
 let tutorial: TutorialController | null = null;
@@ -789,6 +856,7 @@ export function setupGame(
       draw();
     }
   });
+  syncSelectionOverlay();
   if (rosterHud) {
     rosterHud.destroy();
     rosterHud = null;
@@ -1141,6 +1209,7 @@ function syncSaunojaRosterWithUnits(): boolean {
 
   if (changed) {
     saveUnits();
+    syncSelectionOverlay();
   }
 
   return changed;
@@ -1793,6 +1862,7 @@ function setSelectedCoord(next: AxialCoord | null): boolean {
     return false;
   }
   selected = next ? { q: next.q, r: next.r } : null;
+  syncSelectionOverlay();
   return true;
 }
 
@@ -1817,6 +1887,9 @@ function clearSaunojaSelection(): boolean {
   }
   if (setSelectedCoord(null)) {
     changed = true;
+  }
+  if (!changed) {
+    syncSelectionOverlay();
   }
   return changed;
 }
@@ -1851,6 +1924,7 @@ function focusSaunoja(target: Saunoja): boolean {
   if (setSelectedCoord(target.coord)) {
     changed = true;
   }
+  syncSelectionOverlay();
   return changed;
 }
 
@@ -1900,6 +1974,9 @@ function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResu
   eventBus.emit('inventoryChanged', {});
   saveUnits();
   updateRosterDisplay();
+  if (attendant.selected) {
+    syncSelectionOverlay();
+  }
   const previous = beforeLoadout.find((entry) => entry.slot === outcome.slot) ?? null;
   const comparison: InventoryComparison = {
     slot: outcome.slot,
@@ -1924,6 +2001,9 @@ function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaI
   eventBus.emit('inventoryChanged', {});
   saveUnits();
   updateRosterDisplay();
+  if (attendant.selected) {
+    syncSelectionOverlay();
+  }
   const { id, name, description, icon, rarity, quantity } = outcome.removed;
   return { id, name, description, icon, rarity, quantity } satisfies SaunojaItem;
 }
@@ -2497,6 +2577,7 @@ function refreshRosterPanel(entries?: RosterEntry[]): void {
   const view = entries ?? buildRosterEntries();
   pendingRosterEntries = view;
   notifyRosterEntries(view);
+  syncSelectionOverlay();
   if (!rosterHud) {
     return;
   }
@@ -2513,6 +2594,7 @@ function updateRosterDisplay(): void {
     pendingRosterSummary = summary;
   }
   refreshRosterPanel();
+  syncSelectionOverlay();
 }
 
 export function getRosterSummarySnapshot(): RosterHudSummary {
