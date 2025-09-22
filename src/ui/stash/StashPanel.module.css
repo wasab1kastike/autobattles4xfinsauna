@@ -1,9 +1,10 @@
 .panel {
   position: fixed;
-  inset: 0 0 0 auto;
-  width: min(480px, 100%);
-  max-width: 100%;
-  height: 100%;
+  top: calc(var(--hud-padding) + env(safe-area-inset-top, 0px));
+  right: calc(var(--hud-padding) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--hud-padding) + env(safe-area-inset-bottom, 0px));
+  width: var(--inventory-panel-width);
+  max-width: min(100%, calc(100% - (var(--hud-padding) * 2)));
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(18, 22, 27, 0.95), rgba(10, 12, 16, 0.98));
@@ -24,7 +25,12 @@
 
 @media (max-width: 720px) {
   .panel {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
     width: 100%;
+    max-width: 100%;
     background: linear-gradient(185deg, rgba(16, 20, 26, 0.98), rgba(6, 8, 12, 0.98));
   }
 }
