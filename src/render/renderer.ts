@@ -10,6 +10,7 @@ import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
 import { getSpritePlacement } from './units/draw.ts';
+import type { SaunaStatusPayload, UnitStatusPayload } from '../ui/fx/types.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -60,6 +61,10 @@ function resolveSaunaVision(sauna?: SaunaVisionSource | null): VisionSource | nu
 
 export interface FxLayerOptions {
   getUnitAlpha?: (unit: Unit) => number;
+  beginOverlayFrame?: () => void;
+  pushUnitStatus?: (status: UnitStatusPayload) => void;
+  pushSaunaStatus?: (status: SaunaStatusPayload | null) => void;
+  commitOverlayFrame?: () => void;
 }
 
 export interface DrawOptions {
@@ -90,6 +95,8 @@ export function draw(
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
+  options?.fx?.beginOverlayFrame?.();
+
   const viewportWidth = canvasWidth / dpr;
   const viewportHeight = canvasHeight / dpr;
 
@@ -108,7 +115,8 @@ export function draw(
       originY: origin.y,
       hexRadius: mapRenderer.hexSize,
       zoom: camera.zoom,
-      resolveRenderCoord: saunojaLayer.resolveRenderCoord
+      resolveRenderCoord: saunojaLayer.resolveRenderCoord,
+      pushStatus: options?.fx?.pushUnitStatus
     });
   }
   drawUnits(
@@ -124,10 +132,13 @@ export function draw(
   if (options?.sauna) {
     drawSaunaOverlay(ctx, options.sauna, {
       origin,
-      hexSize: mapRenderer.hexSize
+      hexSize: mapRenderer.hexSize,
+      pushStatus: options?.fx?.pushSaunaStatus
     });
   }
   ctx.restore();
+
+  options?.fx?.commitOverlayFrame?.();
 }
 
 export function drawUnits(

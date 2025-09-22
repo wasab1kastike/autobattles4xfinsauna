@@ -1,5 +1,5 @@
 import { camera } from '../camera/autoFrame.ts';
-import { axialToPixel, type AxialCoord } from '../hex/HexUtils.ts';
+import { axialToPixel, type AxialCoord, type PixelCoord } from '../hex/HexUtils.ts';
 import { eventBus } from '../events/index.ts';
 import type {
   UnitDamagedPayload,
@@ -9,6 +9,8 @@ import type {
 import type { HexMapRenderer } from './HexMapRenderer.ts';
 import type { Unit } from '../units/Unit.ts';
 import { createFloaterLayer, type FloaterLayer } from '../ui/fx/Floater.tsx';
+import { createUnitStatusLayer, type UnitStatusLayer } from '../ui/fx/UnitStatusLayer.ts';
+import type { SaunaStatusPayload, UnitStatusPayload } from '../ui/fx/types.ts';
 
 export interface UnitFxOptions {
   canvas: HTMLCanvasElement;
@@ -22,6 +24,10 @@ export interface UnitFxManager {
   step(now: number): void;
   getShakeOffset(): { x: number; y: number };
   getUnitAlpha(unitId: string): number;
+  beginStatusFrame(): void;
+  pushUnitStatus(status: UnitStatusPayload): void;
+  pushSaunaStatus(status: SaunaStatusPayload | null): void;
+  commitStatusFrame(): void;
   dispose(): void;
 }
 
@@ -75,6 +81,24 @@ const coarsePointerQuery = typeof matchMedia === 'function'
 export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const { canvas, overlay, mapRenderer, getUnitById, requestDraw } = options;
   const floaterLayer: FloaterLayer = createFloaterLayer(overlay);
+  const projectWorld = (point: PixelCoord, offsetY = 0): PixelCoord | null => {
+    const canvasRect = canvas.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    if (canvasRect.width === 0 || canvasRect.height === 0) {
+      return null;
+    }
+    const relativeX = (point.x - camera.x) * camera.zoom + canvasRect.width / 2;
+    const relativeY = (point.y - camera.y) * camera.zoom + canvasRect.height / 2;
+    return {
+      x: relativeX + (canvasRect.left - overlayRect.left),
+      y: relativeY + (canvasRect.top - overlayRect.top) + offsetY
+    } satisfies PixelCoord;
+  };
+  const statusLayer: UnitStatusLayer = createUnitStatusLayer({
+    root: overlay,
+    project: projectWorld,
+    getZoom: () => camera.zoom
+  });
   const fades = new Map<string, FadeState>();
   const alphas = new Map<string, number>();
   const shakes: ShakeState[] = [];
@@ -97,19 +121,9 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   };
 
   const project = (coord: AxialCoord): { x: number; y: number } | null => {
-    const canvasRect = canvas.getBoundingClientRect();
-    const overlayRect = overlay.getBoundingClientRect();
-    if (canvasRect.width === 0 || canvasRect.height === 0) {
-      return null;
-    }
     const { x, y } = axialToPixel(coord, mapRenderer.hexSize);
-    const relativeX = (x - camera.x) * camera.zoom + canvasRect.width / 2;
-    const relativeY = (y - camera.y) * camera.zoom + canvasRect.height / 2;
-    const verticalLift = mapRenderer.hexSize * camera.zoom * 0.75;
-    return {
-      x: relativeX + (canvasRect.left - overlayRect.left),
-      y: relativeY + (canvasRect.top - overlayRect.top) - verticalLift
-    };
+    const verticalLift = -mapRenderer.hexSize * camera.zoom * 0.75;
+    return projectWorld({ x, y }, verticalLift);
   };
 
   const spawnFloater = (
@@ -230,7 +244,53 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     fades.clear();
     alphas.clear();
     floaterLayer.destroy();
+    statusLayer.destroy();
   };
 
-  return { step, getShakeOffset, getUnitAlpha, dispose };
+  const unitStatuses = new Map<string, UnitStatusPayload>();
+  let saunaStatus: SaunaStatusPayload | null = null;
+
+  const beginStatusFrame = () => {
+    unitStatuses.clear();
+    saunaStatus = null;
+  };
+
+  const pushUnitStatus = (status: UnitStatusPayload) => {
+    if (!status || typeof status.id !== 'string') {
+      return;
+    }
+    unitStatuses.set(status.id, status);
+  };
+
+  const pushSaunaStatus = (status: SaunaStatusPayload | null) => {
+    saunaStatus = status;
+  };
+
+  const commitStatusFrame = () => {
+    if (!statusLayer) {
+      return;
+    }
+    const entries = Array.from(unitStatuses.values()).filter((entry) => {
+      if (entry.visible === false) {
+        return false;
+      }
+      if (!Number.isFinite(entry.maxHp) || entry.maxHp <= 0) {
+        return false;
+      }
+      return entry.hp > 0;
+    });
+    const sauna = saunaStatus && saunaStatus.visible === false ? null : saunaStatus;
+    statusLayer.render({ units: entries, sauna: sauna ?? null });
+  };
+
+  return {
+    step,
+    getShakeOffset,
+    getUnitAlpha,
+    beginStatusFrame,
+    pushUnitStatus,
+    pushSaunaStatus,
+    commitStatusFrame,
+    dispose
+  } satisfies UnitFxManager;
 }

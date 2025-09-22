@@ -19,6 +19,11 @@
 - Rebuild the GitHub Pages mirror so the published bundle ships the "Return to
   Classic HUD" toggle and current commit badge.
 
+- Replace canvas-rendered attendant HP rings and sauna cooldown gauges with a
+  DOM-driven status layer that mirrors the existing gradients, pipes buff data
+  from the FX manager, cleans up when units fall, and ships with focused UI
+  tests to guard mounting and teardown.
+
 - Ship an accessible “Return to Classic HUD” control within the experimental
   overlay, persist the sauna settings toggle when players opt out, and reboot
   the classic layout instantly with fresh regression coverage.
