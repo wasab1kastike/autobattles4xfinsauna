@@ -69,9 +69,18 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
-  const { regions, anchors, mobileBar } = ensureHudLayout(overlay);
+  const { regions, anchors, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
   const rightRegion = regions.right;
   const commandDock = anchors.commandDock;
+  const rosterHudPanel = bottomTabs.panels.roster;
+
+  const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle') => {
+    if (!rosterHudPanel) {
+      return;
+    }
+    const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
+    rosterHudPanel.dispatchEvent(event);
+  };
 
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
@@ -472,6 +481,11 @@ export function setupRightPanel(
       const isActive = b.textContent === tab;
       b.disabled = isActive;
       b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    }
+    if (tab === 'Roster') {
+      dispatchRosterEvent('expand');
+    } else {
+      dispatchRosterEvent('collapse');
     }
   }
 
