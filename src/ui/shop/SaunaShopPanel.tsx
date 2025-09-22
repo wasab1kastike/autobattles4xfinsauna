@@ -110,13 +110,13 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
   balanceLabel.appendChild(balanceValue);
 
   const balanceIconWrap = document.createElement('div');
-  balanceIconWrap.className = 'relative h-12 w-12 flex-shrink-0';
+  balanceIconWrap.className = 'sauna-shop-panel__crest relative';
   balanceIconWrap.setAttribute('aria-hidden', 'true');
 
   const balanceIcon = document.createElement('img');
   balanceIcon.src = artocoinIconUrl;
   balanceIcon.alt = '';
-  balanceIcon.className = 'h-full w-full drop-shadow-[0_12px_18px_rgba(255,186,92,0.35)]';
+  balanceIcon.className = 'drop-shadow-[0_12px_18px_rgba(255,186,92,0.35)]';
   balanceIcon.decoding = 'async';
   balanceIconWrap.appendChild(balanceIcon);
 
@@ -154,7 +154,7 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
     headerRow.appendChild(titleBlock);
 
     const badge = document.createElement('div');
-    badge.className = 'h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/40 bg-slate-900/40 shadow-[0_8px_16px_rgba(0,0,0,0.35)]';
+    badge.className = 'sauna-shop-panel__tier-badge overflow-hidden rounded-full border border-white/40 bg-slate-900/40 shadow-[0_8px_16px_rgba(0,0,0,0.35)]';
     badge.style.backgroundImage = `url(${tier.art.badge})`;
     badge.style.backgroundSize = 'cover';
     badge.style.backgroundPosition = 'center';
