@@ -32,7 +32,7 @@ describe('enemy scaling integration', () => {
     id: 'integration-test',
     label: 'Integration Test',
     weight: 1,
-    units: Object.freeze([{ unit: 'avanto-marauder', level: 1, quantity: 1 }]),
+    units: Object.freeze([{ unit: 'raider', level: 1, quantity: 1 }]),
     items: Object.freeze([]),
     modifiers: Object.freeze([])
   };
