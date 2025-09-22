@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Standardize every unit sprite on a 64×64 canvas, re-export the SVGs with
+  consistent padding, refresh `UNIT_SPRITE_MAP` scale math, wire up an
+  `npm run export:sprites` helper that records the canvas manifest, document the
+  pipeline in `docs/design/unit-visuals.md`, and extend renderer tests to assert
+  the new dimensions.
+
 - Ship the Avanto raider art drop: replace the placeholder raider sprite with
   the production SVGs from art, add captain and shaman variants, register their
   renderer metadata, and expand sprite tests so the anchors and scale ratios
