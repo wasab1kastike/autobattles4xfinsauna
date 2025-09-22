@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Pull the stash drawer inside the HUD padding: clamp the inventory panel
+  width, align it with the overlay offsets, and teach the command dock plus
+  bottom tabs to respect the reserved space so the controls stay visible on
+  1366p and 1080p layouts.
+
 - Carve out a high-end sauna overlay: limit the canvas pass to the ambient
   glow, stream reusable perimeter anchors (angles, radii, world coords) to the
   status layer, restyle the DOM gauge into a slim annulus with a rotating badge
