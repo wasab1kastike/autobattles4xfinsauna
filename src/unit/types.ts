@@ -36,7 +36,13 @@ export interface UnitProgressionMap {
   visionRange?: StatProgression;
 }
 
-export type UnitArchetypeId = 'soldier' | 'archer' | 'avanto-marauder';
+export type UnitArchetypeId =
+  | 'soldier'
+  | 'archer'
+  | 'avanto-marauder'
+  | 'raider'
+  | 'raider-captain'
+  | 'raider-shaman';
 
 export interface UnitArchetypeDefinition {
   id: UnitArchetypeId;
