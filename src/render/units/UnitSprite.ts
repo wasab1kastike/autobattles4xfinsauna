@@ -3,6 +3,7 @@ import { getFactionPalette } from '../../theme/factionPalette.ts';
 import type { SpritePlacement, SpritePlacementInput } from './draw.ts';
 import { getSpritePlacement } from './draw.ts';
 import { snapForZoom } from '../zoom.ts';
+import type { PixelCoord } from '../../hex/HexUtils.ts';
 
 export interface UnitSpriteFootprint {
   readonly centerX: number;
@@ -31,6 +32,9 @@ export interface DrawUnitSpriteOptions {
   readonly motionStrength?: number;
   readonly cameraZoom?: number;
   readonly selection?: UnitSelectionState;
+  readonly anchorHint?: PixelCoord | null;
+  readonly offset?: PixelCoord | null;
+  readonly drawBase?: boolean;
 }
 
 interface GradientLike {
@@ -115,7 +119,8 @@ function drawBase(
   placement: SpritePlacement,
   hexSize: number,
   zoom: number,
-  palette: ReturnType<typeof resolveBasePalette>
+  palette: ReturnType<typeof resolveBasePalette>,
+  renderBase: boolean
 ): UnitSpriteFootprint {
   const radiusX = snapForZoom(hexSize * 0.78, zoom);
   const radiusY = snapForZoom(hexSize * 0.34, zoom);
@@ -123,6 +128,19 @@ function drawBase(
   const bottomY = placement.drawY + placement.height;
   const centerX = placement.centerX;
   const centerY = bottomY - bottomOffset + radiusY * 0.2;
+
+  const footprint = {
+    centerX,
+    centerY,
+    radiusX,
+    radiusY,
+    top: centerY - radiusY,
+    bottom: centerY + radiusY
+  } satisfies UnitSpriteFootprint;
+
+  if (!renderBase) {
+    return footprint;
+  }
 
   ctx.save();
   ctx.filter = 'none';
@@ -191,14 +209,7 @@ function drawBase(
   ctx.stroke();
   ctx.restore();
 
-  return {
-    centerX,
-    centerY,
-    radiusX,
-    radiusY,
-    top: centerY - radiusY,
-    bottom: centerY + radiusY
-  } satisfies UnitSpriteFootprint;
+  return footprint;
 }
 
 export function drawUnitSprite(
@@ -213,11 +224,46 @@ export function drawUnitSprite(
   const zoom = Number.isFinite(options.cameraZoom) && (options.cameraZoom as number) > 0
     ? (options.cameraZoom as number)
     : options.placement.zoom;
-  const spritePlacement = getSpritePlacement(options.placement);
+  const basePlacement = getSpritePlacement(options.placement);
   const motionStrength = Math.max(0, Math.min(1, options.motionStrength ?? 0));
   const palette = resolveBasePalette(options.faction ?? unit.faction, options.selection, motionStrength);
 
-  const footprint = drawBase(ctx, spritePlacement, options.placement.hexSize, zoom, palette);
+  const anchorHint = options.anchorHint;
+  const offset = options.offset;
+  const nextPlacement: SpritePlacement = {
+    ...basePlacement
+  };
+
+  if (anchorHint) {
+    const deltaX = anchorHint.x - nextPlacement.centerX;
+    const deltaY = anchorHint.y - nextPlacement.centerY;
+    if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+      nextPlacement.drawX += deltaX;
+      nextPlacement.drawY += deltaY;
+      nextPlacement.centerX += deltaX;
+      nextPlacement.centerY += deltaY;
+    }
+  }
+
+  if (offset) {
+    const deltaX = offset.x;
+    const deltaY = offset.y;
+    if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+      nextPlacement.drawX += deltaX;
+      nextPlacement.drawY += deltaY;
+      nextPlacement.centerX += deltaX;
+      nextPlacement.centerY += deltaY;
+    }
+  }
+
+  const footprint = drawBase(
+    ctx,
+    nextPlacement,
+    options.placement.hexSize,
+    zoom,
+    palette,
+    options.drawBase ?? true
+  );
 
   const sprite = options.sprite;
   if (sprite) {
@@ -225,16 +271,16 @@ export function drawUnitSprite(
     ctx.filter = previousFilter;
     ctx.drawImage(
       sprite,
-      spritePlacement.drawX,
-      spritePlacement.drawY,
-      spritePlacement.width,
-      spritePlacement.height
+      nextPlacement.drawX,
+      nextPlacement.drawY,
+      nextPlacement.width,
+      nextPlacement.height
     );
   }
 
   return {
-    placement: spritePlacement,
-    center: { x: spritePlacement.centerX, y: spritePlacement.centerY },
+    placement: nextPlacement,
+    center: { x: nextPlacement.centerX, y: nextPlacement.centerY },
     footprint
   } satisfies UnitSpriteRenderResult;
 }

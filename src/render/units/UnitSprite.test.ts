@@ -145,6 +145,49 @@ describe('drawUnitSprite', () => {
     expect(result.footprint.radiusY).toBeGreaterThan(0);
   });
 
+  it('allows anchoring and offsetting sprite placement without redrawing the base', () => {
+    const placementOptions: DrawUnitSpriteOptions['placement'] = {
+      coord,
+      hexSize: 32,
+      origin,
+      zoom: 1,
+      type: unit.type
+    };
+    const basePlacement = getSpritePlacement(placementOptions);
+    const anchorHint = { x: basePlacement.centerX + 8, y: basePlacement.centerY - 4 } satisfies PixelCoord;
+    const offset = { x: -6, y: 10 } satisfies PixelCoord;
+
+    const result = drawUnitSprite(ctx, unit, {
+      placement: placementOptions,
+      sprite,
+      faction: unit.faction,
+      cameraZoom: 1,
+      motionStrength: 0.2,
+      selection: { isSelected: false },
+      anchorHint,
+      offset,
+      drawBase: false
+    });
+
+    expect(ctx.beginPath).not.toHaveBeenCalled();
+    expect(result.placement.drawX).toBeCloseTo(
+      basePlacement.drawX + (anchorHint.x - basePlacement.centerX) + offset.x
+    );
+    expect(result.placement.drawY).toBeCloseTo(
+      basePlacement.drawY + (anchorHint.y - basePlacement.centerY) + offset.y
+    );
+    expect(result.center.x).toBeCloseTo(anchorHint.x + offset.x);
+    expect(result.center.y).toBeCloseTo(anchorHint.y + offset.y);
+    expect(result.footprint.centerY).toBeGreaterThan(result.center.y);
+    expect(ctx.drawImage).toHaveBeenCalledWith(
+      sprite,
+      result.placement.drawX,
+      result.placement.drawY,
+      result.placement.width,
+      result.placement.height
+    );
+  });
+
   it('reads faction palette tokens from CSS variables for player and enemy sprites', () => {
     const rootStyle = document.documentElement.style;
     rootStyle.setProperty('--faction-player-shell', 'rgba(10, 20, 30, 0.9)');

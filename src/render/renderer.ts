@@ -1,5 +1,5 @@
 import type { AxialCoord, PixelCoord } from '../hex/HexUtils.ts';
-import { hexDistance } from '../hex/HexUtils.ts';
+import { axialToPixel, DIRECTIONS, hexDistance } from '../hex/HexUtils.ts';
 import type { LoadedAssets } from '../loader.ts';
 import type { Unit } from '../unit/index.ts';
 import { isSisuBurstActive } from '../sisu/burst.ts';
@@ -11,9 +11,11 @@ import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
 import type { SpritePlacementInput } from './units/draw.ts';
 import { drawUnitSprite } from './units/UnitSprite.ts';
+import type { UnitSpriteRenderResult } from './units/UnitSprite.ts';
 import type { SaunaStatusPayload, UnitStatusPayload, UnitStatusBuff } from '../ui/fx/types.ts';
 import type { CombatKeywordEntry, CombatKeywordRegistry } from '../combat/resolve.ts';
 import type { KeywordState } from '../keywords/index.ts';
+import { snapForZoom } from './zoom.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -214,6 +216,24 @@ export function drawUnits(
   if (resolvedSaunaVision) {
     friendlyVisionSources.push(resolvedSaunaVision);
   }
+  interface RenderEntry {
+    unit: Unit;
+    image: CanvasImageSource | null | undefined;
+    placement: SpritePlacementInput;
+    selection: { isSelected: boolean; isPrimary: boolean };
+    motionStrength: number;
+    filter: string;
+    shadowColor: string;
+    shadowBlur: number;
+    alpha: number;
+    renderCoord: AxialCoord;
+    maxHealth: number;
+  }
+
+  const visibleEntries: RenderEntry[] = [];
+
+  const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
   for (const unit of units) {
     if (unit.isDead()) {
       continue;
@@ -226,21 +246,15 @@ export function drawUnits(
     ) {
       continue;
     }
+
     const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
     const maxHealth = unit.getMaxHealth();
-    ctx.save();
     const alpha = fx?.getUnitAlpha?.(unit);
-    if (typeof alpha === 'number') {
-      const clamped = Math.min(1, Math.max(0, alpha));
-      if (clamped <= 0) {
-        ctx.restore();
-        continue;
-      }
-      ctx.globalAlpha *= clamped;
+    const normalizedAlpha = typeof alpha === 'number' ? clamp(alpha, 0, 1) : 1;
+    if (normalizedAlpha <= 0) {
+      continue;
     }
-    if (unit.stats.health / maxHealth < 0.5) {
-      ctx.filter = 'saturate(0)';
-    }
+
     const renderCoord = unit.renderCoord ?? unit.coord;
     const placementInput: SpritePlacementInput = {
       coord: renderCoord,
@@ -249,36 +263,189 @@ export function drawUnits(
       zoom: camera.zoom,
       type: unit.type
     };
+
     const filters: string[] = [];
     if (unit.stats.health / maxHealth < 0.5) {
       filters.push('saturate(0)');
     }
+
     const deltaQ = Math.abs(renderCoord.q - unit.coord.q);
     const deltaR = Math.abs(renderCoord.r - unit.coord.r);
     const motionStrength = Math.min(1, deltaQ + deltaR);
+    let shadowColor = 'rgba(0, 0, 0, 0)';
+    let shadowBlur = 0;
     if (motionStrength > 0.01) {
       filters.push('contrast(1.08)');
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.28)';
-      ctx.shadowBlur = Math.max(6, 12 * camera.zoom * motionStrength);
-    } else {
-      ctx.shadowColor = 'rgba(0, 0, 0, 0)';
-      ctx.shadowBlur = 0;
+      shadowColor = 'rgba(255, 255, 255, 0.28)';
+      shadowBlur = Math.max(6, 12 * camera.zoom * motionStrength);
     }
-    ctx.filter = filters.length > 0 ? filters.join(' ') : 'none';
+
     const selectionState = {
       isSelected:
         Boolean((unit as Partial<{ selected: boolean }>).selected) ||
         (selectedCoord?.q === unit.coord.q && selectedCoord?.r === unit.coord.r),
       isPrimary: Boolean((unit as Partial<{ selected: boolean }>).selected)
     };
-    const renderResult = drawUnitSprite(ctx, unit, {
+
+    visibleEntries.push({
+      unit,
+      image: img,
       placement: placementInput,
-      sprite: img,
-      faction: unit.faction,
+      selection: selectionState,
       motionStrength,
-      cameraZoom: camera.zoom,
-      selection: selectionState
+      filter: filters.length > 0 ? filters.join(' ') : 'none',
+      shadowColor,
+      shadowBlur,
+      alpha: normalizedAlpha,
+      renderCoord,
+      maxHealth
     });
+  }
+
+  if (visibleEntries.length <= 0) {
+    return;
+  }
+
+  interface RenderGroup {
+    coord: AxialCoord;
+    entries: RenderEntry[];
+    primaryIndex: number;
+  }
+
+  const groupMap = new Map<string, RenderGroup>();
+
+  const resolvePrimaryIndex = (entries: RenderEntry[]): number => {
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    entries.forEach((entry, index) => {
+      let score = -index * 0.001;
+      if (entry.selection.isPrimary) {
+        score += 200;
+      } else if (entry.selection.isSelected) {
+        score += 120;
+      }
+      if (entry.motionStrength > 0.01) {
+        score += 40 + entry.motionStrength * 10;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+      }
+    });
+    return bestIndex;
+  };
+
+  for (const entry of visibleEntries) {
+    const key = `${entry.renderCoord.q},${entry.renderCoord.r}`;
+    let group = groupMap.get(key);
+    if (!group) {
+      group = { coord: entry.renderCoord, entries: [], primaryIndex: 0 };
+      groupMap.set(key, group);
+    }
+    group.entries.push(entry);
+  }
+
+  const compareFloats = (a: number, b: number) => {
+    const diff = a - b;
+    if (Math.abs(diff) < 1e-6) {
+      return 0;
+    }
+    return diff < 0 ? -1 : 1;
+  };
+
+  const factionRank = (faction: string | undefined): number => {
+    if (!faction) {
+      return 2;
+    }
+    const normalized = faction.toLowerCase();
+    if (normalized === 'player') {
+      return 0;
+    }
+    if (normalized === 'enemy') {
+      return 1;
+    }
+    return 2;
+  };
+
+  const groups: RenderGroup[] = [];
+  for (const group of groupMap.values()) {
+    group.primaryIndex = resolvePrimaryIndex(group.entries);
+    groups.push(group);
+  }
+
+  groups.sort((a, b) => {
+    const rCompare = compareFloats(a.coord.r, b.coord.r);
+    if (rCompare !== 0) {
+      return rCompare;
+    }
+    const qCompare = compareFloats(a.coord.q, b.coord.q);
+    if (qCompare !== 0) {
+      return qCompare;
+    }
+    const aPrimary = a.entries[a.primaryIndex];
+    const bPrimary = b.entries[b.primaryIndex];
+    const factionCompare = factionRank(aPrimary.unit.faction) - factionRank(bPrimary.unit.faction);
+    if (factionCompare !== 0) {
+      return factionCompare;
+    }
+    const selectionCompare = Number(Boolean(bPrimary.selection.isSelected)) - Number(Boolean(aPrimary.selection.isSelected));
+    if (selectionCompare !== 0) {
+      return selectionCompare;
+    }
+    return aPrimary.unit.id.localeCompare(bPrimary.unit.id);
+  });
+
+  const stackAlpha = 0.76;
+
+  const computeStackOffset = (index: number): PixelCoord => {
+    const direction = DIRECTIONS[index % DIRECTIONS.length];
+    const tier = Math.floor(index / DIRECTIONS.length) + 1;
+    const magnitude = 0.22 * tier;
+    const axialOffset = { q: direction.q * magnitude, r: direction.r * magnitude } satisfies AxialCoord;
+    const rawPixel = axialToPixel(axialOffset, mapRenderer.hexSize);
+    return {
+      x: snapForZoom(rawPixel.x, camera.zoom),
+      y: snapForZoom(rawPixel.y, camera.zoom)
+    } satisfies PixelCoord;
+  };
+
+  const paintEntry = (
+    entry: RenderEntry,
+    options: { drawBase: boolean; offset: PixelCoord | null; anchor: PixelCoord | null; alphaMultiplier: number }
+  ): UnitSpriteRenderResult | null => {
+    ctx.save();
+    const previousFilter = ctx.filter;
+    const previousShadowColor = ctx.shadowColor;
+    const previousShadowBlur = ctx.shadowBlur;
+    const previousAlpha = ctx.globalAlpha;
+
+    ctx.filter = entry.filter;
+    ctx.shadowColor = entry.shadowColor;
+    ctx.shadowBlur = entry.shadowBlur;
+
+    const finalAlpha = entry.alpha * options.alphaMultiplier;
+    if (finalAlpha <= 0) {
+      ctx.filter = previousFilter;
+      ctx.shadowColor = previousShadowColor;
+      ctx.shadowBlur = previousShadowBlur;
+      ctx.globalAlpha = previousAlpha;
+      ctx.restore();
+      return null;
+    }
+    ctx.globalAlpha *= finalAlpha;
+
+    const renderResult = drawUnitSprite(ctx, entry.unit, {
+      placement: entry.placement,
+      sprite: entry.image,
+      faction: entry.unit.faction,
+      motionStrength: entry.motionStrength,
+      cameraZoom: camera.zoom,
+      selection: entry.selection,
+      anchorHint: options.anchor,
+      offset: options.offset ?? null,
+      drawBase: options.drawBase
+    });
+
     if (fx?.pushUnitStatus) {
       const baseRadius = Math.max(renderResult.footprint.radiusX, renderResult.footprint.radiusY);
       const radius = Math.max(
@@ -287,25 +454,26 @@ export function drawUnits(
       );
       const worldX = renderResult.footprint.centerX + origin.x;
       const worldY = renderResult.footprint.centerY + origin.y;
-      const hp = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
-      const shieldValue = typeof unit.getShield === 'function' ? unit.getShield() : 0;
+      const hp = Number.isFinite(entry.unit.stats.health) ? Math.max(0, entry.unit.stats.health) : 0;
+      const shieldValue = typeof entry.unit.getShield === 'function' ? entry.unit.getShield() : 0;
       const shield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
-      const buffs = collectKeywordBuffs(unit.combatKeywords ?? null);
+      const buffs = collectKeywordBuffs(entry.unit.combatKeywords ?? null);
 
       fx.pushUnitStatus({
-        id: unit.id,
+        id: entry.unit.id,
         world: { x: worldX, y: worldY },
         radius,
         hp,
-        maxHp: maxHealth,
+        maxHp: entry.maxHealth,
         shield,
-        faction: unit.faction,
-        selected: selectionState.isSelected,
+        faction: entry.unit.faction,
+        selected: entry.selection.isSelected,
         buffs,
         visible: true
       });
     }
-    if (isSisuBurstActive() && unit.faction === 'player') {
+
+    if (isSisuBurstActive() && entry.unit.faction === 'player') {
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
       ctx.strokeRect(
@@ -315,6 +483,41 @@ export function drawUnits(
         renderResult.placement.height
       );
     }
+
+    ctx.globalAlpha = previousAlpha;
+    ctx.filter = previousFilter;
+    ctx.shadowColor = previousShadowColor;
+    ctx.shadowBlur = previousShadowBlur;
     ctx.restore();
+    return renderResult;
+  };
+
+  for (const group of groups) {
+    const primary = group.entries[group.primaryIndex];
+    const primaryResult = paintEntry(primary, {
+      drawBase: true,
+      offset: null,
+      anchor: null,
+      alphaMultiplier: 1
+    });
+
+    const anchor = primaryResult
+      ? { x: primaryResult.center.x, y: primaryResult.center.y }
+      : null;
+
+    const extras = group.entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ index }) => index !== group.primaryIndex)
+      .sort((a, b) => a.entry.unit.id.localeCompare(b.entry.unit.id));
+
+    extras.forEach(({ entry }, stackIndex) => {
+      const offset = computeStackOffset(stackIndex);
+      paintEntry(entry, {
+        drawBase: false,
+        offset,
+        anchor,
+        alphaMultiplier: stackAlpha
+      });
+    });
   }
 }
