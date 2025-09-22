@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce dedicated UI v2 controllers for the roster, top bar, inventory, log,
+  and sauna experiences, bootstrap them from `setupGame` alongside variant-aware
+  cleanup, and extend the Vitest suite so both classic and v2 HUDs mount the
+  correct controllers.
+
 - Replace the experimental HUD bootstrap with a polished React shell that docks
   the classic resource bar, streams live roster/log/resource updates from the
   core controllers, and backstop the v2 layout with Vitest + Testing Library

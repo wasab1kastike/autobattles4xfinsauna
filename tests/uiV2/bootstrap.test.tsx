@@ -6,7 +6,8 @@ import type { RosterHudSummary } from '../../src/ui/rosterHUD.ts';
 import type { RosterEntry } from '../../src/ui/rightPanel.tsx';
 import type { EnemyRampSummary } from '../../src/ui/topbar.ts';
 import { eventBus } from '../../src/events';
-import { logEvent, clearLogs } from '../../src/ui/logging.ts';
+import { logEvent, clearLogs, getLogHistory, subscribeToLogs } from '../../src/ui/logging.ts';
+import type { LogEntry } from '../../src/ui/logging.ts';
 
 type Harness = {
   emitRosterSummary(summary: RosterHudSummary): void;
@@ -17,108 +18,185 @@ type Harness = {
 };
 
 vi.mock('../../src/game.ts', () => {
-  const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
-  const rosterEntriesListeners = new Set<(entries: RosterEntry[]) => void>();
-  const hudTimeListeners = new Set<(ms: number) => void>();
-  const enemyRampListeners = new Set<(summary: EnemyRampSummary | null) => void>();
+  const rosterListeners = new Set<(state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void>();
+  const topbarListeners = new Set<(
+    snapshot: {
+      resources: Record<Resource, { total: number; delta: number }>;
+      artocoin: { total: number; delta: number };
+      elapsedMs: number;
+      ramp: EnemyRampSummary | null;
+    }
+  ) => void>();
+  const logListeners = new Set<(entries: LogEntry[]) => void>();
 
   let currentSummary: RosterHudSummary = { count: 1, card: null };
   let currentEntries: RosterEntry[] = [];
   let currentTime = 0;
   let currentRamp: EnemyRampSummary | null = null;
+  const resources: Record<Resource, { total: number; delta: number }> = {
+    [Resource.SAUNA_BEER]: { total: 200, delta: 0 },
+    [Resource.SAUNAKUNNIA]: { total: 3, delta: 0 },
+    [Resource.SISU]: { total: 5, delta: 0 }
+  };
+  let artocoin = 0;
+  let logEntries = getLogHistory();
+
+  subscribeToLogs((change) => {
+    if (change.kind === 'append') {
+      logEntries = [...logEntries, change.entry];
+    } else if (change.kind === 'update') {
+      logEntries = logEntries.map((entry) => (entry.id === change.entry.id ? change.entry : entry));
+    } else if (change.kind === 'remove') {
+      const ids = new Set(change.entries.map((entry) => entry.id));
+      logEntries = logEntries.filter((entry) => !ids.has(entry.id));
+    }
+    for (const listener of logListeners) {
+      listener([...logEntries]);
+    }
+  });
+
+  const topbarSnapshot = () => ({
+    resources: {
+      [Resource.SAUNA_BEER]: { ...resources[Resource.SAUNA_BEER] },
+      [Resource.SAUNAKUNNIA]: { ...resources[Resource.SAUNAKUNNIA] },
+      [Resource.SISU]: { ...resources[Resource.SISU] }
+    },
+    artocoin: { total: artocoin, delta: 0 },
+    elapsedMs: currentTime,
+    ramp: currentRamp
+  });
+
+  const notifyRoster = () => {
+    const state = { summary: currentSummary, entries: [...currentEntries] } satisfies {
+      summary: RosterHudSummary;
+      entries: RosterEntry[];
+    };
+    for (const listener of rosterListeners) {
+      listener(state);
+    }
+  };
+
+  const notifyTopbar = () => {
+    const snapshot = topbarSnapshot();
+    for (const listener of topbarListeners) {
+      listener(snapshot);
+    }
+  };
+
+  eventBus.on('resourceChanged', (change: { resource: Resource; total: number; amount: number }) => {
+    resources[change.resource] = { total: change.total, delta: change.amount };
+    notifyTopbar();
+  });
+
+  const rosterController = {
+    getSnapshot: () => ({ summary: currentSummary, entries: [...currentEntries] }),
+    subscribe(listener: (state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void) {
+      rosterListeners.add(listener);
+      listener({ summary: currentSummary, entries: [...currentEntries] });
+      return () => rosterListeners.delete(listener);
+    },
+    dispose() {
+      rosterListeners.clear();
+    }
+  } satisfies {
+    getSnapshot: () => { summary: RosterHudSummary; entries: RosterEntry[] };
+    subscribe(listener: (state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void): () => void;
+    dispose(): void;
+  };
+
+  const topbarController = {
+    getSnapshot: topbarSnapshot,
+    subscribe(listener: (snapshot: ReturnType<typeof topbarSnapshot>) => void) {
+      topbarListeners.add(listener);
+      listener(topbarSnapshot());
+      return () => topbarListeners.delete(listener);
+    },
+    dispose() {
+      topbarListeners.clear();
+    }
+  };
+
+  const logController = {
+    getSnapshot: () => [...logEntries],
+    subscribe(listener: (entries: LogEntry[]) => void) {
+      logListeners.add(listener);
+      listener([...logEntries]);
+      return () => logListeners.delete(listener);
+    },
+    dispose() {
+      logListeners.clear();
+    }
+  };
+
+  const saunaController = {
+    mount(container: HTMLElement) {
+      container.dataset.saunaMounted = 'true';
+    },
+    unmount(container: HTMLElement) {
+      container.innerHTML = '';
+      delete container.dataset.saunaMounted;
+    },
+    dispose() {}
+  };
+
+  const inventoryController = {
+    getSnapshot: () => ({ saunaShop: { balance: artocoin, tiers: [] }, useUiV2: false }),
+    subscribe: () => () => {},
+    setUseUiV2: () => {},
+    dispose: () => {}
+  };
 
   const harness: Harness = {
     emitRosterSummary(summary) {
       currentSummary = summary;
-      for (const listener of rosterSummaryListeners) {
-        listener(summary);
-      }
+      notifyRoster();
     },
     emitRosterEntries(entries) {
-      currentEntries = entries;
-      for (const listener of rosterEntriesListeners) {
-        listener(entries);
-      }
+      currentEntries = [...entries];
+      notifyRoster();
     },
     emitHudTime(ms) {
       currentTime = ms;
-      for (const listener of hudTimeListeners) {
-        listener(ms);
-      }
+      notifyTopbar();
     },
     emitEnemyRamp(summary) {
       currentRamp = summary;
-      for (const listener of enemyRampListeners) {
-        listener(summary);
-      }
+      notifyTopbar();
     },
     reset() {
-      rosterSummaryListeners.clear();
-      rosterEntriesListeners.clear();
-      hudTimeListeners.clear();
-      enemyRampListeners.clear();
       currentSummary = { count: 1, card: null };
       currentEntries = [];
       currentTime = 0;
       currentRamp = null;
+      resources[Resource.SAUNA_BEER] = { total: 200, delta: 0 };
+      resources[Resource.SAUNAKUNNIA] = { total: 3, delta: 0 };
+      resources[Resource.SISU] = { total: 5, delta: 0 };
+      artocoin = 0;
+      logEntries = getLogHistory();
+      notifyRoster();
+      notifyTopbar();
+      for (const listener of logListeners) {
+        listener([...logEntries]);
+      }
     }
   };
 
   return {
     getGameStateInstance: () => ({
-      getResource: (resource: Resource) => {
-        switch (resource) {
-          case Resource.SAUNA_BEER:
-            return 200;
-          case Resource.SAUNAKUNNIA:
-            return 3;
-          case Resource.SISU:
-            return 5;
-          default:
-            return 0;
-        }
-      }
+      getResource: (resource: Resource) => resources[resource].total
     }),
-    subscribeRosterSummary: (listener: (summary: RosterHudSummary) => void) => {
-      rosterSummaryListeners.add(listener);
-      listener(currentSummary);
-      return () => {
-        rosterSummaryListeners.delete(listener);
-      };
-    },
-    subscribeRosterEntries: (listener: (entries: RosterEntry[]) => void) => {
-      rosterEntriesListeners.add(listener);
-      listener([...currentEntries]);
-      return () => {
-        rosterEntriesListeners.delete(listener);
-      };
-    },
-    subscribeHudTime: (listener: (ms: number) => void) => {
-      hudTimeListeners.add(listener);
-      listener(currentTime);
-      return () => {
-        hudTimeListeners.delete(listener);
-      };
-    },
-    subscribeEnemyRamp: (listener: (summary: EnemyRampSummary | null) => void) => {
-      enemyRampListeners.add(listener);
-      listener(currentRamp);
-      return () => {
-        enemyRampListeners.delete(listener);
-      };
-    },
-    getHudElapsedMs: () => currentTime,
     getRosterSummarySnapshot: () => currentSummary,
     getRosterEntriesSnapshot: () => [...currentEntries],
-    getEnemyRampSummarySnapshot: () => currentRamp,
-    getSaunaInstance: () => ({}),
-    setExternalSaunaUiController: () => {},
-    getActiveSaunaTierId: () => 'tier-1',
-    setActiveSaunaTier: () => true,
-    getSaunaTierContextSnapshot: () => ({}),
     getRosterCapValue: () => 6,
     getRosterCapLimit: () => 12,
     setRosterCapValue: (value: number) => value,
+    getHudElapsedMs: () => currentTime,
+    getEnemyRampSummarySnapshot: () => currentRamp,
+    getUiV2TopbarController: () => topbarController,
+    getUiV2RosterController: () => rosterController,
+    getUiV2LogController: () => logController,
+    getUiV2SaunaController: () => saunaController,
+    getUiV2InventoryController: () => inventoryController,
     __uiV2Test: harness
   };
 });

@@ -1,45 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Resource } from '../core/GameState.ts';
-import { eventBus } from '../events';
 import {
   getGameStateInstance,
   getRosterEntriesSnapshot,
   getRosterSummarySnapshot,
-  subscribeRosterEntries,
-  subscribeRosterSummary,
-  subscribeHudTime,
-  getHudElapsedMs,
-  subscribeEnemyRamp,
-  getEnemyRampSummarySnapshot,
-  getSaunaInstance,
-  setExternalSaunaUiController,
-  getActiveSaunaTierId,
-  setActiveSaunaTier,
-  getSaunaTierContextSnapshot,
   getRosterCapLimit,
   getRosterCapValue,
   setRosterCapValue,
+  getHudElapsedMs,
+  getEnemyRampSummarySnapshot,
+  getUiV2TopbarController,
+  getUiV2RosterController,
+  getUiV2LogController,
+  getUiV2SaunaController,
 } from '../game.ts';
-import {
-  loadArtocoinBalance,
-  onArtocoinChange,
-  type ArtocoinChangeEvent
-} from '../progression/artocoin.ts';
-import {
-  getLogHistory,
-  subscribeToLogs,
-  LOG_EVENT_META,
-  type LogChange,
-  type LogEntry
-} from '../ui/logging.ts';
+import { LOG_EVENT_META, getLogHistory, type LogEntry } from '../ui/logging.ts';
 import { setupRosterHUD, type RosterHudController } from '../ui/rosterHUD.ts';
 import { uiIcons } from '../game/assets.ts';
 import { createRosterPanel } from '../ui/panels/RosterPanel.tsx';
 import type { RosterEntry } from '../ui/rightPanel.tsx';
 import type { RosterHudSummary } from '../ui/rosterHUD.ts';
-import { setupSaunaUI } from '../ui/sauna.tsx';
 import type { EnemyRampSummary } from '../ui/topbar.ts';
-import type { SaunaUIController } from '../ui/sauna.tsx';
+import type { UiV2TopbarSnapshot } from './topbarController.ts';
+import { loadArtocoinBalance } from '../progression/artocoin.ts';
 
 const numberFormatter = new Intl.NumberFormat('en-US');
 const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
@@ -60,16 +43,11 @@ const resourceSuffix: Record<Resource, string> = {
   [Resource.SISU]: '🔥'
 };
 
-type ResourceState = Record<Resource, { total: number; delta: number }>;
+type ResourceSnapshot = UiV2TopbarSnapshot;
 
-type ArtocoinState = { total: number; delta: number };
+type ResourceState = ResourceSnapshot['resources'];
 
-type ResourceSnapshot = {
-  resources: ResourceState;
-  artocoin: ArtocoinState;
-  elapsedMs: number;
-  ramp: EnemyRampSummary | null;
-};
+type ArtocoinState = ResourceSnapshot['artocoin'];
 
 function formatClock(ms: number): string {
   if (!Number.isFinite(ms) || ms <= 0) {
@@ -85,90 +63,37 @@ function formatClock(ms: number): string {
   return `${timeFormatter.format(minutes)}:${timeFormatter.format(seconds)}`;
 }
 
-function useResourceSnapshot(): ResourceSnapshot {
-  const state = getGameStateInstance();
-  const [resources, setResources] = useState<ResourceState>(() => ({
-    [Resource.SAUNA_BEER]: { total: state.getResource(Resource.SAUNA_BEER), delta: 0 },
-    [Resource.SAUNAKUNNIA]: { total: state.getResource(Resource.SAUNAKUNNIA), delta: 0 },
-    [Resource.SISU]: { total: state.getResource(Resource.SISU), delta: 0 }
-  }));
-  const [artocoin, setArtocoin] = useState<ArtocoinState>(() => ({
-    total: loadArtocoinBalance(),
-    delta: 0
-  }));
-  const [elapsedMs, setElapsedMs] = useState(() => getHudElapsedMs());
-  const [ramp, setRamp] = useState<EnemyRampSummary | null>(() => getEnemyRampSummarySnapshot());
+function useTopbarSnapshot(): ResourceSnapshot {
+  const fallback = (): ResourceSnapshot => {
+    const state = getGameStateInstance();
+    return {
+      resources: {
+        [Resource.SAUNA_BEER]: { total: state.getResource(Resource.SAUNA_BEER), delta: 0 },
+        [Resource.SAUNAKUNNIA]: { total: state.getResource(Resource.SAUNAKUNNIA), delta: 0 },
+        [Resource.SISU]: { total: state.getResource(Resource.SISU), delta: 0 }
+      },
+      artocoin: { total: loadArtocoinBalance(), delta: 0 },
+      elapsedMs: getHudElapsedMs(),
+      ramp: getEnemyRampSummarySnapshot()
+    } satisfies ResourceSnapshot;
+  };
+
+  const [snapshot, setSnapshot] = useState<ResourceSnapshot>(() => {
+    const controller = getUiV2TopbarController();
+    return controller ? controller.getSnapshot() : fallback();
+  });
 
   useEffect(() => {
-    const timers = new Map<Resource, ReturnType<typeof setTimeout>>();
-    const handleResourceChange = ({
-      resource,
-      total,
-      amount
-    }: {
-      resource: Resource;
-      total: number;
-      amount: number;
-    }) => {
-      setResources((prev) => ({
-        ...prev,
-        [resource]: { total, delta: amount }
-      }));
-      const existing = timers.get(resource);
-      if (existing !== undefined) {
-        clearTimeout(existing);
-      }
-      if (amount !== 0) {
-        const timeout = setTimeout(() => {
-          setResources((prev) => ({
-            ...prev,
-            [resource]: { total: prev[resource].total, delta: 0 }
-          }));
-          timers.delete(resource);
-        }, 1200);
-        timers.set(resource, timeout);
-      }
-    };
-    eventBus.on('resourceChanged', handleResourceChange);
-    return () => {
-      eventBus.off('resourceChanged', handleResourceChange);
-      for (const timer of timers.values()) {
-        clearTimeout(timer);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onArtocoinChange((event: ArtocoinChangeEvent) => {
-      setArtocoin({ total: event.balance, delta: event.delta });
-      if (event.delta !== 0) {
-        setTimeout(() => {
-          setArtocoin((prev) => ({ total: prev.total, delta: 0 }));
-        }, 1200);
-      }
+    const controller = getUiV2TopbarController();
+    if (!controller) {
+      return;
+    }
+    return controller.subscribe((state) => {
+      setSnapshot(state);
     });
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = subscribeHudTime((ms) => {
-      setElapsedMs(ms);
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = subscribeEnemyRamp((summary) => setRamp(summary));
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  return { resources, artocoin, elapsedMs, ramp };
+  return snapshot;
 }
 
 type RosterState = {
@@ -177,13 +102,29 @@ type RosterState = {
 };
 
 function useRosterState(): RosterState {
-  const [summary, setSummary] = useState<RosterHudSummary>(() => getRosterSummarySnapshot());
-  const [entries, setEntries] = useState<RosterEntry[]>(() => getRosterEntriesSnapshot());
+  const [state, setState] = useState<RosterState>(() => {
+    const controller = getUiV2RosterController();
+    if (controller) {
+      const snapshot = controller.getSnapshot();
+      return { summary: snapshot.summary, entries: snapshot.entries } satisfies RosterState;
+    }
+    return {
+      summary: getRosterSummarySnapshot(),
+      entries: getRosterEntriesSnapshot()
+    } satisfies RosterState;
+  });
 
-  useEffect(() => subscribeRosterSummary((next) => setSummary(next)), []);
-  useEffect(() => subscribeRosterEntries((next) => setEntries([...next])), []);
+  useEffect(() => {
+    const controller = getUiV2RosterController();
+    if (!controller) {
+      return;
+    }
+    return controller.subscribe((snapshot) => {
+      setState({ summary: snapshot.summary, entries: snapshot.entries });
+    });
+  }, []);
 
-  return { summary, entries };
+  return state;
 }
 
 type LogState = {
@@ -191,28 +132,19 @@ type LogState = {
 };
 
 function useLogs(): LogState {
-  const [entries, setEntries] = useState<LogEntry[]>(() => getLogHistory());
+  const [entries, setEntries] = useState<LogEntry[]>(() => {
+    const controller = getUiV2LogController();
+    return controller ? controller.getSnapshot() : getLogHistory();
+  });
 
   useEffect(() => {
-    const applyChange = (change: LogChange): void => {
-      setEntries((prev) => {
-        if (change.kind === 'append') {
-          return [...prev, change.entry];
-        }
-        if (change.kind === 'update') {
-          return prev.map((entry) => (entry.id === change.entry.id ? change.entry : entry));
-        }
-        if (change.kind === 'remove') {
-          const ids = new Set(change.entries.map((entry) => entry.id));
-          return prev.filter((entry) => !ids.has(entry.id));
-        }
-        return prev;
-      });
-    };
-    const unsubscribe = subscribeToLogs(applyChange);
-    return () => {
-      unsubscribe();
-    };
+    const controller = getUiV2LogController();
+    if (!controller) {
+      return;
+    }
+    return controller.subscribe((next) => {
+      setEntries([...next]);
+    });
   }, []);
 
   return { entries };
@@ -454,17 +386,13 @@ function SaunaControls() {
     if (!container) {
       return;
     }
-    const controller: SaunaUIController = setupSaunaUI(getSaunaInstance(), {
-      getActiveTierId: () => getActiveSaunaTierId(),
-      setActiveTierId: (tierId, options) => setActiveSaunaTier(tierId, { persist: options?.persist }),
-      getTierContext: () => getSaunaTierContextSnapshot()
-    });
-    setExternalSaunaUiController(controller);
-    controller.update();
+    const controller = getUiV2SaunaController();
+    if (!controller) {
+      return;
+    }
+    controller.mount(container);
     return () => {
-      controller.dispose();
-      setExternalSaunaUiController(null);
-      container.innerHTML = '';
+      controller.unmount(container);
     };
   }, []);
 
@@ -482,7 +410,7 @@ export interface UiV2AppProps {
 }
 
 export function UiV2App({ resourceBar, onReturnToClassic }: UiV2AppProps) {
-  const resources = useResourceSnapshot();
+  const resources = useTopbarSnapshot();
   const roster = useRosterState();
   const logs = useLogs();
 
