@@ -254,26 +254,28 @@ function ensureBottomTabs(
     );
     if (!panel) {
       if (tabId === 'roster') {
-        panel = overlay.querySelector<HTMLDivElement>('#resource-bar') ?? doc.createElement('div');
-        if (!panel.id) {
-          panel.id = 'resource-bar';
-        }
+        panel =
+          overlay.querySelector<HTMLDivElement>('#resource-bar') ?? doc.createElement('div');
       } else {
         panel = doc.createElement('div');
-        panel.id = `hud-bottom-panel-${tabId}`;
       }
-      panel.dataset.hudTabPanel = tabId;
     }
+
+    panel.dataset.hudTabPanel = tabId;
     panel.classList.add('hud-bottom-tabs__panel');
+    if (tabId === 'roster') {
+      panel.id = 'resource-bar';
+      panel.classList.add('hud-bottom-tabs__panel--roster');
+    } else if (!panel.id) {
+      panel.id = `hud-bottom-panel-${tabId}`;
+    }
+
     panel.setAttribute('role', 'tabpanel');
     panel.setAttribute('aria-labelledby', buttonId);
     if (panel.parentElement !== panelWrapper) {
       panelWrapper.appendChild(panel);
     }
 
-    if (!panel.id) {
-      panel.id = `hud-bottom-panel-${tabId}`;
-    }
     button.setAttribute('aria-controls', panel.id);
 
     panels[tabId] = panel;
@@ -454,6 +456,7 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     ]),
     commandDock: ensureAnchor(regions.bottom, doc, 'commandDock', [
       'hud-anchor--command-dock',
+      'hud-command-dock',
     ]),
   } satisfies HudLayoutAnchors;
 

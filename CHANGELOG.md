@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Redesign the classic roster HUD into a full-width bottom tab tray with a
+  dedicated expand/collapse control, dispatch expansion events from the
+  inventory and command-console toggles, and refresh the glassmorphic styling
+  across desktop and mobile breakpoints.
+
 - Deliver the v1 frontline art drop: replace the soldier, archer, and Avanto
   marauder sprites with the art-pipeline SVGs, introduce guardian/seer Saunoja
   variants, retune sprite metadata so each unit centers on its hex base, and

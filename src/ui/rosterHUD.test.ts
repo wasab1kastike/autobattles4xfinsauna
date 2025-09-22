@@ -40,10 +40,23 @@ describe('rosterHUD', () => {
       const root = container.querySelector('.sauna-roster');
       expect(root).not.toBeNull();
 
+      const toggle = root?.querySelector<HTMLButtonElement>('.sauna-roster__toggle');
+      expect(toggle?.disabled).toBe(false);
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+
+      const details = root?.querySelector<HTMLElement>('.sauna-roster__details');
+      expect(details?.hidden).toBe(true);
+
       const value = root?.querySelector('.sauna-roster__value');
       expect(value?.textContent).toBe('5');
       expect(root?.getAttribute('aria-label')).toBe('Saunoja roster: 5 active attendants');
       expect(root?.getAttribute('title')).toBe('Saunoja roster • 5 active attendants');
+
+      toggle?.click();
+
+      expect(root?.dataset.expanded).toBe('true');
+      expect(toggle?.getAttribute('aria-expanded')).toBe('true');
+      expect(details?.hidden).toBe(false);
 
       const card = root?.querySelector<HTMLDivElement>('.saunoja-card');
       expect(card?.hidden).toBe(false);
@@ -82,6 +95,11 @@ describe('rosterHUD', () => {
       hud.updateSummary({ count: 0, card: null });
       const card = container.querySelector<HTMLDivElement>('.saunoja-card');
       expect(card?.hidden).toBe(true);
+      const toggle = container.querySelector<HTMLButtonElement>('.sauna-roster__toggle');
+      expect(toggle?.disabled).toBe(true);
+      expect(toggle?.getAttribute('aria-expanded')).toBe('false');
+      const details = container.querySelector<HTMLElement>('.sauna-roster__details');
+      expect(details?.hidden).toBe(true);
     } finally {
       destroyContainer(container);
     }
