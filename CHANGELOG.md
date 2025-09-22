@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ensure the battalion roster unequip control always clears the slot by stashing
+  the removed item, even when the reserve stash is full, matching the expected
+  roster behavior.
+
 - Ship the Avanto raider art drop: replace the placeholder raider sprite with
   the production SVGs from art, add captain and shaman variants, register their
   renderer metadata, and expand sprite tests so the anchors and scale ratios

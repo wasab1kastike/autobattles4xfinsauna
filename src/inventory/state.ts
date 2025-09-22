@@ -549,9 +549,6 @@ export class InventoryState {
     slot: EquipmentSlotId,
     unequip: (unitId: string, slot: EquipmentSlotId) => SaunojaItem | null | undefined
   ): boolean {
-    if (this.stash.length >= this.maxStashSize) {
-      return false;
-    }
     let removed: SaunojaItem | null = null;
     try {
       const result = unequip(unitId, slot);
@@ -567,7 +564,10 @@ export class InventoryState {
     const entry = sanitizeItem(removed, timestamp);
     this.stash.push(entry);
     if (this.stash.length > this.maxStashSize) {
-      this.stash.splice(0, this.stash.length - this.maxStashSize);
+      const overflow = this.stash.splice(0, this.stash.length - this.maxStashSize);
+      if (overflow.length > 0) {
+        console.warn('Inventory stash full, trimming oldest items', overflow);
+      }
     }
     this.persist();
     this.emit({ type: 'stash-updated', stash: this.getStash() });

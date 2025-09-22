@@ -99,6 +99,31 @@ describe('InventoryState', () => {
     stop();
   });
 
+  it('still unequips items when the stash is already at capacity', () => {
+    const inventory = new InventoryState({ now: () => 1500, maxStashSize: 1 });
+    inventory.addItem(
+      { id: 'old-relic', name: 'Old Relic', quantity: 1 },
+      { autoEquip: false }
+    );
+
+    const unequip = vi
+      .fn()
+      .mockReturnValue({ id: 'fresh-find', name: 'Fresh Find', quantity: 1 });
+    const events: InventoryEvent[] = [];
+    const stop = inventory.on((event) => {
+      events.push(event);
+    });
+
+    const success = inventory.unequipToStash('unit-7', 'weapon', unequip);
+    expect(success).toBe(true);
+    expect(unequip).toHaveBeenCalledWith('unit-7', 'weapon');
+    expect(inventory.getStash()).toHaveLength(1);
+    expect(inventory.getStash()[0].id).toBe('fresh-find');
+    const event = events.find((entry) => entry.type === 'item-unequipped');
+    expect(event?.to).toBe('stash');
+    stop();
+  });
+
   it('moves items between stash and ready inventory', () => {
     const inventory = new InventoryState({ now: () => 1100 });
     inventory.addItem(SAMPLE_ITEM, { autoEquip: false });
