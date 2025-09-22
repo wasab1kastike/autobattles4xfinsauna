@@ -7,6 +7,10 @@
   bottom tabs to respect the reserved space so the controls stay visible on
   1366p and 1080p layouts.
 
+- Expand the unit visual style guide with faction palette tokens, renderer
+  layering expectations, and curated “Design → Visual Style” navigation so art
+  updates land with consistent lighting and references.
+
 - Carve out a high-end sauna overlay: limit the canvas pass to the ambient
   glow, stream reusable perimeter anchors (angles, radii, world coords) to the
   status layer, restyle the DOM gauge into a slim annulus with a rotating badge

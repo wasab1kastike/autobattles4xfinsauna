@@ -8,31 +8,222 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>Autobattles4xFinsauna</title>
-    <script type="module" crossorigin src="/assets/index-BwOnG3XV.js"></script>
+    <script type="module" crossorigin src="/assets/index-BoubuXmB.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-Una10bOB.css">
+    <style>
+      :root {
+        --docs-sidebar-width: minmax(260px, 320px);
+      }
+
+      body {
+        margin: 0;
+      }
+
+      .docs-shell {
+        display: grid;
+        grid-template-columns: var(--docs-sidebar-width) 1fr;
+        gap: clamp(24px, 4vw, 64px);
+        padding: clamp(24px, 6vw, 96px);
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .docs-sidebar {
+        background: rgba(15, 23, 42, 0.72);
+        border-radius: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        box-shadow: 0 32px 64px rgba(8, 25, 53, 0.35);
+        padding: clamp(20px, 3vw, 36px);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        color: #e2e8f0;
+      }
+
+      .docs-sidebar h1 {
+        margin: 0;
+        font-size: clamp(1.5rem, 1.2rem + 0.8vw, 2rem);
+        font-weight: 600;
+      }
+
+      .docs-sidebar p {
+        margin: 0;
+        color: rgba(226, 232, 240, 0.72);
+        line-height: 1.5;
+      }
+
+      .docs-nav-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .docs-nav-section h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      .docs-nav-section ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .docs-nav-label {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: rgba(248, 250, 252, 0.82);
+      }
+
+      .docs-nav-sublist {
+        margin-top: 6px;
+        margin-left: 0;
+        padding-left: 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .docs-nav-sublist a {
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        width: fit-content;
+        transition: transform 160ms ease, background 160ms ease;
+      }
+
+      .docs-nav-sublist a::before {
+        content: '→';
+        font-size: 0.85rem;
+        opacity: 0.8;
+      }
+
+      .docs-nav-sublist a:hover {
+        background: rgba(56, 189, 248, 0.22);
+        transform: translateX(4px);
+      }
+
+      .docs-shell__preview {
+        position: relative;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        box-shadow: 0 40px 80px rgba(8, 25, 53, 0.42);
+      }
+
+      .docs-shell__preview::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(140deg, rgba(56, 189, 248, 0.16), transparent 55%),
+          linear-gradient(320deg, rgba(248, 113, 113, 0.12), transparent 60%);
+        mix-blend-mode: screen;
+      }
+
+      .docs-shell__preview > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 960px) {
+        .docs-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .docs-sidebar {
+          position: relative;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .docs-shell {
+          padding: clamp(16px, 5vw, 32px);
+        }
+
+        .docs-nav-sublist a {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="game-container">
-      <canvas id="game-canvas"></canvas>
-      <div id="ui-overlay">
-        <div class="hud-layout-root" data-hud-root>
-          <div class="hud-region hud-top-row" data-hud-region="top"></div>
-          <div class="hud-region hud-actions" data-hud-region="left"></div>
-          <div class="hud-region hud-content" data-hud-region="content"></div>
-          <div class="hud-region hud-right-column" data-hud-region="right">
-            <div id="resource-bar">Saunoja Roster: 0</div>
-          </div>
-          <div class="hud-region hud-bottom-row" data-hud-region="bottom">
-            <footer
-              id="build-id"
-              aria-live="polite"
-              aria-label="Development build"
-              data-build-state="development"
-              title="Unversioned development build"
-            >
-              <span class="build-id__label">Build</span>
-              <span class="build-id__value" data-build-commit data-state="dev">—</span>
-            </footer>
+    <div class="docs-shell">
+      <aside class="docs-sidebar" aria-label="Documentation navigation">
+        <h1>Design Library</h1>
+        <p>
+          Explore premium UI and art specs. “Design → Visual Style” now surfaces
+          sprite guidance alongside palette, layering, and renderer cues.
+        </p>
+        <div class="docs-nav-section">
+          <h2>Design</h2>
+          <ul>
+            <li>
+              <span class="docs-nav-label">Visual Style</span>
+              <ul class="docs-nav-sublist">
+                <li><a href="./design/unit-visuals.md">Unit Visual Standards</a></li>
+              </ul>
+            </li>
+            <li>
+              <span class="docs-nav-label">Economy Systems</span>
+              <ul class="docs-nav-sublist">
+                <li><a href="./design/sauna-artocoin-formula.md">Artocoin Payout Formula</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="docs-nav-section">
+          <h2>Experience</h2>
+          <ul>
+            <li>
+              <span class="docs-nav-label">Onboarding</span>
+              <ul class="docs-nav-sublist">
+                <li><a href="./onboarding.md">Sauna Tutorial Flow</a></li>
+              </ul>
+            </li>
+            <li>
+              <span class="docs-nav-label">Progression</span>
+              <ul class="docs-nav-sublist">
+                <li><a href="./progression/experience.md">Experience &amp; Objectives</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </aside>
+      <div class="docs-shell__preview">
+        <div id="game-container">
+          <canvas id="game-canvas"></canvas>
+          <div id="ui-overlay">
+            <div class="hud-layout-root" data-hud-root>
+              <div class="hud-region hud-top-row" data-hud-region="top"></div>
+              <div class="hud-region hud-actions" data-hud-region="left"></div>
+              <div class="hud-region hud-content" data-hud-region="content"></div>
+              <div class="hud-region hud-right-column" data-hud-region="right">
+                <div id="resource-bar">Saunoja Roster: 0</div>
+              </div>
+              <div class="hud-region hud-bottom-row" data-hud-region="bottom">
+                <footer
+                  id="build-id"
+                  aria-live="polite"
+                  aria-label="Development build"
+                  data-build-state="development"
+                  title="Unversioned development build"
+                >
+                  <span class="build-id__label">Build</span>
+                  <span class="build-id__value" data-build-commit data-state="dev">—</span>
+                </footer>
+              </div>
+            </div>
           </div>
         </div>
       </div>
