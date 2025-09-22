@@ -132,6 +132,46 @@ describe('SelectionMiniHud integration', () => {
     expect(entry?.dataset.visible).toBe('true');
   });
 
+  it('renders and clears an enemy selection payload', () => {
+    const payload: UnitSelectionPayload = {
+      id: 'raider-7',
+      name: 'Frost Raider',
+      faction: 'enemy',
+      coord: { q: -1, r: 2 },
+      hp: 20,
+      maxHp: 24,
+      shield: 0,
+      items: [],
+      statuses: []
+    } satisfies UnitSelectionPayload;
+
+    manager.setSelection(payload);
+    manager.beginStatusFrame();
+    manager.pushUnitStatus({
+      id: 'raider-7',
+      world: { x: 196, y: 256 },
+      radius: 22,
+      hp: 20,
+      maxHp: 24,
+      shield: 0,
+      faction: 'enemy'
+    });
+    manager.commitStatusFrame();
+    manager.step(0);
+
+    const card = overlay.querySelector('.ui-selection-mini-hud__card') as HTMLElement | null;
+    expect(card).toBeTruthy();
+    expect(card?.querySelector('.ui-selection-mini-hud__faction')?.textContent).toBe('ENEMY');
+
+    manager.setSelection(null);
+    manager.beginStatusFrame();
+    manager.commitStatusFrame();
+    manager.step(0);
+
+    const entry = overlay.querySelector('.ui-selection-mini-hud') as HTMLElement | null;
+    expect(entry?.dataset.visible).toBe('false');
+  });
+
   it('hides the card when selection clears', () => {
     const payload: UnitSelectionPayload = {
       id: 'attendant-2',

@@ -215,6 +215,7 @@ const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
 let playerSpawnSequence = 0;
 let selected: AxialCoord | null = null;
+let selectedUnitId: string | null = null;
 let addEvent: (event: GameEvent) => void = () => {};
 let disposeRightPanel: (() => void) | null = null;
 let topbarControls: TopbarControls | null = null;
@@ -305,6 +306,7 @@ function getSelectedSaunoja(): Saunoja | null {
 }
 
 function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
+  const attachedUnit = getAttachedUnitFor(attendant);
   const itemsSource = Array.isArray(attendant.items) ? attendant.items : [];
   const modifiersSource = Array.isArray(attendant.modifiers) ? attendant.modifiers : [];
   const items: SelectionItemSlot[] = itemsSource.map((item, index) => ({
@@ -334,12 +336,13 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
   const hpValue = Number.isFinite(attendant.hp) ? Math.max(0, attendant.hp) : 0;
   const maxHpValue = Number.isFinite(attendant.maxHp) ? Math.max(1, attendant.maxHp) : 1;
   const shieldValue = Number.isFinite(attendant.shield) ? Math.max(0, attendant.shield) : 0;
+  const coordSource = attachedUnit?.coord ?? attendant.coord;
 
   return {
-    id: attendant.id,
+    id: attachedUnit?.id ?? attendant.id,
     name: attendant.name?.trim() || 'Saunoja',
-    faction: 'player',
-    coord: { q: attendant.coord.q, r: attendant.coord.r },
+    faction: attachedUnit?.faction ?? 'player',
+    coord: { q: coordSource.q, r: coordSource.r },
     hp: hpValue,
     maxHp: maxHpValue,
     shield: shieldValue,
@@ -348,16 +351,63 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
   } satisfies UnitSelectionPayload;
 }
 
+function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
+  const hpValue = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
+  const maxHpValue = Number.isFinite(unit.getMaxHealth()) ? Math.max(1, unit.getMaxHealth()) : 1;
+  const shieldValue = Number.isFinite(unit.getShield()) ? Math.max(0, unit.getShield()) : 0;
+  const attachedSaunoja = unitToSaunoja.get(unit.id) ?? null;
+  const name = attachedSaunoja?.name?.trim() || describeUnit(unit, attachedSaunoja);
+  const faction = typeof unit.faction === 'string' && unit.faction.trim().length > 0
+    ? unit.faction
+    : 'enemy';
+  return {
+    id: unit.id,
+    name,
+    faction,
+    coord: { q: unit.coord.q, r: unit.coord.r },
+    hp: hpValue,
+    maxHp: maxHpValue,
+    shield: shieldValue,
+    items: [],
+    statuses: []
+  } satisfies UnitSelectionPayload;
+}
+
 function syncSelectionOverlay(): void {
   if (!unitFx) {
     return;
   }
-  const selectedSaunoja = getSelectedSaunoja();
-  if (!selectedSaunoja) {
-    unitFx.setSelection(null);
-    return;
+
+  let selectionPayload: UnitSelectionPayload | null = null;
+
+  if (selectedUnitId) {
+    const attachedSaunoja = saunojas.find((unit) => {
+      const attachedId = saunojaToUnit.get(unit.id) ?? unit.id;
+      return attachedId === selectedUnitId;
+    });
+
+    if (attachedSaunoja) {
+      selectionPayload = buildSelectionPayload(attachedSaunoja);
+    } else {
+      const unit = unitsById.get(selectedUnitId);
+      if (unit) {
+        selectionPayload = buildSelectionPayloadFromUnit(unit);
+      } else {
+        selectedUnitId = null;
+      }
+    }
   }
-  unitFx.setSelection(buildSelectionPayload(selectedSaunoja));
+
+  if (!selectionPayload) {
+    const selectedSaunoja = getSelectedSaunoja();
+    if (selectedSaunoja) {
+      const attachedUnit = getAttachedUnitFor(selectedSaunoja);
+      selectedUnitId = attachedUnit?.id ?? selectedSaunoja.id;
+      selectionPayload = buildSelectionPayload(selectedSaunoja);
+    }
+  }
+
+  unitFx.setSelection(selectionPayload);
 }
 
 let objectiveTracker: ObjectiveTracker | null = null;
@@ -1882,6 +1932,10 @@ function deselectAllSaunojas(except?: Saunoja): boolean {
 
 function clearSaunojaSelection(): boolean {
   let changed = false;
+  if (selectedUnitId !== null) {
+    selectedUnitId = null;
+    changed = true;
+  }
   if (deselectAllSaunojas()) {
     changed = true;
   }
@@ -1914,6 +1968,9 @@ function isEliteUnit(unit: Unit | null): boolean {
 
 function focusSaunoja(target: Saunoja): boolean {
   let changed = false;
+  const previousUnitId = selectedUnitId;
+  const attachedUnit = getAttachedUnitFor(target);
+  selectedUnitId = attachedUnit?.id ?? target.id;
   if (!target.selected) {
     target.selected = true;
     changed = true;
@@ -1922,6 +1979,9 @@ function focusSaunoja(target: Saunoja): boolean {
     changed = true;
   }
   if (setSelectedCoord(target.coord)) {
+    changed = true;
+  }
+  if (previousUnitId !== selectedUnitId) {
     changed = true;
   }
   syncSelectionOverlay();
@@ -1946,10 +2006,44 @@ export function handleCanvasClick(world: PixelCoord): void {
   const target = saunojas.find(
     (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
   );
+  if (target) {
+    const selectionChanged = focusSaunoja(target);
+    if (!selectionChanged) {
+      return;
+    }
+    saveUnits();
+    updateRosterDisplay();
+    draw();
+    return;
+  }
 
-  const selectionChanged = target ? focusSaunoja(target) : clearSaunojaSelection();
+  const enemyTarget = units.find(
+    (unit) =>
+      unit.faction !== 'player' &&
+      !unit.isDead() &&
+      unit.coord.q === clicked.q &&
+      unit.coord.r === clicked.r
+  );
 
-  if (!selectionChanged) {
+  if (enemyTarget) {
+    const previousUnitId = selectedUnitId;
+    const deselected = deselectAllSaunojas();
+    const coordChanged = setSelectedCoord(enemyTarget.coord);
+    selectedUnitId = enemyTarget.id;
+    syncSelectionOverlay();
+    if (deselected) {
+      saveUnits();
+      updateRosterDisplay();
+    }
+    if (previousUnitId !== selectedUnitId || coordChanged || deselected) {
+      draw();
+    }
+    return;
+  }
+
+  const selectionCleared = clearSaunojaSelection();
+
+  if (!selectionCleared) {
     return;
   }
 
@@ -2151,6 +2245,10 @@ const onUnitDied = ({
     units.splice(idx, 1);
     unitsById.delete(unitId);
     detachSaunoja(unitId);
+    if (selectedUnitId === unitId) {
+      selectedUnitId = null;
+      syncSelectionOverlay();
+    }
     draw();
   }
   if (rosterUpdated || xpUpdated) {
