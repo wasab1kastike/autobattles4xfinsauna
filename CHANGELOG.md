@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Route battlefield status overlays through a fresh FX manager frame buffer so
+  the renderer pushes live HP, shield, and modifier data for visible units,
+  drive the sauna countdown ring via the shared UnitStatusLayer payloads, and
+  extend Vitest coverage around the overlay pipeline.
+
 - Introduce a `drawUnitSprite` renderer helper that paints faction-aware oval
   bases with layered gradients, refactors battlefield unit rendering to reuse
   the placement math for Sisu outlines and selection cues, extends the Vitest

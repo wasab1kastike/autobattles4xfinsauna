@@ -156,15 +156,14 @@ export function drawSaunaOverlay(
 
 
   if (pushStatus) {
-    const gaugeRadius = hexSize * 0.9;
-    const trackRadius = gaugeRadius * 0.78;
+    const statusRadius = Math.max(hexSize * 0.82, Math.min(hexSize * 1.6, auraRadius * 0.62));
     const cooldown = sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
     const remainingSeconds = Math.max(0, Math.min(cooldown, sauna.playerSpawnTimer));
     const progress = cooldown <= 0 ? 1 : 1 - Math.min(1, remainingSeconds / cooldown);
     pushStatus({
       id: sauna.id,
       world: { x: worldCenterX, y: worldCenterY },
-      radius: trackRadius,
+      radius: statusRadius,
       progress,
       countdown: remainingSeconds,
       label: 'Sauna \u2668\ufe0f',
