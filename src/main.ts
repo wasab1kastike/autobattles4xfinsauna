@@ -4,7 +4,6 @@ import { loadSaunaSettings } from './game/saunaSettings.ts';
 import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.tsx';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
-import { preloadSaunojaIcon } from './units/renderSaunoja.ts';
 import { createHud, type HudController, type LoadingHandle, type BannerOptions } from './ui/hud.ts';
 import { useIsMobile } from './ui/hooks/useIsMobile.ts';
 import { createBootstrapLoader, type LoaderStatusEvent } from './bootstrap/loader.ts';
@@ -178,7 +177,6 @@ function handleLoaderEvent(event: LoaderStatusEvent): void {
 const bootstrapLoader = createBootstrapLoader({
   assetPaths,
   loadAssets,
-  preloadSaunojaIcon,
   setAssets,
   startGame: start,
   shouldAbort: (token) => token !== initToken,

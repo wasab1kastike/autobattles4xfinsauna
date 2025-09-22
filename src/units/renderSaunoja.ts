@@ -2,100 +2,45 @@ import { HEX_R, pathHex } from '../hex/index.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Saunoja } from './saunoja.ts';
 import { drawHitFlash, drawSteam } from './visualHelpers.ts';
-import { getSpriteCenter } from '../render/units/draw.ts';
-import { snapForZoom } from '../render/zoom.ts';
+import { getSpritePlacement } from '../render/units/draw.ts';
 import type { UnitStatusBuff, UnitStatusPayload } from '../ui/fx/types.ts';
 
-function resolveSaunojaIconPath(): string {
-  const baseUrl = import.meta.env.BASE_URL ?? '/';
-  const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
-  const assetPath = 'assets/units/saunoja.svg';
-  return `${normalizedBase}${assetPath.replace(/^\/+/, '')}`;
+type SpriteResolver = (saunoja: Saunoja) => string | null | undefined;
+
+const DEFAULT_SAUNOJA_SPRITE_ID = 'saunoja-guardian';
+
+function normalizeSpriteId(candidate: string | null | undefined): string {
+  if (typeof candidate !== 'string') {
+    return DEFAULT_SAUNOJA_SPRITE_ID;
+  }
+  const trimmed = candidate.trim();
+  if (!trimmed) {
+    return DEFAULT_SAUNOJA_SPRITE_ID;
+  }
+  return trimmed.replace(/^unit-/, '');
 }
 
-const SAUNOJA_ICON_PATH = resolveSaunojaIconPath();
-
-let saunojaIcon: HTMLImageElement | null = null;
-let saunojaIconPromise: Promise<HTMLImageElement> | null = null;
-
-function isImageReady(image: HTMLImageElement | null): image is HTMLImageElement {
-  return Boolean(image && image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
-}
-
-function notifyLoaded(
-  icon: HTMLImageElement,
-  onLoad?: (icon: HTMLImageElement) => void
-): HTMLImageElement {
-  if (!onLoad) {
-    return icon;
+function resolveSpriteAsset(
+  assets: Record<string, HTMLImageElement> | undefined,
+  spriteId: string
+): HTMLImageElement | null {
+  if (!assets) {
+    return null;
   }
-
-  try {
-    onLoad(icon);
-  } catch (error) {
-    console.error('Saunoja icon onLoad callback failed', error);
-  }
-
-  return icon;
-}
-
-export function preloadSaunojaIcon(onLoad?: (icon: HTMLImageElement) => void): Promise<HTMLImageElement> {
-  const withCallback = (promise: Promise<HTMLImageElement>) =>
-    onLoad ? promise.then((icon) => notifyLoaded(icon, onLoad)) : promise;
-
-  if (isImageReady(saunojaIcon)) {
-    return withCallback(Promise.resolve(saunojaIcon));
-  }
-
-  if (saunojaIconPromise) {
-    return withCallback(saunojaIconPromise);
-  }
-
-  if (typeof Image === 'undefined') {
-    return Promise.reject(new Error('Image constructor is not available in this environment.'));
-  }
-
-  const img = new Image();
-  img.decoding = 'async';
-  saunojaIcon = img;
-
-  saunojaIconPromise = new Promise((resolve, reject) => {
-    const cleanup = () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-
-    const finalize = () => {
-      cleanup();
-      resolve(img);
-    };
-
-    img.onload = finalize;
-    img.onerror = (event) => {
-      cleanup();
-      saunojaIcon = null;
-      saunojaIconPromise = null;
-      const error = new Error(`Failed to load saunoja icon from ${SAUNOJA_ICON_PATH}`);
-      console.warn(error.message, event);
-      reject(error);
-    };
-
-    img.src = SAUNOJA_ICON_PATH;
-
-    if (isImageReady(img)) {
-      finalize();
-    }
-  });
-
-  return withCallback(saunojaIconPromise);
+  const assetKey = spriteId.startsWith('unit-') ? spriteId : `unit-${spriteId}`;
+  const asset = assets[assetKey];
+  return asset ?? null;
 }
 
 export interface DrawSaunojasOptions {
+  assets?: Record<string, HTMLImageElement>;
   originX?: number;
   originY?: number;
   hexRadius?: number;
   zoom?: number;
   resolveRenderCoord?: (saunoja: Saunoja) => AxialCoord | null | undefined;
+  resolveSpriteId?: SpriteResolver;
+  fallbackSpriteId?: string;
   pushStatus?: (status: UnitStatusPayload) => void;
 }
 
@@ -103,11 +48,14 @@ export function drawSaunojas(
   ctx: CanvasRenderingContext2D,
   saunojas: Saunoja[],
   {
+    assets,
     originX = 0,
     originY = 0,
     hexRadius = HEX_R,
     zoom = 1,
     resolveRenderCoord,
+    resolveSpriteId,
+    fallbackSpriteId,
     pushStatus
   }: DrawSaunojasOptions = {}
 ): void {
@@ -115,13 +63,13 @@ export function drawSaunojas(
     return;
   }
 
-  const icon = isImageReady(saunojaIcon) ? saunojaIcon : null;
-  if (!icon) {
+  if (!assets) {
     return;
   }
 
   const radius = Number.isFinite(hexRadius) && hexRadius > 0 ? hexRadius : HEX_R;
   const clipRadius = radius * 0.965;
+  const fallback = normalizeSpriteId(fallbackSpriteId);
   const renderable = saunojas
     .map((unit) => {
       const candidate = resolveRenderCoord?.(unit);
@@ -146,31 +94,28 @@ export function drawSaunojas(
     });
 
   for (const { unit, coord } of renderable) {
-    const { x: centerX, y: centerY } = getSpriteCenter({
+    const spriteId = normalizeSpriteId(resolveSpriteId?.(unit) ?? fallback);
+    const sprite = resolveSpriteAsset(assets, spriteId);
+    if (!sprite) {
+      continue;
+    }
+
+    const placement = getSpritePlacement({
       coord,
       hexSize: radius,
       origin: { x: originX, y: originY },
       zoom,
-      type: 'saunoja'
+      type: spriteId
     });
+    const { centerX, centerY, drawX, drawY, width, height } = placement;
 
     ctx.save();
     pathHex(ctx, centerX, centerY, clipRadius);
     ctx.clip();
 
-    const iconWidth = icon.naturalWidth || 1;
-    const iconHeight = icon.naturalHeight || 1;
-    const widthBudget = clipRadius * 1.85;
-    const heightBudget = clipRadius * 2.4;
-    const iconScale = Math.min(widthBudget / iconWidth, heightBudget / iconHeight);
-    const drawWidth = snapForZoom(iconWidth * iconScale, zoom);
-    const drawHeight = snapForZoom(iconHeight * iconScale, zoom);
-    const imageX = snapForZoom(centerX - drawWidth / 2, zoom);
-    const imageY = snapForZoom(centerY - drawHeight * 0.78, zoom);
-
     ctx.save();
     ctx.filter = 'saturate(112%) contrast(108%) brightness(1.04)';
-    ctx.drawImage(icon, imageX, imageY, drawWidth, drawHeight);
+    ctx.drawImage(sprite, drawX, drawY, width, height);
     ctx.restore();
 
     ctx.save();
@@ -216,7 +161,7 @@ export function drawSaunojas(
     ctx.fillRect(centerX - clipRadius, centerY - clipRadius, clipRadius * 2, clipRadius * 2);
     ctx.restore();
 
-    const now = performance.now();
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const elapsed = now - unit.lastHitAt;
     const FLASH_MS = 120;
     if (elapsed < FLASH_MS) {

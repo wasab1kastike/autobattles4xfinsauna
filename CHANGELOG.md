@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Sync the Saunoja battlefield overlay with the new unit sprite atlas: replace
+  the bespoke SVG loader with archetype-driven `unit-*` assets, stream sprite
+  resolution through the renderer so attendants inherit the latest art, expand
+  the Vitest coverage around Saunoja rendering, and document the visual upgrade.
+
 - Teach the sauna shop to honor an injected runtime artocoin balance when
   local storage is unavailable: thread the getter through the game purchase
   handler, short-circuit spending with a mocked artocoin result, and lock in the

@@ -13,7 +13,6 @@ export type LoaderStatusEvent =
 export interface BootstrapLoaderOptions {
   assetPaths: AssetPaths;
   loadAssets(paths: AssetPaths): Promise<AssetLoadResult>;
-  preloadSaunojaIcon(): Promise<unknown>;
   setAssets(assets: LoadedAssets): void;
   startGame(): void;
   formatError?(reason: unknown): string;
@@ -58,22 +57,8 @@ export function createBootstrapLoader(options: BootstrapLoaderOptions) {
           load: async () => {
             const result = await options.loadAssets(options.assetPaths);
             return { value: result.assets, errors: result.failures };
-          },
-        },
-        saunojaIcon: {
-          label: 'Saunoja icon',
-          load: async () => {
-            try {
-              await options.preloadSaunojaIcon();
-              return { value: true };
-            } catch (error) {
-              return {
-                value: false,
-                warnings: [`Unable to preload Saunoja icon (${formatError(error)})`],
-              };
-            }
-          },
-        },
+          }
+        }
       });
 
       if (options.shouldAbort?.(runToken)) {
