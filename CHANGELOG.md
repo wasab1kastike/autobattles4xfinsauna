@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce a `drawUnitSprite` renderer helper that paints faction-aware oval
+  bases with layered gradients, refactors battlefield unit rendering to reuse
+  the placement math for Sisu outlines and selection cues, extends the Vitest
+  suite for sprite geometry, and documents the polished pipeline.
+
 - Merge the roster, stash, and policies HUD panes into a unified glass dock with
   a shared tab strip, route the stash renderer through the new panel, and refresh
   HUD tests to reflect the tab-driven layout.
