@@ -1,4 +1,4 @@
-import { GameState, Resource } from '../core/GameState.ts';
+import { GameState } from '../core/GameState.ts';
 import {
   eventBus,
   eventScheduler,
@@ -13,13 +13,6 @@ import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
 import type { EquipmentSlotId } from '../items/types.ts';
 import {
-  listPolicies,
-  POLICY_EVENTS,
-  type PolicyDefinition,
-  type PolicyAppliedEvent,
-  type PolicyRejectedEvent
-} from '../data/policies.ts';
-import {
   getLogHistory,
   LOG_EVENT_META,
   LOG_EVENT_ORDER,
@@ -32,6 +25,7 @@ import {
   type LogEventType,
   writeLogPreferences
 } from './logging.ts';
+import { createPolicyPanel } from './policies/PolicyPanel.ts';
 
 export type {
   RosterEntry,
@@ -73,6 +67,7 @@ export function setupRightPanel(
   const rightRegion = regions.right;
   const commandDock = dock.actions;
   const rosterHudPanel = bottomTabs.panels.roster;
+  const policyHudPanel = bottomTabs.panels.policies;
 
   const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle') => {
     if (!rosterHudPanel) {
@@ -432,8 +427,6 @@ export function setupRightPanel(
   rosterTab.setAttribute('role', 'region');
   rosterTab.setAttribute('aria-live', 'polite');
   rosterTab.setAttribute('aria-label', 'Battalion roster');
-  const policiesTab = document.createElement('div');
-  policiesTab.id = 'right-panel-policies';
   const eventsTab = document.createElement('div');
   eventsTab.id = 'right-panel-events';
   const logSection = document.createElement('div');
@@ -470,14 +463,12 @@ export function setupRightPanel(
 
   const tabs: Record<string, HTMLDivElement> = {
     Roster: rosterTab,
-    Policies: policiesTab,
     Events: eventsTab,
     Log: logSection
   };
 
   const bottomTabTargets: Partial<Record<string, HudBottomTabId>> = {
     Roster: 'roster',
-    Policies: 'policies',
   };
 
   const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
@@ -547,215 +538,8 @@ export function setupRightPanel(
   }
 
   // --- Policies ---
-  const resourceLabel: Record<Resource, string> = {
-    [Resource.SAUNA_BEER]: 'Sauna Beer Bottles',
-    [Resource.SAUNAKUNNIA]: 'Saunakunnia',
-    [Resource.SISU]: 'Sisu'
-  };
-
-  type PolicyUiElements = {
-    card: HTMLElement;
-    action: HTMLButtonElement;
-    stateBadge: HTMLSpanElement;
-    statusCopy: HTMLParagraphElement;
-    requirements: HTMLUListElement;
-    costChip: HTMLSpanElement;
-  };
-
-  const policies = listPolicies();
-  const policyElements = new Map<PolicyDefinition['id'], PolicyUiElements>();
-
-  function createBadge(text: string): HTMLSpanElement {
-    const badge = document.createElement('span');
-    badge.className = 'policy-card__badge';
-    badge.textContent = text;
-    return badge;
-  }
-
-  function createPolicyCard(def: PolicyDefinition): HTMLElement {
-    const card = document.createElement('article');
-    card.className = 'policy-card';
-    card.style.setProperty('--policy-gradient', def.visuals.gradient);
-    card.style.setProperty('--policy-accent', def.visuals.accentColor);
-
-    const header = document.createElement('div');
-    header.className = 'policy-card__header';
-
-    const iconFrame = document.createElement('div');
-    iconFrame.className = 'policy-card__icon-frame';
-
-    const icon = document.createElement('img');
-    icon.className = 'policy-card__icon';
-    icon.src = def.visuals.icon;
-    icon.alt = `${def.name} icon`;
-    iconFrame.appendChild(icon);
-
-    const heading = document.createElement('div');
-    heading.className = 'policy-card__heading';
-
-    const title = document.createElement('h4');
-    title.className = 'policy-card__title';
-    title.textContent = def.name;
-    heading.appendChild(title);
-
-    if (def.visuals.badges?.length) {
-      const badgeStrip = document.createElement('div');
-      badgeStrip.className = 'policy-card__badges';
-      def.visuals.badges.forEach((text) => badgeStrip.appendChild(createBadge(text)));
-      heading.appendChild(badgeStrip);
-    }
-
-    const stateBadge = document.createElement('span');
-    stateBadge.className = 'policy-card__state';
-    stateBadge.textContent = 'Ready';
-
-    header.append(iconFrame, heading, stateBadge);
-
-    const description = document.createElement('p');
-    description.className = 'policy-card__description';
-    description.textContent = def.description;
-
-    const flair = def.visuals.flair
-      ? (() => {
-          const flairLine = document.createElement('p');
-          flairLine.className = 'policy-card__flair';
-          flairLine.textContent = def.visuals.flair ?? '';
-          return flairLine;
-        })()
-      : null;
-
-    const actions = document.createElement('div');
-    actions.className = 'policy-card__actions';
-
-    const costChip = document.createElement('span');
-    costChip.className = 'policy-card__cost';
-
-    const costLabel = document.createElement('span');
-    costLabel.className = 'policy-card__cost-label';
-    costLabel.textContent = 'Cost';
-    const costValue = document.createElement('span');
-    costValue.className = 'policy-card__cost-value';
-    costValue.textContent = `${numberFormatter.format(def.cost)} ${resourceLabel[def.resource]}`;
-    costChip.append(costLabel, costValue);
-
-    const action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'policy-card__action';
-    action.textContent = 'Enact Policy';
-
-    const statusCopy = document.createElement('p');
-    statusCopy.className = 'policy-card__status';
-
-    const requirements = document.createElement('ul');
-    requirements.className = 'policy-card__requirements';
-    requirements.hidden = true;
-
-    actions.append(costChip, action);
-
-    const handleClick = (): void => {
-      if (state.applyPolicy(def.id)) {
-        updatePolicyCard(def);
-      }
-    };
-    action.addEventListener('click', handleClick);
-    disposers.push(() => action.removeEventListener('click', handleClick));
-
-    card.append(header, description);
-    if (flair) {
-      card.appendChild(flair);
-    }
-    card.append(actions, statusCopy, requirements);
-
-    policyElements.set(def.id, {
-      card,
-      action,
-      stateBadge,
-      statusCopy,
-      requirements,
-      costChip
-    });
-
-    return card;
-  }
-
-  function renderPolicies(): void {
-    policiesTab.innerHTML = '';
-    policyElements.clear();
-    const grid = document.createElement('div');
-    grid.className = 'policy-grid';
-    policies.forEach((policy) => {
-      const card = createPolicyCard(policy);
-      grid.appendChild(card);
-    });
-    policiesTab.appendChild(grid);
-    updatePolicyCards();
-  }
-
-  function updatePolicyCard(def: PolicyDefinition): void {
-    const elements = policyElements.get(def.id);
-    if (!elements) {
-      return;
-    }
-
-    const applied = state.hasPolicy(def.id);
-    const missing = def.prerequisites.filter((req) => !req.isSatisfied(state));
-    const affordable = state.canAfford(def.cost, def.resource);
-
-    elements.action.disabled = applied || missing.length > 0 || !affordable;
-    elements.action.textContent = applied ? 'Enacted' : 'Enact Policy';
-
-    let status = 'ready';
-    let badgeText = 'Ready';
-    let statusLine = def.spotlight ?? 'All signals point to go.';
-
-    elements.requirements.innerHTML = '';
-    elements.requirements.hidden = true;
-
-    if (applied) {
-      status = 'applied';
-      badgeText = 'Enacted';
-      statusLine = def.visuals.flair ?? 'Policy active.';
-    } else if (missing.length > 0) {
-      status = 'locked';
-      badgeText = 'Locked';
-      statusLine = 'Awaiting requirements:';
-      elements.requirements.hidden = false;
-      missing.forEach((req) => {
-        const item = document.createElement('li');
-        item.textContent = req.description;
-        elements.requirements.appendChild(item);
-      });
-    } else if (!affordable) {
-      status = 'budget';
-      badgeText = 'Needs Resources';
-      statusLine = `Earn ${numberFormatter.format(def.cost)} ${resourceLabel[def.resource]} to enact this edict.`;
-    }
-
-    elements.card.dataset.status = status;
-    elements.stateBadge.textContent = badgeText;
-    elements.statusCopy.textContent = statusLine;
-    const emphasizeCost = !applied && missing.length === 0 && !affordable;
-    elements.costChip.classList.toggle('policy-card__cost--warning', emphasizeCost);
-  }
-
-  function updatePolicyCards(): void {
-    policies.forEach((policy) => updatePolicyCard(policy));
-  }
-
-  renderPolicies();
-
-  const handleResourceChanged = (_payload: unknown): void => updatePolicyCards();
-  const handlePolicyApplied = (_event: PolicyAppliedEvent): void => updatePolicyCards();
-  const handlePolicyRejected = (_event: PolicyRejectedEvent): void => updatePolicyCards();
-
-  eventBus.on('resourceChanged', handleResourceChanged);
-  eventBus.on(POLICY_EVENTS.APPLIED, handlePolicyApplied);
-  eventBus.on(POLICY_EVENTS.REJECTED, handlePolicyRejected);
-  disposers.push(() => {
-    eventBus.off('resourceChanged', handleResourceChanged);
-    eventBus.off(POLICY_EVENTS.APPLIED, handlePolicyApplied);
-    eventBus.off(POLICY_EVENTS.REJECTED, handlePolicyRejected);
-  });
+  const policyPanel = createPolicyPanel(policyHudPanel, state);
+  disposers.push(() => policyPanel.destroy());
 
   // --- Events ---
   function createChoiceButton(event: ActiveSchedulerEvent, choice: SchedulerEventContent['choices'][number]): HTMLButtonElement {
