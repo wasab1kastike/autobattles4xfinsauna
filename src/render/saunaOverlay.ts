@@ -1,7 +1,7 @@
 import type { Sauna } from '../sim/sauna.ts';
 import type { PixelCoord } from '../hex/HexUtils.ts';
 import { axialToPixel, DIRECTIONS } from '../hex/HexUtils.ts';
-import type { SaunaStatusPayload } from '../ui/fx/types.ts';
+import type { SaunaPerimeterAnchor, SaunaStatusPayload } from '../ui/fx/types.ts';
 
 interface SaunaPalette {
   accent: string;
@@ -121,6 +121,31 @@ export function drawSaunaOverlay(
   const worldCenterX = centerX + origin.x;
   const worldCenterY = centerY + origin.y;
   const auraRadius = computeAuraRadiusPx(sauna, hexSize);
+  const startAngle = -Math.PI / 2;
+  const ringRadius = Math.max(hexSize * 0.96, Math.min(hexSize * 1.12, auraRadius * 0.6));
+  const ringThickness = Math.max(hexSize * 0.18, Math.min(hexSize * 0.42, hexSize * 0.3));
+  const badgeRadius = ringRadius + ringThickness * 0.9;
+  const markerRadius = Math.max(ringRadius - ringThickness * 0.5, hexSize * 0.6);
+
+  const anchors: SaunaPerimeterAnchor[] = Array.from({ length: 6 }, (_, index) => {
+    const angle = startAngle + Math.PI / 6 + (Math.PI / 3) * index;
+    return {
+      angle,
+      radius: ringRadius,
+      world: {
+        x: worldCenterX + Math.cos(angle) * ringRadius,
+        y: worldCenterY + Math.sin(angle) * ringRadius
+      }
+    } satisfies SaunaPerimeterAnchor;
+  });
+
+  const badgeAnchorCandidates = anchors.filter((anchor) => Math.cos(anchor.angle) >= 0);
+  const badgeAnchor = (badgeAnchorCandidates.length > 0 ? badgeAnchorCandidates : anchors).reduce(
+    (best, anchor) => {
+      return anchor.world.y < best.world.y ? anchor : best;
+    }
+  );
+  const badgeAngle = badgeAnchor ? badgeAnchor.angle : startAngle;
 
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
@@ -145,18 +170,18 @@ export function drawSaunaOverlay(
 
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
-  ctx.lineWidth = Math.max(hexSize * 0.28, 6);
+  ctx.lineWidth = Math.max(ringThickness * 0.75, hexSize * 0.22);
   ctx.strokeStyle = `rgba(56, 189, 248, ${(0.35 + pulse * 0.2).toFixed(3)})`;
   ctx.shadowColor = `rgba(56, 189, 248, ${0.45 + pulse * 0.1})`;
-  ctx.shadowBlur = hexSize * (0.9 + pulse * 0.45);
+  ctx.shadowBlur = ringThickness * (2 + pulse * 0.65);
   ctx.beginPath();
-  ctx.arc(centerX, centerY, auraRadius + hexSize * 0.12, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, ringRadius + ringThickness * (0.55 + pulse * 0.15), 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 
 
   if (pushStatus) {
-    const statusRadius = Math.max(hexSize * 0.82, Math.min(hexSize * 1.6, auraRadius * 0.62));
+    const statusRadius = ringRadius + ringThickness;
     const cooldown = sauna.playerSpawnCooldown > 0 ? sauna.playerSpawnCooldown : 1;
     const remainingSeconds = Math.max(0, Math.min(cooldown, sauna.playerSpawnTimer));
     const progress = cooldown <= 0 ? 1 : 1 - Math.min(1, remainingSeconds / cooldown);
@@ -168,7 +193,16 @@ export function drawSaunaOverlay(
       countdown: remainingSeconds,
       label: 'Sauna \u2668\ufe0f',
       unitLabel: 'sec',
-      visible: !sauna.destroyed
+      visible: !sauna.destroyed,
+      geometry: {
+        ringRadius,
+        ringThickness,
+        startAngle,
+        badgeAngle,
+        badgeRadius,
+        markerRadius,
+        anchors
+      }
     });
   }
 }
