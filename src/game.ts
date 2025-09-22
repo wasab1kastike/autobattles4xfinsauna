@@ -2165,7 +2165,7 @@ export function draw(): void {
   if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
     ctx.translate(shakeOffset.x, shakeOffset.y);
   }
-  render(ctx, mapRenderer, assets.images, units, selected, {
+  render(ctx, mapRenderer, { images: assets.images, atlas: assets.atlases.units }, units, selected, {
     saunojas:
       overlaySaunojas.length > 0
         ? {

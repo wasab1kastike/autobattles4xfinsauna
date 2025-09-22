@@ -10,6 +10,7 @@ import { createSauna } from './sim/sauna.ts';
 import { runEconomyTick } from './economy/tick.ts';
 import { getSoldierStats } from './units/Soldier.ts';
 import { clearLogs, logStore } from './ui/logging.ts';
+import type { UnitSpriteAtlas } from './render/units/spriteAtlas.ts';
 
 const flushLogs = () =>
   new Promise<void>((resolve) =>
@@ -534,12 +535,33 @@ describe('rendering', () => {
     const assetsModule = await import('./game/assets.ts');
     assetsModule.resetAssetsForTest();
     const fakeImage = document.createElement('img') as HTMLImageElement;
+    const fakeAtlas: UnitSpriteAtlas = {
+      canvas: document.createElement('canvas'),
+      width: 32,
+      height: 32,
+      padding: 0,
+      slices: {
+        'unit-soldier': {
+          id: 'unit-soldier',
+          sx: 0,
+          sy: 0,
+          sw: 32,
+          sh: 32,
+          u0: 0,
+          v0: 0,
+          u1: 1,
+          v1: 1
+        }
+      }
+    };
     assetsModule.setAssets({
       images: {
         placeholder: fakeImage,
         'unit-soldier': fakeImage
-      }
-    } as any);
+      },
+      sounds: {},
+      atlases: { units: fakeAtlas }
+    });
 
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
     const fakeCtx = {
@@ -609,12 +631,32 @@ describe('game lifecycle', () => {
     assetsModule.resetAssetsForTest();
     const fakeImage = document.createElement('img') as HTMLImageElement;
     const fakeAudio = document.createElement('audio') as HTMLAudioElement;
+    const fakeAtlas: UnitSpriteAtlas = {
+      canvas: document.createElement('canvas'),
+      width: 32,
+      height: 32,
+      padding: 0,
+      slices: {
+        'unit-soldier': {
+          id: 'unit-soldier',
+          sx: 0,
+          sy: 0,
+          sw: 32,
+          sh: 32,
+          u0: 0,
+          v0: 0,
+          u1: 1,
+          v1: 1
+        }
+      }
+    };
     assetsModule.setAssets({
       images: {
         placeholder: fakeImage,
         'unit-soldier': fakeImage
       },
-      sounds: { silent: fakeAudio }
+      sounds: { silent: fakeAudio },
+      atlases: { units: fakeAtlas }
     });
 
     const { GameClock } = await import('./core/GameClock.ts');
