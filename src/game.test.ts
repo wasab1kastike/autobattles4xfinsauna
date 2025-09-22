@@ -617,17 +617,6 @@ describe('game lifecycle', () => {
       sounds: { silent: fakeAudio }
     });
 
-    const renderModule = await import('./units/renderSaunoja.ts');
-    const preloadSpy = vi
-      .spyOn(renderModule, 'preloadSaunojaIcon')
-      .mockImplementation(async (onLoad?: (icon: HTMLImageElement) => void) => {
-        const img = document.createElement('img') as HTMLImageElement;
-        if (onLoad) {
-          onLoad(img);
-        }
-        return img;
-      });
-
     const { GameClock } = await import('./core/GameClock.ts');
     const tickSpy = vi.spyOn(GameClock.prototype, 'tick');
 
@@ -681,7 +670,6 @@ describe('game lifecycle', () => {
       }
       rafMock.mockRestore();
       cancelMock.mockRestore();
-      preloadSpy.mockRestore();
       tickSpy.mockRestore();
       assetsModule.resetAssetsForTest();
     }
