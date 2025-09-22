@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Carve out a high-end sauna overlay: limit the canvas pass to the ambient
+  glow, stream reusable perimeter anchors (angles, radii, world coords) to the
+  status layer, restyle the DOM gauge into a slim annulus with a rotating badge
+  driven by CSS variables/conic gradients, and refresh Vitest coverage plus UI
+  docs so the polished overlay stays locked in.
+
 - Standardize every unit sprite on a 64×64 canvas, re-export the SVGs with
   consistent padding, refresh `UNIT_SPRITE_MAP` scale math, wire up an
   `npm run export:sprites` helper that records the canvas manifest, document the
