@@ -17,7 +17,12 @@ export interface UnitSpriteMetadata {
   readonly nudge: SpriteVector;
 }
 
-type UnitSpriteId = UnitArchetypeId | 'saunoja' | 'default';
+type UnitSpriteId =
+  | UnitArchetypeId
+  | 'saunoja'
+  | 'saunoja-guardian'
+  | 'saunoja-seer'
+  | 'default';
 
 const DEFAULT_SPRITE: UnitSpriteMetadata = {
   nativeSize: { width: 64, height: 64 },
@@ -29,28 +34,40 @@ const DEFAULT_SPRITE: UnitSpriteMetadata = {
 export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   default: DEFAULT_SPRITE,
   soldier: {
-    nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.5, y: 0.9 },
-    scale: { x: 1.12, y: 1.24 },
-    nudge: { x: 0, y: -0.14 }
+    nativeSize: { width: 160, height: 184 },
+    anchor: { x: 0.5, y: 0.815 },
+    scale: { x: 1.3806202089317139, y: 1.375 },
+    nudge: { x: 0, y: -0.02 }
   },
   archer: {
-    nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.46, y: 0.88 },
-    scale: { x: 1.1, y: 1.22 },
-    nudge: { x: -0.04, y: -0.12 }
+    nativeSize: { width: 168, height: 188 },
+    anchor: { x: 0.5, y: 0.81 },
+    scale: { x: 1.4510532031494585, y: 1.40625 },
+    nudge: { x: 0, y: -0.015 }
   },
   'avanto-marauder': {
-    nativeSize: { width: 128, height: 128 },
-    anchor: { x: 0.5, y: 0.92 },
-    scale: { x: 1.18, y: 1.3 },
-    nudge: { x: 0, y: -0.18 }
+    nativeSize: { width: 176, height: 196 },
+    anchor: { x: 0.5, y: 0.836 },
+    scale: { x: 1.5553109292455225, y: 1.5 },
+    nudge: { x: 0, y: -0.03 }
   },
   saunoja: {
     nativeSize: { width: 128, height: 128 },
     anchor: { x: 0.5, y: 0.66 },
     scale: { x: 1, y: 1 },
     nudge: { x: 0, y: -0.02 }
+  },
+  'saunoja-guardian': {
+    nativeSize: { width: 160, height: 176 },
+    anchor: { x: 0.5, y: 0.806 },
+    scale: { x: 1.37776768783888, y: 1.3125 },
+    nudge: { x: 0, y: -0.015 }
+  },
+  'saunoja-seer': {
+    nativeSize: { width: 160, height: 176 },
+    anchor: { x: 0.5, y: 0.806 },
+    scale: { x: 1.37776768783888, y: 1.3125 },
+    nudge: { x: 0, y: -0.015 }
   }
 };
 

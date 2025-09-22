@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Deliver the v1 frontline art drop: replace the soldier, archer, and Avanto
+  marauder sprites with the art-pipeline SVGs, introduce guardian/seer Saunoja
+  variants, retune sprite metadata so each unit centers on its hex base, and
+  lock the renderer tests to the new anchors and scale ratios.
+
 - Lock the Steamforge Atelier crest and tier badges to dedicated 3rem wrappers
   so the shop assets render at the intended proportions inside the sauna panel.
 

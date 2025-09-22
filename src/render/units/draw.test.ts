@@ -84,17 +84,52 @@ describe('unit sprite placement', () => {
     expect(placement.metadata).toBe(meta);
   });
 
-  it('exposes refreshed metadata for soldier and archer sprites', () => {
-    const soldier = getUnitSpriteMetadata('soldier');
-    expect(soldier.nativeSize).toEqual({ width: 128, height: 128 });
-    expect(soldier.anchor).toEqual({ x: 0.5, y: 0.9 });
-    expect(soldier.scale).toEqual({ x: 1.12, y: 1.24 });
-    expect(soldier.nudge).toEqual({ x: 0, y: -0.14 });
+  it('exposes refreshed metadata for production sprites', () => {
+    const expectations = [
+      {
+        type: 'soldier',
+        nativeSize: { width: 160, height: 184 },
+        anchor: { x: 0.5, y: 0.815 },
+        scale: { x: 1.3806202089317139, y: 1.375 },
+        nudge: { x: 0, y: -0.02 }
+      },
+      {
+        type: 'archer',
+        nativeSize: { width: 168, height: 188 },
+        anchor: { x: 0.5, y: 0.81 },
+        scale: { x: 1.4510532031494585, y: 1.40625 },
+        nudge: { x: 0, y: -0.015 }
+      },
+      {
+        type: 'avanto-marauder',
+        nativeSize: { width: 176, height: 196 },
+        anchor: { x: 0.5, y: 0.836 },
+        scale: { x: 1.5553109292455225, y: 1.5 },
+        nudge: { x: 0, y: -0.03 }
+      },
+      {
+        type: 'saunoja-guardian',
+        nativeSize: { width: 160, height: 176 },
+        anchor: { x: 0.5, y: 0.806 },
+        scale: { x: 1.37776768783888, y: 1.3125 },
+        nudge: { x: 0, y: -0.015 }
+      },
+      {
+        type: 'saunoja-seer',
+        nativeSize: { width: 160, height: 176 },
+        anchor: { x: 0.5, y: 0.806 },
+        scale: { x: 1.37776768783888, y: 1.3125 },
+        nudge: { x: 0, y: -0.015 }
+      }
+    ] as const;
 
-    const archer = getUnitSpriteMetadata('archer');
-    expect(archer.nativeSize).toEqual({ width: 128, height: 128 });
-    expect(archer.anchor).toEqual({ x: 0.46, y: 0.88 });
-    expect(archer.scale).toEqual({ x: 1.1, y: 1.22 });
-    expect(archer.nudge).toEqual({ x: -0.04, y: -0.12 });
+    for (const { type, nativeSize, anchor, scale, nudge } of expectations) {
+      const meta = getUnitSpriteMetadata(type);
+      expect(meta.nativeSize).toEqual(nativeSize);
+      expect(meta.anchor).toEqual(anchor);
+      expect(meta.scale.x).toBeCloseTo(scale.x, 6);
+      expect(meta.scale.y).toBeCloseTo(scale.y, 6);
+      expect(meta.nudge).toEqual(nudge);
+    }
   });
 });
