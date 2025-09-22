@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Teach the sauna shop to honor an injected runtime artocoin balance when
+  local storage is unavailable: thread the getter through the game purchase
+  handler, short-circuit spending with a mocked artocoin result, and lock in the
+  regression with a Vitest case that simulates storage access failures.
+
 - Relocate the policy cards into the bottom HUD tab: extract a reusable
   renderer that feeds `tabs.panels.policies`, wire it into the command-console
   setup to avoid duplicate mounts, and extend the HUD tab tests so the polished
