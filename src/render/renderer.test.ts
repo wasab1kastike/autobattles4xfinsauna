@@ -136,7 +136,10 @@ describe('drawUnits', () => {
         origin,
         zoom: 1,
         type: 'soldier'
-      }
+      },
+      drawBase: true,
+      anchorHint: null,
+      offset: null
     });
     expect(enemyCall[1]).toBe(enemy);
     expect(enemyCall[2]).toMatchObject({
@@ -147,8 +150,50 @@ describe('drawUnits', () => {
         origin,
         zoom: 1,
         type: 'marauder'
-      }
+      },
+      drawBase: true,
+      anchorHint: null,
+      offset: null
     });
+  });
+
+  it('renders stacked units with a shared base and jitter offsets', () => {
+    const frontliner = createStubUnit('frontliner', 'player', { q: 0, r: 0 }, 'soldier');
+    const support = createStubUnit('support', 'player', { q: 0, r: 0 }, 'soldier');
+    const mapRenderer = { hexSize: 32 } as unknown as HexMapRenderer;
+    const origin: PixelCoord = { x: 0, y: 0 };
+    const ctx = createMockContext();
+    const makeImage = () => document.createElement('img') as HTMLImageElement;
+    const assets = {
+      'unit-soldier': makeImage(),
+      placeholder: makeImage()
+    };
+
+    drawUnits(
+      ctx,
+      mapRenderer,
+      assets,
+      [frontliner, support],
+      origin,
+      undefined,
+      [frontliner, support],
+      null,
+      frontliner.coord
+    );
+
+    expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
+    const baseCall = drawUnitSpriteMock.fn.mock.calls[0];
+    const stackedCall = drawUnitSpriteMock.fn.mock.calls[1];
+    const baseResult = drawUnitSpriteMock.fn.mock.results[0]?.value as UnitSpriteRenderResult;
+    expect(baseResult).toBeDefined();
+
+    expect(baseCall[2].drawBase).toBe(true);
+    expect(baseCall[2].offset).toBeNull();
+    expect(stackedCall[2].drawBase).toBe(false);
+    expect(stackedCall[2].anchorHint).toEqual(baseResult.center);
+    expect(stackedCall[2].offset).not.toBeNull();
+    const stackedOffset = stackedCall[2].offset as PixelCoord;
+    expect(Math.abs(stackedOffset.x) + Math.abs(stackedOffset.y)).toBeGreaterThan(0);
   });
 
   it('renders enemies overlapping the sauna when only sauna vision is supplied', () => {
@@ -173,6 +218,8 @@ describe('drawUnits', () => {
     const [, , opts] = drawUnitSpriteMock.fn.mock.calls[0];
     expect(opts.placement.coord).toEqual(enemy.coord);
     expect(opts.selection?.isSelected).toBe(false);
+    expect(opts.drawBase).toBe(true);
+    expect(opts.offset).toBeNull();
   });
 
   it('passes selection flags and exposes placement for Sisu burst outlines', () => {
