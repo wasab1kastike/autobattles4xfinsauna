@@ -1,9 +1,10 @@
 import { HEX_R, pathHex } from '../hex/index.ts';
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Saunoja } from './saunoja.ts';
-import { drawHP, drawHitFlash, drawSteam } from './visualHelpers.ts';
+import { drawHitFlash, drawSteam } from './visualHelpers.ts';
 import { getSpriteCenter } from '../render/units/draw.ts';
 import { snapForZoom } from '../render/zoom.ts';
+import type { UnitStatusBuff, UnitStatusPayload } from '../ui/fx/types.ts';
 
 function resolveSaunojaIconPath(): string {
   const baseUrl = import.meta.env.BASE_URL ?? '/';
@@ -95,6 +96,7 @@ export interface DrawSaunojasOptions {
   hexRadius?: number;
   zoom?: number;
   resolveRenderCoord?: (saunoja: Saunoja) => AxialCoord | null | undefined;
+  pushStatus?: (status: UnitStatusPayload) => void;
 }
 
 export function drawSaunojas(
@@ -105,7 +107,8 @@ export function drawSaunojas(
     originY = 0,
     hexRadius = HEX_R,
     zoom = 1,
-    resolveRenderCoord
+    resolveRenderCoord,
+    pushStatus
   }: DrawSaunojasOptions = {}
 ): void {
   if (!ctx || !Array.isArray(saunojas) || saunojas.length === 0) {
@@ -230,14 +233,29 @@ export function drawSaunojas(
       intensity: unit.steam
     });
 
-    const hpRadius = radius * 0.42;
-    const hpCenterY = centerY + radius * 0.34;
-    drawHP(ctx, {
-      centerX,
-      centerY: hpCenterY,
-      hp: unit.hp,
-      maxHp: unit.maxHp,
-      radius: hpRadius
-    });
+    if (pushStatus) {
+      const hpRadius = radius * 0.42;
+      const hpCenterY = centerY + radius * 0.34;
+      const worldX = centerX + originX;
+      const worldY = hpCenterY + originY;
+      const rawBuffs = Array.isArray(unit.modifiers) ? unit.modifiers : [];
+      const buffs: UnitStatusBuff[] = rawBuffs.map((mod) => ({
+        id: mod.id,
+        remaining: Number.isFinite(mod.remaining) ? mod.remaining : Infinity,
+        duration: Number.isFinite(mod.duration) ? mod.duration : Infinity,
+        stacks: typeof mod.stacks === 'number' && Number.isFinite(mod.stacks) ? mod.stacks : undefined
+      }));
+      pushStatus({
+        id: unit.id,
+        world: { x: worldX, y: worldY },
+        radius: hpRadius,
+        hp: unit.hp,
+        maxHp: unit.maxHp,
+        shield: Number.isFinite(unit.shield) ? unit.shield : 0,
+        faction: 'player',
+        selected: Boolean(unit.selected),
+        buffs
+      });
+    }
   }
 }
