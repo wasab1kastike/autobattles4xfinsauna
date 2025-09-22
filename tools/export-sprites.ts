@@ -47,7 +47,7 @@ function parseViewBox(content: string, id: string): SpriteCanvasSize {
   };
 }
 
-function parseTransform(content: string): SpriteTransform {
+export function parseTransform(content: string): SpriteTransform {
   const defaultTransform: SpriteTransform = {
     translateX: 0,
     translateY: 0,
@@ -61,8 +61,8 @@ function parseTransform(content: string): SpriteTransform {
   }
 
   const transform = match[1];
-  const translateMatch = transform.match(/translate\(\s*([\d.-]+)\s*,\s*([\d.-]+)\s*\)/);
-  const scaleMatch = transform.match(/scale\(\s*([\d.-]+)(?:\s*,\s*([\d.-]+))?\s*\)/);
+  const translateMatch = transform.match(/translate\(\s*([\d.-]+)[,\s]+([\d.-]+)\s*\)/);
+  const scaleMatch = transform.match(/scale\(\s*([\d.-]+)(?:[,\s]+([\d.-]+))?\s*\)/);
 
   const translateX = translateMatch ? Number(translateMatch[1]) : 0;
   const translateY = translateMatch ? Number(translateMatch[2]) : 0;

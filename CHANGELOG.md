@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Relax the sprite transform parser to accept whitespace-separated translate
+  and scale values, cover the `parseTransform` helper with Vitest to lock in
+  the tolerant spacing, and refresh the generated sprite manifest to confirm
+  the broadened parsing behaves identically.
+
 - Move the sprite export helper into `tools/export-sprites.ts`, extend it to
   rasterize polished 64×64 PNG outputs (including 2× retina variants) into
   `public/sprites/`, and update the docs plus npm script so art drops ship with
