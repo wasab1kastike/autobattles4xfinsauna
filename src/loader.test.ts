@@ -9,6 +9,10 @@ describe('loadAssets', () => {
     class MockImage {
       onload: (() => void) | null = null;
       onerror: ((e: unknown) => void) | null = null;
+      width = 32;
+      height = 32;
+      naturalWidth = 32;
+      naturalHeight = 32;
       set src(value: string) {
         setTimeout(() => {
           if (value.includes('fail')) {
@@ -51,26 +55,28 @@ describe('loadAssets', () => {
 
   it('loads all assets successfully', async () => {
     const paths: AssetPaths = {
-      images: { good: 'ok-image' },
+      images: { 'unit-soldier': 'ok-image', placeholder: 'ok-placeholder' },
       sounds: { good: 'ok-sound' }
     };
 
     const result = await loadAssets(paths);
-    expect(result.assets.images).toHaveProperty('good');
+    expect(result.assets.images).toHaveProperty('unit-soldier');
     expect(result.assets.sounds).toHaveProperty('good');
     expect(result.failures).toHaveLength(0);
+    expect(result.assets.atlases.units).not.toBeNull();
+    expect(result.assets.atlases.units?.slices['unit-soldier']).toBeDefined();
   });
 
   it('continues when some assets fail', async () => {
     const paths: AssetPaths = {
-      images: { good: 'ok-image', bad: 'fail-image' },
+      images: { 'unit-soldier': 'ok-image', bad: 'fail-image' },
       sounds: { good: 'ok-sound', bad: 'fail-sound' }
     };
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const result = await loadAssets(paths);
 
-    expect(result.assets.images).toHaveProperty('good');
+    expect(result.assets.images).toHaveProperty('unit-soldier');
     expect(result.assets.images).not.toHaveProperty('bad');
     expect(result.assets.sounds).toHaveProperty('good');
     expect(result.assets.sounds).not.toHaveProperty('bad');
@@ -78,7 +84,12 @@ describe('loadAssets', () => {
     expect(result.failures).toContain('Failed to load image: fail-image');
     expect(result.failures).toContain('Failed to load sound: fail-sound');
     expect(result.failures).toHaveLength(2);
-    expect(errorSpy).toHaveBeenCalledTimes(2);
+    const failedCalls = errorSpy.mock.calls.filter(([message]) =>
+      typeof message === 'string' && message.startsWith('Failed to load')
+    );
+    expect(failedCalls).toHaveLength(2);
+    expect(result.assets.atlases.units).not.toBeNull();
+    expect(result.assets.atlases.units?.slices['unit-soldier']).toBeDefined();
     errorSpy.mockRestore();
   });
 });

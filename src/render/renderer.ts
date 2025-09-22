@@ -12,6 +12,7 @@ import { drawSaunaOverlay } from './saunaOverlay.ts';
 import type { SpritePlacementInput } from './units/draw.ts';
 import { drawUnitSprite } from './units/UnitSprite.ts';
 import type { UnitSpriteRenderResult } from './units/UnitSprite.ts';
+import type { UnitSpriteAtlas, SpriteAtlasSlice } from './units/spriteAtlas.ts';
 import type { SaunaStatusPayload, UnitStatusPayload, UnitStatusBuff } from '../ui/fx/types.ts';
 import type { CombatKeywordEntry, CombatKeywordRegistry } from '../combat/resolve.ts';
 import type { KeywordState } from '../keywords/index.ts';
@@ -130,10 +131,15 @@ export interface DrawOptions {
   friendlyVisionSources?: readonly Unit[];
 }
 
+export interface RendererAssets {
+  images: LoadedAssets['images'];
+  atlas: UnitSpriteAtlas | null;
+}
+
 export function draw(
   ctx: CanvasRenderingContext2D,
   mapRenderer: HexMapRenderer,
-  assets: LoadedAssets['images'],
+  assets: RendererAssets,
   units: Unit[],
   selected: AxialCoord | null,
   options?: DrawOptions
@@ -158,11 +164,11 @@ export function draw(
   const origin = mapRenderer.getOrigin();
   ctx.translate(-(camera.x - origin.x), -(camera.y - origin.y));
 
-  mapRenderer.draw(ctx, assets, selected ?? undefined);
+  mapRenderer.draw(ctx, assets.images, selected ?? undefined);
   const saunojaLayer = options?.saunojas;
   if (saunojaLayer && Array.isArray(saunojaLayer.units) && saunojaLayer.units.length > 0) {
     saunojaLayer.draw(ctx, saunojaLayer.units, {
-      assets,
+      assets: assets.images,
       originX: origin.x,
       originY: origin.y,
       hexRadius: mapRenderer.hexSize,
@@ -176,7 +182,7 @@ export function draw(
   drawUnits(
     ctx,
     mapRenderer,
-    assets,
+    { images: assets.images, atlas: assets.atlas },
     units,
     origin,
     options?.fx,
@@ -199,7 +205,7 @@ export function draw(
 export function drawUnits(
   ctx: CanvasRenderingContext2D,
   mapRenderer: HexMapRenderer,
-  assets: LoadedAssets['images'],
+  assets: RendererAssets,
   units: Unit[],
   origin: PixelCoord,
   fx?: FxLayerOptions,
@@ -218,7 +224,9 @@ export function drawUnits(
   }
   interface RenderEntry {
     unit: Unit;
-    image: CanvasImageSource | null | undefined;
+    sprite: CanvasImageSource | null;
+    atlasCanvas: CanvasImageSource | null;
+    slice: SpriteAtlasSlice | null;
     placement: SpritePlacementInput;
     selection: { isSelected: boolean; isPrimary: boolean };
     motionStrength: number;
@@ -233,6 +241,7 @@ export function drawUnits(
   const visibleEntries: RenderEntry[] = [];
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+  const placeholder = assets.images['placeholder'] ?? null;
 
   for (const unit of units) {
     if (unit.isDead()) {
@@ -247,7 +256,10 @@ export function drawUnits(
       continue;
     }
 
-    const img = assets[`unit-${unit.type}`] ?? assets['placeholder'];
+    const spriteKey = `unit-${unit.type}`;
+    const fallbackSprite = assets.images[spriteKey] ?? placeholder;
+    const slice = assets.atlas?.slices[spriteKey] ?? null;
+    const atlasCanvas = assets.atlas ? assets.atlas.canvas : null;
     const maxHealth = unit.getMaxHealth();
     const alpha = fx?.getUnitAlpha?.(unit);
     const normalizedAlpha = typeof alpha === 'number' ? clamp(alpha, 0, 1) : 1;
@@ -289,7 +301,9 @@ export function drawUnits(
 
     visibleEntries.push({
       unit,
-      image: img,
+      sprite: fallbackSprite ?? null,
+      atlasCanvas: atlasCanvas ?? null,
+      slice,
       placement: placementInput,
       selection: selectionState,
       motionStrength,
@@ -409,41 +423,137 @@ export function drawUnits(
     } satisfies PixelCoord;
   };
 
-  const paintEntry = (
-    entry: RenderEntry,
-    options: { drawBase: boolean; offset: PixelCoord | null; anchor: PixelCoord | null; alphaMultiplier: number }
-  ): UnitSpriteRenderResult | null => {
-    ctx.save();
-    const previousFilter = ctx.filter;
-    const previousShadowColor = ctx.shadowColor;
-    const previousShadowBlur = ctx.shadowBlur;
-    const previousAlpha = ctx.globalAlpha;
+  interface RenderJob {
+    entry: RenderEntry;
+    drawBase: boolean;
+    offset: PixelCoord | null;
+    anchor: PixelCoord | null;
+    anchorSource: RenderJob | null;
+    alphaMultiplier: number;
+  }
 
-    ctx.filter = entry.filter;
-    ctx.shadowColor = entry.shadowColor;
-    ctx.shadowBlur = entry.shadowBlur;
+  const jobs: RenderJob[] = [];
 
-    const finalAlpha = entry.alpha * options.alphaMultiplier;
-    if (finalAlpha <= 0) {
-      ctx.filter = previousFilter;
-      ctx.shadowColor = previousShadowColor;
-      ctx.shadowBlur = previousShadowBlur;
-      ctx.globalAlpha = previousAlpha;
-      ctx.restore();
-      return null;
+  for (const group of groups) {
+    const primary = group.entries[group.primaryIndex];
+    const primaryJob: RenderJob = {
+      entry: primary,
+      drawBase: true,
+      offset: null,
+      anchor: null,
+      anchorSource: null,
+      alphaMultiplier: 1
+    } satisfies RenderJob;
+    jobs.push(primaryJob);
+
+    const extras = group.entries
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ index }) => index !== group.primaryIndex)
+      .sort((a, b) => a.entry.unit.id.localeCompare(b.entry.unit.id));
+
+    extras.forEach(({ entry }, stackIndex) => {
+      const offset = computeStackOffset(stackIndex);
+      jobs.push({
+        entry,
+        drawBase: false,
+        offset,
+        anchor: null,
+        anchorSource: primaryJob,
+        alphaMultiplier: stackAlpha
+      });
+    });
+  }
+
+  if (jobs.length === 0) {
+    return;
+  }
+
+  const baseResults = new Map<RenderJob, UnitSpriteRenderResult>();
+
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  for (const job of jobs) {
+    if (!job.drawBase) {
+      continue;
     }
-    ctx.globalAlpha *= finalAlpha;
+    const result = drawUnitSprite(ctx, job.entry.unit, {
+      placement: job.entry.placement,
+      sprite: null,
+      atlas: null,
+      slice: null,
+      faction: job.entry.unit.faction,
+      motionStrength: job.entry.motionStrength,
+      cameraZoom: camera.zoom,
+      selection: job.entry.selection,
+      anchorHint: job.anchor,
+      offset: job.offset,
+      drawBase: true,
+      renderSprite: false
+    });
+    baseResults.set(job, result);
+  }
+
+  ctx.restore();
+
+  for (const job of jobs) {
+    if (job.anchorSource) {
+      const anchorResult = baseResults.get(job.anchorSource);
+      job.anchor = anchorResult ? { x: anchorResult.center.x, y: anchorResult.center.y } : null;
+    }
+  }
+
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  let activeFilter = ctx.filter;
+  let activeShadowColor = ctx.shadowColor as string;
+  let activeShadowBlur = ctx.shadowBlur;
+  let activeAlpha = ctx.globalAlpha;
+
+  for (const job of jobs) {
+    const { entry } = job;
+    const finalAlpha = entry.alpha * job.alphaMultiplier;
+    if (finalAlpha <= 0) {
+      continue;
+    }
+
+    if (entry.filter !== activeFilter) {
+      ctx.filter = entry.filter;
+      activeFilter = ctx.filter;
+    }
+    if (entry.shadowColor !== activeShadowColor) {
+      ctx.shadowColor = entry.shadowColor;
+      activeShadowColor = ctx.shadowColor as string;
+    }
+    if (entry.shadowBlur !== activeShadowBlur) {
+      ctx.shadowBlur = entry.shadowBlur;
+      activeShadowBlur = ctx.shadowBlur;
+    }
+    if (finalAlpha !== activeAlpha) {
+      ctx.globalAlpha = finalAlpha;
+      activeAlpha = ctx.globalAlpha;
+    }
 
     const renderResult = drawUnitSprite(ctx, entry.unit, {
       placement: entry.placement,
-      sprite: entry.image,
+      sprite: entry.sprite,
+      atlas: entry.atlasCanvas,
+      slice: entry.slice,
       faction: entry.unit.faction,
       motionStrength: entry.motionStrength,
       cameraZoom: camera.zoom,
       selection: entry.selection,
-      anchorHint: options.anchor,
-      offset: options.offset ?? null,
-      drawBase: options.drawBase
+      anchorHint: job.anchor,
+      offset: job.offset,
+      drawBase: false,
+      renderSprite: true
     });
 
     if (fx?.pushUnitStatus) {
@@ -483,41 +593,7 @@ export function drawUnits(
         renderResult.placement.height
       );
     }
-
-    ctx.globalAlpha = previousAlpha;
-    ctx.filter = previousFilter;
-    ctx.shadowColor = previousShadowColor;
-    ctx.shadowBlur = previousShadowBlur;
-    ctx.restore();
-    return renderResult;
-  };
-
-  for (const group of groups) {
-    const primary = group.entries[group.primaryIndex];
-    const primaryResult = paintEntry(primary, {
-      drawBase: true,
-      offset: null,
-      anchor: null,
-      alphaMultiplier: 1
-    });
-
-    const anchor = primaryResult
-      ? { x: primaryResult.center.x, y: primaryResult.center.y }
-      : null;
-
-    const extras = group.entries
-      .map((entry, index) => ({ entry, index }))
-      .filter(({ index }) => index !== group.primaryIndex)
-      .sort((a, b) => a.entry.unit.id.localeCompare(b.entry.unit.id));
-
-    extras.forEach(({ entry }, stackIndex) => {
-      const offset = computeStackOffset(stackIndex);
-      paintEntry(entry, {
-        drawBase: false,
-        offset,
-        anchor,
-        alphaMultiplier: stackAlpha
-      });
-    });
   }
+
+  ctx.restore();
 }

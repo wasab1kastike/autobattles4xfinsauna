@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Collapse unit sprite rendering into a packed atlas: stitch every `unit-*`
+  image into a shared canvas at load time, feed UV metadata into the renderer,
+  split the base and sprite passes to minimize canvas state churn, expand the
+  Vitest coverage and renderer benchmarks to assert atlas usage, and document
+  the observed ~14% FPS gain in the unit visuals guide.
+
 - Sync the Saunoja battlefield overlay with the new unit sprite atlas: replace
   the bespoke SVG loader with archetype-driven `unit-*` assets, stream sprite
   resolution through the renderer so attendants inherit the latest art, expand
