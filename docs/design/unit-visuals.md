@@ -126,16 +126,21 @@ Run the automated helper whenever sprites change:
 npm run export:sprites
 ```
 
-This script scans `assets/sprites/*.svg`, verifies the 64×64 canvas, and writes
+The helper (implemented in `tools/export-sprites.ts`) scans
+`assets/sprites/*.svg`, verifies the 64×64 canvas, and writes
 `assets/sprites/manifest.json` with the translation and scale data recovered
-from each file. The manifest records the original source dimensions so future
-re-exports can double-check parity with the historic art.
+from each file. It also rasterizes every sprite into polished PNG outputs at
+64×64 and 128×128 (saved as `<sprite>.png` and `<sprite>@2x.png`) within
+`public/sprites/` alongside the manifest. The manifest records the original
+source dimensions so future re-exports can double-check parity with the historic
+art.
 
 ## Refresh checklist
 
 1. Update the raw SVG in `assets/sprites/` (keep it vector-based, no raster
    embeds).
-2. Run `npm run export:sprites` to regenerate `manifest.json`.
+2. Run `npm run export:sprites` to regenerate `manifest.json` and refresh the
+   PNG exports in `public/sprites/`.
 3. Adjust `UNIT_SPRITE_MAP` entries so `scale` and `nudge` still land the feet on
    the hex base.
 4. Extend `src/render/units/draw.test.ts` if a new sprite type is introduced.
