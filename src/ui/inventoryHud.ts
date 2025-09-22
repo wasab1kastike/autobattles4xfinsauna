@@ -197,6 +197,19 @@ export function setupInventoryHud(
   const stashSlot = tabs.panels.stash;
   stashSlot.replaceChildren();
 
+  const rosterHudPanel = tabs.panels.roster;
+
+  const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle'): void => {
+    if (!rosterHudPanel) {
+      return;
+    }
+    const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
+    rosterHudPanel.dispatchEvent(event);
+  };
+
+  const requestRosterExpand = (): void => dispatchRosterEvent('expand');
+  const requestRosterCollapse = (): void => dispatchRosterEvent('collapse');
+
   const updateStashBadge = (count: number): void => {
     tabs.setBadge('stash', count > 0 ? count : null);
   };
@@ -285,6 +298,7 @@ export function setupInventoryHud(
       if (next) {
         if (tabs.getActive() === 'stash') {
           tabs.setActive('roster');
+          requestRosterExpand();
         }
         overlay.classList.add('inventory-shop-open');
         const view = resolveView();
@@ -319,6 +333,7 @@ export function setupInventoryHud(
     onClose: () => {
       if (tabs.getActive() === 'stash') {
         tabs.setActive('roster');
+        requestRosterExpand();
       }
     },
     onCollectionChange: (next) => {
@@ -411,11 +426,22 @@ export function setupInventoryHud(
     const open = tabId === 'stash';
     if (open) {
       setShopOpen(false);
+      requestRosterCollapse();
+    } else if (tabId === 'roster') {
+      requestRosterExpand();
+    } else {
+      requestRosterCollapse();
     }
     applyStashOpen(open, open);
   });
 
-  applyStashOpen(tabs.getActive() === 'stash', false);
+  const initialTab = tabs.getActive();
+  applyStashOpen(initialTab === 'stash', false);
+  if (initialTab === 'roster') {
+    requestRosterExpand();
+  } else {
+    requestRosterCollapse();
+  }
 
   function computeView(): InventoryPanelView {
     const comparisonContext = options.getComparisonContext?.() ?? null;
@@ -570,7 +596,13 @@ export function setupInventoryHud(
     if (event.code === 'KeyI' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
       const active = tabs.getActive();
-      tabs.setActive(active === 'stash' ? 'roster' : 'stash');
+      const next = active === 'stash' ? 'roster' : 'stash';
+      tabs.setActive(next);
+      if (next === 'roster') {
+        requestRosterExpand();
+      } else {
+        requestRosterCollapse();
+      }
     }
   };
   window.addEventListener('keydown', onKeyDown);
