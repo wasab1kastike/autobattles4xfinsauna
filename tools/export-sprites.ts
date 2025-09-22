@@ -205,14 +205,14 @@ async function main(): Promise<void> {
 
   try {
     const entries = await loadSprites(spriteDir);
-    await writeManifest(manifestPath, entries);
     await exportSpritePngs(entries, spriteDir, pngOutputDir);
+    await writeManifest(manifestPath, entries);
 
     console.log(
-      `Exported ${entries.length} sprite definitions to ${path.relative(
+      `Rendered ${entries.length} sprite PNG sets in ${path.relative(
         root,
-        manifestPath
-      )} and rendered PNG sprites to ${path.relative(root, pngOutputDir)}.`
+        pngOutputDir
+      )} and updated manifest at ${path.relative(root, manifestPath)}.`
     );
   } catch (error) {
     console.error('Failed to export sprite metadata:', error);
