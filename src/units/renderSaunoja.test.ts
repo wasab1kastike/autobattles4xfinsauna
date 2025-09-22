@@ -177,7 +177,6 @@ describe('drawSaunojas', () => {
     const helpers = await import('./visualHelpers.ts');
     const hex = await import('../hex/index.ts');
 
-    const drawHPSpy = vi.spyOn(helpers, 'drawHP');
     const drawSteamSpy = vi.spyOn(helpers, 'drawSteam');
     const pathSpy = vi.spyOn(hex, 'pathHex');
 
@@ -194,7 +193,9 @@ describe('drawSaunojas', () => {
         maxHp: 18,
         hp: 12,
         steam: 0.8,
-        selected: false
+        selected: false,
+        shield: 0,
+        modifiers: []
       },
       {
         id: 'north',
@@ -203,7 +204,9 @@ describe('drawSaunojas', () => {
         maxHp: 14,
         hp: 8,
         steam: 0.1,
-        selected: false
+        selected: false,
+        shield: 1,
+        modifiers: []
       },
       {
         id: 'center',
@@ -212,11 +215,22 @@ describe('drawSaunojas', () => {
         maxHp: 16,
         hp: 5,
         steam: 0.4,
-        selected: true
+        selected: true,
+        shield: 2,
+        modifiers: [
+          {
+            id: 'haste',
+            name: 'Haste',
+            remaining: 6,
+            duration: 10,
+            stacks: 2
+          }
+        ]
       }
     ];
 
-    drawSaunojas(ctx, units, { hexRadius: 30 });
+    const pushStatus = vi.fn();
+    drawSaunojas(ctx, units, { hexRadius: 30, pushStatus });
 
     expect((ctx.drawImage as unknown as Mock).mock.calls).toHaveLength(3);
 
@@ -224,8 +238,16 @@ describe('drawSaunojas', () => {
     const clipCalls = pathSpy.mock.calls.filter(([, , , radius]) => Math.abs(radius - clipRadius) < 0.001);
     expect(clipCalls).toHaveLength(3);
 
-    const hpOrder = drawHPSpy.mock.calls.map(([, options]) => options.hp);
-    expect(hpOrder).toEqual([8, 5, 12]);
+    const statusOrder = pushStatus.mock.calls.map(([payload]) => payload.id);
+    expect(statusOrder).toEqual(['north', 'center', 'south']);
+
+    const firstStatus = pushStatus.mock.calls[0][0];
+    expect(firstStatus.radius).toBeCloseTo(30 * 0.42);
+    expect(firstStatus.buffs?.length ?? 0).toBe(0);
+
+    const centerStatus = pushStatus.mock.calls[1][0];
+    expect(centerStatus.selected).toBe(true);
+    expect(centerStatus.buffs?.[0]?.id).toBe('haste');
 
     const steamOrder = drawSteamSpy.mock.calls.map(([, options]) => options.intensity);
     expect(steamOrder).toEqual([0.1, 0.4, 0.8]);
