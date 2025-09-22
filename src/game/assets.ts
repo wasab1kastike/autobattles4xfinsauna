@@ -39,6 +39,7 @@ export const assetPaths: AssetPaths = {
     'unit-raider': raider,
     'unit-raider-captain': raiderCaptain,
     'unit-raider-shaman': raiderShaman,
+    'unit-saunoja': saunojaGuardian,
     'unit-saunoja-guardian': saunojaGuardian,
     'unit-saunoja-seer': saunojaSeer,
     'icon-sauna-beer': uiIcons.saunaBeer,
