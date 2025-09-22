@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Unify battlefield and HUD faction palettes behind new CSS tokens, teach the
+  canvas renderer to read the shared values, layer in a softened rim light for
+  premium unit bases, and extend sprite tests to lock the faction styling
+  contract.
+
 - Redesign the classic roster HUD into a full-width bottom tab tray with a
   dedicated expand/collapse control, dispatch expansion events from the
   inventory and command-console toggles, and refresh the glassmorphic styling
