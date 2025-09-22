@@ -108,6 +108,27 @@ describe('unit sprite placement', () => {
         nudge: { x: 0, y: -0.03 }
       },
       {
+        type: 'raider',
+        nativeSize: { width: 176, height: 198 },
+        anchor: { x: 0.5, y: 0.832 },
+        scale: { x: 1.524, y: 1.47 },
+        nudge: { x: 0, y: -0.028 }
+      },
+      {
+        type: 'raider-captain',
+        nativeSize: { width: 184, height: 206 },
+        anchor: { x: 0.5, y: 0.838 },
+        scale: { x: 1.598, y: 1.556 },
+        nudge: { x: 0, y: -0.034 }
+      },
+      {
+        type: 'raider-shaman',
+        nativeSize: { width: 180, height: 212 },
+        anchor: { x: 0.5, y: 0.842 },
+        scale: { x: 1.548, y: 1.532 },
+        nudge: { x: 0, y: -0.036 }
+      },
+      {
         type: 'saunoja-guardian',
         nativeSize: { width: 160, height: 176 },
         anchor: { x: 0.5, y: 0.806 },
@@ -131,5 +152,11 @@ describe('unit sprite placement', () => {
       expect(meta.scale.y).toBeCloseTo(scale.y, 6);
       expect(meta.nudge).toEqual(nudge);
     }
+  });
+
+  it('shares metadata between legacy marauder aliases', () => {
+    const primary = getUnitSpriteMetadata('avanto-marauder');
+    const legacy = getUnitSpriteMetadata('marauder');
+    expect(legacy).toBe(primary);
   });
 });
