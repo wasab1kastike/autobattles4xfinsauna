@@ -5,6 +5,7 @@ import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
 import { RoundRobinScheduler } from '../ai/scheduler.ts';
 import { PathCache } from '../ai/path_cache.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 import { DEFEND_PERIMETER_RADIUS, resolveUnitBehavior } from './unitBehavior.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import { damageSauna } from '../sim/sauna.ts';
@@ -140,8 +141,11 @@ export class BattleManager {
         continue;
       }
 
-      let behavior = resolveUnitBehavior(unit);
+      const requestedBehavior = unit.getBehavior();
       const isPlayerUnit = unit.faction === 'player';
+      let behavior: UnitBehavior = isPlayerUnit
+        ? requestedBehavior
+        : resolveUnitBehavior(unit);
       const hasActiveSauna = Boolean(sauna && !sauna.destroyed);
       if (behavior === 'defend' && !hasActiveSauna) {
         behavior = 'attack';
@@ -169,6 +173,10 @@ export class BattleManager {
       }
 
       if (!target) {
+        if (this.lastEnemySighting && now - this.lastEnemySighting.timestamp > 60000) {
+          this.lastEnemySighting = null;
+        }
+
         let goal: AxialCoord | null = null;
         let handledIdle = false;
 
