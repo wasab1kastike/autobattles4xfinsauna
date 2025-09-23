@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Refine battlefield routines to source unit behaviors from the new helper, lock
+  defenders to the sauna perimeter unless invaders breach it, drive attackers
+  toward the latest enemy sightings or the board edge, and cover each routine
+  with focused `BattleManager` tests.
+
 - Introduce Saunoja behavior preferences that synchronize with battlefield
   units, persist through reloads, and default to defend/attack routines based on
   faction alignment.
