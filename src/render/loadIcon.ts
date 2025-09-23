@@ -4,6 +4,7 @@ type IconLoadListener = (path: string, icon: HTMLImageElement) => void;
 
 const iconListeners = new Map<string, Set<IconLoadListener>>();
 const readyIcons = new WeakSet<HTMLImageElement>();
+const pendingIcons = new WeakSet<HTMLImageElement>();
 
 let resolvedBaseUrl: string | null = null;
 
@@ -66,23 +67,30 @@ function notifyIconLoaded(path: string, icon: HTMLImageElement): void {
 }
 
 function registerImageLoadHandlers(path: string, icon: HTMLImageElement): void {
-  const notify = (): void => {
+  if (readyIcons.has(icon) || pendingIcons.has(icon)) {
+    return;
+  }
+
+  pendingIcons.add(icon);
+
+  const handleLoaded = (): void => {
+    pendingIcons.delete(icon);
     notifyIconLoaded(path, icon);
   };
 
-  icon.addEventListener('load', notify, { once: true });
+  icon.addEventListener('load', handleLoaded, { once: true });
 
   if (typeof icon.decode === 'function') {
     icon
       .decode()
-      .then(notify)
+      .then(handleLoaded)
       .catch(() => {
         // Fall back to the load event when decode is unsupported or fails.
       });
   }
 
   if (isIconReady(icon)) {
-    notify();
+    queueMicrotaskSafe(handleLoaded);
   }
 }
 
@@ -124,6 +132,8 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
     icon.src = normalized;
     registerImageLoadHandlers(path, icon);
     iconCache.set(path, icon);
+  } else if (!isIconReady(icon)) {
+    registerImageLoadHandlers(path, icon);
   }
 
   if (isIconReady(icon)) {
