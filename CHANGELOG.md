@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-- Refresh terrain icon rendering by emitting load-completion events from the
-  icon cache, letting the terrain renderer mark affected chunks dirty so freshly
-  loaded art appears during the first frame of a cold start.
+- Refresh terrain icon rendering by queuing load-completion events from the
+  icon cache, tracking pending images so cached assets still notify listeners,
+  and covering the terrain renderer with a Vitest case that dirties affected
+  chunks to draw freshly decoded art on the first cold frame.
 
 - Mount the stash drawer on the overlay instead of the command dock anchor so
   its fixed panel spans the viewport, keep a screen-reader proxy in the stash
