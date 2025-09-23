@@ -204,8 +204,11 @@ body > #game-container {
   grid-template-rows: auto 1fr auto;
 }
 
-.grid-cols-\[280px_1fr_clamp\(260px\,32vw\,420px\)\] {
-  grid-template-columns: 280px 1fr clamp(260px, 32vw, 420px);
+.grid-cols-\[minmax\(clamp\(200px\,22vw\,280px\)\,1fr\)_minmax\(420px\,1\.6fr\)_minmax\(clamp\(200px\,24vw\,340px\)\,1fr\)\] {
+  grid-template-columns:
+    minmax(clamp(200px, 22vw, 280px), 1fr)
+    minmax(420px, 1.6fr)
+    minmax(clamp(200px, 24vw, 340px), 1fr);
 }
 
 .gap-\[clamp\(16px\,3vw\,28px\)\] {
