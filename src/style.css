@@ -200,8 +200,8 @@ body > #game-container {
   display: grid;
 }
 
-.grid-rows-\[64px_1fr_80px\] {
-  grid-template-rows: 64px 1fr 80px;
+.grid-rows-\[auto_1fr_auto\] {
+  grid-template-rows: auto 1fr auto;
 }
 
 .grid-cols-\[280px_1fr_clamp\(260px\,32vw\,420px\)\] {
