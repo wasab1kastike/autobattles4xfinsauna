@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Rework the HUD overlay grid rows to auto-size the top bar and command dock,
+  expose the new utility class in `src/style.css`, and verify both UI variants
+  handle wrapped badges plus expanded docks without overlapping controls.
+
 - Introduce dedicated Frost Raider, Captain, and Shaman archetypes with tuned
   stat progressions, thread them through the enemy faction bundles and spawn
   logic so encounters request the new `unit-raider*` sprites, and expand the
