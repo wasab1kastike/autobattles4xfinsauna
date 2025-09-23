@@ -27,6 +27,7 @@ describe('rosterHUD', () => {
           name: 'Aurora Kallio',
           traits: ['Brave', 'Sage'],
           upkeep: 17,
+          behavior: 'attack',
           progression: {
             level: 4,
             xp: 700,
@@ -77,6 +78,10 @@ describe('rosterHUD', () => {
       expect(callouts?.textContent).toContain('+7 Focus');
       expect(callouts?.textContent).toContain('+5 Resolve');
 
+      const behavior = root?.querySelector('.saunoja-card__behavior');
+      expect(behavior?.textContent).toBe('Behavior: Attack');
+      expect(behavior?.title).toBe('Behavior: Attack');
+
       const traits = root?.querySelector('.saunoja-card__traits');
       expect(traits?.textContent).toBe('Brave, Sage');
       expect(traits?.title).toBe('Brave, Sage');
@@ -119,6 +124,7 @@ describe('rosterHUD', () => {
         upkeep: 12,
         status: 'reserve',
         selected: false,
+        behavior: 'defend',
         traits: [],
         stats: {
           health: 8,

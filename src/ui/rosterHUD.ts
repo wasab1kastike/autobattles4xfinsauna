@@ -1,8 +1,14 @@
 import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
+import type { UnitBehavior } from '../unit/types.ts';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const rosterUpkeepFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const behaviorLabels: Record<UnitBehavior, string> = {
+  defend: 'Defend',
+  attack: 'Attack',
+  explore: 'Explore'
+};
 
 type RosterHudOptions = {
   rosterIcon: string;
@@ -15,6 +21,7 @@ export type RosterCardViewModel = {
   traits: readonly string[];
   upkeep: number;
   progression: RosterProgression;
+  behavior: UnitBehavior;
 };
 
 export type RosterHudSummary = {
@@ -181,6 +188,10 @@ export function setupRosterHUD(
   rosterCardXp.classList.add('saunoja-card__xp');
   rosterCardXp.textContent = '0 / 0 XP • 0%';
 
+  const rosterCardBehavior = document.createElement('p');
+  rosterCardBehavior.classList.add('saunoja-card__behavior');
+  rosterCardBehavior.textContent = 'Behavior: Defend';
+
   rosterCardIdentity.append(rosterCardName, rosterCardXp);
   rosterCardHeader.append(rosterCardLevel, rosterCardIdentity);
 
@@ -194,7 +205,13 @@ export function setupRosterHUD(
   const rosterCardUpkeep = document.createElement('p');
   rosterCardUpkeep.classList.add('saunoja-card__upkeep');
 
-  rosterCard.append(rosterCardHeader, rosterCardTraits, rosterCardStats, rosterCardUpkeep);
+  rosterCard.append(
+    rosterCardHeader,
+    rosterCardBehavior,
+    rosterCardTraits,
+    rosterCardStats,
+    rosterCardUpkeep
+  );
   details.appendChild(rosterCard);
   root.append(header, details);
   container.append(root);
@@ -303,6 +320,11 @@ export function setupRosterHUD(
     rosterCardStats.textContent = bonusLabel;
     rosterCardStats.title = bonusLabel;
 
+    const behaviorLabel = behaviorLabels[card.behavior] ?? card.behavior;
+    const behaviorCopy = `Behavior: ${behaviorLabel}`;
+    rosterCardBehavior.textContent = behaviorCopy;
+    rosterCardBehavior.title = behaviorCopy;
+
     const upkeepValue = Math.max(0, Math.round(card.upkeep));
     const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
     rosterCardUpkeep.textContent = upkeepLabel;
@@ -355,6 +377,7 @@ export function setupRosterHUD(
       entry.name,
       entry.upkeep,
       entry.status,
+      entry.behavior,
       entry.selected ? 1 : 0,
       entry.progression.level,
       entry.progression.xp,

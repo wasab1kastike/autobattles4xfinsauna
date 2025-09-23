@@ -3,6 +3,7 @@ import { renderModPill } from '../components/ModPill.tsx';
 import type { SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
 import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
 import type { StatAwards } from '../../progression/experiencePlan.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 
 export type RosterStatus = 'engaged' | 'reserve' | 'downed';
 
@@ -43,6 +44,7 @@ export interface RosterEntry {
   readonly upkeep: number;
   readonly status: RosterStatus;
   readonly selected: boolean;
+  readonly behavior: UnitBehavior;
   readonly traits: readonly string[];
   readonly stats: RosterStats;
   readonly baseStats: RosterStats;
@@ -56,6 +58,7 @@ export interface RosterPanelOptions {
   readonly onSelect?: (unitId: string) => void;
   readonly onEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   readonly onUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  readonly onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
   readonly getRosterCap?: () => number;
   readonly getRosterCapLimit?: () => number;
   readonly updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
@@ -72,6 +75,14 @@ const integerFormatter = new Intl.NumberFormat('en-US', {
 });
 
 const rosterTitleId = 'panel-roster-title';
+
+const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
+
+const behaviorLabels: Record<UnitBehavior, string> = {
+  defend: 'Defend',
+  attack: 'Attack',
+  explore: 'Explore'
+};
 
 function formatTraits(traits: readonly string[]): string {
   if (traits.length === 0) {
@@ -557,6 +568,55 @@ export function createRosterPanel(
       badge.textContent = rosterStatusLabels[entry.status];
       nameRow.appendChild(badge);
 
+      const behaviorRow = document.createElement('div');
+      behaviorRow.classList.add('panel-roster__behavior');
+
+      const behaviorHeader = document.createElement('div');
+      behaviorHeader.classList.add('panel-roster__behavior-header');
+
+      const behaviorLabel = document.createElement('span');
+      behaviorLabel.classList.add('panel-roster__behavior-label');
+      behaviorLabel.textContent = 'Behavior';
+
+      const behaviorValue = document.createElement('span');
+      behaviorValue.classList.add('panel-roster__behavior-value');
+      behaviorValue.textContent = behaviorLabels[entry.behavior];
+
+      behaviorHeader.append(behaviorLabel, behaviorValue);
+      behaviorRow.appendChild(behaviorHeader);
+
+      const behaviorControls = document.createElement('div');
+      behaviorControls.classList.add('panel-roster__behavior-options');
+      behaviorControls.setAttribute('role', 'group');
+      behaviorControls.setAttribute('aria-label', `${entry.name} behavior`);
+
+      const hasBehaviorHandler = typeof options.onBehaviorChange === 'function';
+      for (const behavior of behaviorOrder) {
+        const behaviorButton = document.createElement('button');
+        behaviorButton.type = 'button';
+        behaviorButton.classList.add('panel-roster__behavior-option');
+        behaviorButton.dataset.behavior = behavior;
+        const label = behaviorLabels[behavior];
+        behaviorButton.textContent = label;
+        const title = `Set ${entry.name} to ${label}`;
+        behaviorButton.title = title;
+        behaviorButton.setAttribute('aria-label', title);
+        const isActive = behavior === entry.behavior;
+        behaviorButton.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        behaviorButton.classList.toggle('is-active', isActive);
+        behaviorButton.disabled = !hasBehaviorHandler;
+        behaviorButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          if (!hasBehaviorHandler || behavior === entry.behavior) {
+            return;
+          }
+          options.onBehaviorChange?.(entry.id, behavior);
+        });
+        behaviorControls.appendChild(behaviorButton);
+      }
+
+      behaviorRow.appendChild(behaviorControls);
+
       const meta = document.createElement('div');
       meta.classList.add('panel-roster__meta');
       const metaLabel = buildMetaLine(entry);
@@ -593,7 +653,7 @@ export function createRosterPanel(
       traits.textContent = traitLabel;
       traits.title = traitLabel;
 
-      button.append(nameRow, xpRow, meta, callouts, healthBar, traits);
+      button.append(nameRow, behaviorRow, xpRow, meta, callouts, healthBar, traits);
       renderLoadout(button, entry, options);
 
       if (typeof options.onSelect === 'function') {

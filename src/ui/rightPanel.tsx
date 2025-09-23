@@ -12,6 +12,7 @@ import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
 import type { EquipmentSlotId } from '../items/types.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 import {
   getLogHistory,
   LOG_EVENT_META,
@@ -44,6 +45,7 @@ type RightPanelOptions = {
   onRosterRendererReady?: (renderer: (entries: RosterEntry[]) => void) => void;
   onRosterEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   onRosterUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
+  onRosterBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
   getRosterCap?: () => number;
   getRosterCapLimit?: () => number;
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
@@ -522,6 +524,7 @@ export function setupRightPanel(
     onSelect: onRosterSelect,
     onEquipSlot: onRosterEquipSlot,
     onUnequipSlot: onRosterUnequipSlot,
+    onBehaviorChange: options.onRosterBehaviorChange,
     getRosterCap: options.getRosterCap,
     getRosterCapLimit: options.getRosterCapLimit,
     updateMaxRosterSize: options.updateMaxRosterSize
