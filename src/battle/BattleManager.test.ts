@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { BattleManager } from './BattleManager.ts';
+import { DEFEND_PERIMETER_RADIUS } from './unitBehavior.ts';
 import { Unit, UnitStats } from '../units/Unit.ts';
 import { HexMap } from '../hexmap.ts';
 import { eventBus } from '../events';
 import { TerrainId } from '../map/terrain.ts';
-import { getNeighbors } from '../hex/HexUtils.ts';
+import { getNeighbors, hexDistance } from '../hex/HexUtils.ts';
 import { createSauna } from '../sim/sauna.ts';
 import { Animator } from '../render/Animator.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 
 function seedTiles(map: HexMap, coords: { q: number; r: number }[]): void {
   for (const coord of coords) {
@@ -19,9 +21,10 @@ function createUnit(
   coord: { q: number; r: number },
   faction: string,
   stats: UnitStats,
-  priorityFactions: string[] = []
+  priorityFactions: string[] = [],
+  behavior?: UnitBehavior
 ): Unit {
-  return new Unit(id, 'test', coord, faction, { ...stats }, priorityFactions);
+  return new Unit(id, 'test', coord, faction, { ...stats }, priorityFactions, behavior);
 }
 
 describe('BattleManager', () => {
@@ -147,7 +150,7 @@ describe('BattleManager', () => {
       attackDamage: 0,
       attackRange: 0,
       movementRange: 1
-    });
+    }, [], 'explore');
 
     const manager = new BattleManager(map);
     manager.tick([unit], 5);
@@ -170,7 +173,7 @@ describe('BattleManager', () => {
       attackDamage: 0,
       attackRange: 0,
       movementRange: 1
-    });
+    }, [], 'explore');
 
     const manager = new BattleManager(map);
 
@@ -201,7 +204,7 @@ describe('BattleManager', () => {
       attackDamage: 0,
       attackRange: 0,
       movementRange: 1
-    });
+    }, [], 'explore');
 
     const manager = new BattleManager(map);
     manager.tick([unit], 5);
@@ -249,6 +252,94 @@ describe('BattleManager', () => {
       attackerId: 'enemy-1',
       attackerFaction: 'enemy'
     });
+  });
+
+  it('keeps defending units within the sauna perimeter', () => {
+    const map = new HexMap(8, 3);
+    const path: { q: number; r: number }[] = [];
+    for (let q = -1; q <= DEFEND_PERIMETER_RADIUS + 2; q++) {
+      path.push({ q, r: 0 });
+    }
+    seedTiles(map, path);
+    for (const coord of path) {
+      const tile = map.ensureTile(coord.q, coord.r);
+      tile.terrain = TerrainId.Plains;
+      tile.setFogged(false);
+    }
+
+    const sauna = createSauna({ q: 0, r: 0 });
+    const guardian = createUnit(
+      'guardian',
+      { q: DEFEND_PERIMETER_RADIUS + 2, r: 0 },
+      'player',
+      {
+        health: 12,
+        attackDamage: 0,
+        attackRange: 0,
+        movementRange: 1
+      },
+      [],
+      'defend'
+    );
+
+    const manager = new BattleManager(map);
+
+    manager.tick([guardian], 5, sauna);
+    expect(hexDistance(guardian.coord, sauna.pos)).toBe(DEFEND_PERIMETER_RADIUS + 1);
+
+    manager.tick([guardian], 5, sauna);
+    expect(hexDistance(guardian.coord, sauna.pos)).toBeLessThanOrEqual(DEFEND_PERIMETER_RADIUS);
+
+    manager.tick([guardian], 5, sauna);
+    expect(guardian.coord).toEqual({ q: DEFEND_PERIMETER_RADIUS, r: 0 });
+  });
+
+  it('drives attackers toward the latest recorded enemy position', () => {
+    const map = new HexMap(8, 3);
+    const corridor: { q: number; r: number }[] = [];
+    for (let q = 0; q <= 4; q++) {
+      corridor.push({ q, r: 0 });
+    }
+    seedTiles(map, corridor);
+    for (const coord of corridor) {
+      const tile = map.ensureTile(coord.q, coord.r);
+      tile.terrain = TerrainId.Plains;
+      tile.setFogged(false);
+    }
+
+    const striker = createUnit(
+      'striker',
+      { q: 0, r: 0 },
+      'player',
+      {
+        health: 10,
+        attackDamage: 2,
+        attackRange: 1,
+        movementRange: 1
+      },
+      [],
+      'attack'
+    );
+    const raider = createUnit(
+      'raider',
+      { q: 4, r: 0 },
+      'enemy',
+      {
+        health: 6,
+        attackDamage: 0,
+        attackRange: 0,
+        movementRange: 0
+      }
+    );
+
+    const manager = new BattleManager(map);
+
+    manager.tick([striker, raider], 5);
+    manager.tick([striker, raider], 5);
+    expect(striker.coord).toEqual({ q: 1, r: 0 });
+
+    manager.tick([striker], 5);
+    expect(striker.coord).toEqual({ q: 2, r: 0 });
   });
 
   it('animates render coordinates when units step across tiles', () => {

@@ -6,6 +6,11 @@
   units, persist through reloads, and default to defend/attack routines based on
   faction alignment.
 
+- Tighten battlefield AI behaviors so defenders hold a configurable sauna
+  perimeter, attackers rally toward the latest enemy foothold instead of
+  drifting to fog, and scouts retain their existing exploration flow, all backed
+  by expanded `BattleManager` coverage.
+
 - Rebalance the HUD overlay grid to prioritize the combat viewport on
   medium-width screens, swap the column template for minmax/fractional tracks,
   and keep the roster plus dock panels legible through the 820–1024px range.
