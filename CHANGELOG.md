@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Collapse the command console track in the HUD grid when the desktop toggle
+  hides the panel, wiring a layout modifier class so the overlay widens the
+  center column cleanly through the 840–1040px breakpoints.
+
 - Align the stash and sauna shop drawers behind the shared
   `--inventory-panel-width`, reserve matching HUD offsets for both inventory
   overlays, and confirm the command dock stays unobstructed through the

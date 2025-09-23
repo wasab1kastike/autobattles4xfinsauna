@@ -47,13 +47,18 @@ export type HudLayout = {
   mobileBar: HTMLDivElement;
 };
 
-const OVERLAY_GRID_CLASSES = [
-  'hud-grid',
-  'grid',
-  'grid-rows-[auto_1fr_auto]',
-  'grid-cols-[minmax(clamp(200px,22vw,280px),1fr)_minmax(420px,1.6fr)_minmax(clamp(200px,24vw,340px),1fr)]',
-  'gap-[clamp(16px,3vw,28px)]',
-];
+const OVERLAY_GRID_CLASSES = {
+  base: [
+    'hud-grid',
+    'grid',
+    'grid-rows-[auto_1fr_auto]',
+    'grid-cols-[minmax(clamp(200px,22vw,280px),1fr)_minmax(420px,1.6fr)_minmax(clamp(200px,24vw,340px),1fr)]',
+    'gap-[clamp(16px,3vw,28px)]',
+  ],
+  collapsed: 'hud-grid--right-collapsed',
+} as const;
+
+export const HUD_OVERLAY_COLLAPSED_CLASS = OVERLAY_GRID_CLASSES.collapsed;
 
 const REGION_GRID_CLASSES: Record<keyof HudLayoutRegions, string[]> = {
   top: ['col-span-3', 'row-span-1', 'row-start-1'],
@@ -171,7 +176,7 @@ function applyVariantClasses(
   isUiV2: boolean
 ): void {
   if (isUiV2) {
-    overlay.classList.add(...OVERLAY_GRID_CLASSES);
+    overlay.classList.add(...OVERLAY_GRID_CLASSES.base);
     for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
       keyof HudLayoutRegions,
       string[]
@@ -179,7 +184,8 @@ function applyVariantClasses(
       regions[name].classList.add(...classes);
     }
   } else {
-    overlay.classList.remove(...OVERLAY_GRID_CLASSES);
+    overlay.classList.remove(...OVERLAY_GRID_CLASSES.base);
+    overlay.classList.remove(OVERLAY_GRID_CLASSES.collapsed);
     for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
       keyof HudLayoutRegions,
       string[]
