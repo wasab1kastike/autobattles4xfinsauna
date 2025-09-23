@@ -5,6 +5,7 @@ import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
 import { RoundRobinScheduler } from '../ai/scheduler.ts';
 import { PathCache } from '../ai/path_cache.ts';
+import { DEFEND_PERIMETER_RADIUS, resolveUnitBehavior } from './unitBehavior.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import { damageSauna } from '../sim/sauna.ts';
 import { eventBus } from '../events';
@@ -22,6 +23,7 @@ export class BattleManager {
   private readonly scheduler = new RoundRobinScheduler();
   private readonly pathCache = new PathCache();
   private readonly lastKnownCoords = new Map<string, AxialCoord>();
+  private lastEnemySighting: { coord: AxialCoord; timestamp: number } | null = null;
 
   constructor(private readonly map: HexMap, private readonly animator?: Animator) {}
 
@@ -98,6 +100,13 @@ export class BattleManager {
       }
       this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
 
+      if (unit.faction !== 'player') {
+        this.lastEnemySighting = {
+          coord: { q: unit.coord.q, r: unit.coord.r },
+          timestamp: now
+        };
+      }
+
       this.pathCache.trackUnit(unit);
       activeUnits.push(unit);
       occupied.add(coordKey(unit.coord));
@@ -131,7 +140,24 @@ export class BattleManager {
         continue;
       }
 
-      const target = Targeting.selectTarget(unit, units);
+      let behavior = resolveUnitBehavior(unit);
+      const isPlayerUnit = unit.faction === 'player';
+      const hasActiveSauna = Boolean(sauna && !sauna.destroyed);
+      if (behavior === 'defend' && !hasActiveSauna) {
+        behavior = 'attack';
+      }
+
+      let target = Targeting.selectTarget(unit, units);
+
+      if (
+        isPlayerUnit &&
+        behavior === 'defend' &&
+        hasActiveSauna &&
+        target &&
+        hexDistance(target.coord, sauna.pos) > DEFEND_PERIMETER_RADIUS
+      ) {
+        target = null;
+      }
 
       if (!target && sauna && !sauna.destroyed) {
         const attacked = this.tryAttackSauna(unit, sauna);
@@ -144,13 +170,43 @@ export class BattleManager {
 
       if (!target) {
         let goal: AxialCoord | null = null;
-        if (sauna && !sauna.destroyed) {
-          goal = sauna.pos;
+        let handledIdle = false;
+
+        if (isPlayerUnit) {
+          if (behavior === 'defend') {
+            handledIdle = true;
+            if (hasActiveSauna) {
+              const distance = hexDistance(unit.coord, sauna.pos);
+              if (distance > DEFEND_PERIMETER_RADIUS) {
+                goal = sauna.pos;
+              }
+            }
+          } else if (behavior === 'attack') {
+            handledIdle = true;
+            if (this.lastEnemySighting) {
+              goal = { ...this.lastEnemySighting.coord };
+            } else {
+              const reference = hasActiveSauna ? sauna.pos : unit.coord;
+              goal = this.getBoardEdgeGoal(reference, unit.coord);
+            }
+          }
         }
-        if (!goal) {
-          goal = this.findExplorationGoal(unit, occupied);
+
+        if (!handledIdle) {
+          if (sauna && !sauna.destroyed) {
+            goal = sauna.pos;
+          }
+          if (!goal) {
+            goal = this.findExplorationGoal(unit, occupied);
+          }
         }
+
+        if (goal && coordKey(goal) === originalKey) {
+          goal = null;
+        }
+
         if (goal) {
+          this.map.ensureTile(goal.q, goal.r);
           const path = this.computeMovementPath(unit, goal, occupied, now);
           if (path.length > 1 && unit.stats.movementRange > 0) {
             const nextCoord = path[1];
@@ -308,6 +364,34 @@ export class BattleManager {
 
     const steps = Math.min(unit.stats.movementRange, endIndex);
     return path.slice(0, steps + 1);
+  }
+
+  private getBoardEdgeGoal(reference: AxialCoord, unitCoord: AxialCoord): AxialCoord {
+    const clampQ = (q: number) => Math.min(this.map.maxQ, Math.max(this.map.minQ, q));
+    const clampR = (r: number) => Math.min(this.map.maxR, Math.max(this.map.minR, r));
+    const deltaQ = unitCoord.q - reference.q;
+    const deltaR = unitCoord.r - reference.r;
+
+    const qTarget = deltaQ >= 0 ? this.map.maxQ : this.map.minQ;
+    const rTarget = deltaR >= 0 ? this.map.maxR : this.map.minR;
+
+    const candidates: AxialCoord[] = [
+      { q: qTarget, r: clampR(unitCoord.r) },
+      { q: clampQ(unitCoord.q), r: rTarget },
+      { q: qTarget, r: rTarget }
+    ];
+
+    let best = candidates[0];
+    let bestDistance = -Infinity;
+    for (const candidate of candidates) {
+      const distance = hexDistance(unitCoord, candidate);
+      if (distance > bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+
+    return { q: best.q, r: best.r };
   }
 }
 
