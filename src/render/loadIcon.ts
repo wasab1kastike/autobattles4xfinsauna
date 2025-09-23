@@ -1,5 +1,10 @@
 const iconCache = new Map<string, HTMLImageElement>();
 
+type IconLoadListener = (path: string, icon: HTMLImageElement) => void;
+
+const iconListeners = new Map<string, Set<IconLoadListener>>();
+const readyIcons = new WeakSet<HTMLImageElement>();
+
 let resolvedBaseUrl: string | null = null;
 
 function resolveBaseUrl(): string {
@@ -25,6 +30,91 @@ function resolveBaseUrl(): string {
   return resolvedBaseUrl;
 }
 
+function queueMicrotaskSafe(callback: () => void): void {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(callback);
+  } else {
+    setTimeout(callback, 0);
+  }
+}
+
+function isIconReady(icon: HTMLImageElement): boolean {
+  return icon.complete && icon.naturalWidth > 0 && icon.naturalHeight > 0;
+}
+
+function notifyIconLoaded(path: string, icon: HTMLImageElement): void {
+  if (readyIcons.has(icon)) {
+    return;
+  }
+
+  readyIcons.add(icon);
+
+  const listeners = iconListeners.get(path);
+  if (!listeners || listeners.size === 0) {
+    return;
+  }
+
+  iconListeners.delete(path);
+
+  for (const listener of listeners) {
+    try {
+      listener(path, icon);
+    } catch (error) {
+      console.error('Icon load listener failed', error);
+    }
+  }
+}
+
+function registerImageLoadHandlers(path: string, icon: HTMLImageElement): void {
+  const notify = (): void => {
+    notifyIconLoaded(path, icon);
+  };
+
+  icon.addEventListener('load', notify, { once: true });
+
+  if (typeof icon.decode === 'function') {
+    icon
+      .decode()
+      .then(notify)
+      .catch(() => {
+        // Fall back to the load event when decode is unsupported or fails.
+      });
+  }
+
+  if (isIconReady(icon)) {
+    notify();
+  }
+}
+
+export function onIconLoaded(path: string, listener: IconLoadListener): () => void {
+  const icon = iconCache.get(path);
+  if (icon && isIconReady(icon)) {
+    queueMicrotaskSafe(() => {
+      listener(path, icon);
+    });
+    return () => {};
+  }
+
+  let listeners = iconListeners.get(path);
+  if (!listeners) {
+    listeners = new Set();
+    iconListeners.set(path, listeners);
+  }
+
+  listeners.add(listener);
+
+  return () => {
+    const existing = iconListeners.get(path);
+    if (!existing) {
+      return;
+    }
+    existing.delete(listener);
+    if (existing.size === 0) {
+      iconListeners.delete(path);
+    }
+  };
+}
+
 export function loadIcon(path: string): HTMLImageElement | undefined {
   let icon = iconCache.get(path);
   if (!icon) {
@@ -32,10 +122,11 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
     icon.decoding = 'async';
     const normalized = new URL(path, resolveBaseUrl()).href;
     icon.src = normalized;
+    registerImageLoadHandlers(path, icon);
     iconCache.set(path, icon);
   }
 
-  if (icon.complete && icon.naturalWidth > 0 && icon.naturalHeight > 0) {
+  if (isIconReady(icon)) {
     return icon;
   }
 
@@ -44,5 +135,6 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
 
 export function clearIconCache(): void {
   iconCache.clear();
+  iconListeners.clear();
   resolvedBaseUrl = null;
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh terrain icon rendering by emitting load-completion events from the
+  icon cache, letting the terrain renderer mark affected chunks dirty so freshly
+  loaded art appears during the first frame of a cold start.
+
 - Float the stash drawer alongside the command dock so its fixed overlay can
   cover the viewport, leave a screen-reader proxy in the stash tab, and confirm
   the dock chrome stays pristine while the drawer opens at full height.
