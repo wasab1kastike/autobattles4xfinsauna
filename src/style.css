@@ -211,6 +211,17 @@ body > #game-container {
     minmax(clamp(200px, 24vw, 340px), 1fr);
 }
 
+#ui-overlay.hud-grid.hud-grid--right-collapsed {
+  grid-template-columns:
+    minmax(clamp(200px, 22vw, 280px), 1fr)
+    minmax(420px, 1.6fr)
+    minmax(0, 0);
+}
+
+#ui-overlay.hud-grid.hud-grid--right-collapsed [data-hud-region='right'] {
+  visibility: hidden;
+}
+
 .gap-\[clamp\(16px\,3vw\,28px\)\] {
   gap: clamp(16px, 3vw, 28px);
 }
