@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Float the stash drawer alongside the command dock so its fixed overlay can
+  cover the viewport, leave a screen-reader proxy in the stash tab, and confirm
+  the dock chrome stays pristine while the drawer opens at full height.
+
 - Collapse the command console track in the HUD grid when the desktop toggle
   hides the panel, wiring a layout modifier class so the overlay widens the
   center column cleanly through the 840–1040px breakpoints.

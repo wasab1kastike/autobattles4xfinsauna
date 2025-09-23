@@ -187,6 +187,7 @@ export function setupInventoryHud(
     return { destroy: () => {} };
   }
 
+  const doc = overlay.ownerDocument ?? document;
   const { anchors, tabs } = ensureHudLayout(overlay);
   const topLeftCluster = anchors.topLeftCluster;
   const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
@@ -195,7 +196,37 @@ export function setupInventoryHud(
   overlay.querySelector('#inventory-shop-panel')?.remove();
 
   const stashSlot = tabs.panels.stash;
+  const previousStashSlotId = stashSlot.id || null;
+  const previousStashDescribedBy = stashSlot.getAttribute('aria-describedby');
+  const stashSlotId = previousStashSlotId || 'hud-bottom-panel-stash';
+  stashSlot.id = stashSlotId;
   stashSlot.replaceChildren();
+
+  const stashProxy = doc.createElement('p');
+  stashProxy.id = 'inventory-stash-panel-proxy';
+  stashProxy.className = 'sr-only';
+  stashProxy.textContent =
+    'Quartermaster stash drawer opens alongside the command dock. Focus shifts to the drawer when this tab is active.';
+  stashSlot.appendChild(stashProxy);
+
+  const describedByTokens = [previousStashDescribedBy, stashProxy.id]
+    .map((token) => token?.trim())
+    .filter((token): token is string => Boolean(token && token.length > 0));
+  if (describedByTokens.length > 0) {
+    stashSlot.setAttribute('aria-describedby', describedByTokens.join(' '));
+  } else {
+    stashSlot.removeAttribute('aria-describedby');
+  }
+
+  const stashButton =
+    tabs.tabList.querySelector<HTMLButtonElement>('[data-hud-tab="stash"]') ?? null;
+  const previousAriaControls = stashButton?.getAttribute('aria-controls') ?? null;
+  if (stashButton) {
+    const controlTargets = [stashSlotId, 'inventory-stash-panel'].filter(Boolean).join(' ');
+    stashButton.setAttribute('aria-controls', controlTargets);
+  }
+
+  const dockParent = anchors.commandDock.parentElement ?? overlay;
 
   const rosterHudPanel = tabs.panels.roster;
 
@@ -398,7 +429,16 @@ export function setupInventoryHud(
 
   const panel = createStashPanel(panelCallbacks);
   panel.element.id = 'inventory-stash-panel';
-  stashSlot.appendChild(panel.element);
+  const stashButtonLabelId = stashButton?.id?.trim();
+  if (stashButtonLabelId) {
+    panel.element.setAttribute('aria-labelledby', stashButtonLabelId);
+  }
+  const dockSibling = anchors.commandDock.nextSibling;
+  if (dockSibling && dockSibling.parentElement === dockParent) {
+    dockParent.insertBefore(panel.element, dockSibling);
+  } else {
+    dockParent.appendChild(panel.element);
+  }
 
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();
@@ -613,6 +653,24 @@ export function setupInventoryHud(
     unsubscribe();
     unsubscribeTabs();
     window.removeEventListener('keydown', onKeyDown);
+    if (stashButton) {
+      if (previousAriaControls !== null) {
+        stashButton.setAttribute('aria-controls', previousAriaControls);
+      } else {
+        stashButton.removeAttribute('aria-controls');
+      }
+    }
+    stashSlot.replaceChildren();
+    if (previousStashDescribedBy && previousStashDescribedBy.trim().length > 0) {
+      stashSlot.setAttribute('aria-describedby', previousStashDescribedBy);
+    } else {
+      stashSlot.removeAttribute('aria-describedby');
+    }
+    if (previousStashSlotId) {
+      stashSlot.id = previousStashSlotId;
+    } else {
+      stashSlot.removeAttribute('id');
+    }
     panel.destroy();
     updateStashBadge(0);
     overlay.classList.remove('inventory-panel-open');
