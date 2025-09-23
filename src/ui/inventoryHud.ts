@@ -226,8 +226,6 @@ export function setupInventoryHud(
     stashButton.setAttribute('aria-controls', controlTargets);
   }
 
-  const dockParent = anchors.commandDock.parentElement ?? overlay;
-
   const rosterHudPanel = tabs.panels.roster;
 
   const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle'): void => {
@@ -433,11 +431,12 @@ export function setupInventoryHud(
   if (stashButtonLabelId) {
     panel.element.setAttribute('aria-labelledby', stashButtonLabelId);
   }
-  const dockSibling = anchors.commandDock.nextSibling;
-  if (dockSibling && dockSibling.parentElement === dockParent) {
-    dockParent.insertBefore(panel.element, dockSibling);
+  const layoutRoot = overlay.querySelector<HTMLElement>('[data-hud-root]');
+  const stashMountTarget = layoutRoot?.parentElement ?? overlay;
+  if (layoutRoot && layoutRoot.parentElement === stashMountTarget) {
+    stashMountTarget.insertBefore(panel.element, layoutRoot.nextSibling);
   } else {
-    dockParent.appendChild(panel.element);
+    stashMountTarget.appendChild(panel.element);
   }
 
   let collection: InventoryCollection = 'stash';
