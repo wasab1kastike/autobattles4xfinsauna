@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Smooth the command console slide-over transitions so resizing from mobile
+  closes and resets the drawer state, ensuring the body scroll lock clears and
+  the toggle mirrors the desktop collapse status.
+
 - Elevate the roster experience with stance-aware controls: display each
   Saunoja's current behavior in the featured HUD card, add a polished
   Defend/Attack/Explore segmented toggle to roster rows, and persist changes
