@@ -13,6 +13,7 @@ import {
   rgbaString,
   lightenNeutral,
   getOutlineWidth,
+  type TerrainVisual,
 } from './palette.ts';
 import type { HexPatternOptions } from '../map/hexPatterns.ts';
 import { drawForest, drawHills, drawPlains, drawWater } from '../map/hexPatterns.ts';
@@ -25,7 +26,7 @@ import {
 } from '../map/hex/chunking.ts';
 import type { ChunkKey, ChunkCoord } from '../map/hex/chunking.ts';
 import type { TileChangeType } from '../hexmap.ts';
-import { loadIcon } from './loadIcon.ts';
+import { loadIcon, onIconLoaded } from './loadIcon.ts';
 
 const TERRAIN_PATTERNS: Record<TerrainId, (options: HexPatternOptions) => void> = {
   [TerrainId.Plains]: drawPlains,
@@ -76,6 +77,7 @@ function strokeHex(
 function drawTerrainAndBuilding(
   ctx: CanvasRenderingContext2D,
   tile: { terrain: TerrainId; building: string | null },
+  palette: TerrainVisual,
   images: Record<string, HTMLImageElement>,
   x: number,
   y: number,
@@ -83,7 +85,6 @@ function drawTerrainAndBuilding(
   height: number,
   radius: number
 ): void {
-  const palette = TERRAIN[tile.terrain] ?? TERRAIN[TerrainId.Plains];
   const rgb = hexToRgb(palette.baseColor);
   const centerX = x + width / 2;
   const centerY = y + height / 2;
@@ -156,6 +157,10 @@ export class TerrainCache {
   private readonly chunkCanvases = new Map<ChunkKey, ChunkCanvas>();
   private readonly dirtyChunks = new Set<ChunkKey>();
   private cachedImages?: Record<string, HTMLImageElement>;
+  private readonly iconChunks = new Map<string, Set<ChunkKey>>();
+  private readonly chunkIcons = new Map<ChunkKey, Set<string>>();
+  private readonly iconSubscriptions = new Map<string, () => void>();
+  private readonly readyIconPaths = new Set<string>();
   private readonly unsubscribe: () => void;
 
   constructor(private readonly map: HexMap) {
@@ -169,12 +174,14 @@ export class TerrainCache {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
+    this.clearIconTracking();
   }
 
   invalidate(): void {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
+    this.clearIconTracking();
   }
 
   markChunkDirty(key: ChunkKey): void {
@@ -238,6 +245,7 @@ export class TerrainCache {
       this.dirtyChunks.delete(key);
       if (!updated) {
         this.chunkCanvases.delete(key);
+        this.trackChunkIcons(key, new Set());
         return null;
       }
       this.chunkCanvases.set(key, updated);
@@ -273,7 +281,13 @@ export class TerrainCache {
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
-    const tiles: Array<{ tile: { terrain: TerrainId; building: string | null }; x: number; y: number }> = [];
+    const chunkIconPaths = new Set<string>();
+    const tiles: Array<{
+      tile: { terrain: TerrainId; building: string | null };
+      palette: TerrainVisual;
+      x: number;
+      y: number;
+    }> = [];
 
     for (let q = qStart; q <= qEnd; q++) {
       for (let r = rStart; r <= rEnd; r++) {
@@ -289,7 +303,9 @@ export class TerrainCache {
         minY = Math.min(minY, drawY);
         maxX = Math.max(maxX, drawX + hexWidth);
         maxY = Math.max(maxY, drawY + hexHeight);
-        tiles.push({ tile, x: drawX, y: drawY });
+        const palette = TERRAIN[tile.terrain] ?? TERRAIN[TerrainId.Plains];
+        chunkIconPaths.add(palette.icon);
+        tiles.push({ tile, palette, x: drawX, y: drawY });
       }
     }
 
@@ -315,14 +331,16 @@ export class TerrainCache {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, width, height);
 
-    for (const { tile, x, y } of tiles) {
+    for (const { tile, palette, x, y } of tiles) {
       const drawX = x - minX;
       const drawY = y - minY;
       ctx.save();
-      drawTerrainAndBuilding(ctx, tile, images, drawX, drawY, hexWidth, hexHeight, hexSize);
+      drawTerrainAndBuilding(ctx, tile, palette, images, drawX, drawY, hexWidth, hexHeight, hexSize);
       strokeHex(ctx, drawX + hexWidth / 2, drawY + hexHeight / 2, hexSize);
       ctx.restore();
     }
+
+    this.trackChunkIcons(key, chunkIconPaths);
 
     return {
       key,
@@ -331,6 +349,93 @@ export class TerrainCache {
       width,
       height,
     };
+  }
+
+  private trackChunkIcons(key: ChunkKey, icons: Set<string>): void {
+    const previousIcons = this.chunkIcons.get(key);
+    if (previousIcons) {
+      for (const icon of previousIcons) {
+        const chunks = this.iconChunks.get(icon);
+        if (chunks) {
+          chunks.delete(key);
+          if (chunks.size === 0) {
+            this.iconChunks.delete(icon);
+            this.unsubscribeFromIcon(icon);
+          }
+        }
+      }
+    }
+
+    if (icons.size === 0) {
+      this.chunkIcons.delete(key);
+      return;
+    }
+
+    const trackedIcons = new Set(icons);
+    this.chunkIcons.set(key, trackedIcons);
+
+    for (const icon of trackedIcons) {
+      let chunks = this.iconChunks.get(icon);
+      if (!chunks) {
+        chunks = new Set();
+        this.iconChunks.set(icon, chunks);
+      }
+      chunks.add(key);
+      this.ensureIconSubscription(icon);
+    }
+  }
+
+  private markChunksForIcon(path: string): void {
+    const chunks = this.iconChunks.get(path);
+    if (!chunks || chunks.size === 0) {
+      return;
+    }
+
+    for (const chunkKey of chunks) {
+      this.markChunkDirty(chunkKey);
+    }
+  }
+
+  private ensureIconSubscription(path: string): void {
+    const icon = loadIcon(path);
+    if (icon) {
+      this.readyIconPaths.add(path);
+      this.markChunksForIcon(path);
+      return;
+    }
+
+    this.readyIconPaths.delete(path);
+
+    if (this.iconSubscriptions.has(path)) {
+      return;
+    }
+
+    const unsubscribe = onIconLoaded(path, () => {
+      this.readyIconPaths.add(path);
+      this.markChunksForIcon(path);
+      this.unsubscribeFromIcon(path);
+    });
+
+    this.iconSubscriptions.set(path, unsubscribe);
+  }
+
+  private unsubscribeFromIcon(path: string): void {
+    const unsubscribe = this.iconSubscriptions.get(path);
+    if (!unsubscribe) {
+      return;
+    }
+    unsubscribe();
+    this.iconSubscriptions.delete(path);
+  }
+
+  private clearIconTracking(): void {
+    for (const unsubscribe of this.iconSubscriptions.values()) {
+      unsubscribe();
+    }
+    this.iconSubscriptions.clear();
+    this.iconChunks.clear();
+    this.chunkIcons.clear();
+    this.readyIconPaths.clear();
   }
 }
 
