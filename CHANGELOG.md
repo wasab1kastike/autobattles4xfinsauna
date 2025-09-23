@@ -6,9 +6,10 @@
   icon cache, letting the terrain renderer mark affected chunks dirty so freshly
   loaded art appears during the first frame of a cold start.
 
-- Float the stash drawer alongside the command dock so its fixed overlay can
-  cover the viewport, leave a screen-reader proxy in the stash tab, and confirm
-  the dock chrome stays pristine while the drawer opens at full height.
+- Mount the stash drawer on the overlay instead of the command dock anchor so
+  its fixed panel spans the viewport, keep a screen-reader proxy in the stash
+  tab, and confirm the dock chrome stays pristine while the drawer opens at
+  full height.
 
 - Collapse the command console track in the HUD grid when the desktop toggle
   hides the panel, wiring a layout modifier class so the overlay widens the
