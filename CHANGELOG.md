@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Elevate the roster experience with stance-aware controls: display each
+  Saunoja's current behavior in the featured HUD card, add a polished
+  Defend/Attack/Explore segmented toggle to roster rows, and persist changes
+  through the right-panel handler so battlefield routines update instantly.
+
 - Refine battlefield routines to source unit behaviors from the new helper, lock
   defenders to the sauna perimeter unless invaders breach it, drive attackers
   toward the latest enemy sightings or the board edge, and cover each routine

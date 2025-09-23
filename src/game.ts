@@ -1839,6 +1839,20 @@ function initializeRightPanel(): void {
     onRosterRendererReady: installRosterRenderer,
     onRosterEquipSlot: equipSlotFromStash,
     onRosterUnequipSlot: unequipSlotToStash,
+    onRosterBehaviorChange: (unitId, nextBehavior) => {
+      const attendant = saunojas.find((unit) => unit.id === unitId);
+      if (!attendant) {
+        return;
+      }
+      if (attendant.behavior === nextBehavior) {
+        return;
+      }
+      attendant.behavior = nextBehavior;
+      const attachedUnit = getAttachedUnitFor(attendant);
+      attachedUnit?.setBehavior(nextBehavior);
+      saveUnits();
+      updateRosterDisplay();
+    },
     getRosterCap: () => Math.max(0, Math.floor(sauna.maxRosterSize)),
     getRosterCapLimit: () => getActiveTierLimit(),
     updateMaxRosterSize: (value, opts) => {
@@ -2594,12 +2608,15 @@ function buildRosterEntries(): RosterEntry[] {
           : undefined
     } satisfies RosterStats;
 
+    const behavior: UnitBehavior = attendant.behavior ?? 'defend';
+
     return {
       id: attendant.id,
       name: attendant.name,
       upkeep,
       status,
       selected: Boolean(attendant.selected),
+      behavior,
       traits: [...attendant.traits],
       stats: {
         health: currentHealth,
@@ -2669,12 +2686,14 @@ function buildRosterSummary(): RosterHudSummary {
   const featured = pickFeaturedSaunoja();
   let card: RosterCardViewModel | null = null;
   if (featured) {
+    const behavior: UnitBehavior = featured.behavior ?? 'defend';
     card = {
       id: featured.id,
       name: featured.name || 'Saunoja',
       traits: [...featured.traits],
       upkeep: Math.max(0, Math.round(featured.upkeep)),
-      progression: buildProgression(featured)
+      progression: buildProgression(featured),
+      behavior
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

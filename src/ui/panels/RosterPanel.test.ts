@@ -82,6 +82,7 @@ function buildEntry(
     upkeep: 3,
     status: 'reserve',
     selected: false,
+    behavior: 'defend',
     traits,
     stats,
     baseStats,
@@ -120,10 +121,24 @@ describe('createRosterPanel', () => {
     expect(calloutsInitial?.textContent).toContain('+5 Focus');
     expect(calloutsInitial?.textContent).toContain('+3 Resolve');
 
+    const behaviorValueInitial = container.querySelector('.panel-roster__behavior-value');
+    expect(behaviorValueInitial?.textContent).toBe('Defend');
+    const defendButtonInitial = container.querySelector<HTMLButtonElement>(
+      '.panel-roster__behavior-option[data-behavior="defend"]'
+    );
+    expect(defendButtonInitial?.getAttribute('aria-pressed')).toBe('true');
+    expect(defendButtonInitial?.classList.contains('is-active')).toBe(true);
+    const behaviorButtonsInitial = container.querySelectorAll<HTMLButtonElement>(
+      '.panel-roster__behavior-option'
+    );
+    expect(behaviorButtonsInitial).toHaveLength(3);
+    expect(Array.from(behaviorButtonsInitial).every((button) => button.disabled)).toBe(true);
+
     const updatedEntry = buildEntry({
       upkeep: 5,
       status: 'engaged',
       selected: true,
+      behavior: 'attack',
       stats: {
         health: 12,
         maxHealth: 30,
@@ -240,6 +255,14 @@ describe('createRosterPanel', () => {
     expect(calloutsUpdated?.textContent).toContain('+10 Focus');
     expect(calloutsUpdated?.textContent).toContain('+6 Resolve');
 
+    const behaviorValueUpdated = container.querySelector('.panel-roster__behavior-value');
+    expect(behaviorValueUpdated?.textContent).toBe('Attack');
+    const attackButton = container.querySelector<HTMLButtonElement>(
+      '.panel-roster__behavior-option[data-behavior="attack"]'
+    );
+    expect(attackButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(attackButton?.classList.contains('is-active')).toBe(true);
+
     const slotSummaries = Array.from(
       container.querySelectorAll<HTMLSpanElement>('.panel-roster__slot-summary')
     ).map((node) => node.textContent?.trim());
@@ -323,5 +346,27 @@ describe('createRosterPanel', () => {
     expect(updates[2]).toEqual({ value: 0, persist: true });
     expect(valueLabel.textContent).toBe('Paused');
     expect(valueLabel.dataset.state).toBe('paused');
+  });
+
+  it('invokes the behavior change callback when toggles are pressed', () => {
+    const container = document.createElement('div');
+    const calls: Array<{ id: string; behavior: RosterEntry['behavior'] }> = [];
+    const panel = createRosterPanel(container, {
+      onBehaviorChange: (unitId, behavior) => {
+        calls.push({ id: unitId, behavior });
+      }
+    });
+
+    const entry = buildEntry({ behavior: 'defend' });
+    panel.render([entry]);
+
+    const attackButton = container.querySelector<HTMLButtonElement>(
+      '.panel-roster__behavior-option[data-behavior="attack"]'
+    );
+    expect(attackButton).not.toBeNull();
+    expect(attackButton?.disabled).toBe(false);
+    attackButton?.click();
+
+    expect(calls).toEqual([{ id: entry.id, behavior: 'attack' }]);
   });
 });
