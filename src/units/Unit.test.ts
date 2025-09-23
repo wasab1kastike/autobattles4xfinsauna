@@ -36,3 +36,35 @@ describe('Unit combat keywords', () => {
   });
 });
 
+describe('Unit behavior', () => {
+  it('defaults to defend for player-controlled units', () => {
+    const stats = { health: 12, attackDamage: 3, attackRange: 1, movementRange: 1 };
+    const unit = new Unit('player-behavior', 'soldier', { ...BASE_COORD }, 'player', stats);
+    expect(unit.getBehavior()).toBe('defend');
+  });
+
+  it('defaults to attack for non-player factions', () => {
+    const stats = { health: 10, attackDamage: 4, attackRange: 1, movementRange: 1 };
+    const foe = new Unit('enemy-behavior', 'soldier', { ...BASE_COORD }, 'enemy', stats);
+    const neutral = new Unit('neutral-behavior', 'soldier', { ...BASE_COORD }, 'neutral', stats);
+    expect(foe.getBehavior()).toBe('attack');
+    expect(neutral.getBehavior()).toBe('attack');
+  });
+
+  it('supports overriding and mutating the behavior preference', () => {
+    const stats = { health: 9, attackDamage: 2, attackRange: 1, movementRange: 1 };
+    const explorer = new Unit(
+      'explorer-behavior',
+      'scout',
+      { ...BASE_COORD },
+      'player',
+      stats,
+      [],
+      'explore'
+    );
+    expect(explorer.getBehavior()).toBe('explore');
+    explorer.setBehavior('attack');
+    expect(explorer.getBehavior()).toBe('attack');
+  });
+});
+
