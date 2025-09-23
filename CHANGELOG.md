@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce Saunoja behavior preferences that synchronize with battlefield
+  units, persist through reloads, and default to defend/attack routines based on
+  faction alignment.
+
 - Rebalance the HUD overlay grid to prioritize the combat viewport on
   medium-width screens, swap the column template for minmax/fractional tracks,
   and keep the roster plus dock panels legible through the 820–1024px range.
