@@ -5,10 +5,17 @@ export class Targeting {
   /**
    * Select an enemy target for a unit based on faction priorities, range and distance.
    */
-  static selectTarget(unit: Unit, units: Unit[]): Unit | null {
+  static selectTarget(
+    unit: Unit,
+    units: Unit[],
+    predicate?: (enemy: Unit) => boolean
+  ): Unit | null {
     let enemies = units.filter(
       (u) => u.faction !== unit.faction && !u.isDead()
     );
+    if (predicate) {
+      enemies = enemies.filter(predicate);
+    }
     if (enemies.length === 0) {
       return null;
     }
@@ -26,7 +33,13 @@ export class Targeting {
       (e) => unit.distanceTo(e.coord) <= unit.stats.attackRange
     );
     if (inRange.length > 0) {
-      inRange.sort((a, b) => a.stats.health - b.stats.health);
+      inRange.sort((a, b) => {
+        const healthDiff = a.stats.health - b.stats.health;
+        if (healthDiff !== 0) {
+          return healthDiff;
+        }
+        return unit.distanceTo(a.coord) - unit.distanceTo(b.coord);
+      });
       return inRange[0];
     }
 

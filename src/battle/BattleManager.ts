@@ -151,16 +151,27 @@ export class BattleManager {
         behavior = 'attack';
       }
 
-      let target = Targeting.selectTarget(unit, units);
+      const acquireTarget = (
+        predicate?: (enemy: Unit) => boolean
+      ): Unit | null => this.findClosestEnemy(unit, units, predicate);
 
-      if (
-        isPlayerUnit &&
-        behavior === 'defend' &&
-        hasActiveSauna &&
-        target &&
-        hexDistance(target.coord, sauna.pos) > DEFEND_PERIMETER_RADIUS
-      ) {
-        target = null;
+      let target: Unit | null = null;
+
+      if (behavior === 'defend') {
+        if (isPlayerUnit && hasActiveSauna) {
+          target = acquireTarget((enemy) =>
+            hexDistance(enemy.coord, sauna.pos) <= DEFEND_PERIMETER_RADIUS
+          );
+        } else {
+          target = acquireTarget();
+        }
+      } else if (behavior === 'explore') {
+        const visionRange = unit.getVisionRange();
+        target = acquireTarget(
+          (enemy) => unit.distanceTo(enemy.coord) <= visionRange
+        );
+      } else {
+        target = acquireTarget();
       }
 
       if (!target && sauna && !sauna.destroyed) {
@@ -340,6 +351,14 @@ export class BattleManager {
       eventBus.emit('saunaDestroyed', destroyedPayload);
     }
     return true;
+  }
+
+  private findClosestEnemy(
+    unit: Unit,
+    units: Unit[],
+    predicate?: (enemy: Unit) => boolean
+  ): Unit | null {
+    return Targeting.selectTarget(unit, units, predicate);
   }
 
   private computeMovementPath(
