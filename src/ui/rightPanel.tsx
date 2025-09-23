@@ -260,9 +260,7 @@ export function setupRightPanel(
   };
 
   const closeMobilePanel = ({ skipFocus = false }: { skipFocus?: boolean } = {}) => {
-    if (!isMobileViewport || !isMobilePanelOpen) {
-      return;
-    }
+    const wasOpen = isMobilePanelOpen;
     resetDrag();
     isMobilePanelOpen = false;
     slideOver.classList.remove('right-panel-slide--open');
@@ -272,7 +270,7 @@ export function setupRightPanel(
     slideOver.style.setProperty('--panel-drag-progress', '0');
     refreshTogglePresentation();
     unbindMobileKeydown();
-    if (!skipFocus) {
+    if (wasOpen && !skipFocus) {
       toggle.focus({ preventScroll: true });
     }
   };
@@ -403,7 +401,6 @@ export function setupRightPanel(
       }
     } else {
       closeMobilePanel({ skipFocus: true });
-      slideOver.style.setProperty('--panel-drag-progress', '1');
       slideOver.remove();
       rightRegion.appendChild(panel);
       insertToggle();
