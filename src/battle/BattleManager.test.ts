@@ -294,6 +294,56 @@ describe('BattleManager', () => {
     expect(guardian.coord).toEqual({ q: DEFEND_PERIMETER_RADIUS, r: 0 });
   });
 
+  it('only allows defenders to pursue enemies that breach the perimeter', () => {
+    const map = new HexMap(12, 3);
+    const line: { q: number; r: number }[] = [];
+    for (let q = -2; q <= DEFEND_PERIMETER_RADIUS + 4; q++) {
+      line.push({ q, r: 0 });
+    }
+    seedTiles(map, line);
+    for (const coord of line) {
+      const tile = map.ensureTile(coord.q, coord.r);
+      tile.terrain = TerrainId.Plains;
+      tile.setFogged(false);
+    }
+
+    const sauna = createSauna({ q: 0, r: 0 });
+    const guardian = createUnit(
+      'guardian-perimeter',
+      { q: DEFEND_PERIMETER_RADIUS, r: 0 },
+      'player',
+      {
+        health: 12,
+        attackDamage: 2,
+        attackRange: 1,
+        movementRange: 1
+      },
+      [],
+      'defend'
+    );
+    const raider = createUnit(
+      'perimeter-raider',
+      { q: DEFEND_PERIMETER_RADIUS + 3, r: 0 },
+      'enemy',
+      {
+        health: 6,
+        attackDamage: 1,
+        attackRange: 1,
+        movementRange: 0
+      }
+    );
+
+    const manager = new BattleManager(map);
+
+    manager.tick([guardian, raider], 5, sauna);
+    expect(guardian.coord).toEqual({ q: DEFEND_PERIMETER_RADIUS, r: 0 });
+
+    raider.setCoord({ q: DEFEND_PERIMETER_RADIUS - 1, r: 0 });
+    manager.tick([guardian, raider], 5, sauna);
+    expect(hexDistance(guardian.coord, sauna.pos)).toBeLessThanOrEqual(DEFEND_PERIMETER_RADIUS);
+    expect(hexDistance(guardian.coord, raider.coord)).toBeLessThanOrEqual(1);
+  });
+
   it('drives attackers toward the latest recorded enemy position', () => {
     const map = new HexMap(8, 3);
     const corridor: { q: number; r: number }[] = [];
@@ -336,6 +386,44 @@ describe('BattleManager', () => {
 
     manager.tick([striker, raider], 5);
     manager.tick([striker, raider], 5);
+    expect(striker.coord).toEqual({ q: 1, r: 0 });
+
+    manager.tick([striker], 5);
+    expect(striker.coord).toEqual({ q: 2, r: 0 });
+  });
+
+  it('guides attackers toward the board edge when no sightings exist', () => {
+    const map = new HexMap(6, 3);
+    const corridor: { q: number; r: number }[] = [];
+    for (let q = 0; q <= 5; q++) {
+      for (let r = 0; r <= 2; r++) {
+        corridor.push({ q, r });
+      }
+    }
+    seedTiles(map, corridor);
+    for (const coord of corridor) {
+      const tile = map.ensureTile(coord.q, coord.r);
+      tile.terrain = TerrainId.Plains;
+      tile.setFogged(false);
+    }
+
+    const striker = createUnit(
+      'edge-runner',
+      { q: 0, r: 0 },
+      'player',
+      {
+        health: 10,
+        attackDamage: 2,
+        attackRange: 1,
+        movementRange: 1
+      },
+      [],
+      'attack'
+    );
+
+    const manager = new BattleManager(map);
+
+    manager.tick([striker], 5);
     expect(striker.coord).toEqual({ q: 1, r: 0 });
 
     manager.tick([striker], 5);
