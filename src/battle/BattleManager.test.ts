@@ -159,6 +159,46 @@ describe('BattleManager', () => {
     expect((unit as any).cachedPath).toBeUndefined();
   });
 
+  it('keeps explorers scouting when distant enemies are out of sight', () => {
+    const map = new HexMap(8, 3);
+    const explored = map.ensureTile(0, 0);
+    explored.reveal();
+    explored.terrain = TerrainId.Plains;
+    const frontier = map.ensureTile(1, 0);
+    frontier.setFogged(true);
+    frontier.terrain = TerrainId.Plains;
+    const far = map.ensureTile(5, 0);
+    far.setFogged(false);
+    far.terrain = TerrainId.Plains;
+
+    const scout = createUnit(
+      'distant-scout',
+      { q: 0, r: 0 },
+      'player',
+      {
+        health: 6,
+        attackDamage: 0,
+        attackRange: 0,
+        movementRange: 1,
+        visionRange: 2
+      },
+      [],
+      'explore'
+    );
+    const raider = createUnit('remote-raider', { q: 5, r: 0 }, 'enemy', {
+      health: 12,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+
+    const manager = new BattleManager(map);
+    manager.tick([scout, raider], 5);
+
+    expect(scout.coord).toEqual({ q: 1, r: 0 });
+    expect(raider.coord).toEqual({ q: 5, r: 0 });
+  });
+
   it('waits until five seconds accrue before allowing exploration movement', () => {
     const map = new HexMap(5, 5);
     const origin = map.ensureTile(0, 0);
@@ -390,6 +430,51 @@ describe('BattleManager', () => {
 
     manager.tick([striker], 5);
     expect(striker.coord).toEqual({ q: 2, r: 0 });
+  });
+
+  it('continues guiding attackers to their last sighted foe when enemies vanish', () => {
+    const map = new HexMap(8, 3);
+    const lane: { q: number; r: number }[] = [];
+    for (let q = 0; q <= 5; q++) {
+      lane.push({ q, r: 0 });
+    }
+    seedTiles(map, lane);
+    for (const coord of lane) {
+      const tile = map.ensureTile(coord.q, coord.r);
+      tile.terrain = TerrainId.Plains;
+      tile.setFogged(false);
+    }
+
+    const striker = createUnit(
+      'persistent-striker',
+      { q: 0, r: 0 },
+      'player',
+      {
+        health: 10,
+        attackDamage: 2,
+        attackRange: 1,
+        movementRange: 1
+      },
+      [],
+      'attack'
+    );
+    const raider = createUnit('vanishing-raider', { q: 4, r: 0 }, 'enemy', {
+      health: 6,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+
+    const manager = new BattleManager(map);
+
+    manager.tick([striker, raider], 5);
+    expect(striker.coord).toEqual({ q: 1, r: 0 });
+
+    manager.tick([striker], 5);
+    expect(striker.coord).toEqual({ q: 2, r: 0 });
+
+    manager.tick([striker], 5);
+    expect(striker.coord).toEqual({ q: 3, r: 0 });
   });
 
   it('guides attackers toward the board edge when no sightings exist', () => {

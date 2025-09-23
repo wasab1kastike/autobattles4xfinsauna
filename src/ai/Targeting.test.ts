@@ -59,4 +59,31 @@ describe('Targeting', () => {
     const target = Targeting.selectTarget(attacker, [attacker, enemy1, enemy2]);
     expect(target?.id).toBe('c');
   });
+
+  it('applies custom filters before evaluating priorities', () => {
+    const attacker = createUnit('a', { q: 0, r: 0 }, 'A', {
+      health: 10,
+      attackDamage: 1,
+      attackRange: 3,
+      movementRange: 0
+    }, ['B']);
+    const enemyNear = createUnit('b', { q: 1, r: 0 }, 'B', {
+      health: 5,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+    const enemyFar = createUnit('c', { q: 3, r: 0 }, 'C', {
+      health: 1,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 0
+    });
+
+    const target = Targeting.selectTarget(attacker, [attacker, enemyNear, enemyFar], (enemy) =>
+      attacker.distanceTo(enemy.coord) <= 1
+    );
+
+    expect(target?.id).toBe('b');
+  });
 });
