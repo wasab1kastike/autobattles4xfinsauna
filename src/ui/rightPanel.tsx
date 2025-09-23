@@ -7,7 +7,11 @@ import {
   type SchedulerEventContent,
   type SchedulerTriggeredPayload
 } from '../events';
-import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
+import {
+  ensureHudLayout,
+  HUD_OVERLAY_COLLAPSED_CLASS,
+  type HudBottomTabId,
+} from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
@@ -211,6 +215,7 @@ export function setupRightPanel(
     const shouldCollapse = collapsed && matches;
     isCollapsed = shouldCollapse;
     panel.classList.toggle('right-panel--collapsed', shouldCollapse);
+    overlay.classList.toggle(HUD_OVERLAY_COLLAPSED_CLASS, shouldCollapse);
     panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
     refreshTogglePresentation();
     if (wasCollapsed && !shouldCollapse && matches) {
@@ -394,6 +399,7 @@ export function setupRightPanel(
       mobileBar.appendChild(toggle);
       toggle.classList.add('hud-panel-toggle--mobile');
       toggle.hidden = false;
+      overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
       if (!isMobilePanelOpen) {
         panel.setAttribute('aria-hidden', 'true');
         slideOver.setAttribute('aria-hidden', 'true');
@@ -1000,6 +1006,7 @@ export function setupRightPanel(
     slideOver.remove();
     toggle.remove();
     panel.remove();
+    overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
   };
 
   return {
