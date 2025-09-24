@@ -1,5 +1,3 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#8b4513" />
-  <polygon points="32,10 42,22 22,22" fill="#555" />
-  <rect x="30" y="22" width="4" height="32" fill="#ccc" />
-</svg>
+version https://git-lfs.github.com/spec/v1
+oid sha256:542bc3a309d7fa2106a7e2aeebe6031bad1cdee7a06859bfc3d249766e4020ba
+size 3199
