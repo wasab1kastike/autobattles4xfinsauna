@@ -242,6 +242,12 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     }
 
     selectionHud.refreshPosition();
+
+    const hasActiveAnimations =
+      (!prefersReducedMotion && shakes.length > 0) || fades.size > 0;
+    if (hasActiveAnimations) {
+      scheduleDraw();
+    }
   };
 
   const getShakeOffset = () => ({ x: offset.x, y: offset.y });
