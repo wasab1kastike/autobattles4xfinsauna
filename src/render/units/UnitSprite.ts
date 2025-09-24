@@ -45,6 +45,47 @@ interface GradientLike {
   addColorStop(offset: number, color: string): void;
 }
 
+type AnyRenderingContext2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+
+interface CachedBaseCanvas {
+  readonly canvas: CanvasImageSource;
+  readonly width: number;
+  readonly height: number;
+}
+
+const baseCanvasCache = new Map<string, CachedBaseCanvas>();
+
+function createOffscreenCanvas(
+  width: number,
+  height: number
+): { canvas: HTMLCanvasElement | OffscreenCanvas; ctx: AnyRenderingContext2D } | null {
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+
+  if (typeof OffscreenCanvas !== 'undefined') {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      return { canvas, ctx };
+    }
+  }
+
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return null;
+  }
+
+  return { canvas, ctx };
+}
+
 function createGradientSafe(
   create: () => CanvasGradient | null,
   fallbackColor: string
@@ -146,6 +187,28 @@ function drawBase(
     return footprint;
   }
 
+  const cachedBase = getCachedBaseCanvas(radiusX, radiusY, zoom, palette);
+  if (cachedBase) {
+    const drawX = centerX - cachedBase.width / 2;
+    const drawY = centerY - cachedBase.height / 2;
+    ctx.drawImage(cachedBase.canvas, drawX, drawY, cachedBase.width, cachedBase.height);
+    return footprint;
+  }
+
+  paintUnitBase(ctx, centerX, centerY, radiusX, radiusY, zoom, palette);
+
+  return footprint;
+}
+
+function paintUnitBase(
+  ctx: AnyRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  zoom: number,
+  palette: ReturnType<typeof resolveBasePalette>
+): void {
   ctx.save();
   ctx.filter = 'none';
 
@@ -166,7 +229,15 @@ function drawBase(
 
   ctx.globalCompositeOperation = 'multiply';
   const [shadowGradient, shadowFallback] = createGradientSafe(
-    () => ctx.createRadialGradient(centerX, centerY + radiusY * 0.4, radiusY * 0.35, centerX, centerY + radiusY * 0.4, radiusY * 1.4),
+    () =>
+      ctx.createRadialGradient(
+        centerX,
+        centerY + radiusY * 0.4,
+        radiusY * 0.35,
+        centerX,
+        centerY + radiusY * 0.4,
+        radiusY * 1.4
+      ),
     'rgba(24, 26, 32, 0.55)'
   );
   applyStops(shadowGradient, [
@@ -179,7 +250,15 @@ function drawBase(
 
   ctx.globalCompositeOperation = 'screen';
   const [highlightGradient, highlightFallback] = createGradientSafe(
-    () => ctx.createRadialGradient(centerX, centerY - radiusY * 0.65, radiusY * 0.1, centerX, centerY, radiusY * 1.25),
+    () =>
+      ctx.createRadialGradient(
+        centerX,
+        centerY - radiusY * 0.65,
+        radiusY * 0.1,
+        centerX,
+        centerY,
+        radiusY * 1.25
+      ),
     palette.highlight
   );
   applyStops(highlightGradient, [
@@ -212,8 +291,69 @@ function drawBase(
   ctx.lineWidth = snapForZoom(Math.max(1.6, zoom * 1.15), zoom);
   ctx.stroke();
   ctx.restore();
+}
 
-  return footprint;
+function formatCacheNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '0';
+  }
+  return value.toFixed(3);
+}
+
+function getBaseCacheKey(
+  radiusX: number,
+  radiusY: number,
+  zoom: number,
+  palette: ReturnType<typeof resolveBasePalette>
+): string {
+  return [
+    formatCacheNumber(radiusX),
+    formatCacheNumber(radiusY),
+    formatCacheNumber(zoom),
+    palette.shell,
+    palette.mid,
+    palette.rim,
+    palette.highlight,
+    palette.ring,
+    palette.motionGlow
+  ].join('|');
+}
+
+function getCachedBaseCanvas(
+  radiusX: number,
+  radiusY: number,
+  zoom: number,
+  palette: ReturnType<typeof resolveBasePalette>
+): CachedBaseCanvas | null {
+  const key = getBaseCacheKey(radiusX, radiusY, zoom, palette);
+  const cached = baseCanvasCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const rimLineWidth = snapForZoom(Math.max(2.4, zoom * 1.8), zoom);
+  const rimShadowBlur = snapForZoom(Math.max(6, zoom * 3.2), zoom);
+  const ringLineWidth = snapForZoom(Math.max(1.6, zoom * 1.15), zoom);
+  const margin = Math.ceil(rimShadowBlur + Math.max(rimLineWidth, ringLineWidth) + 6);
+  const width = Math.max(1, Math.ceil(radiusX * 2 + margin * 2));
+  const height = Math.max(1, Math.ceil(radiusY * 2 + margin * 2));
+
+  const offscreen = createOffscreenCanvas(width, height);
+  if (!offscreen) {
+    return null;
+  }
+
+  const { canvas, ctx } = offscreen;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+  paintUnitBase(ctx, centerX, centerY, radiusX, radiusY, zoom, palette);
+
+  const entry: CachedBaseCanvas = { canvas, width, height };
+  baseCanvasCache.set(key, entry);
+  return entry;
 }
 
 export function drawUnitSprite(
