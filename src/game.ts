@@ -228,6 +228,8 @@ let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
 let pendingRosterEntries: RosterEntry[] | null = null;
 let lastRosterSummary: RosterHudSummary | null = null;
 let lastRosterEntries: RosterEntry[] = [];
+const friendlyVisionUnitScratch: Unit[] = [];
+const overlaySaunojasScratch: Saunoja[] = [];
 const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
 const rosterEntriesListeners = new Set<(entries: RosterEntry[]) => void>();
 let hudElapsedMs = 0;
@@ -2161,20 +2163,26 @@ export function draw(): void {
         commitOverlayFrame: () => unitFx!.commitStatusFrame()
       }
     : undefined;
-  const friendlyVisionSources = units.filter(
-    (unit) => unit.faction === 'player' && !unit.isDead()
-  );
-  const overlaySaunojas = saunojas.filter((attendant) => {
+  const friendlyVisionSources = friendlyVisionUnitScratch;
+  friendlyVisionSources.length = 0;
+  for (const unit of units) {
+    if (unit.faction === 'player' && !unit.isDead()) {
+      friendlyVisionSources.push(unit);
+    }
+  }
+
+  const overlaySaunojas = overlaySaunojasScratch;
+  overlaySaunojas.length = 0;
+  for (const attendant of saunojas) {
     const attachedId = saunojaToUnit.get(attendant.id);
     if (!attachedId) {
-      return false;
+      continue;
     }
     const attachedUnit = unitsById.get(attachedId) ?? null;
-    if (!attachedUnit) {
-      return true;
+    if (!attachedUnit || attachedUnit.isDead()) {
+      overlaySaunojas.push(attendant);
     }
-    return attachedUnit.isDead();
-  });
+  }
   const saunaVision: VisionSource | null = sauna
     ? {
         coord: sauna.pos,
@@ -2186,31 +2194,42 @@ export function draw(): void {
   if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
     ctx.translate(shakeOffset.x, shakeOffset.y);
   }
-  render(ctx, mapRenderer, { images: assets.images, atlas: assets.atlases.units }, units, selected, {
-    saunojas:
-      overlaySaunojas.length > 0
-        ? {
-            units: overlaySaunojas,
-            draw: drawSaunojas,
-            resolveRenderCoord: (attendant) => {
-              const unit = getAttachedUnitFor(attendant);
-              if (!unit) {
-                return null;
-              }
-              return unit.renderCoord ?? unit.coord;
-            },
-            resolveSpriteId: (attendant) => {
-              const unit = getAttachedUnitFor(attendant);
-              return unit?.type ?? null;
-            },
-            fallbackSpriteId: 'saunoja-guardian'
-          }
-        : undefined,
-    sauna,
-    saunaVision,
-    fx: fxOptions,
-    friendlyVisionSources
-  });
+  const saunojaLayer =
+    overlaySaunojas.length > 0
+      ? {
+          units: overlaySaunojas,
+          draw: drawSaunojas,
+          resolveRenderCoord: (attendant: Saunoja) => {
+            const unit = getAttachedUnitFor(attendant);
+            if (!unit) {
+              return null;
+            }
+            return unit.renderCoord ?? unit.coord;
+          },
+          resolveSpriteId: (attendant: Saunoja) => {
+            const unit = getAttachedUnitFor(attendant);
+            return unit?.type ?? null;
+          },
+          fallbackSpriteId: 'saunoja-guardian'
+        }
+      : undefined;
+
+  render(
+    ctx,
+    mapRenderer,
+    { images: assets.images, atlas: assets.atlases.units },
+    units,
+    selected,
+    {
+      saunojas: saunojaLayer,
+      sauna,
+      saunaVision,
+      fx: fxOptions,
+      friendlyVisionSources
+    }
+  );
+  friendlyVisionSources.length = 0;
+  overlaySaunojas.length = 0;
   ctx.restore();
 }
 
