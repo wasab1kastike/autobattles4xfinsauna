@@ -300,6 +300,11 @@ function disposeUiV2Controllers(): void {
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
+let frameDirty = true;
+
+export function invalidateFrame(): void {
+  frameDirty = true;
+}
 
 function getSelectedSaunoja(): Saunoja | null {
   return saunojas.find((unit) => unit.selected) ?? null;
@@ -902,9 +907,7 @@ export function setupGame(
     overlay: overlayEl,
     mapRenderer,
     getUnitById: (id) => unitsById.get(id),
-    requestDraw: () => {
-      draw();
-    }
+    requestDraw: invalidateFrame
   });
   syncSelectionOverlay();
   if (rosterHud) {
@@ -1093,12 +1096,12 @@ export function setupGame(
 }
 
 const map = new HexMap(10, 10, 32);
-const animator = new Animator(() => draw());
+const animator = new Animator(() => invalidateFrame());
 const battleManager = new BattleManager(map, animator);
 const mapRenderer = new HexMapRenderer(map);
 const invalidateTerrainCache = (): void => {
   mapRenderer.invalidateCache();
-  draw();
+  invalidateFrame();
 };
 eventBus.on('buildingPlaced', invalidateTerrainCache);
 eventBus.on('buildingRemoved', invalidateTerrainCache);
@@ -1297,7 +1300,7 @@ function registerUnit(unit: Unit): void {
     persona = unitToSaunoja.get(unit.id) ?? null;
   }
   if (canvas) {
-    draw();
+    invalidateFrame();
   }
   if (unit.faction === 'player') {
     const steward = 'Our';
@@ -1666,7 +1669,7 @@ const clock = new GameClock(1000, (deltaMs) => {
 
     map.revealAround(unit.coord, unit.getVisionRange(), { autoFrame: false });
   }
-  draw();
+  invalidateFrame();
 });
 
 const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
@@ -1678,7 +1681,7 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = null;
   }
-  draw();
+  invalidateFrame();
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) {
     return;
@@ -2015,7 +2018,7 @@ function focusSaunojaById(unitId: string): void {
   }
   saveUnits();
   updateRosterDisplay();
-  draw();
+  invalidateFrame();
 }
 
 export function handleCanvasClick(world: PixelCoord): void {
@@ -2030,7 +2033,7 @@ export function handleCanvasClick(world: PixelCoord): void {
     }
     saveUnits();
     updateRosterDisplay();
-    draw();
+    invalidateFrame();
     return;
   }
 
@@ -2053,7 +2056,7 @@ export function handleCanvasClick(world: PixelCoord): void {
       updateRosterDisplay();
     }
     if (previousUnitId !== selectedUnitId || coordChanged || deselected) {
-      draw();
+      invalidateFrame();
     }
     return;
   }
@@ -2066,7 +2069,7 @@ export function handleCanvasClick(world: PixelCoord): void {
 
   saveUnits();
   updateRosterDisplay();
-  draw();
+  invalidateFrame();
 }
 
 function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
@@ -2133,12 +2136,16 @@ function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
 }
 
 export function draw(): void {
+  frameDirty = false;
   if (!canvas) {
     return;
   }
   const ctx = canvas.getContext('2d');
   const assets = getAssets();
-  if (!ctx || !assets) return;
+  if (!ctx || !assets) {
+    frameDirty = true;
+    return;
+  }
   if (unitFx) {
     const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     unitFx.step(now);
@@ -2281,7 +2288,7 @@ const onUnitDied = ({
       selectedUnitId = null;
       syncSelectionOverlay();
     }
-    draw();
+    invalidateFrame();
   }
   if (rosterUpdated || xpUpdated) {
     saveUnits();
@@ -2443,6 +2450,7 @@ export async function start(): Promise<void> {
   }
   running = true;
   updateRosterDisplay();
+  invalidateFrame();
   draw();
   let last = performance.now();
   function gameLoop(now: number) {
@@ -2452,15 +2460,21 @@ export async function start(): Promise<void> {
     const delta = now - last;
     last = now;
     const paused = isGamePaused();
-    clock.tick(paused ? 0 : delta);
-    if (!paused) {
+    if (paused) {
+      updateTopbarHud(0);
+      if (!frameDirty) {
+        animationFrameId = requestAnimationFrame(gameLoop);
+        return;
+      }
+    } else {
+      clock.tick(delta);
       updateSaunaHud();
       updateTopbarHud(delta);
       refreshRosterPanel();
-    } else {
-      updateTopbarHud(0);
     }
-    draw();
+    if (frameDirty) {
+      draw();
+    }
     if (!running) {
       return;
     }
