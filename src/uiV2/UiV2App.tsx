@@ -276,6 +276,10 @@ function RosterSummaryDock({ resourceBar, summary, entries }: RosterSummaryDockP
     controller.updateSummary(summary);
     controller.renderRoster(entries);
     return () => {
+      const controller = controllerRef.current;
+      if (controller) {
+        controller.destroy();
+      }
       controllerRef.current = null;
       resourceBar.replaceChildren();
       resourceBar.classList.remove('ui-v2-resource-bar');

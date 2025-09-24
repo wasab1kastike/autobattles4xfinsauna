@@ -9,6 +9,8 @@ import { eventBus } from '../../src/events';
 import { logEvent, clearLogs, getLogHistory, subscribeToLogs } from '../../src/ui/logging.ts';
 import type { LogEntry } from '../../src/ui/logging.ts';
 
+const destroyRosterHudMock = vi.fn();
+
 type Harness = {
   emitRosterSummary(summary: RosterHudSummary): void;
   emitRosterEntries(entries: RosterEntry[]): void;
@@ -214,7 +216,7 @@ vi.mock('../../src/ui/rosterHUD.ts', () => ({
       renderRoster(entries: RosterEntry[]) {
         element.dataset.rosterEntries = String(entries.length);
       },
-      destroy: () => {}
+      destroy: destroyRosterHudMock
     };
   }
 }));
@@ -249,6 +251,7 @@ const getHarness = async (): Promise<Harness> => {
 
 describe('UiV2 shell', () => {
   beforeEach(async () => {
+    destroyRosterHudMock.mockClear();
     (await getHarness()).reset();
     clearLogs();
     const overlay = document.getElementById('ui-overlay');
@@ -357,5 +360,6 @@ describe('UiV2 shell', () => {
 
     expect(resourceBar.parentElement).toBe(overlay);
     expect(resourceBar.classList.contains('ui-v2-resource-bar')).toBe(false);
+    await waitFor(() => expect(destroyRosterHudMock).toHaveBeenCalled());
   });
 });
