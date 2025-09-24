@@ -1,6 +1,6 @@
 import { camera } from './autoFrame.ts';
 import type { PixelCoord } from '../hex/HexUtils.ts';
-import { draw } from '../game.ts';
+import { invalidateFrame } from '../game.ts';
 
 export const MIN_ZOOM = 0.5;
 export const MAX_ZOOM = 3.5;
@@ -53,14 +53,14 @@ export function applyZoomAtPoint(
   camera.x += before.x - after.x;
   camera.y += before.y - after.y;
   camera.zoom = clamped;
-  draw();
+  invalidateFrame();
 }
 
 export function panCameraByScreenDelta(dx: number, dy: number): void {
   if (dx === 0 && dy === 0) return;
   camera.x -= dx / camera.zoom;
   camera.y -= dy / camera.zoom;
-  draw();
+  invalidateFrame();
 }
 
 export function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement): void {
@@ -77,7 +77,7 @@ export function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement): void {
   if (ctx) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
-  draw();
+  invalidateFrame();
 }
 
 export { camera };
