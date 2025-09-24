@@ -299,14 +299,35 @@ function disposeUiV2Controllers(): void {
   uiV2SaunaController?.dispose();
   uiV2SaunaController = null;
 }
+const IDLE_FRAME_LIMIT = 10;
+
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
 let frameDirty = true;
+let idleFrameCount = 0;
+let gameLoopCallback: FrameRequestCallback | null = null;
+let pauseListenerAttached = false;
 
 export function invalidateFrame(): void {
   frameDirty = true;
+  idleFrameCount = 0;
+  scheduleGameLoop();
 }
+
+function scheduleGameLoop(): void {
+  if (!running || !gameLoopCallback) {
+    return;
+  }
+  if (animationFrameId !== null) {
+    return;
+  }
+  animationFrameId = requestAnimationFrame(gameLoopCallback);
+}
+
+const onPauseChanged = () => {
+  invalidateFrame();
+};
 
 function getSelectedSaunoja(): Saunoja | null {
   return saunojas.find((unit) => unit.selected) ?? null;
@@ -2139,6 +2160,7 @@ function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
 
 export function draw(): void {
   frameDirty = false;
+  idleFrameCount = 0;
   if (!canvas) {
     return;
   }
@@ -2386,6 +2408,8 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   running = false;
+  gameLoopCallback = null;
+  idleFrameCount = 0;
   objectiveTracker?.offProgress(handleObjectiveProgress);
   objectiveTracker?.dispose();
   objectiveTracker = null;
@@ -2417,6 +2441,10 @@ export function cleanup(): void {
   }
 
   eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);
+  if (pauseListenerAttached) {
+    eventBus.off('game:pause-changed', onPauseChanged);
+    pauseListenerAttached = false;
+  }
   eventBus.off('unitDied', onUnitDied);
   eventBus.off('unitSpawned', onUnitSpawned);
   eventBus.off('inventoryChanged', onInventoryChanged);
@@ -2468,38 +2496,53 @@ export async function start(): Promise<void> {
     return;
   }
   running = true;
+  if (!pauseListenerAttached) {
+    eventBus.on('game:pause-changed', onPauseChanged);
+    pauseListenerAttached = true;
+  }
+  idleFrameCount = 0;
   updateRosterDisplay();
   invalidateFrame();
   draw();
   let last = performance.now();
   function gameLoop(now: number) {
+    animationFrameId = null;
     if (!running) {
       return;
     }
     const delta = now - last;
     last = now;
     const paused = isGamePaused();
+    let shouldContinue = true;
     if (paused) {
       updateTopbarHud(0);
-      if (!frameDirty) {
-        animationFrameId = requestAnimationFrame(gameLoop);
-        return;
-      }
     } else {
+      idleFrameCount = 0;
       clock.tick(delta);
       updateSaunaHud();
       updateTopbarHud(delta);
       refreshRosterPanel();
     }
     if (frameDirty) {
+      idleFrameCount = 0;
       draw();
+    } else if (paused) {
+      idleFrameCount += 1;
+      if (idleFrameCount >= IDLE_FRAME_LIMIT) {
+        shouldContinue = false;
+      }
+    } else {
+      idleFrameCount = 0;
     }
     if (!running) {
       return;
     }
-    animationFrameId = requestAnimationFrame(gameLoop);
+    if (shouldContinue) {
+      scheduleGameLoop();
+    }
   }
-  animationFrameId = requestAnimationFrame(gameLoop);
+  gameLoopCallback = gameLoop;
+  scheduleGameLoop();
 }
 
 export { logEvent as log };
