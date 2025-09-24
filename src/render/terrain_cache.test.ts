@@ -154,6 +154,76 @@ describe('TerrainCache', () => {
       clearIconCache();
     }
   });
+
+  it('re-renders chunks with terrain icons after images decode', async () => {
+    clearIconCache();
+    const map = new HexMap(1, 1);
+    const tile = map.ensureTile(0, 0);
+    tile.reveal();
+
+    const createdImages: FakeImage[] = [];
+    const originalImage = global.Image;
+    const FakeImageCtor = createFakeImageConstructor(createdImages);
+    (globalThis as unknown as { Image: typeof Image }).Image = FakeImageCtor;
+
+    const drawImage = vi.fn();
+    const ctx = createStubContext(drawImage);
+    const originalCreateElement = document.createElement;
+    const offscreenCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+    } as unknown as HTMLCanvasElement;
+
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          offscreenCanvas.width = 0;
+          offscreenCanvas.height = 0;
+          return offscreenCanvas;
+        }
+        return originalCreateElement.call(document, tagName);
+      });
+
+    let cache: TerrainCache | undefined;
+    try {
+      cache = new TerrainCache(map);
+      const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
+      ensureChunksPopulated(map, range);
+      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
+      const images = {
+        'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
+      };
+
+      const [chunk] = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      expect(chunk).toBeDefined();
+      expect(drawImage).not.toHaveBeenCalled();
+
+      expect(createdImages.length).toBeGreaterThan(0);
+      createdImages[0]!.triggerLoad();
+
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const chunkKey = chunk!.key;
+      expect((cache as unknown as { dirtyChunks: Set<string> }).dirtyChunks.has(chunkKey)).toBe(
+        true,
+      );
+
+      drawImage.mockClear();
+
+      cache.getRenderableChunks(range, map.hexSize, images, origin);
+      expect(drawImage).toHaveBeenCalled();
+    } finally {
+      cache?.dispose();
+      createElementSpy.mockRestore();
+      (globalThis as unknown as { Image: typeof Image }).Image = originalImage;
+      clearIconCache();
+    }
+  });
 });
 
 type FakeImageListener = (event: Event) => void;

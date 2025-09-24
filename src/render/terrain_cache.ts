@@ -28,6 +28,14 @@ import type { ChunkKey, ChunkCoord } from '../map/hex/chunking.ts';
 import type { TileChangeType } from '../hexmap.ts';
 import { loadIcon, onIconLoaded } from './loadIcon.ts';
 
+function queueMicrotaskSafe(callback: () => void): void {
+  if (typeof queueMicrotask === 'function') {
+    queueMicrotask(callback);
+  } else {
+    setTimeout(callback, 0);
+  }
+}
+
 const TERRAIN_PATTERNS: Record<TerrainId, (options: HexPatternOptions) => void> = {
   [TerrainId.Plains]: drawPlains,
   [TerrainId.Forest]: drawForest,
@@ -161,6 +169,8 @@ export class TerrainCache {
   private readonly chunkIcons = new Map<ChunkKey, Set<string>>();
   private readonly iconSubscriptions = new Map<string, () => void>();
   private readonly readyIconPaths = new Set<string>();
+  private readonly pendingReadyIcons = new Set<string>();
+  private pendingReadyFlush = false;
   private readonly unsubscribe: () => void;
 
   constructor(private readonly map: HexMap) {
@@ -198,6 +208,7 @@ export class TerrainCache {
     images: LoadedAssets['images'],
     origin: PixelCoord
   ): ChunkCanvas[] {
+    this.flushReadyIcons();
     this.refreshAssets(images);
     const renderable: ChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);
@@ -399,8 +410,7 @@ export class TerrainCache {
   private ensureIconSubscription(path: string): void {
     const icon = loadIcon(path);
     if (icon) {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
+      this.enqueueIconReady(path);
       return;
     }
 
@@ -411,8 +421,7 @@ export class TerrainCache {
     }
 
     const unsubscribe = onIconLoaded(path, () => {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
+      this.enqueueIconReady(path);
       this.unsubscribeFromIcon(path);
     });
 
@@ -436,6 +445,37 @@ export class TerrainCache {
     this.iconChunks.clear();
     this.chunkIcons.clear();
     this.readyIconPaths.clear();
+    this.pendingReadyIcons.clear();
+    this.pendingReadyFlush = false;
+  }
+
+  private enqueueIconReady(path: string): void {
+    if (this.pendingReadyIcons.has(path)) {
+      return;
+    }
+    this.pendingReadyIcons.add(path);
+    if (!this.pendingReadyFlush) {
+      this.pendingReadyFlush = true;
+      queueMicrotaskSafe(() => {
+        this.flushReadyIcons();
+      });
+    }
+  }
+
+  private flushReadyIcons(): void {
+    if (this.pendingReadyIcons.size === 0) {
+      this.pendingReadyFlush = false;
+      return;
+    }
+
+    const ready = Array.from(this.pendingReadyIcons);
+    this.pendingReadyIcons.clear();
+    this.pendingReadyFlush = false;
+
+    for (const path of ready) {
+      this.readyIconPaths.add(path);
+      this.markChunksForIcon(path);
+    }
   }
 }
 

@@ -220,6 +220,10 @@ body > #game-container {
 
 #ui-overlay.hud-grid.hud-grid--right-collapsed [data-hud-region='right'] {
   visibility: hidden;
+  width: 0;
+  max-width: 0;
+  min-width: 0;
+  pointer-events: none;
 }
 
 .gap-\[clamp\(16px\,3vw\,28px\)\] {
@@ -282,10 +286,11 @@ body > #game-container {
 
 #inventory-shop-panel {
   position: fixed;
-  top: clamp(18px, 4vw, 28px);
-  right: clamp(18px, 4vw, 32px);
+  top: calc(var(--hud-padding) + env(safe-area-inset-top, 0px));
+  right: calc(var(--hud-padding) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--hud-padding) + env(safe-area-inset-bottom, 0px));
   width: var(--inventory-panel-width);
-  max-height: min(86vh, 720px);
+  max-height: min(100vh - (var(--hud-padding) * 2), 720px);
   overflow-y: auto;
   z-index: 980;
   opacity: 0;
@@ -308,13 +313,17 @@ body > #game-container {
 
 @media (max-width: 720px) {
   #inventory-shop-panel {
-    left: 50%;
-    right: auto;
-    transform: translate3d(-50%, 12px, 0);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 100%;
+    transform: translate3d(0, 12px, 0);
   }
 
   #inventory-shop-panel[data-open='true'] {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -1840,6 +1849,9 @@ body > #game-container {
 
 #right-panel.right-panel--collapsed {
   pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(16px, 0, 0);
 }
 
 .panel-tabs {

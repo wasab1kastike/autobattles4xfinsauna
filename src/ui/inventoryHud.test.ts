@@ -71,7 +71,11 @@ describe('setupInventoryHud', () => {
 
     const stashPanelHost = overlay.querySelector('[data-hud-tab-panel="stash"]');
     expect(stashPanelHost).not.toBeNull();
-    expect(stashPanelHost?.contains(stashPanel.element)).toBe(true);
+    expect(stashPanelHost?.contains(stashPanel.element)).toBe(false);
+    expect(overlay.contains(stashPanel.element)).toBe(true);
+
+    const stashProxy = stashPanelHost?.querySelector('#inventory-stash-panel-proxy');
+    expect(stashProxy).not.toBeNull();
 
     const dockTabs = overlay.querySelector('[data-hud-command-dock-section="tabs"]');
     expect(dockTabs?.contains(stashPanelHost!)).toBe(true);

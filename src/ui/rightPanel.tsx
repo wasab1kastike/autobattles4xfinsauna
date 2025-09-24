@@ -252,6 +252,7 @@ export function setupRightPanel(
       return;
     }
     isMobilePanelOpen = true;
+    panel.classList.remove('right-panel--collapsed');
     slideOver.classList.add('right-panel-slide--open');
     slideOver.setAttribute('aria-hidden', 'false');
     panel.setAttribute('aria-hidden', 'false');
@@ -392,6 +393,7 @@ export function setupRightPanel(
   const detachMobilePlacement = subscribeToIsMobile((isMobile) => {
     isMobileViewport = isMobile;
     if (isMobileViewport) {
+      panel.classList.remove('right-panel--collapsed');
       slideSheet.appendChild(panel);
       if (!slideOver.isConnected) {
         overlay.appendChild(slideOver);

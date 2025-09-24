@@ -431,7 +431,7 @@ export function setupInventoryHud(
   if (stashButtonLabelId) {
     panel.element.setAttribute('aria-labelledby', stashButtonLabelId);
   }
-  stashSlot.appendChild(panel.element);
+  overlay.appendChild(panel.element);
 
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();
