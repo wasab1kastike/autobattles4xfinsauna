@@ -8,23 +8,24 @@ import {
   computeVisibleBounds,
   chunkRangeFromBounds,
   ensureChunksPopulated,
-  type AxialBounds,
 } from '../map/hex/chunking.ts';
 import { TerrainCache, type ChunkCanvas } from './terrain_cache.ts';
+import { FogCache, type FogChunkCanvas } from './fog_cache.ts';
 import {
   getHighlightTokens,
   getOutlineWidth,
   lightenNeutral,
   darkenNeutral,
 } from './palette.ts';
-import { drawFogHex } from './fog.ts';
 
 export class HexMapRenderer {
   private readonly terrainCache: TerrainCache;
+  private readonly fogCache: FogCache;
   private cachedHexSize: number;
 
   constructor(private readonly mapRef: HexMap) {
     this.terrainCache = new TerrainCache(mapRef);
+    this.fogCache = new FogCache(mapRef);
     this.cachedHexSize = mapRef.hexSize;
   }
 
@@ -38,10 +39,12 @@ export class HexMapRenderer {
 
   invalidateCache(): void {
     this.terrainCache.invalidate();
+    this.fogCache.invalidate();
   }
 
   dispose(): void {
     this.terrainCache.dispose();
+    this.fogCache.dispose();
   }
 
   draw(
@@ -62,7 +65,8 @@ export class HexMapRenderer {
     const origin = this.getOrigin();
     const chunks = this.terrainCache.getRenderableChunks(chunkRange, this.hexSize, images, origin);
     this.drawChunks(ctx, chunks);
-    this.drawFogLayer(ctx, origin, bounds);
+    const fogChunks = this.fogCache.getRenderableChunks(chunkRange, this.hexSize, camera.zoom, origin);
+    this.drawFogChunks(ctx, fogChunks);
 
     if (selected) {
       this.drawSelection(ctx, origin, selected);
@@ -85,10 +89,21 @@ export class HexMapRenderer {
     if (this.cachedHexSize !== this.hexSize) {
       this.cachedHexSize = this.hexSize;
       this.terrainCache.invalidate();
+      this.fogCache.invalidate();
     }
   }
 
   private drawChunks(ctx: CanvasRenderingContext2D, chunks: ChunkCanvas[]): void {
+    if (chunks.length === 0) {
+      return;
+    }
+
+    for (const chunk of chunks) {
+      ctx.drawImage(chunk.canvas, chunk.origin.x, chunk.origin.y);
+    }
+  }
+
+  private drawFogChunks(ctx: CanvasRenderingContext2D, chunks: FogChunkCanvas[]): void {
     if (chunks.length === 0) {
       return;
     }
@@ -104,32 +119,6 @@ export class HexMapRenderer {
     const drawX = x - origin.x - hexWidth / 2;
     const drawY = y - origin.y - hexHeight / 2;
     this.strokeHex(ctx, drawX + hexWidth / 2, drawY + hexHeight / 2, this.hexSize, true);
-  }
-
-  private drawFogLayer(
-    ctx: CanvasRenderingContext2D,
-    origin: PixelCoord,
-    bounds: AxialBounds
-  ): void {
-    const { width: hexWidth, height: hexHeight } = getHexDimensions(this.hexSize);
-    const halfHexWidth = hexWidth / 2;
-    const halfHexHeight = hexHeight / 2;
-    for (let r = bounds.rMin; r <= bounds.rMax; r++) {
-      for (let q = bounds.qMin; q <= bounds.qMax; q++) {
-        const tile = this.mapRef.getTile(q, r);
-        if (!tile || !tile.isFogged) {
-          continue;
-        }
-
-        const { x, y } = axialToPixel({ q, r }, this.hexSize);
-        const drawX = x - origin.x - halfHexWidth;
-        const drawY = y - origin.y - halfHexHeight;
-        const radius = this.hexSize;
-        const centerX = drawX + hexWidth / 2;
-        const centerY = drawY + hexHeight / 2;
-        drawFogHex(ctx, centerX, centerY, radius, camera.zoom);
-      }
-    }
   }
 
   private strokeHex(
