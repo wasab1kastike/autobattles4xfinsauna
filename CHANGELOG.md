@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Align the command console collapse logic by syncing the desktop media query
+  and HUD toggle listener on a shared 960px breakpoint so both layers hide the
+  panel in lockstep.
+
 - Guard the roster HUD teardown by destroying the V2 controller before
   resetting the classic resource bar mount and extend the UI shell bootstrap
   test suite to assert the cleanup hook fires.
