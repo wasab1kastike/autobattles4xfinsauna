@@ -130,21 +130,21 @@ describe('unit sprite placement', () => {
       },
       {
         type: 'saunoja',
-        nativeSize: { width: 64, height: 64 },
+        nativeSize: { width: 1024, height: 1024 },
         anchor: { x: 0.5, y: 0.66 },
         scale: { x: 1.154700538, y: 1 },
         nudge: { x: 0, y: -0.02 }
       },
       {
         type: 'saunoja-guardian',
-        nativeSize: { width: 64, height: 64 },
+        nativeSize: { width: 1024, height: 1536 },
         anchor: { x: 0.5, y: 0.806 },
         scale: { x: 1.515544457, y: 1.3125 },
         nudge: { x: 0, y: -0.015 }
       },
       {
         type: 'saunoja-seer',
-        nativeSize: { width: 64, height: 64 },
+        nativeSize: { width: 1024, height: 1536 },
         anchor: { x: 0.5, y: 0.806 },
         scale: { x: 1.515544457, y: 1.3125 },
         nudge: { x: 0, y: -0.015 }
