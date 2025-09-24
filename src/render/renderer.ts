@@ -136,6 +136,33 @@ export interface RendererAssets {
   atlas: UnitSpriteAtlas | null;
 }
 
+interface RenderEntry {
+  unit: Unit;
+  sprite: CanvasImageSource | null;
+  atlasCanvas: CanvasImageSource | null;
+  slice: SpriteAtlasSlice | null;
+  placement: SpritePlacementInput;
+  selection: { isSelected: boolean; isPrimary: boolean };
+  motionStrength: number;
+  filter: string;
+  shadowColor: string;
+  shadowBlur: number;
+  alpha: number;
+  renderCoord: AxialCoord;
+  maxHealth: number;
+}
+
+interface RenderGroup {
+  coord: AxialCoord;
+  entries: RenderEntry[];
+  primaryIndex: number;
+}
+
+const friendlyVisionScratch: VisionSource[] = [];
+const renderEntriesScratch: RenderEntry[] = [];
+const renderGroupsScratch: RenderGroup[] = [];
+const renderGroupMapScratch: Map<string, RenderGroup> = new Map();
+
 export function draw(
   ctx: CanvasRenderingContext2D,
   mapRenderer: HexMapRenderer,
@@ -214,31 +241,24 @@ export function drawUnits(
   selectedCoord?: AxialCoord | null
 ): void {
   const visionUnits = visionSources ?? units;
-  const friendlyVisionSources: VisionSource[] = visionUnits
-    .filter((unit) => unit.faction === 'player' && !unit.isDead())
-    .map((unit) => ({ coord: unit.coord, range: unit.getVisionRange() } satisfies VisionSource));
+  const friendlyVisionSources = friendlyVisionScratch;
+  friendlyVisionSources.length = 0;
+  for (const unit of visionUnits) {
+    if (unit.faction === 'player' && !unit.isDead()) {
+      friendlyVisionSources.push({
+        coord: unit.coord,
+        range: unit.getVisionRange()
+      });
+    }
+  }
 
   const resolvedSaunaVision = resolveSaunaVision(saunaVision);
   if (resolvedSaunaVision) {
     friendlyVisionSources.push(resolvedSaunaVision);
   }
-  interface RenderEntry {
-    unit: Unit;
-    sprite: CanvasImageSource | null;
-    atlasCanvas: CanvasImageSource | null;
-    slice: SpriteAtlasSlice | null;
-    placement: SpritePlacementInput;
-    selection: { isSelected: boolean; isPrimary: boolean };
-    motionStrength: number;
-    filter: string;
-    shadowColor: string;
-    shadowBlur: number;
-    alpha: number;
-    renderCoord: AxialCoord;
-    maxHealth: number;
-  }
 
-  const visibleEntries: RenderEntry[] = [];
+  const visibleEntries = renderEntriesScratch;
+  visibleEntries.length = 0;
 
   const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
   const placeholder = assets.images['placeholder'] ?? null;
@@ -247,13 +267,18 @@ export function drawUnits(
     if (unit.isDead()) {
       continue;
     }
-    if (
-      unit.faction === 'enemy' &&
-      !friendlyVisionSources.some(
-        ({ coord, range }) => hexDistance(coord, unit.coord) <= range
-      )
-    ) {
-      continue;
+    if (unit.faction === 'enemy') {
+      let visible = false;
+      for (let index = 0; index < friendlyVisionSources.length; index++) {
+        const source = friendlyVisionSources[index];
+        if (hexDistance(source.coord, unit.coord) <= source.range) {
+          visible = true;
+          break;
+        }
+      }
+      if (!visible) {
+        continue;
+      }
     }
 
     const spriteKey = `unit-${unit.type}`;
@@ -317,21 +342,18 @@ export function drawUnits(
   }
 
   if (visibleEntries.length <= 0) {
+    friendlyVisionSources.length = 0;
     return;
   }
 
-  interface RenderGroup {
-    coord: AxialCoord;
-    entries: RenderEntry[];
-    primaryIndex: number;
-  }
-
-  const groupMap = new Map<string, RenderGroup>();
+  const groupMap = renderGroupMapScratch;
+  groupMap.clear();
 
   const resolvePrimaryIndex = (entries: RenderEntry[]): number => {
     let bestIndex = 0;
     let bestScore = -Infinity;
-    entries.forEach((entry, index) => {
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index];
       let score = -index * 0.001;
       if (entry.selection.isPrimary) {
         score += 200;
@@ -345,7 +367,7 @@ export function drawUnits(
         bestScore = score;
         bestIndex = index;
       }
-    });
+    }
     return bestIndex;
   };
 
@@ -381,7 +403,8 @@ export function drawUnits(
     return 2;
   };
 
-  const groups: RenderGroup[] = [];
+  const groups = renderGroupsScratch;
+  groups.length = 0;
   for (const group of groupMap.values()) {
     group.primaryIndex = resolvePrimaryIndex(group.entries);
     groups.push(group);
@@ -446,12 +469,16 @@ export function drawUnits(
     } satisfies RenderJob;
     jobs.push(primaryJob);
 
-    const extras = group.entries
-      .map((entry, index) => ({ entry, index }))
-      .filter(({ index }) => index !== group.primaryIndex)
-      .sort((a, b) => a.entry.unit.id.localeCompare(b.entry.unit.id));
+    const extras: RenderEntry[] = [];
+    for (let index = 0; index < group.entries.length; index++) {
+      if (index === group.primaryIndex) {
+        continue;
+      }
+      extras.push(group.entries[index]);
+    }
+    extras.sort((a, b) => a.unit.id.localeCompare(b.unit.id));
 
-    extras.forEach(({ entry }, stackIndex) => {
+    extras.forEach((entry, stackIndex) => {
       const offset = computeStackOffset(stackIndex);
       jobs.push({
         entry,
@@ -464,7 +491,12 @@ export function drawUnits(
     });
   }
 
+  groups.length = 0;
+  groupMap.clear();
+
   if (jobs.length === 0) {
+    visibleEntries.length = 0;
+    friendlyVisionSources.length = 0;
     return;
   }
 
@@ -595,5 +627,7 @@ export function drawUnits(
     }
   }
 
+  visibleEntries.length = 0;
+  friendlyVisionSources.length = 0;
   ctx.restore();
 }
