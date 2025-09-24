@@ -687,6 +687,9 @@ describe('game lifecycle', () => {
     try {
       await start();
 
+      const pauseModule = await import('./game/pause.ts');
+      pauseModule.setGamePaused(false);
+
       const firstLoop = loopFrames[0];
       expect(firstLoop).toBeDefined();
 
