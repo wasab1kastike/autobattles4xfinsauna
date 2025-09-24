@@ -4,6 +4,10 @@
 
 
 
+- Stage cinematic battle feedback with synchronized attack and hit animations
+  for units, emitting timing hooks on combat events and sampling glow/recoil
+  states in the renderer so sprites lunge, flash, and recover in-step.
+
 - Guard the roster HUD teardown by destroying the V2 controller before
   resetting the classic resource bar mount and extend the UI shell bootstrap
   test suite to assert the cleanup hook fires.
