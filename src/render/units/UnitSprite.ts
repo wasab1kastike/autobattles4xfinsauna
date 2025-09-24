@@ -32,6 +32,7 @@ export interface DrawUnitSpriteOptions {
   readonly atlas?: CanvasImageSource | null;
   readonly slice?: SpriteAtlasSlice | null;
   readonly renderSprite?: boolean;
+  readonly precomputedPlacement?: SpritePlacement | null;
   readonly faction?: Unit['faction'];
   readonly motionStrength?: number;
   readonly cameraZoom?: number;
@@ -99,6 +100,18 @@ function createGradientSafe(
     console.warn('Failed to create canvas gradient', error);
   }
   return [null, fallbackColor];
+}
+
+function clonePlacement(placement: SpritePlacement): SpritePlacement {
+  return {
+    drawX: placement.drawX,
+    drawY: placement.drawY,
+    width: placement.width,
+    height: placement.height,
+    centerX: placement.centerX,
+    centerY: placement.centerY,
+    metadata: placement.metadata
+  } satisfies SpritePlacement;
 }
 
 function applyStops(gradient: GradientLike | null, stops: Array<[number, string]>): void {
@@ -368,7 +381,9 @@ export function drawUnitSprite(
   const zoom = Number.isFinite(options.cameraZoom) && (options.cameraZoom as number) > 0
     ? (options.cameraZoom as number)
     : options.placement.zoom;
-  const basePlacement = getSpritePlacement(options.placement);
+  const basePlacement = options.precomputedPlacement
+    ? clonePlacement(options.precomputedPlacement)
+    : getSpritePlacement(options.placement);
   const motionStrength = Math.max(0, Math.min(1, options.motionStrength ?? 0));
   const palette = resolveBasePalette(options.faction ?? unit.faction, options.selection, motionStrength);
 

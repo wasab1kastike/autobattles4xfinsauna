@@ -43,6 +43,7 @@ function createMockContext(): CanvasRenderingContext2D {
     save: vi.fn(),
     restore: vi.fn(),
     strokeRect: vi.fn(),
+    drawImage: vi.fn(),
     filter: '',
     shadowColor: 'rgba(0,0,0,0)',
     shadowBlur: 0,
@@ -183,10 +184,10 @@ describe('drawUnits', () => {
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(4);
     const calls = drawUnitSpriteMock.fn.mock.calls;
-    const friendlyBase = calls.find(([, unit, opts]) => unit === friendly && opts.renderSprite === false);
-    const friendlySprite = calls.find(([, unit, opts]) => unit === friendly && opts.renderSprite !== false);
-    const enemyBase = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite === false);
-    const enemySprite = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite !== false);
+    const friendlyBase = calls.find(([, unit, opts]) => unit === friendly && opts.drawBase === true);
+    const friendlySprite = calls.find(([, unit, opts]) => unit === friendly && opts.drawBase === false);
+    const enemyBase = calls.find(([, unit, opts]) => unit === enemy && opts.drawBase === true);
+    const enemySprite = calls.find(([, unit, opts]) => unit === enemy && opts.drawBase === false);
 
     expect(friendlyBase).toBeDefined();
     expect(friendlySprite).toBeDefined();
@@ -211,7 +212,7 @@ describe('drawUnits', () => {
     const [, , friendlySpriteOpts] = friendlySprite!;
     expect(friendlySpriteOpts).toMatchObject({
       drawBase: false,
-      renderSprite: true,
+      renderSprite: false,
       faction: 'player',
       atlas: atlas.canvas,
       slice: atlas.slices['unit-soldier'],
@@ -242,7 +243,7 @@ describe('drawUnits', () => {
     const [, , enemySpriteOpts] = enemySprite!;
     expect(enemySpriteOpts).toMatchObject({
       drawBase: false,
-      renderSprite: true,
+      renderSprite: false,
       faction: 'enemy',
       atlas: atlas.canvas,
       slice: atlas.slices['unit-marauder'],
@@ -254,6 +255,35 @@ describe('drawUnits', () => {
         type: 'marauder'
       }
     });
+
+    const drawImageSpy = ctx.drawImage as unknown as ReturnType<typeof vi.fn>;
+    expect(drawImageSpy).toHaveBeenCalledTimes(2);
+    const drawCalls = drawImageSpy.mock.calls;
+    const soldierDraw = drawCalls.find((args) => args[1] === atlas.slices['unit-soldier'].sx);
+    const marauderDraw = drawCalls.find((args) => args[1] === atlas.slices['unit-marauder'].sx);
+    expect(soldierDraw).toBeDefined();
+    expect(marauderDraw).toBeDefined();
+    const [soldierImage, soldierSx, soldierSy, soldierSw, soldierSh, soldierDx, soldierDy, soldierDw, soldierDh] =
+      soldierDraw!;
+    expect(soldierImage).toBe(atlas.canvas);
+    expect([soldierSx, soldierSy, soldierSw, soldierSh]).toEqual([
+      atlas.slices['unit-soldier'].sx,
+      atlas.slices['unit-soldier'].sy,
+      atlas.slices['unit-soldier'].sw,
+      atlas.slices['unit-soldier'].sh
+    ]);
+    expect([soldierDx, soldierDy, soldierDw, soldierDh]).toEqual([12, 24, 48, 64]);
+
+    const [marauderImage, marauderSx, marauderSy, marauderSw, marauderSh, marauderDx, marauderDy, marauderDw, marauderDh] =
+      marauderDraw!;
+    expect(marauderImage).toBe(atlas.canvas);
+    expect([marauderSx, marauderSy, marauderSw, marauderSh]).toEqual([
+      atlas.slices['unit-marauder'].sx,
+      atlas.slices['unit-marauder'].sy,
+      atlas.slices['unit-marauder'].sw,
+      atlas.slices['unit-marauder'].sh
+    ]);
+    expect([marauderDx, marauderDy, marauderDw, marauderDh]).toEqual([12, 24, 48, 64]);
   });
 
   it('renders stacked units with a shared base and jitter offsets', () => {
@@ -287,9 +317,9 @@ describe('drawUnits', () => {
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(3);
     const calls = drawUnitSpriteMock.fn.mock.calls;
-    const baseCall = calls.find(([, unit, opts]) => unit === frontliner && opts.renderSprite === false);
-    const primarySpriteCall = calls.find(([, unit, opts]) => unit === frontliner && opts.renderSprite !== false);
-    const stackedSpriteCall = calls.find(([, unit, opts]) => unit === support && opts.renderSprite !== false);
+    const baseCall = calls.find(([, unit, opts]) => unit === frontliner && opts.drawBase === true);
+    const primarySpriteCall = calls.find(([, unit, opts]) => unit === frontliner && opts.drawBase === false);
+    const stackedSpriteCall = calls.find(([, unit, opts]) => unit === support && opts.drawBase === false);
 
     expect(baseCall).toBeDefined();
     expect(primarySpriteCall).toBeDefined();
@@ -305,18 +335,30 @@ describe('drawUnits', () => {
 
     const [, , primaryOpts] = primarySpriteCall!;
     expect(primaryOpts.drawBase).toBe(false);
-    expect(primaryOpts.renderSprite).toBe(true);
+    expect(primaryOpts.renderSprite).toBe(false);
     expect(primaryOpts.offset).toBeNull();
     expect(primaryOpts.atlas).toBe(atlas.canvas);
     expect(primaryOpts.slice).toBe(atlas.slices['unit-soldier']);
 
     const [, , stackedOpts] = stackedSpriteCall!;
     expect(stackedOpts.drawBase).toBe(false);
-    expect(stackedOpts.renderSprite).toBe(true);
+    expect(stackedOpts.renderSprite).toBe(false);
     expect(stackedOpts.anchorHint).toEqual(baseResult.center);
     expect(stackedOpts.offset).not.toBeNull();
     const stackedOffset = stackedOpts.offset as PixelCoord;
     expect(Math.abs(stackedOffset.x) + Math.abs(stackedOffset.y)).toBeGreaterThan(0);
+
+    const drawImageSpy = ctx.drawImage as unknown as ReturnType<typeof vi.fn>;
+    expect(drawImageSpy).toHaveBeenCalledTimes(2);
+    const drawCalls = drawImageSpy.mock.calls;
+    drawCalls.forEach((args) => {
+      expect(args[0]).toBe(atlas.canvas);
+      expect(args[1]).toBe(atlas.slices['unit-soldier'].sx);
+      expect(args[2]).toBe(atlas.slices['unit-soldier'].sy);
+      expect(args[3]).toBe(atlas.slices['unit-soldier'].sw);
+      expect(args[4]).toBe(atlas.slices['unit-soldier'].sh);
+      expect(args.slice(5)).toEqual([12, 24, 48, 64]);
+    });
   });
 
   it('renders enemies overlapping the sauna when only sauna vision is supplied', () => {
@@ -343,8 +385,8 @@ describe('drawUnits', () => {
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
     const calls = drawUnitSpriteMock.fn.mock.calls;
-    const baseCall = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite === false);
-    const spriteCall = calls.find(([, unit, opts]) => unit === enemy && opts.renderSprite !== false);
+    const baseCall = calls.find(([, unit, opts]) => unit === enemy && opts.drawBase === true);
+    const spriteCall = calls.find(([, unit, opts]) => unit === enemy && opts.drawBase === false);
     expect(baseCall).toBeDefined();
     expect(spriteCall).toBeDefined();
     const [, , baseOpts] = baseCall!;
@@ -352,9 +394,22 @@ describe('drawUnits', () => {
     expect(baseOpts.offset).toBeNull();
     const [, , spriteOpts] = spriteCall!;
     expect(spriteOpts.drawBase).toBe(false);
+    expect(spriteOpts.renderSprite).toBe(false);
     expect(spriteOpts.atlas).toBe(atlas.canvas);
     expect(spriteOpts.slice).toBe(atlas.slices['unit-marauder']);
     expect(spriteOpts.selection?.isSelected).toBe(false);
+
+    const drawImageSpy = ctx.drawImage as unknown as ReturnType<typeof vi.fn>;
+    expect(drawImageSpy).toHaveBeenCalledTimes(1);
+    const [image, sx, sy, sw, sh, dx, dy, dw, dh] = drawImageSpy.mock.calls[0];
+    expect(image).toBe(atlas.canvas);
+    expect([sx, sy, sw, sh]).toEqual([
+      atlas.slices['unit-marauder'].sx,
+      atlas.slices['unit-marauder'].sy,
+      atlas.slices['unit-marauder'].sw,
+      atlas.slices['unit-marauder'].sh
+    ]);
+    expect([dx, dy, dw, dh]).toEqual([12, 24, 48, 64]);
   });
 
   it('passes selection flags and exposes placement for Sisu burst outlines', () => {
@@ -404,9 +459,10 @@ describe('drawUnits', () => {
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
     const calls = drawUnitSpriteMock.fn.mock.calls;
-    const spriteCall = calls.find(([, unit, options]) => unit === player && options.renderSprite !== false);
+    const spriteCall = calls.find(([, unit, options]) => unit === player && options.drawBase === false);
     expect(spriteCall).toBeDefined();
     const [, , opts] = spriteCall!;
+    expect(opts.renderSprite).toBe(false);
     expect(opts.selection).toEqual({ isSelected: true, isPrimary: true });
     expect(ctx.strokeRect).toHaveBeenCalledWith(10, 20, 30, 40);
   });
