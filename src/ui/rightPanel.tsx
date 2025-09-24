@@ -117,7 +117,7 @@ export function setupRightPanel(
   slideSheet.appendChild(panel);
   slideOver.append(slideBackdrop, slideSheet);
 
-  const smallViewportQuery = window.matchMedia('(max-width: 1040px)');
+  const smallViewportQuery = window.matchMedia('(max-width: 960px)');
   const disposers: Array<() => void> = [];
 
   const applyRosterState = (tabId: HudBottomTabId): void => {
