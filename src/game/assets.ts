@@ -8,8 +8,9 @@ import avantoMarauder from '../../assets/sprites/avanto-marauder.svg';
 import raider from '../../assets/sprites/raider.svg';
 import raiderCaptain from '../../assets/sprites/raider-captain.svg';
 import raiderShaman from '../../assets/sprites/raider-shaman.svg';
-import saunojaGuardian from '../../assets/sprites/saunoja-guardian.svg';
-import saunojaSeer from '../../assets/sprites/saunoja-seer.svg';
+import saunojaDefault from '../../assets/units/saunoja-01.png';
+import saunojaGuardian from '../../assets/units/saunoja-02.png';
+import saunojaSeer from '../../assets/units/saunoja-03.png';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
@@ -39,7 +40,7 @@ export const assetPaths: AssetPaths = {
     'unit-raider': raider,
     'unit-raider-captain': raiderCaptain,
     'unit-raider-shaman': raiderShaman,
-    'unit-saunoja': saunojaGuardian,
+    'unit-saunoja': saunojaDefault,
     'unit-saunoja-guardian': saunojaGuardian,
     'unit-saunoja-seer': saunojaSeer,
     'icon-sauna-beer': uiIcons.saunaBeer,
