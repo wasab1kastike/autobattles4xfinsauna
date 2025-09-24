@@ -1,5 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#216e24" />
-  <rect x="29" y="34" width="6" height="20" fill="#8b4513" />
-  <circle cx="32" cy="24" r="16" fill="#2e8b57" />
+  <defs>
+    <linearGradient id="forest-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#102a3f" />
+      <stop offset="0.45" stop-color="#164c3b" />
+      <stop offset="1" stop-color="#103020" />
+    </linearGradient>
+    <linearGradient id="forest-ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e492f" />
+      <stop offset="1" stop-color="#112419" />
+    </linearGradient>
+    <radialGradient id="forest-glow" cx="32" cy="20" r="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3fd9a4" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#1b5f3c" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="canopy-main" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#59c27f" />
+      <stop offset="0.55" stop-color="#2f8b55" />
+      <stop offset="1" stop-color="#1b5033" />
+    </linearGradient>
+    <linearGradient id="canopy-side" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ebc89" />
+      <stop offset="1" stop-color="#1e5d3c" />
+    </linearGradient>
+    <linearGradient id="trunk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7c4a2b" />
+      <stop offset="0.45" stop-color="#5c341f" />
+      <stop offset="1" stop-color="#3b1e12" />
+    </linearGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#93f6d1" stop-opacity="0.35" />
+      <stop offset="1" stop-color="#3db388" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#forest-sky)" />
+  <rect y="42" width="64" height="22" fill="url(#forest-ground)" />
+  <ellipse cx="32" cy="24" rx="24" ry="20" fill="url(#forest-glow)" />
+  <g opacity="0.9">
+    <path d="M20 48h8l-4-18z" fill="url(#canopy-side)" />
+    <path d="M16 48h8l-4-14z" fill="url(#canopy-side)" opacity="0.75" />
+    <path d="M42 48h8l-4-16z" fill="url(#canopy-side)" opacity="0.82" />
+  </g>
+  <g>
+    <path d="M30 50h4l-2-20z" fill="url(#trunk)" />
+    <path d="M26 50h4l-2-16z" fill="url(#trunk)" opacity="0.7" />
+    <path d="M36 50h4l-2-18z" fill="url(#trunk)" opacity="0.85" />
+  </g>
+  <g>
+    <path d="M32 6c-7 0-14 10-14 16 0 5.5 5.5 12 14 12s14-6.5 14-12c0-6-7-16-14-16z" fill="url(#canopy-main)" />
+    <path d="M20 20c0 4 4.5 8.5 12 8.5s12-4.5 12-8.5c0-0.8-0.09-1.6-0.26-2.4-2.44 3.6-7.45 6.9-11.74 6.9-4.35 0-9.43-3.44-11.74-7.04-0.17 0.78-0.26 1.6-0.26 2.54z" fill="#a6f8d2" opacity="0.25" />
+  </g>
+  <g opacity="0.6">
+    <ellipse cx="32" cy="44" rx="18" ry="6" fill="url(#mist)" />
+    <ellipse cx="18" cy="46" rx="10" ry="4" fill="url(#mist)" />
+    <ellipse cx="46" cy="46" rx="10" ry="4" fill="url(#mist)" />
+  </g>
+  <path d="M12 52c8 6 32 6 40 0-4 6-14 10-20 10s-16-4-20-10z" fill="#0c1a12" opacity="0.6" />
 </svg>
