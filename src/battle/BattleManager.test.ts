@@ -72,18 +72,29 @@ describe('BattleManager', () => {
     const manager = new BattleManager(map);
     const units = [attacker, defender];
 
+    const attackEvents: any[] = [];
     const damageEvents: any[] = [];
     const deathEvents: any[] = [];
+    const onAttack = (e: any) => attackEvents.push(e);
     const onDamage = (e: any) => damageEvents.push(e);
     const onDeath = (e: any) => deathEvents.push(e);
+    eventBus.on('unitAttack', onAttack);
     eventBus.on('unitDamaged', onDamage);
     eventBus.on('unitDied', onDeath);
 
     manager.tick(units, 5);
 
+    eventBus.off('unitAttack', onAttack);
     eventBus.off('unitDamaged', onDamage);
     eventBus.off('unitDied', onDeath);
 
+    expect(attackEvents).toHaveLength(1);
+    expect(attackEvents[0]).toMatchObject({
+      attackerId: 'a',
+      targetId: 'b'
+    });
+    expect(attackEvents[0].impactAt).toBeGreaterThan(attackEvents[0].timestamp);
+    expect(attackEvents[0].recoverAt).toBeGreaterThan(attackEvents[0].impactAt);
     expect(attacker.coord).toEqual({ q: 1, r: 0 });
     expect(damageEvents).toHaveLength(1);
     expect(deathEvents).toHaveLength(1);

@@ -168,7 +168,18 @@ describe('drawUnits', () => {
       atlas
     } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
-    drawUnits(ctx, mapRenderer, assets, [friendly, enemy], origin, undefined, [friendly], null, null);
+    drawUnits(
+      ctx,
+      mapRenderer,
+      assets,
+      [friendly, enemy],
+      origin,
+      undefined,
+      null,
+      [friendly],
+      null,
+      null
+    );
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(4);
     const calls = drawUnitSpriteMock.fn.mock.calls;
@@ -268,6 +279,7 @@ describe('drawUnits', () => {
       [frontliner, support],
       origin,
       undefined,
+      null,
       [frontliner, support],
       null,
       frontliner.coord
@@ -327,7 +339,7 @@ describe('drawUnits', () => {
       atlas
     } satisfies { images: Record<string, HTMLImageElement>; atlas: UnitSpriteAtlas };
 
-    drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, [], sauna, null);
+    drawUnits(ctx, mapRenderer, assets, [enemy], origin, undefined, null, [], sauna, null);
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
     const calls = drawUnitSpriteMock.fn.mock.calls;
@@ -388,7 +400,7 @@ describe('drawUnits', () => {
       }
     });
 
-    drawUnits(ctx, mapRenderer, assets, [player], origin, undefined, [player], null, player.coord);
+    drawUnits(ctx, mapRenderer, assets, [player], origin, undefined, null, [player], null, player.coord);
 
     expect(drawUnitSpriteMock.fn).toHaveBeenCalledTimes(2);
     const calls = drawUnitSpriteMock.fn.mock.calls;
@@ -428,6 +440,7 @@ describe('drawUnits', () => {
       [player],
       origin,
       { pushUnitStatus },
+      null,
       [player],
       null,
       player.coord
@@ -479,6 +492,7 @@ describe('drawUnits', () => {
       [enemy],
       origin,
       { pushUnitStatus },
+      null,
       [friendly],
       null,
       null

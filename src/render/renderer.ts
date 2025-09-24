@@ -17,6 +17,7 @@ import type { SaunaStatusPayload, UnitStatusPayload, UnitStatusBuff } from '../u
 import type { CombatKeywordEntry, CombatKeywordRegistry } from '../combat/resolve.ts';
 import type { KeywordState } from '../keywords/index.ts';
 import { snapForZoom } from './zoom.ts';
+import type { CombatAnimationSampler } from './combatAnimations.ts';
 
 type DrawSaunojaFn = (
   ctx: CanvasRenderingContext2D,
@@ -128,6 +129,7 @@ export interface DrawOptions {
   sauna?: Sauna | null;
   saunaVision?: VisionSource | null;
   fx?: FxLayerOptions;
+  animations?: CombatAnimationSampler | null;
   friendlyVisionSources?: readonly Unit[];
 }
 
@@ -150,6 +152,7 @@ interface RenderEntry {
   alpha: number;
   renderCoord: AxialCoord;
   maxHealth: number;
+  animationOffset: PixelCoord | null;
 }
 
 interface RenderGroup {
@@ -213,6 +216,7 @@ export function draw(
     units,
     origin,
     options?.fx,
+    options?.animations ?? null,
     options?.friendlyVisionSources,
     options?.saunaVision ?? options?.sauna ?? null,
     selected
@@ -236,6 +240,7 @@ export function drawUnits(
   units: Unit[],
   origin: PixelCoord,
   fx?: FxLayerOptions,
+  animations?: CombatAnimationSampler | null,
   visionSources?: readonly Unit[],
   saunaVision?: SaunaVisionSource | null,
   selectedCoord?: AxialCoord | null
@@ -317,6 +322,29 @@ export function drawUnits(
       shadowBlur = Math.max(6, 12 * camera.zoom * motionStrength);
     }
 
+    const animationSample = animations?.getState(unit.id) ?? null;
+    let animationOffset: PixelCoord | null = null;
+    if (animationSample) {
+      animationOffset = {
+        x: animationSample.offset.x * mapRenderer.hexSize,
+        y: animationSample.offset.y * mapRenderer.hexSize
+      } satisfies PixelCoord;
+      if (animationSample.glow > 0.01) {
+        const glow = clamp(animationSample.glow, 0, 1);
+        const factionGlow = unit.faction === 'player'
+          ? `rgba(255, 236, 192, ${(0.32 + glow * 0.45).toFixed(3)})`
+          : `rgba(255, 168, 168, ${(0.28 + glow * 0.4).toFixed(3)})`;
+        shadowColor = factionGlow;
+        shadowBlur = Math.max(shadowBlur, Math.max(14, 22 * camera.zoom * (0.4 + glow * 0.6)));
+        filters.push(`saturate(${(1 + glow * 0.45).toFixed(3)})`);
+      }
+      if (animationSample.flash > 0.01) {
+        const flash = clamp(animationSample.flash, 0, 1);
+        filters.push(`brightness(${(1 + flash * 0.35).toFixed(3)})`);
+        filters.push(`contrast(${(1 + flash * 0.18).toFixed(3)})`);
+      }
+    }
+
     const selectionState = {
       isSelected:
         Boolean((unit as Partial<{ selected: boolean }>).selected) ||
@@ -337,7 +365,8 @@ export function drawUnits(
       shadowBlur,
       alpha: normalizedAlpha,
       renderCoord,
-      maxHealth
+      maxHealth,
+      animationOffset
     });
   }
 
@@ -446,6 +475,22 @@ export function drawUnits(
     } satisfies PixelCoord;
   };
 
+  const mergeOffsets = (
+    base: PixelCoord | null,
+    extra: PixelCoord | null
+  ): PixelCoord | null => {
+    if (!base && !extra) {
+      return null;
+    }
+    if (!base) {
+      return extra ? { x: extra.x, y: extra.y } : null;
+    }
+    if (!extra) {
+      return { x: base.x, y: base.y } satisfies PixelCoord;
+    }
+    return { x: base.x + extra.x, y: base.y + extra.y } satisfies PixelCoord;
+  };
+
   interface RenderJob {
     entry: RenderEntry;
     drawBase: boolean;
@@ -462,7 +507,7 @@ export function drawUnits(
     const primaryJob: RenderJob = {
       entry: primary,
       drawBase: true,
-      offset: null,
+      offset: primary.animationOffset ? { ...primary.animationOffset } : null,
       anchor: null,
       anchorSource: null,
       alphaMultiplier: 1
@@ -483,7 +528,7 @@ export function drawUnits(
       jobs.push({
         entry,
         drawBase: false,
-        offset,
+        offset: mergeOffsets(entry.animationOffset, offset),
         anchor: null,
         anchorSource: primaryJob,
         alphaMultiplier: stackAlpha
