@@ -5,9 +5,8 @@ import mine from '../../assets/sprites/mine.svg';
 import soldier from '../../assets/sprites/soldier.svg';
 import archer from '../../assets/sprites/archer.svg';
 import avantoMarauder from '../../assets/sprites/avanto-marauder.svg';
-import raider from '../../assets/sprites/raider.svg';
-import raiderCaptain from '../../assets/sprites/raider-captain.svg';
-import raiderShaman from '../../assets/sprites/raider-shaman.svg';
+import enemyOrc1 from '../../assets/sprites/enemy-orc-1.png';
+import enemyOrc2 from '../../assets/sprites/enemy-orc-2.png';
 import saunojaGuardian from '../../assets/sprites/saunoja-guardian.svg';
 import saunojaSeer from '../../assets/sprites/saunoja-seer.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
@@ -36,9 +35,9 @@ export const assetPaths: AssetPaths = {
     'unit-archer': archer,
     'unit-avanto-marauder': avantoMarauder,
     'unit-marauder': avantoMarauder,
-    'unit-raider': raider,
-    'unit-raider-captain': raiderCaptain,
-    'unit-raider-shaman': raiderShaman,
+    'unit-raider': enemyOrc1,
+    'unit-raider-captain': enemyOrc2,
+    'unit-raider-shaman': enemyOrc2,
     'unit-saunoja': saunojaGuardian,
     'unit-saunoja-guardian': saunojaGuardian,
     'unit-saunoja-seer': saunojaSeer,

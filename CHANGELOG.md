@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Refresh Frost Raider unit icons by wiring the newly supplied high-resolution
+  PNG renders into the sprite loader so encounters showcase the polished enemy
+  art.
 - Batch unit sprite rendering through a cached atlas, precomputing placements
   so draw calls reuse the same geometry and can be issued in filter/shadow
   batches, slashing the overhead of 50-unit scenes and expanding the renderer
