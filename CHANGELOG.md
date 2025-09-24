@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Guard the roster HUD teardown by destroying the V2 controller before
+  resetting the classic resource bar mount and extend the UI shell bootstrap
+  test suite to assert the cleanup hook fires.
+
 - Refresh terrain icon rendering by queuing load-completion events from the
   icon cache, tracking pending images so cached assets still notify listeners,
   and covering the terrain renderer with a Vitest case that dirties affected
