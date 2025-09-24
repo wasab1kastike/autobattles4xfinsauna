@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Refresh the Saunoja unit icons with the newly supplied high-resolution PNG
+  renders, update the sprite metadata to honor their native sizes, and route the
+  asset loader through the polished artwork for both battlefield and roster
+  presentations.
+
 - Batch unit sprite rendering through a cached atlas, precomputing placements
   so draw calls reuse the same geometry and can be issued in filter/shadow
   batches, slashing the overhead of 50-unit scenes and expanding the renderer
