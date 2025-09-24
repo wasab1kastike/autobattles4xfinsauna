@@ -4,6 +4,10 @@
 
 
 
+- Carve the sauna shop progression logic into `src/game/saunaShopState.ts`,
+  wiring polished helpers for artocoin balances, tier ownership, and listener
+  subscriptions so the main game loop sheds its sprawling inline state.
+
 - Stage cinematic battle feedback with synchronized attack and hit animations
   for units, emitting timing hooks on combat events and sampling glow/recoil
   states in the renderer so sprites lunge, flash, and recover in-step.

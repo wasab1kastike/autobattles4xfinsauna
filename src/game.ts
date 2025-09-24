@@ -98,7 +98,6 @@ import {
   type ArtocoinChangeEvent
 } from './progression/artocoin.ts';
 import {
-  getPurchasedSaunaTiers,
   grantSaunaTier,
   onSaunaShopChange,
   purchaseSaunaTier,
@@ -146,6 +145,17 @@ import {
 } from './uiV2/inventoryController.ts';
 import { createUiV2LogController, type UiV2LogController } from './uiV2/logController.ts';
 import { createUiV2SaunaController, type UiV2SaunaController } from './uiV2/saunaController.ts';
+import {
+  addArtocoinSpend,
+  getArtocoinBalance,
+  getArtocoinsSpentThisRun,
+  getPurchasedTierIds,
+  notifySaunaShopSubscribers,
+  reloadSaunaShopState,
+  setArtocoinBalance,
+  setPurchasedTierIds,
+  subscribeToSaunaShop as subscribeToSaunaShopState
+} from './game/saunaShopState.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -162,21 +172,6 @@ const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNAKUNNIA]: 'Saunakunnia',
   [Resource.SISU]: 'Sisu'
 };
-
-let artocoinBalance = loadArtocoinBalance();
-let purchasedTierIds = new Set<SaunaTierId>(getPurchasedSaunaTiers());
-let artocoinsSpentThisRun = 0;
-const saunaShopListeners = new Set<() => void>();
-
-function notifySaunaShopListeners(): void {
-  saunaShopListeners.forEach((listener) => {
-    try {
-      listener();
-    } catch (error) {
-      console.warn('Sauna shop listener failure', error);
-    }
-  });
-}
 
 function clampRosterCap(value: number, limit: number): number {
   const maxCap = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
@@ -1037,13 +1032,16 @@ export function setupGame(
 
   inventoryHudController?.destroy();
   inventoryHudController = null;
-  const buildSaunaShopViewModel = (): SaunaShopViewModel => ({
-    balance: artocoinBalance,
-    tiers: listSaunaTiers().map((tier) => ({
-      tier,
-      status: evaluateSaunaTier(tier, resolveTierContext())
-    }))
-  });
+  const buildSaunaShopViewModel = (): SaunaShopViewModel => {
+    const context = resolveTierContext();
+    return {
+      balance: getArtocoinBalance(),
+      tiers: listSaunaTiers().map((tier) => ({
+        tier,
+        status: evaluateSaunaTier(tier, context)
+      }))
+    } satisfies SaunaShopViewModel;
+  };
   if (useClassicHud) {
     inventoryHudController = setupInventoryHud(inventory, {
       getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
@@ -1054,12 +1052,9 @@ export function setupGame(
       getSaunaShopViewModel: () => buildSaunaShopViewModel(),
       onPurchaseSaunaTier: (tierId) =>
         purchaseSaunaTier(getSaunaTier(tierId), {
-          getCurrentBalance: () => artocoinBalance
+          getCurrentBalance: () => getArtocoinBalance()
         }),
-      subscribeToSaunaShop: (listener) => {
-        saunaShopListeners.add(listener);
-        return () => saunaShopListeners.delete(listener);
-      }
+      subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
     });
   }
 
@@ -1083,7 +1078,7 @@ export function setupGame(
           eventBus.off('resourceChanged', handler);
         };
       },
-      getArtocoinBalance: () => artocoinBalance,
+      getArtocoinBalance: () => getArtocoinBalance(),
       subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
       getElapsedMs: () => getHudElapsedMs(),
       subscribeHudTime: (listener) => subscribeHudTime(listener),
@@ -1092,10 +1087,7 @@ export function setupGame(
     });
     uiV2InventoryController = createUiV2InventoryController({
       buildSaunaShopViewModel,
-      subscribeToSaunaShop: (listener) => {
-        saunaShopListeners.add(listener);
-        return () => saunaShopListeners.delete(listener);
-      },
+      subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
       getUseUiV2,
       setUseUiV2
     });
@@ -1400,9 +1392,7 @@ function resolveUnitUpkeep(unit: Unit): number {
 
 const state = new GameState(1000);
 const inventory = new InventoryState();
-artocoinBalance = loadArtocoinBalance();
-purchasedTierIds = new Set(getPurchasedSaunaTiers());
-artocoinsSpentThisRun = 0;
+reloadSaunaShopState();
 const restoredSave = state.load(map);
 if (restoredSave) {
   const hydratedNgPlus = state.getNgPlusState();
@@ -1421,20 +1411,20 @@ state.setEnemyScalingBase({
 const saunaSettings = loadSaunaSettings();
 
 if (currentNgPlusState.unlockSlots >= 2) {
-  purchasedTierIds = new Set(grantSaunaTier('aurora-ward'));
+  setPurchasedTierIds(grantSaunaTier('aurora-ward'));
 }
 if (currentNgPlusState.ngPlusLevel >= 3) {
-  purchasedTierIds = new Set(grantSaunaTier('mythic-conclave'));
+  setPurchasedTierIds(grantSaunaTier('mythic-conclave'));
 }
 if (
   saunaSettings.activeTierId !== DEFAULT_SAUNA_TIER_ID &&
-  !purchasedTierIds.has(saunaSettings.activeTierId)
+  !getPurchasedTierIds().has(saunaSettings.activeTierId)
 ) {
-  purchasedTierIds = new Set(grantSaunaTier(saunaSettings.activeTierId));
+  setPurchasedTierIds(grantSaunaTier(saunaSettings.activeTierId));
 }
 const resolveTierContext = (): SaunaTierContext => ({
-  artocoinBalance,
-  ownedTierIds: purchasedTierIds
+  artocoinBalance: getArtocoinBalance(),
+  ownedTierIds: getPurchasedTierIds()
 });
 
 let currentTierId: SaunaTierId = saunaSettings.activeTierId;
@@ -1583,18 +1573,18 @@ syncActiveTierWithUnlocks = (options: { persist?: boolean } = {}): void => {
 syncActiveTierWithUnlocks({ persist: true });
 
 onSaunaShopChange((event: SaunaShopChangeEvent) => {
-  purchasedTierIds = new Set(event.purchased);
   if (event.type === 'purchase' && event.cost && event.spendResult?.success) {
-    artocoinsSpentThisRun += Math.max(0, Math.floor(event.cost));
+    addArtocoinSpend(event.cost);
   }
-  notifySaunaShopListeners();
+  setPurchasedTierIds(event.purchased);
+  notifySaunaShopSubscribers();
   syncActiveTierWithUnlocks({ persist: true });
   saunaUiController?.update?.();
 });
 
 onArtocoinChange((change: ArtocoinChangeEvent) => {
-  artocoinBalance = change.balance;
-  notifySaunaShopListeners();
+  setArtocoinBalance(change.balance);
+  notifySaunaShopSubscribers();
   saunaUiController?.update?.();
 });
 
@@ -1748,14 +1738,16 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
     rampStageIndex: snapshot.rampStageIndex
   });
   if (payout.artocoins > 0) {
-    artocoinBalance = creditArtocoins(payout.artocoins, {
+    const previousBalance = getArtocoinBalance();
+    const nextBalance = creditArtocoins(payout.artocoins, {
       reason: 'payout',
       metadata: {
         outcome: resolution.outcome,
         tier: currentTierId
       },
-      previousBalance: artocoinBalance
+      previousBalance
     });
+    setArtocoinBalance(nextBalance);
   }
   const nextRunNgPlusState = planNextNgPlusRun(currentNgPlusState, {
     outcome: resolution.outcome
@@ -1767,9 +1759,9 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
     container: overlay,
     resolution,
     artocoinSummary: {
-      balance: artocoinBalance,
+      balance: getArtocoinBalance(),
       earned: payout.artocoins,
-      spent: artocoinsSpentThisRun
+      spent: getArtocoinsSpentThisRun()
     },
     resourceLabels: RESOURCE_LABELS,
     onNewRun: () => {
