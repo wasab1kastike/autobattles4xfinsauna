@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Hand-paint high resolution sprites for every Saunoja and raid archetype,
+  refreshing the guardian, seer, soldier, archer, marauder, and raider line so
+  each unit now shares consistent gradients, steam halos, and polished
+  highlights while keeping the sprite manifest in sync.
+
 - Guard the roster HUD teardown by destroying the V2 controller before
   resetting the classic resource bar mount and extend the UI shell bootstrap
   test suite to assert the cleanup hook fires.

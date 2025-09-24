@@ -1,69 +1,70 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
-  <title id="title">Avanto Marauder v1</title>
-  <desc id="desc">First-pass production render of the avanto marauder wielding twin frost axes amid blizzard shards.</desc>
+  <title id="title">Avanto Marauder v2</title>
+  <desc id="desc">Premium illustration of the Avanto marauder clad in basalt armor, steaming hammer, and sauna embers.</desc>
   <defs>
-    <linearGradient id="marauder-sky" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#02070d" />
-      <stop offset="1" stop-color="#0f1a2c" />
+    <linearGradient id="marauder-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#080713" />
+      <stop offset="1" stop-color="#1b1331" />
     </linearGradient>
-    <radialGradient id="marauder-aurora" cx="52%" cy="30%" r="86%">
-      <stop offset="0" stop-color="#f0f7ff" stop-opacity="0.9" />
-      <stop offset="0.46" stop-color="#c0e0ff" stop-opacity="0.55" />
-      <stop offset="1" stop-color="#16263f" stop-opacity="0" />
+    <radialGradient id="marauder-ember" cx="52%" cy="36%" r="80%">
+      <stop offset="0" stop-color="#ffeede" stop-opacity="0.92" />
+      <stop offset="0.48" stop-color="#ffbb7c" stop-opacity="0.54" />
+      <stop offset="1" stop-color="#200c24" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="marauder-fur" x1="12%" x2="88%" y1="12%" y2="92%">
-      <stop offset="0" stop-color="#4d5a6d" />
-      <stop offset="1" stop-color="#111827" />
+    <linearGradient id="marauder-armor" x1="24%" y1="8%" x2="80%" y2="92%">
+      <stop offset="0" stop-color="#f7f5ff" />
+      <stop offset="0.4" stop-color="#d2cff5" />
+      <stop offset="0.78" stop-color="#8178c8" />
+      <stop offset="1" stop-color="#413a7a" />
     </linearGradient>
-    <linearGradient id="marauder-armor" x1="24%" x2="76%" y1="8%" y2="100%">
-      <stop offset="0" stop-color="#f2fbff" />
-      <stop offset="0.4" stop-color="#cfe6fb" />
-      <stop offset="0.78" stop-color="#7b92b5" />
-      <stop offset="1" stop-color="#27344c" />
+    <linearGradient id="marauder-cloak" x1="18%" y1="16%" x2="90%" y2="92%">
+      <stop offset="0" stop-color="#6337ff" />
+      <stop offset="0.5" stop-color="#5c2dcb" />
+      <stop offset="1" stop-color="#a95dff" />
     </linearGradient>
-    <linearGradient id="marauder-wrap" x1="20%" x2="80%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#ffd770" />
-      <stop offset="0.5" stop-color="#f6a43c" />
-      <stop offset="1" stop-color="#dd6b21" />
+    <linearGradient id="marauder-hammer" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0" stop-color="#ffe3b3" />
+      <stop offset="0.5" stop-color="#ffb45c" />
+      <stop offset="1" stop-color="#ff7640" />
     </linearGradient>
-    <linearGradient id="marauder-axe" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#f2f8ff" />
-      <stop offset="0.6" stop-color="#9ac8ff" />
-      <stop offset="1" stop-color="#18304d" />
-    </linearGradient>
-    <radialGradient id="marauder-shadow" cx="50%" cy="88%" r="50%">
-      <stop offset="0" stop-color="rgba(6,10,20,0.6)" />
-      <stop offset="1" stop-color="rgba(6,10,20,0)" />
+    <radialGradient id="marauder-halo" cx="50%" cy="20%" r="42%">
+      <stop offset="0" stop-color="rgba(255,216,148,0.8)" />
+      <stop offset="1" stop-color="rgba(255,216,148,0)" />
     </radialGradient>
-    <linearGradient id="marauder-ice" x1="0%" x2="100%" y1="0%" y2="0%">
-      <stop offset="0" stop-color="#7dd3fc" />
-      <stop offset="1" stop-color="#bae6fd" />
-    </linearGradient>
+    <radialGradient id="marauder-shadow" cx="50%" cy="88%" r="48%">
+      <stop offset="0" stop-color="rgba(18,10,28,0.56)" />
+      <stop offset="1" stop-color="rgba(18,10,28,0)" />
+    </radialGradient>
   </defs>
   <g transform="translate(3.265306122, 0) scale(0.326530612)">
-      <rect width="176" height="196" rx="30" fill="url(#marauder-sky)" />
-      <circle cx="90" cy="78" r="82" fill="url(#marauder-aurora)" />
-      <ellipse cx="88" cy="164" rx="64" ry="22" fill="url(#marauder-shadow)" />
-      <path d="M32 66c-12 30-10 64 6 94l28 16c-2-36 10-70 38-96-24-6-44-10-72-14Z" fill="url(#marauder-fur)" opacity="0.82" />
-      <path d="M154 62c14 28 16 64 2 96l-26 16c4-38-6-72-34-96 22-4 40-8 58-16Z" fill="url(#marauder-fur)" opacity="0.66" />
-      <path d="M76 30 48 68c-14 18-20 40-20 62v30l28 64h56l32-66v-30c0-24-6-46-20-64L100 30H76Z" fill="url(#marauder-armor)" stroke="#101d32" stroke-width="3.4" stroke-linejoin="round" />
-      <path d="M62 122h52l10 26c-18 20-34 30-36 30s-22-10-38-30l12-26Z" fill="#e6f1ff" opacity="0.92" />
-      <path d="M90 44c-14 0-28 10-40 22l14 16c16-12 48-12 64 0l14-16c-12-12-26-22-44-22Z" fill="#f6fbff" stroke="#ccdcf3" stroke-width="2.8" />
-      <path d="M76 24h32l12 14-28 18-28-18 12-14Z" fill="#e7efff" stroke="#9ab0d0" stroke-width="2.4" />
-      <path d="M66 146l14 44-30 18-24-54 24-12 16 4Z" fill="url(#marauder-wrap)" opacity="0.96" />
-      <path d="M120 142l30-12-16 54-24-16 10-26Z" fill="#ffe8bf" opacity="0.7" />
-      <path d="M30 134 12 150l42 44 24-20-48-40Z" fill="url(#marauder-axe)" stroke="#0b1428" stroke-width="2.8" />
-      <path d="M34 136c12-8 22-4 32 4l-10 16-22-20Z" fill="#f5f8ff" opacity="0.78" />
-      <path d="M140 128c14-4 26 4 34 16l-38 22-16-14 20-24Z" fill="url(#marauder-axe)" stroke="#081220" stroke-width="2.8" />
-      <path d="M140 130c10-2 14 4 20 12l-18 12-10-10 8-14Z" fill="#f4f8ff" opacity="0.74" />
-      <path d="M88 168c-14 0-26 12-34 26 12 10 24 14 38 14s26-4 38-14c-8-14-20-26-42-26Z" fill="#d6e8ff" stroke="#96c5ff" stroke-width="2" stroke-linejoin="round" />
-      <path d="M76 110h24l4 12-16 12-16-12 4-12Z" fill="#111f35" />
-      <circle cx="88" cy="112" r="10" fill="#f6f9ff" stroke="#c7d8ee" stroke-width="1.8" />
-      <path d="M66 86c-8 0-14 8-14 18 12-6 24-8 36-8s24 2 36 8c0-10-6-18-14-18H66Z" fill="#070f1f" opacity="0.85" />
-      <path d="M96 158c-6 0-8 6-8 12 0 12 8 20 14 20s14-8 14-20c0-6-2-12-8-12H96Z" fill="#14223a" opacity="0.72" />
-      <path d="M46 94c-4 0-6 4-6 8 0 10 4 16 10 16s10-6 10-16c0-4-2-8-6-8H46Z" fill="#14223a" opacity="0.72" />
-      <path d="M130 94c-4 0-6 4-6 8 0 10 4 16 10 16s10-6 10-16c0-4-2-8-6-8h-8Z" fill="#14223a" opacity="0.72" />
-      <path d="M22 52c12 4 24-4 36-12 10-6 26-8 40-4 12 4 28 0 36-8-6 12-18 22-32 24-16 2-34 0-54 6-8 2-18 4-26-6Z" fill="#0ea5e9" opacity="0.32" />
-      <path d="M10 84c14 6 26 6 40 0 16-6 32-8 50 0 14 6 26 6 38 0-12 10-24 16-38 16-16 0-34-8-52-8-14 0-26 2-38-8Z" fill="url(#marauder-ice)" opacity="0.4" />
+    <rect width="176" height="196" rx="30" fill="url(#marauder-sky)" />
+    <circle cx="90" cy="78" r="82" fill="url(#marauder-ember)" />
+    <ellipse cx="88" cy="164" rx="66" ry="22" fill="url(#marauder-shadow)" />
+    <path d="M32 56c-18 32-18 70 0 104 10 20 26 38 42 48l-12 24c-24-14-44-38-54-66-14-42-6-84 24-110Z" fill="#190c2e" opacity="0.38" />
+    <path d="M152 50c28 28 38 80 26 118-8 26-28 48-52 66l-12-24c18-12 32-30 38-48 10-32 4-68-16-94Z" fill="#11051f" opacity="0.4" />
+    <path d="M44 68c-16 32-16 70 2 102l32 20c-4-36 6-70 36-96-26-8-48-16-70-26Z" fill="url(#marauder-cloak)" opacity="0.9" />
+    <path d="M150 68c14 32 12 72-8 98l-30 20c4-36-6-68-34-92 24-8 46-16 72-26Z" fill="url(#marauder-cloak)" opacity="0.66" />
+    <path d="M74 26 50 64c-12 18-20 40-20 62v30l32 66h54l34-68V110c0-24-8-46-20-62L100 26H74Z" fill="url(#marauder-armor)" stroke="#211545" stroke-width="3.4" stroke-linejoin="round" />
+    <path d="M62 120h54l10 26c-18 20-32 30-34 30s-20-10-36-30l6-26Z" fill="#eeeaff" opacity="0.86" />
+    <path d="M86 38c-14 0-30 10-40 22l16 18c18-12 50-12 64 0l16-18c-12-12-26-22-40-22Z" fill="#f9f6ff" stroke="#d7d0f6" stroke-width="2.6" />
+    <path d="M70 22h32l12 14-26 18-26-18 8-14Z" fill="#f0ecff" stroke="#a8a0dc" stroke-width="2.2" />
+    <path d="M62 140l16 44-30 20-24-54 26-14 12 4Z" fill="#5630b7" opacity="0.82" />
+    <path d="M120 138l28-14-16 54-24-16 12-24Z" fill="#f7d6aa" opacity="0.74" />
+    <path d="M30 124 12 144l46 44 22-22-50-42Z" fill="#4830ff" opacity="0.62" />
+    <path d="M144 92c20-6 32-12 48-22-4-10-14-20-24-24-14 8-28 16-42 22l18 24Z" fill="#ff8d3b" stroke="#59260d" stroke-width="3" />
+    <path d="M132 76 154 48l24-6c6 6 10 16 10 24-12 12-26 22-42 30l-14-20Z" fill="url(#marauder-hammer)" stroke="#7c3010" stroke-width="2.6" />
+    <path d="M96 154c-14 0-28 12-34 26 14 10 26 14 40 14s26-4 40-14c-8-14-20-26-46-26Z" fill="#d8d2ff" stroke="#9f95ff" stroke-width="2" stroke-linejoin="round" />
+    <path d="M78 104h24l4 12-18 10-18-10 8-12Z" fill="#211d3f" />
+    <circle cx="90" cy="106" r="11" fill="#f5f1ff" stroke="#cfc7f7" stroke-width="1.8" />
+    <path d="M70 82c-10 0-16 8-16 20 12-8 26-10 36-10s24 2 36 10c0-12-8-20-16-20H70Z" fill="#130e2c" opacity="0.78" />
+    <path d="M76 60c-18 4-32 12-40 26l12 8c10-12 28-20 46-20s36 8 46 20l12-8c-10-14-26-22-42-26-12-2-24-2-34 0Z" fill="#2b1b54" opacity="0.44" />
+    <g fill="rgba(255,206,156,0.32)">
+      <circle cx="38" cy="44" r="5" />
+      <circle cx="58" cy="34" r="4" />
+      <circle cx="134" cy="32" r="6" />
+      <circle cx="150" cy="48" r="4" />
+      <circle cx="118" cy="22" r="3" />
+    </g>
+    <circle cx="90" cy="64" r="46" fill="url(#marauder-halo)" opacity="0.32" />
   </g>
 </svg>

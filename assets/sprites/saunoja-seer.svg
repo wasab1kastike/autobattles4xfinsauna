@@ -1,57 +1,72 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
-  <title id="title">Saunoja Seer v1</title>
-  <desc id="desc">First production badge of a Saunoja seer with crystal focus and drifting steam.</desc>
+  <title id="title">Saunoja Seer v2</title>
+  <desc id="desc">Refined portrait of a Saunoja seer with crystal focus, drifting steam, and aurora palette.</desc>
   <defs>
-    <linearGradient id="seer-panel" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#0f1a2c" />
-      <stop offset="1" stop-color="#1a2f48" />
+    <linearGradient id="seer-panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#0e1a2f" />
+      <stop offset="1" stop-color="#1b3354" />
     </linearGradient>
-    <radialGradient id="seer-halo" cx="48%" cy="36%" r="82%">
-      <stop offset="0" stop-color="#f6faff" stop-opacity="0.94" />
-      <stop offset="0.48" stop-color="#d8f4ff" stop-opacity="0.54" />
-      <stop offset="1" stop-color="#13243b" stop-opacity="0" />
+    <radialGradient id="seer-halo" cx="50%" cy="32%" r="82%">
+      <stop offset="0" stop-color="#f5faff" stop-opacity="0.94" />
+      <stop offset="0.48" stop-color="#d6f0ff" stop-opacity="0.58" />
+      <stop offset="1" stop-color="#13263f" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="seer-robe" x1="24%" x2="78%" y1="14%" y2="94%">
+    <linearGradient id="seer-robe" x1="24%" y1="14%" x2="80%" y2="94%">
       <stop offset="0" stop-color="#fefcff" />
-      <stop offset="0.4" stop-color="#e4d9ff" />
-      <stop offset="1" stop-color="#9ac4ff" />
+      <stop offset="0.4" stop-color="#e5ddff" />
+      <stop offset="1" stop-color="#a0c9ff" />
     </linearGradient>
-    <linearGradient id="seer-sash" x1="18%" x2="82%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#8de7ff" />
-      <stop offset="0.52" stop-color="#54b9ff" />
-      <stop offset="1" stop-color="#3f6bff" />
+    <linearGradient id="seer-sash" x1="16%" y1="0%" x2="84%" y2="100%">
+      <stop offset="0" stop-color="#8fe8ff" />
+      <stop offset="0.5" stop-color="#5cb8ff" />
+      <stop offset="1" stop-color="#436cff" />
     </linearGradient>
-    <linearGradient id="seer-hair" x1="18%" x2="82%" y1="22%" y2="88%">
-      <stop offset="0" stop-color="#2e143f" />
-      <stop offset="1" stop-color="#753a8f" />
+    <linearGradient id="seer-hair" x1="20%" y1="16%" x2="80%" y2="90%">
+      <stop offset="0" stop-color="#321648" />
+      <stop offset="1" stop-color="#7a3f94" />
     </linearGradient>
-    <radialGradient id="seer-crystal" cx="50%" cy="50%" r="60%">
-      <stop offset="0" stop-color="#fef7ff" />
-      <stop offset="0.5" stop-color="#b9e0ff" />
-      <stop offset="1" stop-color="#5b9dff" />
+    <radialGradient id="seer-crystal" cx="50%" cy="52%" r="60%">
+      <stop offset="0" stop-color="#f7feff" />
+      <stop offset="0.5" stop-color="#c2e8ff" />
+      <stop offset="1" stop-color="#5b9cff" />
     </radialGradient>
     <radialGradient id="seer-shadow" cx="50%" cy="86%" r="48%">
-      <stop offset="0" stop-color="rgba(10,20,40,0.55)" />
-      <stop offset="1" stop-color="rgba(10,20,40,0)" />
+      <stop offset="0" stop-color="rgba(12,20,42,0.55)" />
+      <stop offset="1" stop-color="rgba(12,20,42,0)" />
+    </radialGradient>
+    <radialGradient id="seer-highlight" cx="50%" cy="24%" r="40%">
+      <stop offset="0" stop-color="rgba(235,247,255,0.78)" />
+      <stop offset="1" stop-color="rgba(235,247,255,0)" />
     </radialGradient>
   </defs>
   <g transform="translate(2.909090909, 0) scale(0.363636364)">
-      <rect width="160" height="176" rx="28" fill="url(#seer-panel)" />
-      <circle cx="78" cy="72" r="72" fill="url(#seer-halo)" />
-      <ellipse cx="80" cy="144" rx="54" ry="18" fill="url(#seer-shadow)" />
-      <path d="M64 40 42 68c-10 12-16 28-16 46v24l24 46h44l24-46v-24c0-18-6-34-16-46L92 40H64Z" fill="url(#seer-robe)" stroke="#1a2c46" stroke-width="2.6" stroke-linejoin="round" />
-      <path d="M60 110h40l6 18c-12 14-24 20-26 20s-16-6-28-20l8-18Z" fill="#f2f4ff" opacity="0.9" />
-      <path d="M78 50c-10 0-22 6-30 14l10 12c12-8 34-8 46 0l10-12c-8-8-16-14-28-14Z" fill="#fbf9ff" stroke="#ccd7ff" stroke-width="2" />
-      <path d="M68 34h20l8 10-18 12-18-12 8-10Z" fill="#ecefff" stroke="#9cb5e0" stroke-width="1.8" />
-      <path d="M56 130l12 30-20 12-18-36 14-8 12 2Z" fill="url(#seer-sash)" opacity="0.94" />
-      <path d="M100 128l18-8-8 34-18-10 8-16Z" fill="#e8f3ff" opacity="0.74" />
-      <path d="M74 90c-16 0-26-12-26-26 0-10 8-18 18-18s18 8 18 18c0 14-8 26-10 26Z" fill="url(#seer-hair)" />
-      <path d="M52 118l18 26-16 10-18-30 16-6Z" fill="url(#seer-crystal)" />
-      <circle cx="66" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
-      <circle cx="90" cy="90" r="6" fill="#2a1f3a" opacity="0.8" />
-      <path d="M66 74c-6 0-10 6-10 14 8-4 16-6 24-6s16 2 24 6c0-8-4-14-10-14H66Z" fill="#18233a" opacity="0.82" />
-      <path d="M68 96h16l4 10-12 8-12-8 4-10Z" fill="#172034" />
-      <circle cx="76" cy="98" r="7" fill="#f7faff" stroke="#cad6f3" stroke-width="1.6" />
-      <circle cx="104" cy="122" r="10" fill="url(#seer-crystal)" stroke="#4c85ff" stroke-width="1.6" />
+    <rect width="160" height="176" rx="28" fill="url(#seer-panel)" />
+    <circle cx="80" cy="70" r="72" fill="url(#seer-halo)" />
+    <ellipse cx="82" cy="142" rx="54" ry="18" fill="url(#seer-shadow)" />
+    <path d="M30 48c-14 26-18 54-10 82 8 22 22 40 36 52l-10 18c-20-12-36-34-44-58-10-32-4-68 18-94Z" fill="#102239" opacity="0.32" />
+    <path d="M132 44c22 24 30 60 22 90-6 24-20 46-42 60l-10-18c12-10 22-26 28-40 8-28 4-60-12-92Z" fill="#0d1a31" opacity="0.34" />
+    <path d="M64 40 42 68c-10 14-16 32-16 52v22l24 48h46l26-50v-22c0-20-6-36-16-50L90 40H64Z" fill="url(#seer-robe)" stroke="#1b2f4d" stroke-width="2.8" stroke-linejoin="round" />
+    <path d="M60 108h44l8 20c-14 16-24 22-26 22s-16-6-30-22l4-20Z" fill="#f5f7ff" opacity="0.92" />
+    <path d="M80 50c-12 0-22 6-30 14l10 12c14-10 38-10 50 0l10-12c-8-8-18-14-30-14Z" fill="#fff9ff" stroke="#dbe3ff" stroke-width="2.2" />
+    <path d="M68 34h22l8 10-18 12-18-12 6-10Z" fill="#f0eaff" stroke="#a6afdf" stroke-width="1.9" />
+    <path d="M76 20c-14 4-22 12-24 22l10 4c4-8 10-12 18-12s16 4 20 12l10-4c-4-10-12-18-26-22-4-2-6-2-8 0Z" fill="url(#seer-hair)" />
+    <path d="M58 126c-10 18-16 28-28 34l-8-20 24-14 12 0Z" fill="url(#seer-sash)" opacity="0.84" />
+    <path d="M106 124l26-12-8 32c-12-2-20-6-28-14l10-6Z" fill="#e5f3ff" opacity="0.76" />
+    <path d="M38 102 24 116l32 30 16-14-34-30Z" fill="url(#seer-sash)" opacity="0.66" />
+    <path d="M96 98c14-4 22-10 34-18-4-10-10-16-16-20-12 8-22 14-30 20l12 18Z" fill="url(#seer-crystal)" stroke="#3a6fde" stroke-width="2.2" />
+    <path d="M68 98l-18 8 10 28 26-12-18-24Z" fill="url(#seer-crystal)" opacity="0.78" />
+    <ellipse cx="82" cy="122" rx="26" ry="16" fill="#f0f6ff" stroke="#bcd6ff" stroke-width="2" />
+    <path d="M70 90h22l4 12-16 8-16-8 6-12Z" fill="#202c43" />
+    <circle cx="82" cy="92" r="10" fill="#f4f8ff" stroke="#d5e2ff" stroke-width="1.8" />
+    <path d="M64 68c-8 0-14 6-14 16 10-6 20-8 30-8s20 2 30 8c0-10-6-16-14-16H64Z" fill="#112438" opacity="0.82" />
+    <path d="M70 54c-16 4-26 10-34 20l10 6c8-8 20-14 32-14s26 6 34 14l10-6c-8-12-20-18-34-22-8-2-14-2-18 0Z" fill="#253e63" opacity="0.44" />
+    <g fill="rgba(224,244,255,0.42)">
+      <circle cx="34" cy="48" r="4" />
+      <circle cx="48" cy="34" r="3" />
+      <circle cx="124" cy="38" r="5" />
+      <circle cx="136" cy="52" r="3" />
+      <circle cx="112" cy="24" r="3" />
+    </g>
+    <circle cx="80" cy="60" r="42" fill="url(#seer-highlight)" opacity="0.28" />
   </g>
 </svg>

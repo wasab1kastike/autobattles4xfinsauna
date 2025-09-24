@@ -1,50 +1,67 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
-  <title id="title">Saunoja Guardian v1</title>
-  <desc id="desc">First production badge of a Saunoja guardian wrapped in steamlight with herbal satchel.</desc>
+  <title id="title">Saunoja Guardian v2</title>
+  <desc id="desc">Luxe depiction of a Saunoja guardian cradled in steam with herbal satchel, auric trim, and twilight pane.</desc>
   <defs>
-    <radialGradient id="guardian-halo" cx="50%" cy="34%" r="80%">
-      <stop offset="0" stop-color="#fefaf5" stop-opacity="0.92" />
-      <stop offset="0.48" stop-color="#dbe9ff" stop-opacity="0.54" />
-      <stop offset="1" stop-color="#18223a" stop-opacity="0" />
+    <linearGradient id="guardian-panel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#120b28" />
+      <stop offset="1" stop-color="#23345c" />
+    </linearGradient>
+    <radialGradient id="guardian-halo" cx="50%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#fcf8ff" stop-opacity="0.94" />
+      <stop offset="0.48" stop-color="#d4e4ff" stop-opacity="0.58" />
+      <stop offset="1" stop-color="#17263f" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="guardian-panel" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#1a0f2f" />
-      <stop offset="1" stop-color="#1c2747" />
-    </linearGradient>
-    <linearGradient id="guardian-robe" x1="20%" x2="80%" y1="14%" y2="92%">
+    <linearGradient id="guardian-robe" x1="18%" y1="16%" x2="84%" y2="94%">
       <stop offset="0" stop-color="#f8f3ff" />
-      <stop offset="0.44" stop-color="#d8c9ff" />
-      <stop offset="1" stop-color="#9a86ff" />
+      <stop offset="0.42" stop-color="#d9caff" />
+      <stop offset="1" stop-color="#9c88ff" />
     </linearGradient>
-    <linearGradient id="guardian-trim" x1="22%" x2="78%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#fde49a" />
-      <stop offset="0.52" stop-color="#f2a94d" />
-      <stop offset="1" stop-color="#de6f28" />
+    <linearGradient id="guardian-trim" x1="18%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0" stop-color="#ffecc6" />
+      <stop offset="0.5" stop-color="#f1b65a" />
+      <stop offset="1" stop-color="#d97a22" />
     </linearGradient>
-    <linearGradient id="guardian-hair" x1="18%" x2="82%" y1="22%" y2="88%">
-      <stop offset="0" stop-color="#251138" />
-      <stop offset="1" stop-color="#532d7f" />
+    <linearGradient id="guardian-hair" x1="20%" y1="16%" x2="80%" y2="88%">
+      <stop offset="0" stop-color="#2c1746" />
+      <stop offset="1" stop-color="#5a2f7d" />
     </linearGradient>
     <radialGradient id="guardian-shadow" cx="50%" cy="86%" r="48%">
-      <stop offset="0" stop-color="rgba(12,18,36,0.55)" />
-      <stop offset="1" stop-color="rgba(12,18,36,0)" />
+      <stop offset="0" stop-color="rgba(16,24,42,0.55)" />
+      <stop offset="1" stop-color="rgba(16,24,42,0)" />
+    </radialGradient>
+    <radialGradient id="guardian-highlight" cx="50%" cy="24%" r="40%">
+      <stop offset="0" stop-color="rgba(255,255,255,0.78)" />
+      <stop offset="1" stop-color="rgba(255,255,255,0)" />
     </radialGradient>
   </defs>
   <g transform="translate(2.909090909, 0) scale(0.363636364)">
-      <rect width="160" height="176" rx="28" fill="url(#guardian-panel)" />
-      <circle cx="80" cy="70" r="70" fill="url(#guardian-halo)" />
-      <ellipse cx="82" cy="142" rx="54" ry="18" fill="url(#guardian-shadow)" />
-      <path d="M66 42 44 70c-10 12-16 28-16 46v22l24 46h44l24-48v-20c0-18-6-34-16-46L94 42H66Z" fill="url(#guardian-robe)" stroke="#1a2742" stroke-width="2.6" stroke-linejoin="round" />
-      <path d="M62 110h40l6 16c-12 14-24 20-26 20s-16-6-28-20l8-16Z" fill="#f3f4ff" opacity="0.92" />
-      <path d="M80 50c-10 0-20 6-28 14l10 12c12-8 36-8 48 0l10-12c-8-8-18-14-30-14Z" fill="#fff9ff" stroke="#d3c9ff" stroke-width="2" />
-      <path d="M70 34h20l8 10-18 12-18-12 8-10Z" fill="#ede7ff" stroke="#9f9fe0" stroke-width="1.8" />
-      <path d="M58 128l10 30-18 12-18-36 16-8 10 2Z" fill="url(#guardian-trim)" opacity="0.96" />
-      <path d="M102 126l20-8-10 34-18-10 8-16Z" fill="#ffe8c8" opacity="0.76" />
-      <path d="M88 92c-18 0-30-14-30-30 0-12 10-22 22-22s22 10 22 22c0 16-10 30-14 30Z" fill="url(#guardian-hair)" />
-      <circle cx="70" cy="90" r="6" fill="#2b1b3f" opacity="0.8" />
-      <circle cx="96" cy="90" r="6" fill="#2b1b3f" opacity="0.8" />
-      <path d="M70 74c-6 0-10 6-10 14 8-4 16-6 24-6s16 2 24 6c0-8-4-14-10-14H70Z" fill="#1f1733" opacity="0.82" />
-      <path d="M72 98h16l4 10-12 8-12-8 4-10Z" fill="#1b2036" />
-      <circle cx="80" cy="100" r="8" fill="#f6f9ff" stroke="#cfd7f5" stroke-width="1.6" />
+    <rect width="160" height="176" rx="28" fill="url(#guardian-panel)" />
+    <circle cx="82" cy="68" r="72" fill="url(#guardian-halo)" />
+    <ellipse cx="82" cy="142" rx="54" ry="18" fill="url(#guardian-shadow)" />
+    <path d="M32 46c-14 24-18 52-10 80 6 22 20 40 34 52l-10 18c-20-12-36-34-44-58-10-32-4-68 20-92Z" fill="#0f1a32" opacity="0.32" />
+    <path d="M132 42c22 24 30 60 22 90-6 24-22 46-44 60l-10-18c12-10 22-26 28-40 8-28 4-60-12-92Z" fill="#0b1024" opacity="0.34" />
+    <path d="M64 40 42 68c-10 14-16 32-16 50v24l24 48h46l26-50v-22c0-18-6-36-16-48L90 40H64Z" fill="url(#guardian-robe)" stroke="#1c2f50" stroke-width="2.8" stroke-linejoin="round" />
+    <path d="M58 108h44l8 20c-14 16-24 22-26 22s-16-6-30-22l4-20Z" fill="#f4f4ff" opacity="0.92" />
+    <path d="M80 48c-12 0-22 6-30 14l10 12c14-10 38-10 50 0l10-12c-8-8-18-14-30-14Z" fill="#fff9ff" stroke="#d8cff7" stroke-width="2.2" />
+    <path d="M70 32h22l8 10-18 12-18-12 6-10Z" fill="#efe7ff" stroke="#a6a0dd" stroke-width="1.9" />
+    <path d="M54 120c-8 18-14 28-26 34l-8-20 22-14 12 0Z" fill="url(#guardian-trim)" opacity="0.88" />
+    <path d="M108 118l24-12-8 32c-12-2-20-6-28-14l12-6Z" fill="#ffe4c6" opacity="0.72" />
+    <path d="M38 100 24 112l32 30 16-14-34-28Z" fill="url(#guardian-trim)" opacity="0.66" />
+    <path d="M102 94c16-6 24-12 36-20-4-8-10-14-16-18-10 6-20 12-30 18l10 20Z" fill="#ffd9a0" stroke="#8a4a16" stroke-width="2.4" />
+    <path d="M62 98l-18 8 10 28 26-12-18-24Z" fill="#ffe5c8" opacity="0.74" />
+    <ellipse cx="82" cy="122" rx="26" ry="16" fill="#ece7ff" stroke="#c4b9ff" stroke-width="2" />
+    <path d="M70 88h22l4 12-16 8-16-8 6-12Z" fill="#1f223d" />
+    <circle cx="82" cy="90" r="10" fill="#f5f6ff" stroke="#d2d7f4" stroke-width="1.8" />
+    <path d="M64 66c-8 0-14 6-14 16 10-6 20-8 30-8s20 2 30 8c0-10-6-16-14-16H64Z" fill="#111b33" opacity="0.82" />
+    <path d="M70 52c-16 4-26 10-34 20l10 6c8-8 20-14 32-14s26 6 34 14l10-6c-8-12-22-18-36-20-6-2-12-2-16 0Z" fill="#22345a" opacity="0.42" />
+    <path d="M76 22c-12 4-18 12-20 20l10 4c4-8 10-12 18-12s16 4 20 12l10-4c-4-8-12-16-24-20-4-2-8-2-14 0Z" fill="url(#guardian-hair)" />
+    <g fill="rgba(230,243,255,0.4)">
+      <circle cx="32" cy="46" r="4" />
+      <circle cx="46" cy="34" r="3" />
+      <circle cx="126" cy="40" r="5" />
+      <circle cx="138" cy="54" r="3" />
+      <circle cx="112" cy="26" r="3" />
+    </g>
+    <circle cx="82" cy="60" r="40" fill="url(#guardian-highlight)" opacity="0.28" />
   </g>
 </svg>

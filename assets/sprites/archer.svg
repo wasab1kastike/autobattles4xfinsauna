@@ -1,72 +1,82 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-labelledby="title desc">
-  <title id="title">Glacier Warden v1</title>
-  <desc id="desc">First-pass production render of the Saunoja glacial archer poised with crystalline bow and aurora snow.</desc>
+  <title id="title">Glacier Warden v2</title>
+  <desc id="desc">Refined illustration of the Saunoja glacial archer framed by auroral snow, crystalline bow, and frostlit armor.</desc>
   <defs>
-    <linearGradient id="archer-sky" x1="0%" x2="0%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#030914" />
-      <stop offset="1" stop-color="#11243c" />
+    <linearGradient id="archer-sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0" stop-color="#07152a" />
+      <stop offset="1" stop-color="#12395f" />
     </linearGradient>
     <radialGradient id="archer-aurora" cx="48%" cy="34%" r="82%">
-      <stop offset="0" stop-color="#eefaff" stop-opacity="0.9" />
-      <stop offset="0.48" stop-color="#bde4ff" stop-opacity="0.55" />
-      <stop offset="1" stop-color="#162b46" stop-opacity="0" />
+      <stop offset="0" stop-color="#f2fbff" stop-opacity="0.92" />
+      <stop offset="0.5" stop-color="#c9e8ff" stop-opacity="0.58" />
+      <stop offset="1" stop-color="#122a45" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="archer-cloak" x1="16%" x2="88%" y1="18%" y2="94%">
-      <stop offset="0" stop-color="#27c5ff" />
-      <stop offset="1" stop-color="#5460ff" />
+    <linearGradient id="archer-cloak" x1="12%" y1="20%" x2="90%" y2="88%">
+      <stop offset="0" stop-color="#2ad5ff" />
+      <stop offset="0.48" stop-color="#2490ff" />
+      <stop offset="1" stop-color="#6a7cff" />
     </linearGradient>
-    <linearGradient id="archer-leather" x1="18%" x2="84%" y1="0%" y2="100%">
-      <stop offset="0" stop-color="#ffe5ae" />
-      <stop offset="0.5" stop-color="#f7b84d" />
-      <stop offset="1" stop-color="#de7d2b" />
+    <linearGradient id="archer-armor" x1="30%" y1="8%" x2="74%" y2="96%">
+      <stop offset="0" stop-color="#f9fdff" />
+      <stop offset="0.44" stop-color="#d8e8ff" />
+      <stop offset="0.82" stop-color="#8aa7d3" />
+      <stop offset="1" stop-color="#42567f" />
     </linearGradient>
-    <linearGradient id="archer-armor" x1="30%" x2="72%" y1="6%" y2="96%">
-      <stop offset="0" stop-color="#f5fbff" />
-      <stop offset="0.36" stop-color="#d0ddff" />
-      <stop offset="0.78" stop-color="#8194bf" />
-      <stop offset="1" stop-color="#4b5474" />
+    <linearGradient id="archer-leather" x1="18%" y1="0%" x2="84%" y2="100%">
+      <stop offset="0" stop-color="#ffead0" />
+      <stop offset="0.48" stop-color="#f4b864" />
+      <stop offset="1" stop-color="#d67924" />
     </linearGradient>
-    <radialGradient id="archer-bow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#fdf6d0" />
-      <stop offset="0.4" stop-color="#f6c45f" />
-      <stop offset="1" stop-color="#d87318" />
+    <radialGradient id="archer-bow" cx="50%" cy="52%" r="50%">
+      <stop offset="0" stop-color="#fdf7df" />
+      <stop offset="0.45" stop-color="#f3c86e" />
+      <stop offset="1" stop-color="#c96818" />
     </radialGradient>
-    <linearGradient id="archer-arrow" x1="0%" x2="100%" y1="0%" y2="0%">
-      <stop offset="0" stop-color="#e8f7ff" />
-      <stop offset="1" stop-color="#8bc6ff" />
+    <linearGradient id="archer-arrow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0" stop-color="#f4fbff" />
+      <stop offset="1" stop-color="#8bcaff" />
     </linearGradient>
     <radialGradient id="archer-shadow" cx="52%" cy="86%" r="48%">
-      <stop offset="0" stop-color="rgba(8,14,28,0.55)" />
+      <stop offset="0" stop-color="rgba(8,14,28,0.5)" />
       <stop offset="1" stop-color="rgba(8,14,28,0)" />
+    </radialGradient>
+    <radialGradient id="archer-highlight" cx="52%" cy="28%" r="42%">
+      <stop offset="0" stop-color="rgba(255,255,255,0.8)" />
+      <stop offset="1" stop-color="rgba(255,255,255,0)" />
     </radialGradient>
   </defs>
   <g transform="translate(3.404255319, 0) scale(0.340425532)">
-      <rect width="168" height="188" rx="28" fill="url(#archer-sky)" />
-      <circle cx="86" cy="74" r="76" fill="url(#archer-aurora)" />
-      <ellipse cx="90" cy="152" rx="60" ry="20" fill="url(#archer-shadow)" />
-      <path d="M38 60c-12 28-12 58 2 86l26 14c-2-32 10-64 34-84-24-6-42-10-62-16Z" fill="url(#archer-cloak)" opacity="0.82" />
-      <path d="M144 64c10 26 10 58-6 84l-24 14c4-30-4-60-30-82 22-6 42-10 60-16Z" fill="url(#archer-cloak)" opacity="0.62" />
-      <path d="M74 30 50 64c-12 16-18 36-18 56v26l26 54h48l26-54V102c0-22-6-42-18-56L94 30H74Z" fill="url(#archer-armor)" stroke="#13253f" stroke-width="3" stroke-linejoin="round" />
-      <path d="M60 110h48l8 22c-16 18-30 26-32 26s-18-8-34-26l10-22Z" fill="#e9f4ff" opacity="0.92" />
-      <path d="M86 42c-12 0-26 10-36 20l14 16c14-10 44-10 58 0l14-16c-10-10-24-20-40-20Z" fill="#f8fbff" stroke="#cedcfe" stroke-width="2.4" />
-      <path d="M74 26h28l10 12-24 16-24-16 10-12Z" fill="#e7efff" stroke="#9badcf" stroke-width="2" />
-      <path d="M58 132l12 38-26 16-20-46 22-12 12 4Z" fill="url(#archer-leather)" opacity="0.94" />
-      <path d="M112 130l26-12-14 48-22-14 10-22Z" fill="#ffeccc" opacity="0.74" />
-      <path d="M32 120 16 134l38 38 20-18-42-34Z" fill="url(#archer-bow)" stroke="#934d10" stroke-width="2.6" />
-      <path d="M124 102c16 0 30 16 30 28s-12 24-28 24-24-12-24-24 8-28 22-28Z" fill="none" stroke="#fbd37d" stroke-width="5" stroke-linecap="round" />
-      <path d="M124 104c10 6 16 16 16 26s-6 18-16 24" fill="none" stroke="#f59f0b" stroke-width="2.6" stroke-linecap="round" />
-      <path d="M58 106l16-10 34 32-12 14-38-36Z" fill="url(#archer-leather)" stroke="#934d10" stroke-width="2" />
-      <path d="M124 110l26-6-14 16h-24l12-10Z" fill="url(#archer-arrow)" />
-      <path d="M88 150c-12 0-24 10-30 22 12 8 22 12 34 12s22-4 34-12c-6-12-18-22-38-22Z" fill="#d7e9ff" stroke="#99c9ff" stroke-width="1.8" stroke-linejoin="round" />
-      <path d="M74 96h20l4 12-14 8-14-8 4-12Z" fill="#15263f" />
-      <circle cx="84" cy="98" r="9" fill="#f4f9ff" stroke="#c7d9f3" stroke-width="1.6" />
-      <path d="M66 74c-8 0-14 8-14 18 10-6 22-8 32-8s22 2 32 8c0-10-6-18-14-18H66Z" fill="#0d192e" opacity="0.82" />
-      <g fill="rgba(231,246,255,0.45)">
-        <circle cx="32" cy="48" r="4" />
-        <circle cx="44" cy="34" r="3" />
-        <circle cx="134" cy="42" r="5" />
-        <circle cx="146" cy="56" r="3" />
-        <circle cx="120" cy="32" r="3" />
-      </g>
+    <rect width="168" height="188" rx="28" fill="url(#archer-sky)" />
+    <circle cx="86" cy="74" r="78" fill="url(#archer-aurora)" />
+    <ellipse cx="88" cy="156" rx="60" ry="20" fill="url(#archer-shadow)" />
+    <path d="M32 46c-16 26-20 58-6 90 8 20 22 36 38 46l-12 20c-22-12-38-34-46-58-10-30-4-64 18-98Z" fill="#102e52" opacity="0.32" />
+    <path d="M148 46c22 28 26 70 12 102-8 18-22 34-42 46l-12-20c16-10 30-28 34-46 8-34 2-62-18-82Z" fill="#0a213d" opacity="0.34" />
+    <path d="M40 64c-14 28-14 60 2 90l28 16c-4-34 6-66 32-88-24-6-44-12-62-18Z" fill="url(#archer-cloak)" opacity="0.86" />
+    <path d="M144 64c12 30 10 62-6 88l-26 16c4-34-4-64-30-84 20-6 40-12 62-20Z" fill="url(#archer-cloak)" opacity="0.58" />
+    <path d="M70 28 48 60c-12 16-18 36-18 56v26l28 58h50l28-56V104c0-22-6-42-18-56L96 28H70Z" fill="url(#archer-armor)" stroke="#142c4d" stroke-width="3" stroke-linejoin="round" />
+    <path d="M60 112h48l8 24c-16 18-30 26-32 26s-18-8-34-26l10-24Z" fill="#e8f4ff" opacity="0.92" />
+    <path d="M84 40c-14 0-28 10-38 20l14 16c16-10 48-10 62 0l14-16c-10-12-26-20-40-20Z" fill="#f8fbff" stroke="#cedcf2" stroke-width="2.4" />
+    <path d="M70 24h30l10 12-26 16-24-16 10-12Z" fill="#e9f0ff" stroke="#9aaed0" stroke-width="2" />
+    <path d="M58 134l12 38-26 16-20-46 22-12 12 4Z" fill="url(#archer-leather)" opacity="0.94" />
+    <path d="M114 132l26-12-14 48-24-14 12-22Z" fill="#ffeccd" opacity="0.76" />
+    <path d="M32 120 16 136l40 40 20-18-44-38Z" fill="url(#archer-bow)" stroke="#8e4a14" stroke-width="2.6" />
+    <path d="M58 108l18-12 36 36-14 16-40-40Z" fill="url(#archer-leather)" stroke="#8e4a14" stroke-width="2" />
+    <path d="M126 106c16 0 30 16 30 28s-12 24-28 24-24-12-24-24 8-28 22-28Z" fill="none" stroke="#f9d37a" stroke-width="5" stroke-linecap="round" />
+    <path d="M126 108c10 6 16 16 16 26s-6 18-16 24" fill="none" stroke="#f59c0c" stroke-width="2.8" stroke-linecap="round" />
+    <path d="M126 110l28-6-16 16h-26l14-10Z" fill="url(#archer-arrow)" />
+    <path d="M88 152c-12 0-24 10-30 22 12 8 24 12 36 12s22-4 34-12c-6-12-18-22-40-22Z" fill="#d8eaff" stroke="#9cc6ff" stroke-width="2" stroke-linejoin="round" />
+    <path d="M74 98h22l4 12-16 8-16-8 6-12Z" fill="#162740" />
+    <circle cx="84" cy="100" r="9" fill="#f4f9ff" stroke="#c7d8f2" stroke-width="1.6" />
+    <path d="M68 76c-8 0-14 8-14 18 12-6 24-8 34-8s22 2 34 8c0-10-6-18-14-18H68Z" fill="#0d192e" opacity="0.82" />
+    <path d="M86 56c-20 0-36 8-46 22l12 8c10-10 26-16 44-16s34 6 44 16l12-8c-12-16-30-22-48-22Z" fill="#1d416a" opacity="0.4" />
+    <g fill="rgba(232,246,255,0.46)">
+      <circle cx="30" cy="46" r="4" />
+      <circle cx="44" cy="32" r="3" />
+      <circle cx="136" cy="40" r="5" />
+      <circle cx="148" cy="56" r="3" />
+      <circle cx="118" cy="30" r="3" />
+    </g>
+    <circle cx="88" cy="66" r="44" fill="url(#archer-highlight)" opacity="0.26" />
+    <path d="M40 64c18 8 46 8 64 0l-18-10c-16 4-30 4-48 0L40 64Z" fill="#73e1ff" opacity="0.2" />
   </g>
 </svg>
