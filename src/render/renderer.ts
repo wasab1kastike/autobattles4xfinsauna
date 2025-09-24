@@ -9,7 +9,8 @@ import { camera } from '../camera/autoFrame.ts';
 import type { Saunoja } from '../units/saunoja.ts';
 import type { DrawSaunojasOptions } from '../units/renderSaunoja.ts';
 import { drawSaunaOverlay } from './saunaOverlay.ts';
-import type { SpritePlacementInput } from './units/draw.ts';
+import { getSpritePlacement } from './units/draw.ts';
+import type { SpritePlacementInput, SpritePlacement } from './units/draw.ts';
 import { drawUnitSprite } from './units/UnitSprite.ts';
 import type { UnitSpriteRenderResult } from './units/UnitSprite.ts';
 import type { UnitSpriteAtlas, SpriteAtlasSlice } from './units/spriteAtlas.ts';
@@ -144,6 +145,7 @@ interface RenderEntry {
   atlasCanvas: CanvasImageSource | null;
   slice: SpriteAtlasSlice | null;
   placement: SpritePlacementInput;
+  precomputedPlacement: SpritePlacement;
   selection: { isSelected: boolean; isPrimary: boolean };
   motionStrength: number;
   filter: string;
@@ -165,6 +167,66 @@ const friendlyVisionScratch: VisionSource[] = [];
 const renderEntriesScratch: RenderEntry[] = [];
 const renderGroupsScratch: RenderGroup[] = [];
 const renderGroupMapScratch: Map<string, RenderGroup> = new Map();
+const spriteBatchesScratch: SpriteBatch[] = [];
+const spriteCommandsScratch: SpriteCommand[] = [];
+
+interface SpriteBatchItem {
+  sx: number | null;
+  sy: number | null;
+  sw: number | null;
+  sh: number | null;
+  dx: number;
+  dy: number;
+  dw: number;
+  dh: number;
+  alpha: number;
+}
+
+interface SpriteBatch {
+  key: string;
+  image: CanvasImageSource;
+  filter: string;
+  shadowColor: string;
+  shadowBlur: number;
+  items: SpriteBatchItem[];
+}
+
+interface SpriteCommand {
+  job: RenderJob;
+  result: UnitSpriteRenderResult;
+  alpha: number;
+}
+
+const spriteImageKeyCache = new WeakMap<CanvasImageSource, string>();
+let spriteImageKeyCounter = 0;
+
+function getSpriteImageKey(image: CanvasImageSource): string {
+  let key = spriteImageKeyCache.get(image);
+  if (!key) {
+    key = `sprite-${++spriteImageKeyCounter}`;
+    spriteImageKeyCache.set(image, key);
+  }
+  return key;
+}
+
+function getSpriteBatchKey(
+  image: CanvasImageSource,
+  filter: string,
+  shadowColor: string,
+  shadowBlur: number
+): string {
+  return `${getSpriteImageKey(image)}|${filter}|${shadowColor}|${shadowBlur}`;
+}
+
+function createSpriteBatch(
+  key: string,
+  image: CanvasImageSource,
+  filter: string,
+  shadowColor: string,
+  shadowBlur: number
+): SpriteBatch {
+  return { key, image, filter, shadowColor, shadowBlur, items: [] } satisfies SpriteBatch;
+}
 
 export function draw(
   ctx: CanvasRenderingContext2D,
@@ -305,6 +367,7 @@ export function drawUnits(
       zoom: camera.zoom,
       type: unit.type
     };
+    const precomputedPlacement = getSpritePlacement(placementInput);
 
     const filters: string[] = [];
     if (unit.stats.health / maxHealth < 0.5) {
@@ -358,6 +421,7 @@ export function drawUnits(
       atlasCanvas: atlasCanvas ?? null,
       slice,
       placement: placementInput,
+      precomputedPlacement,
       selection: selectionState,
       motionStrength,
       filter: filters.length > 0 ? filters.join(' ') : 'none',
@@ -559,6 +623,7 @@ export function drawUnits(
     }
     const result = drawUnitSprite(ctx, job.entry.unit, {
       placement: job.entry.placement,
+      precomputedPlacement: job.entry.precomputedPlacement,
       sprite: null,
       atlas: null,
       slice: null,
@@ -583,16 +648,18 @@ export function drawUnits(
     }
   }
 
+  const spriteBatches = spriteBatchesScratch;
+  spriteBatches.length = 0;
+  const spriteCommands = spriteCommandsScratch;
+  spriteCommands.length = 0;
+
   ctx.save();
   ctx.filter = 'none';
   ctx.shadowColor = 'rgba(0, 0, 0, 0)';
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 
-  let activeFilter = ctx.filter;
-  let activeShadowColor = ctx.shadowColor as string;
-  let activeShadowBlur = ctx.shadowBlur;
-  let activeAlpha = ctx.globalAlpha;
+  let activeBatch: SpriteBatch | null = null;
 
   for (const job of jobs) {
     const { entry } = job;
@@ -601,25 +668,9 @@ export function drawUnits(
       continue;
     }
 
-    if (entry.filter !== activeFilter) {
-      ctx.filter = entry.filter;
-      activeFilter = ctx.filter;
-    }
-    if (entry.shadowColor !== activeShadowColor) {
-      ctx.shadowColor = entry.shadowColor;
-      activeShadowColor = ctx.shadowColor as string;
-    }
-    if (entry.shadowBlur !== activeShadowBlur) {
-      ctx.shadowBlur = entry.shadowBlur;
-      activeShadowBlur = ctx.shadowBlur;
-    }
-    if (finalAlpha !== activeAlpha) {
-      ctx.globalAlpha = finalAlpha;
-      activeAlpha = ctx.globalAlpha;
-    }
-
     const renderResult = drawUnitSprite(ctx, entry.unit, {
       placement: entry.placement,
+      precomputedPlacement: entry.precomputedPlacement,
       sprite: entry.sprite,
       atlas: entry.atlasCanvas,
       slice: entry.slice,
@@ -630,17 +681,99 @@ export function drawUnits(
       anchorHint: job.anchor,
       offset: job.offset,
       drawBase: false,
-      renderSprite: true
+      renderSprite: false
     });
 
+    spriteCommands.push({ job, result: renderResult, alpha: finalAlpha });
+
+    const image = entry.slice && entry.atlasCanvas ? entry.atlasCanvas : entry.sprite;
+    if (!image) {
+      continue;
+    }
+
+    const batchKey = getSpriteBatchKey(image, entry.filter, entry.shadowColor, entry.shadowBlur);
+    if (!activeBatch || activeBatch.key !== batchKey) {
+      if (activeBatch) {
+        spriteBatches.push(activeBatch);
+      }
+      activeBatch = createSpriteBatch(batchKey, image, entry.filter, entry.shadowColor, entry.shadowBlur);
+    }
+
+    activeBatch.items.push({
+      sx: entry.slice ? entry.slice.sx : null,
+      sy: entry.slice ? entry.slice.sy : null,
+      sw: entry.slice ? entry.slice.sw : null,
+      sh: entry.slice ? entry.slice.sh : null,
+      dx: renderResult.placement.drawX,
+      dy: renderResult.placement.drawY,
+      dw: renderResult.placement.width,
+      dh: renderResult.placement.height,
+      alpha: finalAlpha
+    });
+  }
+
+  if (activeBatch) {
+    spriteBatches.push(activeBatch);
+  }
+
+  let activeFilter = ctx.filter;
+  let activeShadowColor = ctx.shadowColor as string;
+  let activeShadowBlur = ctx.shadowBlur;
+  let activeAlpha = ctx.globalAlpha;
+
+  for (const batch of spriteBatches) {
+    if (batch.filter !== activeFilter) {
+      ctx.filter = batch.filter;
+      activeFilter = ctx.filter;
+    }
+    if (batch.shadowColor !== activeShadowColor) {
+      ctx.shadowColor = batch.shadowColor;
+      activeShadowColor = ctx.shadowColor as string;
+    }
+    if (batch.shadowBlur !== activeShadowBlur) {
+      ctx.shadowBlur = batch.shadowBlur;
+      activeShadowBlur = ctx.shadowBlur;
+    }
+
+    for (const item of batch.items) {
+      if (item.alpha !== activeAlpha) {
+        ctx.globalAlpha = item.alpha;
+        activeAlpha = ctx.globalAlpha;
+      }
+
+      if (
+        item.sx !== null &&
+        item.sy !== null &&
+        item.sw !== null &&
+        item.sh !== null
+      ) {
+        ctx.drawImage(batch.image, item.sx, item.sy, item.sw, item.sh, item.dx, item.dy, item.dw, item.dh);
+      } else {
+        ctx.drawImage(batch.image, item.dx, item.dy, item.dw, item.dh);
+      }
+    }
+  }
+
+  ctx.filter = 'none';
+  ctx.shadowColor = 'rgba(0, 0, 0, 0)';
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
+
+  for (const command of spriteCommands) {
+    const { job, result, alpha } = command;
+    const { entry } = job;
+    if (alpha <= 0) {
+      continue;
+    }
+
     if (fx?.pushUnitStatus) {
-      const baseRadius = Math.max(renderResult.footprint.radiusX, renderResult.footprint.radiusY);
+      const baseRadius = Math.max(result.footprint.radiusX, result.footprint.radiusY);
       const radius = Math.max(
         mapRenderer.hexSize * 0.32,
         Math.min(mapRenderer.hexSize * 0.72, baseRadius * 0.92)
       );
-      const worldX = renderResult.footprint.centerX + origin.x;
-      const worldY = renderResult.footprint.centerY + origin.y;
+      const worldX = result.footprint.centerX + origin.x;
+      const worldY = result.footprint.centerY + origin.y;
       const hp = Number.isFinite(entry.unit.stats.health) ? Math.max(0, entry.unit.stats.health) : 0;
       const shieldValue = typeof entry.unit.getShield === 'function' ? entry.unit.getShield() : 0;
       const shield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
@@ -664,13 +797,19 @@ export function drawUnits(
       ctx.strokeStyle = 'rgba(255,255,255,0.5)';
       ctx.lineWidth = 2;
       ctx.strokeRect(
-        renderResult.placement.drawX,
-        renderResult.placement.drawY,
-        renderResult.placement.width,
-        renderResult.placement.height
+        result.placement.drawX,
+        result.placement.drawY,
+        result.placement.width,
+        result.placement.height
       );
     }
   }
+
+  for (const batch of spriteBatches) {
+    batch.items.length = 0;
+  }
+  spriteBatches.length = 0;
+  spriteCommands.length = 0;
 
   visibleEntries.length = 0;
   friendlyVisionSources.length = 0;
