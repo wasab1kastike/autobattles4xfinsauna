@@ -87,9 +87,33 @@ const coarsePointerQuery = typeof matchMedia === 'function'
 export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const { canvas, overlay, mapRenderer, getUnitById, requestDraw } = options;
   const floaterLayer: FloaterLayer = createFloaterLayer(overlay);
-  const projectWorld = (point: PixelCoord, offsetY = 0): PixelCoord | null => {
+
+  type RectCache = { canvas: DOMRectReadOnly; overlay: DOMRectReadOnly } | null;
+  let rectCache: RectCache = null;
+  const invalidateRectCache = () => {
+    rectCache = null;
+  };
+  const readRectCache = (): RectCache => {
+    if (rectCache) {
+      return rectCache;
+    }
     const canvasRect = canvas.getBoundingClientRect();
     const overlayRect = overlay.getBoundingClientRect();
+    rectCache = { canvas: canvasRect, overlay: overlayRect } satisfies RectCache;
+    return rectCache;
+  };
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', invalidateRectCache);
+    window.addEventListener('scroll', invalidateRectCache, true);
+  }
+
+  const projectWorld = (point: PixelCoord, offsetY = 0): PixelCoord | null => {
+    const rects = readRectCache();
+    if (!rects) {
+      return null;
+    }
+    const { canvas: canvasRect, overlay: overlayRect } = rects;
     if (canvasRect.width === 0 || canvasRect.height === 0) {
       return null;
     }
@@ -260,6 +284,10 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     eventBus.off<UnitDamagedPayload>('unitDamaged', onDamaged);
     eventBus.off<UnitHealedPayload>('unitHealed', onHealed);
     eventBus.off<UnitDiedPayload>('unitDied', onDied);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', invalidateRectCache);
+      window.removeEventListener('scroll', invalidateRectCache, true);
+    }
     shakes.length = 0;
     fades.clear();
     alphas.clear();
@@ -281,6 +309,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const beginStatusFrame = () => {
     frameUnitStatuses = new Map<string, UnitStatusPayload>();
     frameSaunaStatus = null;
+    invalidateRectCache();
   };
 
   const pushUnitStatus = (status: UnitStatusPayload) => {
