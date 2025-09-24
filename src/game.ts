@@ -42,6 +42,7 @@ import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/bur
 import { setupRightPanel, type GameEvent, type RosterEntry } from './ui/rightPanel.tsx';
 import { createTutorialController, type TutorialController } from './ui/tutorial/Tutorial.tsx';
 import { draw as render, type VisionSource } from './render/renderer.ts';
+import { createUnitCombatAnimator, type UnitCombatAnimator } from './render/combatAnimations.ts';
 import { Animator } from './render/Animator.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
@@ -304,6 +305,7 @@ const IDLE_FRAME_LIMIT = 10;
 let animationFrameId: number | null = null;
 let running = false;
 let unitFx: UnitFxManager | null = null;
+let combatAnimations: UnitCombatAnimator | null = null;
 let frameDirty = true;
 let idleFrameCount = 0;
 let gameLoopCallback: FrameRequestCallback | null = null;
@@ -925,10 +927,18 @@ export function setupGame(
     unitFx.dispose();
     unitFx = null;
   }
+  if (combatAnimations) {
+    combatAnimations.dispose();
+    combatAnimations = null;
+  }
   unitFx = createUnitFxManager({
     canvas: canvasEl,
     overlay: overlayEl,
     mapRenderer,
+    getUnitById: (id) => unitsById.get(id),
+    requestDraw: invalidateFrame
+  });
+  combatAnimations = createUnitCombatAnimator({
     getUnitById: (id) => unitsById.get(id),
     requestDraw: invalidateFrame
   });
@@ -2181,8 +2191,11 @@ export function draw(): void {
     frameDirty = true;
     return;
   }
+  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  if (combatAnimations) {
+    combatAnimations.step(now);
+  }
   if (unitFx) {
-    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     unitFx.step(now);
   }
   const shakeOffset = unitFx?.getShakeOffset() ?? { x: 0, y: 0 };
@@ -2258,6 +2271,7 @@ export function draw(): void {
       sauna,
       saunaVision,
       fx: fxOptions,
+      animations: combatAnimations,
       friendlyVisionSources
     }
   );
@@ -2450,6 +2464,10 @@ export function cleanup(): void {
   if (unitFx) {
     unitFx.dispose();
     unitFx = null;
+  }
+  if (combatAnimations) {
+    combatAnimations.dispose();
+    combatAnimations = null;
   }
 
   eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);

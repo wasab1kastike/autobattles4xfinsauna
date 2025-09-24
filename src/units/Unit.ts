@@ -12,6 +12,8 @@ import type {
   CombatResolution
 } from '../combat/resolve.ts';
 import { resolveCombat } from '../combat/resolve.ts';
+import { UNIT_ATTACK_IMPACT_MS, UNIT_ATTACK_TOTAL_MS } from '../combat/timing.ts';
+import type { UnitAttackPayload } from '../events/types.ts';
 
 export const UNIT_MOVEMENT_STEP_SECONDS = 5;
 
@@ -125,7 +127,26 @@ export class Unit {
       return null;
     }
 
-    return target.takeDamage(this.stats.attackDamage, this);
+    const now =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    const attackerCoord = { q: this.coord.q, r: this.coord.r };
+    const targetCoord = { q: target.coord.q, r: target.coord.r };
+    const impactAt = now + UNIT_ATTACK_IMPACT_MS;
+    const recoverAt = now + UNIT_ATTACK_TOTAL_MS;
+    const payload: UnitAttackPayload = {
+      attackerId: this.id,
+      targetId: target.id,
+      attackerCoord,
+      targetCoord,
+      timestamp: now,
+      impactAt,
+      recoverAt
+    };
+    eventBus.emit('unitAttack', payload);
+
+    return target.takeDamage(this.stats.attackDamage, this, { impactAt });
   }
 
   update(dt: number, sauna?: Sauna): void {
@@ -173,7 +194,11 @@ export class Unit {
     this.healMarkerElapsed = 0;
   }
 
-  takeDamage(amount?: number, attacker?: Unit): CombatResolution | null {
+  takeDamage(
+    amount?: number,
+    attacker?: Unit,
+    options?: { impactAt?: number }
+  ): CombatResolution | null {
     const hasDirectAmount = Number.isFinite(amount);
     if (hasDirectAmount && (amount as number) <= 0) {
       return null;
@@ -215,11 +240,17 @@ export class Unit {
     }
 
     if (finalResult.damage > 0) {
+      const eventTimestamp = options?.impactAt ??
+        (typeof performance !== 'undefined' && typeof performance.now === 'function'
+          ? performance.now()
+          : Date.now());
       eventBus.emit('unitDamaged', {
         attackerId: attacker?.id,
         targetId: this.id,
+        targetCoord: { q: this.coord.q, r: this.coord.r },
         amount: finalResult.damage,
-        remainingHealth: this.stats.health
+        remainingHealth: this.stats.health,
+        timestamp: eventTimestamp
       });
     }
 
