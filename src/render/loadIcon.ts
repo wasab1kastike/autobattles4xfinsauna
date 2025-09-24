@@ -5,6 +5,7 @@ type IconLoadListener = (path: string, icon: HTMLImageElement) => void;
 const iconListeners = new Map<string, Set<IconLoadListener>>();
 const readyIcons = new WeakSet<HTMLImageElement>();
 const pendingIcons = new WeakSet<HTMLImageElement>();
+let iconLoadHandlers = new WeakMap<HTMLImageElement, () => void>();
 
 let resolvedBaseUrl: string | null = null;
 
@@ -49,6 +50,7 @@ function notifyIconLoaded(path: string, icon: HTMLImageElement): void {
   }
 
   readyIcons.add(icon);
+  iconLoadHandlers.delete(icon);
 
   const listeners = iconListeners.get(path);
   if (!listeners || listeners.size === 0) {
@@ -66,32 +68,53 @@ function notifyIconLoaded(path: string, icon: HTMLImageElement): void {
   }
 }
 
-function registerImageLoadHandlers(path: string, icon: HTMLImageElement): void {
-  if (readyIcons.has(icon) || pendingIcons.has(icon)) {
-    return;
+function registerImageLoadHandlers(path: string, icon: HTMLImageElement): (() => void) | undefined {
+  if (readyIcons.has(icon)) {
+    return iconLoadHandlers.get(icon);
   }
 
-  pendingIcons.add(icon);
+  let handleLoaded = iconLoadHandlers.get(icon);
+  if (!handleLoaded) {
+    handleLoaded = () => {
+      pendingIcons.delete(icon);
+      notifyIconLoaded(path, icon);
+    };
+    iconLoadHandlers.set(icon, handleLoaded);
+  }
 
-  const handleLoaded = (): void => {
-    pendingIcons.delete(icon);
-    notifyIconLoaded(path, icon);
-  };
+  if (!pendingIcons.has(icon)) {
+    pendingIcons.add(icon);
 
-  icon.addEventListener('load', handleLoaded, { once: true });
-
-  if (typeof icon.decode === 'function') {
-    icon
-      .decode()
-      .then(handleLoaded)
-      .catch(() => {
-        // Fall back to the load event when decode is unsupported or fails.
-      });
+    const onceOptions: AddEventListenerOptions = { once: true };
+    icon.addEventListener('load', handleLoaded, onceOptions);
+    icon.addEventListener(
+      'error',
+      () => {
+        pendingIcons.delete(icon);
+        iconLoadHandlers.delete(icon);
+      },
+      onceOptions
+    );
   }
 
   if (isIconReady(icon)) {
     queueMicrotaskSafe(handleLoaded);
   }
+
+  return handleLoaded;
+}
+
+function triggerIconDecode(icon: HTMLImageElement, onLoaded: () => void): void {
+  if (typeof icon.decode !== 'function') {
+    return;
+  }
+
+  icon
+    .decode()
+    .then(onLoaded)
+    .catch(() => {
+      // Fall back to the load event when decode is unsupported or fails.
+    });
 }
 
 export function onIconLoaded(path: string, listener: IconLoadListener): () => void {
@@ -128,12 +151,18 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
   if (!icon) {
     icon = new Image();
     icon.decoding = 'async';
+    const onLoaded = registerImageLoadHandlers(path, icon);
     const normalized = new URL(path, resolveBaseUrl()).href;
     icon.src = normalized;
-    registerImageLoadHandlers(path, icon);
+    if (onLoaded) {
+      triggerIconDecode(icon, onLoaded);
+    }
     iconCache.set(path, icon);
   } else if (!isIconReady(icon)) {
-    registerImageLoadHandlers(path, icon);
+    const onLoaded = registerImageLoadHandlers(path, icon);
+    if (onLoaded) {
+      triggerIconDecode(icon, onLoaded);
+    }
   }
 
   if (isIconReady(icon)) {
@@ -146,5 +175,6 @@ export function loadIcon(path: string): HTMLImageElement | undefined {
 export function clearIconCache(): void {
   iconCache.clear();
   iconListeners.clear();
+  iconLoadHandlers = new WeakMap();
   resolvedBaseUrl = null;
 }
