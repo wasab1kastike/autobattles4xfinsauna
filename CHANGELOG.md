@@ -7,6 +7,10 @@
   batches, slashing the overhead of 50-unit scenes and expanding the renderer
   tests to assert atlas usage.
 
+- Upgrade the Artocoin crest renderings by swapping in the new product art,
+  refreshing the base64 sprite so the latest coin treatment beams through the
+  HUD badges, overlays, and inventory affordances.
+
 - Carve the sauna shop progression logic into `src/game/saunaShopState.ts`,
   wiring polished helpers for artocoin balances, tier ownership, and listener
   subscriptions so the main game loop sheds its sprawling inline state.
