@@ -399,8 +399,10 @@ export class TerrainCache {
   private ensureIconSubscription(path: string): void {
     const icon = loadIcon(path);
     if (icon) {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
+      if (!this.readyIconPaths.has(path)) {
+        this.readyIconPaths.add(path);
+        this.markChunksForIcon(path);
+      }
       return;
     }
 
@@ -411,8 +413,10 @@ export class TerrainCache {
     }
 
     const unsubscribe = onIconLoaded(path, () => {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
+      if (!this.readyIconPaths.has(path)) {
+        this.readyIconPaths.add(path);
+        this.markChunksForIcon(path);
+      }
       this.unsubscribeFromIcon(path);
     });
 
