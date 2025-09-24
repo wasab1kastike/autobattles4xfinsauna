@@ -1,8 +1,22 @@
+import type { AxialCoord } from '../hex/HexUtils.ts';
+
+export interface UnitAttackPayload {
+  attackerId: string;
+  targetId: string;
+  attackerCoord: AxialCoord;
+  targetCoord: AxialCoord;
+  timestamp: number;
+  impactAt: number;
+  recoverAt: number;
+}
+
 export interface UnitDamagedPayload {
   attackerId?: string;
   targetId: string;
+  targetCoord?: AxialCoord;
   amount: number;
   remainingHealth: number;
+  timestamp?: number;
 }
 
 export interface UnitHealedPayload {
