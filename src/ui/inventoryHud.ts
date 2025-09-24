@@ -431,13 +431,7 @@ export function setupInventoryHud(
   if (stashButtonLabelId) {
     panel.element.setAttribute('aria-labelledby', stashButtonLabelId);
   }
-  const layoutRoot = overlay.querySelector<HTMLElement>('[data-hud-root]');
-  const stashMountTarget = layoutRoot?.parentElement ?? overlay;
-  if (layoutRoot && layoutRoot.parentElement === stashMountTarget) {
-    stashMountTarget.insertBefore(panel.element, layoutRoot.nextSibling);
-  } else {
-    stashMountTarget.appendChild(panel.element);
-  }
+  overlay.appendChild(panel.element);
 
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();

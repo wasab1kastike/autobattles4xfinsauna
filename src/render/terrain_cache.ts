@@ -161,6 +161,9 @@ export class TerrainCache {
   private readonly chunkIcons = new Map<ChunkKey, Set<string>>();
   private readonly iconSubscriptions = new Map<string, () => void>();
   private readonly readyIconPaths = new Set<string>();
+  private readonly pendingIconPaths = new Set<string>();
+  private readonly readyIconQueue = new Set<string>();
+  private iconQueueScheduled = false;
   private readonly unsubscribe: () => void;
 
   constructor(private readonly map: HexMap) {
@@ -399,21 +402,23 @@ export class TerrainCache {
   private ensureIconSubscription(path: string): void {
     const icon = loadIcon(path);
     if (icon) {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
+      if (this.pendingIconPaths.has(path)) {
+        this.queueIconReady(path);
+      } else {
+        this.readyIconPaths.add(path);
+      }
       return;
     }
 
     this.readyIconPaths.delete(path);
+    this.pendingIconPaths.add(path);
 
     if (this.iconSubscriptions.has(path)) {
       return;
     }
 
     const unsubscribe = onIconLoaded(path, () => {
-      this.readyIconPaths.add(path);
-      this.markChunksForIcon(path);
-      this.unsubscribeFromIcon(path);
+      this.queueIconReady(path);
     });
 
     this.iconSubscriptions.set(path, unsubscribe);
@@ -426,6 +431,7 @@ export class TerrainCache {
     }
     unsubscribe();
     this.iconSubscriptions.delete(path);
+    this.pendingIconPaths.delete(path);
   }
 
   private clearIconTracking(): void {
@@ -436,6 +442,36 @@ export class TerrainCache {
     this.iconChunks.clear();
     this.chunkIcons.clear();
     this.readyIconPaths.clear();
+    this.pendingIconPaths.clear();
+    this.readyIconQueue.clear();
+    this.iconQueueScheduled = false;
+  }
+
+  private queueIconReady(path: string): void {
+    this.pendingIconPaths.delete(path);
+    if (this.readyIconPaths.has(path)) {
+      return;
+    }
+    this.readyIconPaths.add(path);
+    this.readyIconQueue.add(path);
+    if (this.iconQueueScheduled) {
+      return;
+    }
+    this.iconQueueScheduled = true;
+    queueMicrotask(() => this.flushReadyIconQueue());
+  }
+
+  private flushReadyIconQueue(): void {
+    this.iconQueueScheduled = false;
+    if (this.readyIconQueue.size === 0) {
+      return;
+    }
+    const readyPaths = Array.from(this.readyIconQueue);
+    this.readyIconQueue.clear();
+    for (const readyPath of readyPaths) {
+      this.markChunksForIcon(readyPath);
+      this.unsubscribeFromIcon(readyPath);
+    }
   }
 }
 

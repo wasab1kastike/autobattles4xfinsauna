@@ -282,10 +282,11 @@ body > #game-container {
 
 #inventory-shop-panel {
   position: fixed;
-  top: clamp(18px, 4vw, 28px);
-  right: clamp(18px, 4vw, 32px);
+  top: calc(var(--hud-padding) + env(safe-area-inset-top, 0px));
+  right: calc(var(--hud-padding) + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--hud-padding) + env(safe-area-inset-bottom, 0px));
   width: var(--inventory-panel-width);
-  max-height: min(86vh, 720px);
+  max-width: min(100%, calc(100% - (var(--hud-padding) * 2)));
   overflow-y: auto;
   z-index: 980;
   opacity: 0;
@@ -308,13 +309,16 @@ body > #game-container {
 
 @media (max-width: 720px) {
   #inventory-shop-panel {
-    left: 50%;
-    right: auto;
-    transform: translate3d(-50%, 12px, 0);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    max-width: 100%;
+    transform: translate3d(0, 12px, 0);
   }
 
   #inventory-shop-panel[data-open='true'] {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -447,6 +451,20 @@ body > #game-container {
   #ui-overlay.inventory-shop-open .hud-anchor--command-dock {
     margin-right: calc(var(--inventory-panel-width) + var(--inventory-panel-gap));
     max-width: calc(100% - var(--inventory-panel-width) - var(--inventory-panel-gap));
+  }
+}
+
+@media (min-width: 721px) {
+  #ui-overlay.hud-grid--right-collapsed:not(.inventory-panel-open):not(.inventory-shop-open)
+    .hud-anchor--command-dock {
+    margin-right: 0;
+    max-width: min(100%, clamp(720px, 88vw, 1180px));
+  }
+
+  #ui-overlay.hud-grid--right-collapsed:not(.inventory-panel-open):not(.inventory-shop-open)
+    .hud-bottom-tabs__chrome {
+    margin-right: 0;
+    max-width: 100%;
   }
 }
 
