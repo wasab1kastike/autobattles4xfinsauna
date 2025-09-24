@@ -2,7 +2,10 @@
 
 ## Unreleased
 
-
+- Batch unit sprite rendering through a cached atlas, precomputing placements
+  so draw calls reuse the same geometry and can be issued in filter/shadow
+  batches, slashing the overhead of 50-unit scenes and expanding the renderer
+  tests to assert atlas usage.
 
 - Carve the sauna shop progression logic into `src/game/saunaShopState.ts`,
   wiring polished helpers for artocoin balances, tier ownership, and listener
