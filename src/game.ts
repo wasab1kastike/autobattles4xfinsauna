@@ -1133,6 +1133,7 @@ map.forEachTile((t) => t.setFogged(true));
 resetAutoFrame();
 
 const units: Unit[] = [];
+const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
 
 function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
@@ -1187,6 +1188,7 @@ function detachSaunoja(unitId: string): void {
   if (!saunoja) {
     return;
   }
+  unitVisionSnapshots.delete(unitId);
   unitToSaunoja.delete(unitId);
   if (saunojaToUnit.get(saunoja.id) === unitId) {
     saunojaToUnit.delete(saunoja.id);
@@ -1690,7 +1692,16 @@ const clock = new GameClock(1000, (deltaMs) => {
       continue;
     }
 
-    map.revealAround(unit.coord, unit.getVisionRange(), { autoFrame: false });
+    const rawRadius = unit.getVisionRange();
+    const radius = Number.isFinite(rawRadius) ? Math.max(0, Math.round(rawRadius)) : 0;
+    const currentKey = coordKey(unit.coord);
+    const snapshot = unitVisionSnapshots.get(unit.id);
+    if (snapshot && snapshot.coordKey === currentKey && snapshot.radius === radius) {
+      continue;
+    }
+
+    map.revealAround(unit.coord, radius, { autoFrame: false });
+    unitVisionSnapshots.set(unit.id, { coordKey: currentKey, radius });
   }
   invalidateFrame();
 });
@@ -2410,6 +2421,7 @@ export function cleanup(): void {
   running = false;
   gameLoopCallback = null;
   idleFrameCount = 0;
+  unitVisionSnapshots.clear();
   objectiveTracker?.offProgress(handleObjectiveProgress);
   objectiveTracker?.dispose();
   objectiveTracker = null;
