@@ -240,7 +240,7 @@ export function setupInventoryHud(
   }
 
   const doc = overlay.ownerDocument ?? document;
-  const { anchors } = ensureHudLayout(overlay);
+  const { anchors, tabs } = ensureHudLayout(overlay);
   const topLeftCluster = anchors.topLeftCluster;
   const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
 
@@ -265,7 +265,7 @@ export function setupInventoryHud(
   stashLayer.appendChild(stashScrim);
   overlay.appendChild(stashLayer);
 
-  const rosterHudPanel = overlay.querySelector<HTMLDivElement>('#resource-bar');
+  const rosterHudPanel = tabs.panels.roster;
   let stashCount = 0;
   let isStashOpen = false;
 
@@ -399,7 +399,11 @@ export function setupInventoryHud(
       } else {
         overlay.classList.remove('inventory-shop-open');
         if (!isStashOpen) {
-          requestRosterCollapse();
+          if (tabs.getActive() === 'roster') {
+            requestRosterExpand();
+          } else {
+            requestRosterCollapse();
+          }
         }
         try {
           shopButton?.focus({ preventScroll: true });
@@ -531,6 +535,8 @@ export function setupInventoryHud(
           console.warn('Unable to focus stash panel', error);
         }
       }
+    } else if (tabs.getActive() === 'roster') {
+      requestRosterExpand();
     } else {
       requestRosterCollapse();
     }
@@ -546,7 +552,20 @@ export function setupInventoryHud(
 
   updateInventoryButtonAccessibility();
 
-  requestRosterCollapse();
+  const unsubscribeTabs = tabs.onChange((tabId) => {
+    if (tabId === 'roster' && !isStashOpen) {
+      requestRosterExpand();
+    } else {
+      requestRosterCollapse();
+    }
+  });
+
+  const initialTab = tabs.getActive();
+  if (initialTab === 'roster') {
+    requestRosterExpand();
+  } else {
+    requestRosterCollapse();
+  }
   setStashOpen(false, false);
 
   function computeView(): InventoryPanelView {
@@ -715,6 +734,7 @@ export function setupInventoryHud(
 
   const destroy = (): void => {
     unsubscribe();
+    unsubscribeTabs();
     window.removeEventListener('keydown', onKeyDown);
     inventoryButton.removeEventListener('click', handleInventoryButtonClick);
     stashScrim.removeEventListener('click', handleScrimClick);

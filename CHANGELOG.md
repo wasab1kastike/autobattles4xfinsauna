@@ -2,11 +2,6 @@
 
 ## Unreleased
 
-- Remove the roster/policy bottom panel from the HUD, promote the roster crest to
-  the right column, and fold the policy controls into the command console tabs so
-  the layout stays focused while keeping every system accessible within the
-  polished interface.
-
 - Update the GitHub Pages workflow to upload a uniquely named deployment
   artifact so reruns never collide on the default `github-pages` bundle and the
   publishing job can deploy our polished builds without manual retries.
