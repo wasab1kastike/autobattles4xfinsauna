@@ -2257,7 +2257,7 @@ export function draw(): void {
               ? attendant.appearanceId
               : null;
           },
-          fallbackSpriteId: 'saunoja-guardian'
+          fallbackSpriteId: 'saunoja-02'
         }
       : undefined;
 

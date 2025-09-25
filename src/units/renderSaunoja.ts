@@ -7,7 +7,7 @@ import type { UnitStatusBuff, UnitStatusPayload } from '../ui/fx/types.ts';
 
 type SpriteResolver = (saunoja: Saunoja) => string | null | undefined;
 
-const DEFAULT_SAUNOJA_SPRITE_ID = 'saunoja-guardian';
+const DEFAULT_SAUNOJA_SPRITE_ID = 'saunoja-02';
 
 function normalizeSpriteId(candidate: string | null | undefined): string {
   if (typeof candidate !== 'string') {
