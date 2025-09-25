@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh the published docs bundle with the current commit metadata so the
+  verification script recognizes the hosted manual as up to date with our
+  polished release build.
+
 - Ensure auto-equip replaces existing gear by parking the previous item in the
   stash, teach the roster replace action to pick the highest-tier stash option,
   and verify the polished flow with new integration tests so attendants always
