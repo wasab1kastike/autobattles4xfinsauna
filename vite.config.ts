@@ -21,8 +21,8 @@ try {
 // Vite configuration
 export default defineConfig({
   root: 'src',
-  // Ensure assets resolve correctly when hosted on GitHub Pages.
-  base: '/',
+  // Ensure assets resolve correctly when hosted from a subdirectory (e.g. GitHub Pages).
+  base: './',
   publicDir: '../public',
   plugins: [tailwindcss()],
   build: {
