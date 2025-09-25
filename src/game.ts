@@ -6,6 +6,7 @@ import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
+import { resolveSaunojaAppearance } from './unit/appearance.ts';
 import { eventBus, eventScheduler } from './events';
 import { POLICY_EVENTS, type PolicyAppliedEvent } from './data/policies.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
@@ -49,6 +50,7 @@ import { HexMapRenderer } from './render/HexMapRenderer.ts';
 import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
 import {
   makeSaunoja,
+  rollSaunojaUpkeep,
   SAUNOJA_DEFAULT_UPKEEP,
   SAUNOJA_UPKEEP_MAX,
   SAUNOJA_UPKEEP_MIN
@@ -864,32 +866,25 @@ export function saveUnits(): void {
   persistRosterToStorage(saunojas);
 }
 
-export function rollSaunojaUpkeep(random: () => number = Math.random): number {
-  const rng = typeof random === 'function' ? random : Math.random;
-  const lowerBound = Math.ceil(Math.min(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
-  const upperBound = Math.floor(Math.max(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
-  const span = Math.max(1, upperBound - lowerBound + 1);
-
-  const rawSample = Number(rng());
-  const sample = Number.isFinite(rawSample) ? rawSample : Math.random();
-  const normalized = Math.min(Math.max(sample, 0), 1);
-  const index = Math.min(Math.floor(normalized * span), span - 1);
-
-  return lowerBound + index;
-}
-
 function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
   const traits = Array.isArray(saunoja.traits) ? saunoja.traits : [];
   const hasTraits = traits.length >= 3;
   const upkeepValid = Number.isFinite(saunoja.upkeep);
   const xpValid = Number.isFinite(saunoja.xp);
-  return !hasTraits || !upkeepValid || !xpValid;
+  const appearanceValid =
+    typeof saunoja.appearanceId === 'string' && saunoja.appearanceId.trim().length > 0;
+  return !hasTraits || !upkeepValid || !xpValid || !appearanceValid;
 }
 
 function refreshSaunojaPersona(saunoja: Saunoja): void {
   saunoja.traits = generateTraits();
   saunoja.upkeep = rollSaunojaUpkeep();
   saunoja.xp = 0;
+  if (typeof saunoja.appearanceId !== 'string' || saunoja.appearanceId.trim().length === 0) {
+    saunoja.appearanceId = resolveSaunojaAppearance();
+  }
+  const attached = getAttachedUnitFor(saunoja);
+  attached?.setAppearanceId(saunoja.appearanceId);
 }
 
 function hexDistance(a: AxialCoord, b: AxialCoord): number {
@@ -1232,6 +1227,9 @@ function claimSaunoja(
   updateBaseStatsFromUnit(match, unit);
   applyEffectiveStats(match, match.effectiveStats);
   unit.setExperience(match.xp);
+  if (typeof match.appearanceId === 'string' && match.appearanceId.trim().length > 0) {
+    unit.setAppearanceId(match.appearanceId);
+  }
 
   const personaMissing = isSaunojaPersonaMissing(match);
   if (created || personaMissing) {
@@ -1613,7 +1611,9 @@ const setActiveTier = (
 const spawnPlayerReinforcement = (coord: AxialCoord): Unit | null => {
   playerSpawnSequence += 1;
   const id = `p${Date.now()}-${playerSpawnSequence}`;
-  const unit = spawnUnit(state, 'soldier', id, coord, 'player');
+  const unit = spawnUnit(state, 'soldier', id, coord, 'player', {
+    appearanceRandom: () => Math.random()
+  });
   if (unit) {
     registerUnit(unit);
   }
@@ -1833,7 +1833,9 @@ if (!hasActivePlayerUnit) {
     state.addResource(Resource.SAUNA_BEER, SOLDIER_COST);
   }
   const fallbackId = `u${units.length + 1}`;
-  const fallbackUnit = spawnUnit(state, 'soldier', fallbackId, sauna.pos, 'player');
+  const fallbackUnit = spawnUnit(state, 'soldier', fallbackId, sauna.pos, 'player', {
+    appearanceRandom: () => Math.random()
+  });
   if (fallbackUnit) {
     registerUnit(fallbackUnit);
   }
@@ -1922,7 +1924,9 @@ function updateTopbarHud(deltaMs: number): void {
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
-  const unit = spawnUnit(state, type, id, coord, 'player');
+  const unit = spawnUnit(state, type, id, coord, 'player', {
+    appearanceRandom: () => Math.random()
+  });
   if (unit) {
     registerUnit(unit);
   }
@@ -2246,7 +2250,12 @@ export function draw(): void {
           },
           resolveSpriteId: (attendant: Saunoja) => {
             const unit = getAttachedUnitFor(attendant);
-            return unit?.type ?? null;
+            if (unit) {
+              return unit.getAppearanceId();
+            }
+            return typeof attendant.appearanceId === 'string'
+              ? attendant.appearanceId
+              : null;
           },
           fallbackSpriteId: 'saunoja-guardian'
         }

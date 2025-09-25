@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { makeSaunoja, SAUNOJA_DEFAULT_UPKEEP, SAUNOJA_UPKEEP_MAX } from './saunoja.ts';
 import { applyDamage } from './combat.ts';
 
+const SAUNOJA_APPEARANCES = new Set(['saunoja', 'saunoja-guardian', 'saunoja-seer']);
+
 describe('makeSaunoja', () => {
   it('applies defaults and clamps mutable values', () => {
     const coord = { q: 2, r: -1 };
@@ -36,6 +38,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.baseStats.health).toBe(20);
     expect(saunoja.effectiveStats.health).toBe(20);
     expect(saunoja.equipment.weapon).toBeNull();
+    expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
   });
 
   it('falls back to safe defaults for invalid data', () => {
@@ -64,6 +67,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.behavior).toBe('defend');
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
+    expect(saunoja.appearanceId).toBe('saunoja');
     randomSpy.mockRestore();
   });
 
@@ -76,6 +80,7 @@ describe('makeSaunoja', () => {
 
     expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(0);
+    expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
   });
 
   it('generates a flavorful name when none is provided', () => {
@@ -86,6 +91,7 @@ describe('makeSaunoja', () => {
       .mockReturnValueOnce(0.8);
     const saunoja = makeSaunoja({ id: 's5', name: '   ' });
     expect(saunoja.name).toBe('Noora "Steamcaller" Tuomi');
+    expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
     randomSpy.mockRestore();
   });
 

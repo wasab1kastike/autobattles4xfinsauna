@@ -36,6 +36,8 @@ export const assetPaths: AssetPaths = {
     'unit-raider': enemyOrcVanguard,
     'unit-raider-captain': enemyOrcWarlock,
     'unit-raider-shaman': enemyOrcWarlock,
+    'unit-enemy-orc-1': enemyOrcVanguard,
+    'unit-enemy-orc-2': enemyOrcWarlock,
     'unit-saunoja': saunojaVanguard,
     'unit-saunoja-guardian': saunojaGuardian,
     'unit-saunoja-seer': saunojaSeer,
