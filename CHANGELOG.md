@@ -7,6 +7,11 @@
   across every polished model without desynchronising combat scaling, and cover
   the behaviour with fresh Vitest cases.
 
+- Ensure freshly deployed builds bypass stale caches by marking the HTML shell
+  as non-cacheable and bundling the roster and resource crest SVGs through the
+  Vite asset pipeline so the high-fidelity unit art and HUD chrome always draw
+  the latest polished visuals on load.
+
 - Randomize Saunoja and orc battlefield models so freshly spawned units pull
   from every high-fidelity render, persist attendant appearances across saves,
   and update the renderer plus atlas metadata to honor the polished variants.
