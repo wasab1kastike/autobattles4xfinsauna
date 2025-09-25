@@ -28,72 +28,75 @@ type UnitSpriteId =
   | 'saunoja-seer'
   | 'default';
 
-const DEFAULT_SPRITE: UnitSpriteMetadata = {
-  nativeSize: { width: 64, height: 64 },
-  anchor: { x: 0.5, y: 0.92 },
-  scale: { x: 1.154700538, y: 1 },
-  nudge: { x: 0, y: -0.05 }
-};
+const HEX_WIDTH_TO_HEIGHT_RATIO = 2 / Math.sqrt(3);
 
-const AVANTO_MARAUDER_META: UnitSpriteMetadata = {
-  nativeSize: { width: 64, height: 64 },
-  anchor: { x: 0.5, y: 0.836 },
-  scale: { x: 1.732050808, y: 1.5 },
-  nudge: { x: 0, y: -0.03 }
-};
+function makeSpriteMeta(
+  nativeWidth: number,
+  nativeHeight: number,
+  {
+    anchorX = 0.5,
+    anchorY,
+    scaleY,
+    nudgeX = 0,
+    nudgeY = -0.02
+  }: {
+    anchorX?: number;
+    anchorY: number;
+    scaleY: number;
+    nudgeX?: number;
+    nudgeY?: number;
+  }
+): UnitSpriteMetadata {
+  return {
+    nativeSize: { width: nativeWidth, height: nativeHeight },
+    anchor: { x: anchorX, y: anchorY },
+    scale: { x: scaleY * HEX_WIDTH_TO_HEIGHT_RATIO, y: scaleY },
+    nudge: { x: nudgeX, y: nudgeY }
+  } satisfies UnitSpriteMetadata;
+}
+
+const DEFAULT_SPRITE: UnitSpriteMetadata = makeSpriteMeta(64, 64, {
+  anchorY: 0.92,
+  scaleY: 1,
+  nudgeY: -0.05
+});
+
+const PLAYER_SQUARE_META = makeSpriteMeta(1024, 1024, {
+  anchorY: 0.7,
+  scaleY: 1.2,
+  nudgeY: -0.018
+});
+
+const PLAYER_TALL_META = makeSpriteMeta(1024, 1536, {
+  anchorY: 0.81,
+  scaleY: 1.32,
+  nudgeY: -0.016
+});
+
+const ENEMY_VANGUARD_META = makeSpriteMeta(1024, 1536, {
+  anchorY: 0.835,
+  scaleY: 1.38,
+  nudgeY: -0.024
+});
+
+const ENEMY_WARLOCK_META = makeSpriteMeta(1024, 1536, {
+  anchorY: 0.842,
+  scaleY: 1.44,
+  nudgeY: -0.028
+});
 
 export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   default: DEFAULT_SPRITE,
-  soldier: {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.815 },
-    scale: { x: 1.58771324, y: 1.375 },
-    nudge: { x: 0, y: -0.02 }
-  },
-  archer: {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.81 },
-    scale: { x: 1.623797632, y: 1.40625 },
-    nudge: { x: 0, y: -0.015 }
-  },
-  'avanto-marauder': AVANTO_MARAUDER_META,
-  marauder: AVANTO_MARAUDER_META,
-  raider: {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.832 },
-    scale: { x: 1.697409791, y: 1.47 },
-    nudge: { x: 0, y: -0.028 }
-  },
-  'raider-captain': {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.838 },
-    scale: { x: 1.796714038, y: 1.556 },
-    nudge: { x: 0, y: -0.034 }
-  },
-  'raider-shaman': {
-    nativeSize: { width: 64, height: 64 },
-    anchor: { x: 0.5, y: 0.842 },
-    scale: { x: 1.769001225, y: 1.532 },
-    nudge: { x: 0, y: -0.036 }
-  },
-  saunoja: {
-    nativeSize: { width: 1024, height: 1024 },
-    anchor: { x: 0.5, y: 0.66 },
-    scale: { x: 1.154700538, y: 1 },
-    nudge: { x: 0, y: -0.02 }
-  },
-  'saunoja-guardian': {
-    nativeSize: { width: 1024, height: 1536 },
-    anchor: { x: 0.5, y: 0.806 },
-    scale: { x: 1.515544457, y: 1.3125 },
-    nudge: { x: 0, y: -0.015 }
-  },
-  'saunoja-seer': {
-    nativeSize: { width: 1024, height: 1536 },
-    anchor: { x: 0.5, y: 0.806 },
-    scale: { x: 1.515544457, y: 1.3125 },
-    nudge: { x: 0, y: -0.015 }
-  }
+  soldier: PLAYER_TALL_META,
+  archer: PLAYER_TALL_META,
+  'avanto-marauder': ENEMY_VANGUARD_META,
+  marauder: ENEMY_VANGUARD_META,
+  raider: ENEMY_VANGUARD_META,
+  'raider-captain': ENEMY_WARLOCK_META,
+  'raider-shaman': ENEMY_WARLOCK_META,
+  saunoja: PLAYER_SQUARE_META,
+  'saunoja-guardian': PLAYER_TALL_META,
+  'saunoja-seer': PLAYER_TALL_META
 };
 
 export function getUnitSpriteMetadata(type: string): UnitSpriteMetadata {
