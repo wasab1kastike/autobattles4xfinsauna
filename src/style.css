@@ -275,9 +275,53 @@ body > #game-container {
   pointer-events: auto;
 }
 
-#ui-overlay.inventory-panel-open #inventory-stash-panel,
+#ui-overlay.inventory-panel-open #inventory-stash-layer,
 #ui-overlay.inventory-shop-open #inventory-shop-panel {
   pointer-events: auto;
+}
+
+.inventory-stash-layer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(18px, 4vw, 36px);
+  z-index: 970;
+  pointer-events: none;
+}
+
+.inventory-stash-layer[data-open='true'] {
+  pointer-events: auto;
+}
+
+.inventory-stash-scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: clamp(24px, 4vw, 32px);
+  background:
+    radial-gradient(circle at 20% 14%, rgba(82, 140, 255, 0.26), transparent 58%),
+    radial-gradient(circle at 80% 24%, rgba(79, 209, 197, 0.18), transparent 60%),
+    rgba(7, 12, 20, 0.72);
+  backdrop-filter: blur(18px) saturate(132%);
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+
+.inventory-stash-scrim[data-open='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 720px) {
+  .inventory-stash-layer {
+    padding: clamp(12px, 5vw, 18px);
+  }
+
+  .inventory-stash-scrim {
+    border-radius: 0;
+  }
 }
 
 #inventory-shop-panel {
@@ -443,7 +487,6 @@ body > #game-container {
 }
 
 @media (min-width: 721px) {
-  #ui-overlay.inventory-panel-open .hud-anchor--command-dock,
   #ui-overlay.inventory-shop-open .hud-anchor--command-dock {
     margin-right: calc(var(--inventory-panel-width) + var(--inventory-panel-gap));
     max-width: calc(100% - var(--inventory-panel-width) - var(--inventory-panel-gap));
@@ -574,7 +617,6 @@ body > #game-container {
 }
 
 @media (min-width: 721px) {
-  #ui-overlay.inventory-panel-open .hud-bottom-tabs__chrome,
   #ui-overlay.inventory-shop-open .hud-bottom-tabs__chrome {
     margin-right: calc(var(--inventory-panel-width) + var(--inventory-panel-gap));
     max-width: calc(100% - var(--inventory-panel-width) - var(--inventory-panel-gap));
