@@ -33,6 +33,16 @@
     max-width: 100%;
     background: linear-gradient(185deg, rgba(16, 20, 26, 0.98), rgba(6, 8, 12, 0.98));
   }
+
+  .titleWrap {
+    gap: 0.75rem;
+  }
+
+  .emblem {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 14px;
+  }
 }
 
 .header {
@@ -43,6 +53,45 @@
   gap: 1rem;
   border-bottom: 1px solid rgba(122, 139, 168, 0.16);
   backdrop-filter: blur(24px);
+}
+
+.titleWrap {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.emblem {
+  position: relative;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 16px;
+  background-image:
+    linear-gradient(140deg, rgba(122, 176, 255, 0.42), rgba(34, 52, 88, 0.78)),
+    url('../../../assets/ui/inventory-saunabucket-01.png');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 1px solid rgba(132, 182, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 18px 36px rgba(10, 20, 38, 0.45);
+  overflow: hidden;
+}
+
+.emblem::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.45), transparent 55%);
+  mix-blend-mode: screen;
+  opacity: 0.75;
 }
 
 .title {

@@ -69,15 +69,25 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
   header.className = panelStyles.header;
 
   const titleWrap = document.createElement('div');
+  titleWrap.className = panelStyles.titleWrap;
+
+  const emblem = document.createElement('div');
+  emblem.className = panelStyles.emblem;
+
+  const titleBlock = document.createElement('div');
+  titleBlock.className = panelStyles.titleBlock;
+
   const title = document.createElement('h2');
   title.className = panelStyles.title;
   title.textContent = 'Quartermaster Stash';
-  titleWrap.appendChild(title);
+  titleBlock.appendChild(title);
 
   const meta = document.createElement('div');
   meta.className = panelStyles.meta;
   meta.textContent = 'Loading…';
-  titleWrap.appendChild(meta);
+  titleBlock.appendChild(meta);
+
+  titleWrap.append(emblem, titleBlock);
 
   const close = document.createElement('button');
   close.type = 'button';

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Polish the Quartermaster stash header with the new sauna bucket emblem,
+  layering in the freshly supplied PNG art so the inventory panel immediately
+  reflects the upgraded stash branding.
+
 - Swap enemy combatants over to the new orc portrait PNGs, retune the sprite
   metadata for their taller aspect ratio, and map player-controlled units to the
   freshly supplied Saunoja renders so battlefield and HUD art stays polished and
