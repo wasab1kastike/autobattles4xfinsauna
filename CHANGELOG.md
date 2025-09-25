@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Swap the quartermaster HUD toggle over to the polished sauna bucket crest,
+  align it beneath the artocoin shop control, and keep the overlay visuals in
+  step with the refreshed inventory branding.
+
 - Relocate the quartermaster stash behind a polished inventory crest toggle, add
   a glassmorphism popup with responsive scrim, and update the HUD layout plus
   tests so the command dock no longer reserves a bottom tab for the drawer.
