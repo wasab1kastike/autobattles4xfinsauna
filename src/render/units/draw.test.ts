@@ -88,77 +88,77 @@ describe('unit sprite placement', () => {
     const expectations = [
       {
         type: 'soldier',
-        nativeSize: { width: 64, height: 64 },
-        anchor: { x: 0.5, y: 0.815 },
-        scale: { x: 1.58771324, y: 1.375 },
-        nudge: { x: 0, y: -0.02 }
+        nativeSize: { width: 1024, height: 1536 },
+        anchor: { x: 0.5, y: 0.81 },
+        scaleY: 1.32,
+        nudge: { x: 0, y: -0.016 }
       },
       {
         type: 'archer',
-        nativeSize: { width: 64, height: 64 },
+        nativeSize: { width: 1024, height: 1536 },
         anchor: { x: 0.5, y: 0.81 },
-        scale: { x: 1.623797632, y: 1.40625 },
-        nudge: { x: 0, y: -0.015 }
+        scaleY: 1.32,
+        nudge: { x: 0, y: -0.016 }
       },
       {
         type: 'avanto-marauder',
-        nativeSize: { width: 64, height: 64 },
-        anchor: { x: 0.5, y: 0.836 },
-        scale: { x: 1.732050808, y: 1.5 },
-        nudge: { x: 0, y: -0.03 }
+        nativeSize: { width: 1024, height: 1536 },
+        anchor: { x: 0.5, y: 0.835 },
+        scaleY: 1.38,
+        nudge: { x: 0, y: -0.024 }
       },
       {
         type: 'raider',
-        nativeSize: { width: 64, height: 64 },
-        anchor: { x: 0.5, y: 0.832 },
-        scale: { x: 1.697409791, y: 1.47 },
-        nudge: { x: 0, y: -0.028 }
+        nativeSize: { width: 1024, height: 1536 },
+        anchor: { x: 0.5, y: 0.835 },
+        scaleY: 1.38,
+        nudge: { x: 0, y: -0.024 }
       },
       {
         type: 'raider-captain',
-        nativeSize: { width: 64, height: 64 },
-        anchor: { x: 0.5, y: 0.838 },
-        scale: { x: 1.796714038, y: 1.556 },
-        nudge: { x: 0, y: -0.034 }
+        nativeSize: { width: 1024, height: 1536 },
+        anchor: { x: 0.5, y: 0.842 },
+        scaleY: 1.44,
+        nudge: { x: 0, y: -0.028 }
       },
       {
         type: 'raider-shaman',
-        nativeSize: { width: 64, height: 64 },
+        nativeSize: { width: 1024, height: 1536 },
         anchor: { x: 0.5, y: 0.842 },
-        scale: { x: 1.769001225, y: 1.532 },
-        nudge: { x: 0, y: -0.036 }
+        scaleY: 1.44,
+        nudge: { x: 0, y: -0.028 }
       },
       {
         type: 'saunoja',
         nativeSize: { width: 1024, height: 1024 },
-        anchor: { x: 0.5, y: 0.66 },
-        scale: { x: 1.154700538, y: 1 },
-        nudge: { x: 0, y: -0.02 }
+        anchor: { x: 0.5, y: 0.7 },
+        scaleY: 1.2,
+        nudge: { x: 0, y: -0.018 }
       },
       {
         type: 'saunoja-guardian',
         nativeSize: { width: 1024, height: 1536 },
-        anchor: { x: 0.5, y: 0.806 },
-        scale: { x: 1.515544457, y: 1.3125 },
-        nudge: { x: 0, y: -0.015 }
+        anchor: { x: 0.5, y: 0.81 },
+        scaleY: 1.32,
+        nudge: { x: 0, y: -0.016 }
       },
       {
         type: 'saunoja-seer',
         nativeSize: { width: 1024, height: 1536 },
-        anchor: { x: 0.5, y: 0.806 },
-        scale: { x: 1.515544457, y: 1.3125 },
-        nudge: { x: 0, y: -0.015 }
+        anchor: { x: 0.5, y: 0.81 },
+        scaleY: 1.32,
+        nudge: { x: 0, y: -0.016 }
       }
     ] as const;
 
     const widthToHeightRatio = 2 / Math.sqrt(3);
 
-    for (const { type, nativeSize, anchor, scale, nudge } of expectations) {
+    for (const { type, nativeSize, anchor, scaleY, nudge } of expectations) {
       const meta = getUnitSpriteMetadata(type);
       expect(meta.nativeSize).toEqual(nativeSize);
       expect(meta.anchor).toEqual(anchor);
-      expect(meta.scale.x).toBeCloseTo(scale.x, 6);
-      expect(meta.scale.y).toBeCloseTo(scale.y, 6);
+      expect(meta.scale.y).toBeCloseTo(scaleY, 6);
+      expect(meta.scale.x).toBeCloseTo(scaleY * widthToHeightRatio, 6);
       expect(meta.scale.x).toBeCloseTo(meta.scale.y * widthToHeightRatio, 6);
       expect(meta.nudge).toEqual(nudge);
     }
