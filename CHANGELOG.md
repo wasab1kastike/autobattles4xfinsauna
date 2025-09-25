@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Ensure auto-equip replaces existing gear by parking the previous item in the
+  stash, teach the roster replace action to pick the highest-tier stash option,
+  and verify the polished flow with new integration tests so attendants always
+  leave the quartermaster with their best kit.
+
 - Update the GitHub Pages workflow to upload a uniquely named deployment
   artifact so reruns never collide on the default `github-pages` bundle and the
   publishing job can deploy our polished builds without manual retries.
