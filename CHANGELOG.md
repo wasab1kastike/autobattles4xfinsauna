@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-- Fix the asset loader failing on GitHub Pages by switching the Vite base path
-  to relative URLs so the polished unit portraits and enemy renders resolve
-  correctly when the site is served from a subdirectory.
-
 - Sync the GitHub Pages shell with the latest build assets so the docs site
   loads the fresh hashed bundles, and copy the non-cacheable headers across to
   prevent browsers from clinging to outdated scripts and styles.
