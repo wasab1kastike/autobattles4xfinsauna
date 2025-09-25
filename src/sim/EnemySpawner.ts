@@ -161,6 +161,7 @@ export class EnemySpawner {
         availableSlots,
         eliteOdds: this.eliteOdds,
         random: this.random,
+        appearanceRandom: () => Math.random(),
         difficultyMultiplier: multiplier,
         rampTier: evaluation.stage.bundleTier
       });
