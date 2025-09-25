@@ -66,7 +66,6 @@ import type { UnitBehavior } from './unit/types.ts';
 import type {
   EquipAttemptResult,
   InventoryComparison,
-  InventoryItem,
   InventoryItemSummary,
   InventoryStatDelta,
   InventoryStatId
@@ -2120,14 +2119,7 @@ function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResu
   }
   const beforeLoadout = loadoutItems(attendant.equipment);
   const beforeStats = applyEquipment(attendant.baseStats, beforeLoadout);
-  let outcome = equipLoadout(attendant, item);
-  if (!outcome.success && outcome.reason === 'slot-occupied') {
-    const slot = outcome.slot;
-    const freed = inventory.unequipToStash(unitId, slot, unequipItemFromSaunoja);
-    if (freed) {
-      outcome = equipLoadout(attendant, item);
-    }
-  }
+  const outcome = equipLoadout(attendant, item);
   if (!outcome.success) {
     return { success: false, reason: outcome.reason } satisfies EquipAttemptResult;
   }
@@ -2170,42 +2162,13 @@ function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaI
   return { id, name, description, icon, rarity, quantity } satisfies SaunojaItem;
 }
 
-const RARITY_PRIORITY: Record<string, number> = Object.freeze({
-  mythic: 5,
-  legendary: 4,
-  epic: 3,
-  rare: 2,
-  uncommon: 1,
-  common: 0
-});
-
-function resolveItemPriority(item: InventoryItem): number {
-  const rarityKey = typeof item.rarity === 'string' ? item.rarity.toLowerCase() : '';
-  const rarityScore = RARITY_PRIORITY[rarityKey] ?? -1;
-  const quantityScore = Number.isFinite(item.quantity) ? item.quantity : 0;
-  const acquiredScore = Number.isFinite(item.acquiredAt) ? item.acquiredAt : 0;
-  return rarityScore * 1_000_000 + quantityScore * 1_000 + acquiredScore;
-}
-
 function equipSlotFromStash(unitId: string, slot: EquipmentSlotId): boolean {
   const stash = inventory.getStash();
-  let bestIndex = -1;
-  let bestScore = Number.NEGATIVE_INFINITY;
-  for (let index = 0; index < stash.length; index += 1) {
-    const entry = stash[index];
-    if (!matchesSlot(entry.id, slot)) {
-      continue;
-    }
-    const score = resolveItemPriority(entry);
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-  }
-  if (bestIndex === -1) {
+  const index = stash.findIndex((entry) => matchesSlot(entry.id, slot));
+  if (index === -1) {
     return false;
   }
-  return inventory.equipFromStash(bestIndex, unitId, equipItemToSaunoja);
+  return inventory.equipFromStash(index, unitId, equipItemToSaunoja);
 }
 
 function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
@@ -2638,18 +2601,6 @@ export function __getUnitUpkeepForTest(unit: Unit): number {
 
 export function __getAttachedUnitIdForTest(attendantId: string): string | undefined {
   return saunojaToUnit.get(attendantId);
-}
-
-export function __getInventoryStateForTest(): InventoryState {
-  return inventory;
-}
-
-export function __getEquipHandlerForTest(): (unitId: string, item: SaunojaItem) => EquipAttemptResult {
-  return (unitId: string, item: SaunojaItem) => equipItemToSaunoja(unitId, item);
-}
-
-export function __equipSlotFromStashForTest(unitId: string, slot: EquipmentSlotId): boolean {
-  return equipSlotFromStash(unitId, slot);
 }
 
 export function __grantExperienceForTest(unitId: string, amount: number): void {
