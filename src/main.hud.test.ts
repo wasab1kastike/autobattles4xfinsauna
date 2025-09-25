@@ -7,14 +7,14 @@ const renderShell = () => {
       <div id="ui-overlay">
         <div class="hud-layout-root" data-hud-root>
           <div class="hud-region hud-top-row" data-hud-region="top">
-            <div class="hud-anchor hud-anchor--top-left" data-hud-anchor="top-left-cluster">
-              <div id="resource-bar"></div>
-            </div>
+            <div class="hud-anchor hud-anchor--top-left" data-hud-anchor="top-left-cluster"></div>
             <div class="hud-anchor hud-anchor--top-right" data-hud-anchor="top-right-cluster"></div>
           </div>
           <div class="hud-region hud-actions" data-hud-region="left"></div>
           <div class="hud-region hud-content" data-hud-region="content"></div>
-          <div class="hud-region hud-right-column" data-hud-region="right"></div>
+          <div class="hud-region hud-right-column" data-hud-region="right">
+            <div id="resource-bar"></div>
+          </div>
           <div class="hud-region hud-bottom-row" data-hud-region="bottom">
             <div class="hud-anchor hud-anchor--command-dock" data-hud-anchor="command-dock"></div>
           </div>
@@ -63,29 +63,29 @@ describe('main HUD lifecycle', () => {
     const { init, destroy } = await import('./main.ts');
 
     init();
-    await Promise.resolve();
-
-    expect(document.querySelectorAll('#topbar')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
-    expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
-    expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll('#topbar')).toHaveLength(1);
+      expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
+      expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
+      expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+    });
 
     destroy();
-    await Promise.resolve();
-
-    expect(document.querySelectorAll('#topbar')).toHaveLength(0);
-    expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(0);
-    expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
-    expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll('#topbar')).toHaveLength(0);
+      expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(0);
+      expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
+      expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
+    });
 
     init();
-    await Promise.resolve();
-
-    expect(document.querySelectorAll('#topbar')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
-    expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
-    expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
-  });
+    await vi.waitFor(() => {
+      expect(document.querySelectorAll('#topbar')).toHaveLength(1);
+      expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
+      expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
+      expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+    });
+  }, 20000);
 
   it('restores the classic HUD and persists the flag when the V2 exit control is used', async () => {
     const { DEFAULT_SAUNA_TIER_ID } = await import('./sauna/tiers.ts');
@@ -99,30 +99,35 @@ describe('main HUD lifecycle', () => {
     const { init, destroy } = await import('./main.ts');
 
     init();
-    await Promise.resolve();
-
-    const overlay = document.getElementById('ui-overlay');
-    expect(overlay?.dataset.hudVariant).toBe('v2');
+    await vi.waitFor(() => {
+      const overlay = document.getElementById('ui-overlay');
+      expect(overlay?.dataset.hudVariant).toBe('v2');
+    });
 
     const returnControl = document.querySelector<HTMLButtonElement>('[data-testid="return-to-classic-hud"]');
     expect(returnControl).toBeTruthy();
 
     returnControl?.click();
-    await Promise.resolve();
-
-    const saved = window.localStorage.getItem(SAUNA_SETTINGS_STORAGE_KEY);
-    expect(saved).toBeTruthy();
-    const parsed = saved ? (JSON.parse(saved) as { useUiV2?: boolean }) : null;
-    expect(parsed?.useUiV2).toBe(false);
-
-    expect(overlay?.dataset.hudVariant).toBe('classic');
-    expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
-    expect(document.querySelector('#topbar')).not.toBeNull();
-    expect(document.querySelector('[data-ui="inventory-toggle"]')).not.toBeNull();
-    expect(document.querySelector('#inventory-stash-panel')).not.toBeNull();
-    expect(document.querySelector('#right-panel')).not.toBeNull();
+    await vi.waitFor(() => {
+      const saved = window.localStorage.getItem(SAUNA_SETTINGS_STORAGE_KEY);
+      expect(saved).toBeTruthy();
+      const parsed = saved ? (JSON.parse(saved) as { useUiV2?: boolean }) : null;
+      expect(parsed?.useUiV2).toBe(false);
+      const overlay = document.getElementById('ui-overlay');
+      expect(overlay?.dataset.hudVariant).toBe('classic');
+      expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
+      expect(document.querySelector('#topbar')).not.toBeNull();
+      expect(document.querySelector('[data-ui="inventory-toggle"]')).not.toBeNull();
+      expect(document.querySelector('#inventory-stash-panel')).not.toBeNull();
+      expect(document.querySelector('#right-panel')).not.toBeNull();
+    });
 
     destroy();
-    await Promise.resolve();
-  });
+    await vi.waitFor(() => {
+      expect(document.querySelector('#topbar')).toBeNull();
+      expect(document.querySelector('[data-ui="inventory-toggle"]')).toBeNull();
+      expect(document.querySelector('#inventory-stash-panel')).toBeNull();
+      expect(document.querySelector('#right-panel')).toBeNull();
+    });
+  }, 20000);
 });

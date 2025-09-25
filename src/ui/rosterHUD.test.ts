@@ -157,24 +157,49 @@ describe('rosterHUD', () => {
     }
   });
 
-  it('activates the roster tab when expand events fire', () => {
+  it('responds to expand and collapse events from the surrounding UI', () => {
     const overlay = document.createElement('div');
     overlay.id = 'ui-overlay';
+    const resourceBar = document.createElement('div');
+    resourceBar.id = 'resource-bar';
+    overlay.appendChild(resourceBar);
     document.body.appendChild(overlay);
 
     try {
-      const layout = ensureHudLayout(overlay);
-      const rosterContainer = layout.tabs.panels.roster;
-      const hud = setupRosterHUD(rosterContainer, { rosterIcon: '/icon.svg' });
+      ensureHudLayout(overlay);
+      const hud = setupRosterHUD(resourceBar, { rosterIcon: '/icon.svg' });
 
-      layout.tabs.setActive('policies');
-      expect(layout.tabs.getActive()).toBe('policies');
+      hud.updateSummary({
+        count: 1,
+        card: {
+          id: 'saunoja-1',
+          name: 'Kalevi',
+          traits: ['Resolute'],
+          upkeep: 8,
+          behavior: 'defend',
+          progression: {
+            level: 2,
+            xp: 120,
+            xpIntoLevel: 20,
+            xpForNext: 180,
+            progress: 20 / 180,
+            statBonuses: { vigor: 4, focus: 2, resolve: 1 }
+          }
+        }
+      });
 
-      rosterContainer.dispatchEvent(
+      const rosterRoot = resourceBar.querySelector<HTMLElement>('.sauna-roster');
+      expect(rosterRoot?.dataset.expanded).toBe('false');
+
+      resourceBar.dispatchEvent(
         new CustomEvent('sauna-roster:expand', { bubbles: true })
       );
+      expect(rosterRoot?.dataset.expanded).toBe('true');
 
-      expect(layout.tabs.getActive()).toBe('roster');
+      resourceBar.dispatchEvent(
+        new CustomEvent('sauna-roster:collapse', { bubbles: true })
+      );
+      expect(rosterRoot?.dataset.expanded).toBe('false');
 
       hud.destroy();
     } finally {
