@@ -69,27 +69,21 @@ describe('setupInventoryHud', () => {
 
     const hud = setupInventoryHud(inventory);
 
-    const stashPanelHost = overlay.querySelector('[data-hud-tab-panel="stash"]');
-    expect(stashPanelHost).not.toBeNull();
-    expect(stashPanelHost?.contains(stashPanel.element)).toBe(true);
+    const stashLayer = overlay.querySelector('#inventory-stash-layer');
+    expect(stashLayer).not.toBeNull();
+    expect(stashLayer?.contains(stashPanel.element)).toBe(true);
 
-    const dockTabs = overlay.querySelector('[data-hud-command-dock-section="tabs"]');
-    expect(dockTabs?.contains(stashPanelHost!)).toBe(true);
-
-    const stashTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="stash"]');
-    const rosterTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="roster"]');
-
-    expect(stashTab).not.toBeNull();
-    expect(rosterTab).not.toBeNull();
+    const inventoryToggle = overlay.querySelector<HTMLButtonElement>('[data-ui="inventory-toggle"]');
+    expect(inventoryToggle).not.toBeNull();
 
     setOpenMock.mockClear();
 
-    stashTab!.click();
+    inventoryToggle!.click();
 
     expect(setOpenMock).toHaveBeenCalledWith(true);
     expect(overlay.classList.contains('inventory-panel-open')).toBe(true);
 
-    rosterTab!.click();
+    inventoryToggle!.click();
 
     expect(setOpenMock).toHaveBeenCalledWith(false);
     expect(overlay.classList.contains('inventory-panel-open')).toBe(false);
