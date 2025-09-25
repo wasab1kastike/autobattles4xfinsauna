@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Refresh the HUD inventory toggle so it renders the sauna bucket crest from
+  `inventory-saunabucket-01.png`, keeping the quartermaster control aligned with
+  the polished stash artwork.
+
+- Swap the quartermaster HUD toggle over to the polished sauna bucket crest,
+  align it beneath the artocoin shop control, and keep the overlay visuals in
+  step with the refreshed inventory branding.
+
+- Relocate the quartermaster stash behind a polished inventory crest toggle, add
+  a glassmorphism popup with responsive scrim, and update the HUD layout plus
+  tests so the command dock no longer reserves a bottom tab for the drawer.
+
 - Extend unit spawning with dedicated appearance samplers that fall back to the
   provided deterministic RNG, ensuring Saunoja recruits and invading orcs roll
   across every polished model without desynchronising combat scaling, and cover

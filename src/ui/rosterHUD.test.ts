@@ -167,8 +167,8 @@ describe('rosterHUD', () => {
       const rosterContainer = layout.tabs.panels.roster;
       const hud = setupRosterHUD(rosterContainer, { rosterIcon: '/icon.svg' });
 
-      layout.tabs.setActive('stash');
-      expect(layout.tabs.getActive()).toBe('stash');
+      layout.tabs.setActive('policies');
+      expect(layout.tabs.getActive()).toBe('policies');
 
       rosterContainer.dispatchEvent(
         new CustomEvent('sauna-roster:expand', { bubbles: true })
