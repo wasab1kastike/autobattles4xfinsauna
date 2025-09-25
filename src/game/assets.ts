@@ -23,6 +23,29 @@ export const uiIcons = {
   artocoin: ARTOCOIN_CREST_PNG_DATA_URL
 } as const;
 
+const saunojaSprites = {
+  'unit-saunoja': saunojaVanguard,
+  'unit-saunoja-guardian': saunojaGuardian,
+  'unit-saunoja-seer': saunojaSeer
+} as const;
+
+const enemyOrcSprites = {
+  'unit-enemy-orc-1': enemyOrcVanguard,
+  'unit-enemy-orc-2': enemyOrcWarlock
+} as const;
+
+const unitSprites = {
+  'unit-soldier': saunojaGuardian,
+  'unit-archer': saunojaSeer,
+  'unit-avanto-marauder': enemyOrcVanguard,
+  'unit-marauder': enemyOrcVanguard,
+  'unit-raider': enemyOrcVanguard,
+  'unit-raider-captain': enemyOrcWarlock,
+  'unit-raider-shaman': enemyOrcWarlock,
+  ...saunojaSprites,
+  ...enemyOrcSprites
+} as const;
+
 export const assetPaths: AssetPaths = {
   images: {
     placeholder:
@@ -31,18 +54,7 @@ export const assetPaths: AssetPaths = {
     'building-barracks': barracks,
     'building-city': city,
     'building-mine': mine,
-    'unit-soldier': saunojaGuardian,
-    'unit-archer': saunojaSeer,
-    'unit-avanto-marauder': enemyOrcVanguard,
-    'unit-marauder': enemyOrcVanguard,
-    'unit-raider': enemyOrcVanguard,
-    'unit-raider-captain': enemyOrcWarlock,
-    'unit-raider-shaman': enemyOrcWarlock,
-    'unit-enemy-orc-1': enemyOrcVanguard,
-    'unit-enemy-orc-2': enemyOrcWarlock,
-    'unit-saunoja': saunojaVanguard,
-    'unit-saunoja-guardian': saunojaGuardian,
-    'unit-saunoja-seer': saunojaSeer,
+    ...unitSprites,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,

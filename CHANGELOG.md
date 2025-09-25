@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Route battlefield units through the freshly supplied Saunoja and orc PNG
+  variants, consolidating sprite registration so spawn-time appearance sampling
+  always resolves the polished art the new models ship with.
+
 - Extend unit spawning with dedicated appearance samplers that fall back to the
   provided deterministic RNG, ensuring Saunoja recruits and invading orcs roll
   across every polished model without desynchronising combat scaling, and cover
