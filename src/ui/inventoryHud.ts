@@ -27,6 +27,8 @@ import {
 import type { SaunaTierId } from '../sauna/tiers.ts';
 import type { PurchaseSaunaTierResult } from '../progression/saunaShop.ts';
 
+const INVENTORY_ICON_URL = new URL('../../assets/ui/inventory-saunabucket-01.png', import.meta.url).href;
+
 export interface InventoryHudOptions {
   readonly getSelectedUnitId?: () => string | null;
   readonly getComparisonContext?: () => InventoryComparisonContext | null;
@@ -167,22 +169,17 @@ function createInventoryButton(): InventoryToggleElements {
 
   const iconWrap = document.createElement('span');
   iconWrap.className =
-    'relative flex h-[1.85rem] w-[1.85rem] flex-shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(145,196,255,0.38),rgba(34,59,104,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.32)]';
+    'relative flex h-[1.85rem] w-[1.85rem] flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/24 bg-[radial-gradient(circle_at_32%_28%,rgba(144,196,255,0.48),rgba(30,48,82,0.88))] shadow-[inset_0_1px_0_rgba(255,255,255,0.34)]';
   iconWrap.setAttribute('aria-hidden', 'true');
 
-  const chestBody = document.createElement('span');
-  chestBody.className =
-    'absolute left-[18%] right-[18%] bottom-[18%] h-[42%] rounded-[11px] bg-[linear-gradient(160deg,rgba(70,108,160,0.96),rgba(29,48,84,0.96))] shadow-[0_6px_14px_rgba(8,16,32,0.55)]';
+  const icon = document.createElement('img');
+  icon.src = INVENTORY_ICON_URL;
+  icon.alt = '';
+  icon.decoding = 'async';
+  icon.loading = 'lazy';
+  icon.className = 'h-[115%] w-[115%] object-cover drop-shadow-[0_12px_18px_rgba(10,18,36,0.5)]';
 
-  const chestLid = document.createElement('span');
-  chestLid.className =
-    'absolute left-[18%] right-[18%] top-[18%] h-[26%] rounded-[9px] bg-[linear-gradient(140deg,rgba(224,236,255,0.92),rgba(122,168,220,0.3))] shadow-[0_3px_8px_rgba(10,18,32,0.45)]';
-
-  const chestHandle = document.createElement('span');
-  chestHandle.className =
-    'absolute left-1/2 top-[36%] h-[32%] w-[32%] -translate-x-1/2 rounded-full border border-white/45 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.78),rgba(156,206,255,0.25))] shadow-[0_4px_10px_rgba(9,17,32,0.35)]';
-
-  iconWrap.append(chestBody, chestHandle, chestLid);
+  iconWrap.append(icon);
 
   const label = document.createElement('span');
   label.className =
@@ -248,7 +245,7 @@ export function setupInventoryHud(
 
   const { button: inventoryButton, badge: inventoryBadge } = createInventoryButton();
   inventoryButton.dataset.ui = 'inventory-toggle';
-  topLeftCluster.prepend(inventoryButton);
+  topLeftCluster.appendChild(inventoryButton);
 
   const stashLayer = doc.createElement('div');
   stashLayer.id = 'inventory-stash-layer';
@@ -334,7 +331,7 @@ export function setupInventoryHud(
       options.getSaunaShopViewModel?.() ?? { balance: 0, tiers: [] };
     shopButton = createShopButton();
     shopButton.dataset.state = 'locked';
-    topLeftCluster.appendChild(shopButton);
+    topLeftCluster.insertBefore(shopButton, inventoryButton);
 
     const emitShopToast = (message: string, variant: SaunaShopToastVariant) => {
       const mapped = shopToastVariants[variant] ?? 'info';
