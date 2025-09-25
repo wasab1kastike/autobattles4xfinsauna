@@ -7,7 +7,11 @@ import {
   type SchedulerEventContent,
   type SchedulerTriggeredPayload
 } from '../events';
-import { ensureHudLayout, HUD_OVERLAY_COLLAPSED_CLASS } from './layout.ts';
+import {
+  ensureHudLayout,
+  HUD_OVERLAY_COLLAPSED_CLASS,
+  type HudBottomTabId,
+} from './layout.ts';
 import { subscribeToIsMobile } from './hooks/useIsMobile.ts';
 import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
@@ -65,10 +69,11 @@ export function setupRightPanel(
     return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
   }
 
-  const { regions, anchors, dock, mobileBar } = ensureHudLayout(overlay);
+  const { regions, anchors, dock, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
   const rightRegion = regions.right;
   const commandDock = dock.actions;
-  const rosterHudPanel = overlay.querySelector<HTMLDivElement>('#resource-bar');
+  const rosterHudPanel = bottomTabs.panels.roster;
+  const policyHudPanel = bottomTabs.panels.policies;
 
   const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle') => {
     if (!rosterHudPanel) {
@@ -114,6 +119,17 @@ export function setupRightPanel(
 
   const smallViewportQuery = window.matchMedia('(max-width: 960px)');
   const disposers: Array<() => void> = [];
+
+  const applyRosterState = (tabId: HudBottomTabId): void => {
+    if (tabId === 'roster') {
+      dispatchRosterEvent('expand');
+    } else {
+      dispatchRosterEvent('collapse');
+    }
+  };
+
+  applyRosterState(bottomTabs.getActive());
+  disposers.push(bottomTabs.onChange(applyRosterState));
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
@@ -416,10 +432,6 @@ export function setupRightPanel(
   rosterTab.setAttribute('role', 'region');
   rosterTab.setAttribute('aria-live', 'polite');
   rosterTab.setAttribute('aria-label', 'Battalion roster');
-  const policiesTab = document.createElement('div');
-  policiesTab.id = 'right-panel-policies';
-  policiesTab.setAttribute('role', 'region');
-  policiesTab.setAttribute('aria-label', 'Council policies');
   const eventsTab = document.createElement('div');
   eventsTab.id = 'right-panel-events';
   const logSection = document.createElement('div');
@@ -456,9 +468,12 @@ export function setupRightPanel(
 
   const tabs: Record<string, HTMLDivElement> = {
     Roster: rosterTab,
-    Policies: policiesTab,
     Events: eventsTab,
     Log: logSection
+  };
+
+  const bottomTabTargets: Partial<Record<string, HudBottomTabId>> = {
+    Roster: 'roster',
   };
 
   const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
@@ -479,8 +494,13 @@ export function setupRightPanel(
       b.disabled = isActive;
       b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     }
-    if (tab === 'Roster') {
-      dispatchRosterEvent('expand');
+    const targetBottomTab = bottomTabTargets[tab];
+    if (targetBottomTab) {
+      if (bottomTabs.getActive() !== targetBottomTab) {
+        bottomTabs.setActive(targetBottomTab);
+      } else {
+        applyRosterState(targetBottomTab);
+      }
     } else {
       dispatchRosterEvent('collapse');
     }
@@ -524,7 +544,7 @@ export function setupRightPanel(
   }
 
   // --- Policies ---
-  const policyPanel = createPolicyPanel(policiesTab, state);
+  const policyPanel = createPolicyPanel(policyHudPanel, state);
   disposers.push(() => policyPanel.destroy());
 
   // --- Events ---
