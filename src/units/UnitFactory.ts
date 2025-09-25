@@ -6,6 +6,7 @@ import { eventBus } from '../events/EventBus.ts';
 import { computeUnitStats } from '../unit/calc.ts';
 import { normalizeLevel } from '../unit/level.ts';
 import { tryGetUnitArchetype } from '../unit/archetypes.ts';
+import { resolveUnitAppearance } from '../unit/appearance.ts';
 import type {
   UnitArchetypeDefinition,
   UnitArchetypeId,
@@ -14,7 +15,24 @@ import type {
 
 export type UnitType = UnitArchetypeId;
 
-export interface UnitSpawnOptions extends UnitBuildOptions {}
+export interface UnitSpawnOptions extends UnitBuildOptions {
+  appearanceId?: string;
+  random?: () => number;
+  appearanceRandom?: () => number;
+}
+
+function resolveAppearanceSampler(options?: UnitSpawnOptions): (() => number) | undefined {
+  if (!options) {
+    return undefined;
+  }
+  if (typeof options.appearanceRandom === 'function') {
+    return options.appearanceRandom;
+  }
+  if (typeof options.random === 'function') {
+    return options.random;
+  }
+  return undefined;
+}
 
 function instantiateArchetype(
   archetype: UnitArchetypeDefinition,
@@ -25,6 +43,12 @@ function instantiateArchetype(
 ): Unit {
   const level = normalizeLevel(options?.level);
   const stats = computeUnitStats(archetype, level);
+  const appearanceSampler = resolveAppearanceSampler(options);
+  const appearance = resolveUnitAppearance(
+    archetype.id,
+    options?.appearanceId,
+    appearanceSampler
+  );
   return new Unit(
     id,
     archetype.id,
@@ -32,7 +56,8 @@ function instantiateArchetype(
     faction,
     stats,
     archetype.priorityFactions,
-    options?.behavior
+    options?.behavior,
+    appearance
   );
 }
 

@@ -26,6 +26,8 @@ type UnitSpriteId =
   | 'saunoja'
   | 'saunoja-guardian'
   | 'saunoja-seer'
+  | 'enemy-orc-1'
+  | 'enemy-orc-2'
   | 'default';
 
 const HEX_WIDTH_TO_HEIGHT_RATIO = 2 / Math.sqrt(3);
@@ -94,6 +96,8 @@ export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   raider: ENEMY_VANGUARD_META,
   'raider-captain': ENEMY_WARLOCK_META,
   'raider-shaman': ENEMY_WARLOCK_META,
+  'enemy-orc-1': ENEMY_VANGUARD_META,
+  'enemy-orc-2': ENEMY_WARLOCK_META,
   saunoja: PLAYER_SQUARE_META,
   'saunoja-guardian': PLAYER_TALL_META,
   'saunoja-seer': PLAYER_TALL_META
