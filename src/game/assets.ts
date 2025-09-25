@@ -7,17 +7,19 @@ import saunojaGuardian from '../../assets/units/saunoja-02.png';
 import saunojaSeer from '../../assets/units/saunoja-03.png';
 import enemyOrcVanguard from '../../assets/units/enemy-orc-1.png';
 import enemyOrcWarlock from '../../assets/units/enemy-orc-2.png';
+import saunaBeerIcon from '../../assets/ui/sauna-beer.svg';
+import saunaRosterIcon from '../../assets/ui/saunoja-roster.svg';
+import resourceIcon from '../../assets/ui/resource.svg';
+import soundIcon from '../../assets/ui/sound.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
-const PUBLIC_ASSET_BASE = import.meta.env.BASE_URL ?? '/';
-
 export const uiIcons = {
-  saunaBeer: `${PUBLIC_ASSET_BASE}assets/ui/sauna-beer.svg`,
-  saunojaRoster: `${PUBLIC_ASSET_BASE}assets/ui/saunoja-roster.svg`,
-  resource: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sisu: `${PUBLIC_ASSET_BASE}assets/ui/resource.svg`,
-  sound: `${PUBLIC_ASSET_BASE}assets/ui/sound.svg`,
+  saunaBeer: saunaBeerIcon,
+  saunojaRoster: saunaRosterIcon,
+  resource: resourceIcon,
+  sisu: resourceIcon,
+  sound: soundIcon,
   artocoin: ARTOCOIN_CREST_PNG_DATA_URL
 } as const;
 
