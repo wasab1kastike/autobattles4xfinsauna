@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Teach the quartermaster auto-equip pass to rank stash gear by slot power,
+  cascading past blocked upgrades so loot pickups and Replace actions keep our
+  attendants in the highest-tier equipment available.
+
 - Update the GitHub Pages workflow to upload a uniquely named deployment
   artifact so reruns never collide on the default `github-pages` bundle and the
   publishing job can deploy our polished builds without manual retries.

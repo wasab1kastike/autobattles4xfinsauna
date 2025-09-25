@@ -10,6 +10,58 @@ import {
 } from './types.ts';
 import type { Saunoja, SaunojaItem } from '../units/saunoja.ts';
 
+const RARITY_RANK: Record<string, number> = Object.freeze({
+  mythic: 6,
+  legendary: 5,
+  epic: 4,
+  rare: 3,
+  uncommon: 2,
+  common: 1
+});
+
+function normalizeRarity(value?: string | null): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function getRarityRank(value?: string | null): number {
+  const key = normalizeRarity(value);
+  return RARITY_RANK[key] ?? 0;
+}
+
+function sumPositiveModifiers(modifiers: EquipmentModifier | undefined): number {
+  if (!modifiers) {
+    return 0;
+  }
+  let total = 0;
+  for (const value of Object.values(modifiers)) {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      total += value;
+    }
+  }
+  return total;
+}
+
+function resolveStackCount(quantity?: number): number {
+  if (!Number.isFinite(quantity)) {
+    return 1;
+  }
+  return Math.max(1, Math.round(quantity as number));
+}
+
+export function evaluateEquipmentPower(item: SaunojaItem | EquippedItem): number {
+  const definition = getItemDefinition(item.id);
+  if (!definition) {
+    return 0;
+  }
+  const rarity = getRarityRank(item.rarity);
+  const modifiers = 'modifiers' in item && item.modifiers
+    ? item.modifiers
+    : definition.modifiers ?? ({} as EquipmentModifier);
+  const stacks = resolveStackCount(item.quantity);
+  const modifierScore = sumPositiveModifiers(modifiers) * stacks;
+  return rarity * 1000 + modifierScore;
+}
+
 const SLOT_DEFINITIONS: Record<EquipmentSlotId, EquipmentSlotDefinition> = Object.freeze({
   supply: Object.freeze({
     id: 'supply',
@@ -233,7 +285,12 @@ export interface EquipOutcome {
   readonly slot: EquipmentSlotId;
   readonly loadout: readonly EquippedItem[];
   readonly item: EquippedItem | null;
+  readonly removed?: EquippedItem | null;
   readonly reason?: string;
+}
+
+export interface EquipOptions {
+  readonly allowDowngrade?: boolean;
 }
 
 export interface UnequipOutcome {
@@ -244,7 +301,7 @@ export interface UnequipOutcome {
   readonly reason?: string;
 }
 
-export function equip(unit: Saunoja, item: SaunojaItem): EquipOutcome {
+export function equip(unit: Saunoja, item: SaunojaItem, options: EquipOptions = {}): EquipOutcome {
   const definition = getItemDefinition(item.id);
   if (!definition) {
     return {
@@ -264,12 +321,37 @@ export function equip(unit: Saunoja, item: SaunojaItem): EquipOutcome {
   const existing = equipment[slot];
 
   if (existing && existing.id !== item.id) {
+    const incomingStacks = Math.min(limit, incomingQuantity);
+    const incomingPreview: SaunojaItem = {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      icon: item.icon,
+      rarity: item.rarity,
+      quantity: incomingStacks
+    } satisfies SaunojaItem;
+    const incomingPower = evaluateEquipmentPower(incomingPreview);
+    const existingPower = evaluateEquipmentPower(existing);
+    const shouldReplace = options.allowDowngrade === true || incomingPower > existingPower;
+    if (!shouldReplace) {
+      return {
+        success: false,
+        slot,
+        loadout: loadoutItems(equipment),
+        item: existing,
+        reason: 'slot-occupied'
+      } satisfies EquipOutcome;
+    }
+
+    const equipped = toEquippedItem(item, slot, definition, incomingStacks);
+    equipment[slot] = equipped;
+    unit.items = loadoutToItems(equipment);
     return {
-      success: false,
+      success: true,
       slot,
       loadout: loadoutItems(equipment),
-      item: existing,
-      reason: 'slot-occupied'
+      item: equipped,
+      removed: existing
     } satisfies EquipOutcome;
   }
 
@@ -320,4 +402,32 @@ export function unequip(unit: Saunoja, slot: EquipmentSlotId): UnequipOutcome {
 export function matchesSlot(itemId: string, slot: EquipmentSlotId): boolean {
   const definition = getItemDefinition(itemId);
   return definition?.slot === slot;
+}
+
+type RankedCandidate = { index: number; score: number };
+
+function byDescendingScore(a: RankedCandidate, b: RankedCandidate): number {
+  if (a.score !== b.score) {
+    return b.score - a.score;
+  }
+  return a.index - b.index;
+}
+
+export function rankEquipmentCandidates(
+  items: readonly SaunojaItem[],
+  slot: EquipmentSlotId
+): readonly number[] {
+  const ranked: RankedCandidate[] = [];
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (!matchesSlot(item.id, slot)) {
+      continue;
+    }
+    ranked.push({
+      index,
+      score: evaluateEquipmentPower(item)
+    });
+  }
+  ranked.sort(byDescendingScore);
+  return ranked.map((entry) => entry.index);
 }

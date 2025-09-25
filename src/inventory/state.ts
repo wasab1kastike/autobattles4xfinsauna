@@ -38,6 +38,7 @@ export interface EquipAttemptResult {
   readonly success: boolean;
   readonly comparison?: InventoryComparison;
   readonly reason?: string;
+  readonly returnedItem?: SaunojaItem | null;
 }
 
 export interface InventoryItem extends SaunojaItem {
@@ -294,6 +295,41 @@ export class InventoryState {
     }
   }
 
+  private storeReturnedItem(
+    item: SaunojaItem | null | undefined,
+    preferred: InventoryCollection,
+    insertIndex?: number
+  ): InventoryItem | null {
+    if (!item) {
+      return null;
+    }
+    const timestamp = Math.max(0, Math.round(this.now()));
+    const entry = sanitizeItem(item, timestamp);
+    if (preferred === 'inventory') {
+      const index =
+        typeof insertIndex === 'number' && Number.isFinite(insertIndex)
+          ? Math.min(Math.max(0, Math.floor(insertIndex)), this.inventory.length)
+          : this.inventory.length;
+      this.inventory.splice(index, 0, entry);
+      return entry;
+    }
+    const desiredIndex =
+      typeof insertIndex === 'number' && Number.isFinite(insertIndex)
+        ? Math.max(0, Math.floor(insertIndex))
+        : this.stash.length;
+    let index = Math.min(desiredIndex, this.stash.length);
+    if (this.stash.length >= this.maxStashSize) {
+      const removeCount = this.stash.length - this.maxStashSize + 1;
+      const overflow = this.stash.splice(0, removeCount);
+      if (overflow.length > 0) {
+        console.warn('Inventory stash full while returning equipped item', overflow);
+      }
+      index = Math.min(Math.max(0, desiredIndex - removeCount), this.stash.length);
+    }
+    this.stash.splice(index, 0, entry);
+    return entry;
+  }
+
   private normalizeEquipResult(result: boolean | EquipAttemptResult): EquipAttemptResult {
     if (typeof result === 'boolean') {
       return { success: result } satisfies EquipAttemptResult;
@@ -304,7 +340,8 @@ export class InventoryState {
     return {
       success: Boolean(result.success),
       comparison: result.comparison,
-      reason: result.reason
+      reason: result.reason,
+      returnedItem: result.returnedItem ?? null
     } satisfies EquipAttemptResult;
   }
 
@@ -369,7 +406,11 @@ export class InventoryState {
         equipOutcome = { success: false } satisfies EquipAttemptResult;
       }
       if (equipOutcome.success) {
+        const returned = this.storeReturnedItem(equipOutcome.returnedItem ?? null, 'stash');
         this.persist();
+        if (returned) {
+          this.emit({ type: 'stash-updated', stash: this.getStash() });
+        }
         this.emit({
           type: 'item-acquired',
           item: entry,
@@ -433,6 +474,7 @@ export class InventoryState {
       return false;
     }
     const [removed] = this.stash.splice(index, 1);
+    this.storeReturnedItem(outcome.returnedItem ?? null, 'stash', index);
     this.persist();
     this.emit({ type: 'stash-updated', stash: this.getStash() });
     this.emit({
@@ -467,6 +509,7 @@ export class InventoryState {
       return false;
     }
     const [removed] = this.inventory.splice(index, 1);
+    this.storeReturnedItem(outcome.returnedItem ?? null, 'inventory', index);
     this.persist();
     this.emit({ type: 'inventory-updated', inventory: this.getInventory() });
     this.emit({

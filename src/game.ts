@@ -112,8 +112,8 @@ import {
   equip as equipLoadout,
   unequip as unequipLoadout,
   loadoutItems,
-  matchesSlot,
-  getSlotDefinition
+  getSlotDefinition,
+  rankEquipmentCandidates
 } from './items/equip.ts';
 import { EQUIPMENT_SLOT_IDS } from './items/types.ts';
 import type { EquipmentSlotId, EquippedItem, EquipmentModifier } from './items/types.ts';
@@ -1041,7 +1041,7 @@ export function setupGame(
     inventoryHudController = setupInventoryHud(inventory, {
       getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
       getComparisonContext: () => getSelectedInventoryContext(),
-      onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
+      onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item, { allowDowngrade: true }),
       getUseUiV2,
       onUseUiV2Change: setUseUiV2,
       getSaunaShopViewModel: () => buildSaunaShopViewModel(),
@@ -2112,14 +2112,18 @@ export function handleCanvasClick(world: PixelCoord): void {
   invalidateFrame();
 }
 
-function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
+function equipItemToSaunoja(
+  unitId: string,
+  item: SaunojaItem,
+  options: { allowDowngrade?: boolean } = {}
+): EquipAttemptResult {
   const attendant = saunojas.find((unit) => unit.id === unitId);
   if (!attendant) {
     return { success: false, reason: 'unit-missing' } satisfies EquipAttemptResult;
   }
   const beforeLoadout = loadoutItems(attendant.equipment);
   const beforeStats = applyEquipment(attendant.baseStats, beforeLoadout);
-  const outcome = equipLoadout(attendant, item);
+  const outcome = equipLoadout(attendant, item, { allowDowngrade: options.allowDowngrade });
   if (!outcome.success) {
     return { success: false, reason: outcome.reason } satisfies EquipAttemptResult;
   }
@@ -2132,13 +2136,23 @@ function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResu
     syncSelectionOverlay();
   }
   const previous = beforeLoadout.find((entry) => entry.slot === outcome.slot) ?? null;
+  const returnedItem = outcome.removed
+    ? ({
+        id: outcome.removed.id,
+        name: outcome.removed.name,
+        description: outcome.removed.description,
+        icon: outcome.removed.icon,
+        rarity: outcome.removed.rarity,
+        quantity: outcome.removed.quantity
+      } satisfies SaunojaItem)
+    : null;
   const comparison: InventoryComparison = {
     slot: outcome.slot,
     previous: summarizeEquippedItem(previous),
     next: summarizeEquippedItem(outcome.item ?? null),
     deltas: computeInventoryStatDeltas(beforeStats, effective)
   } satisfies InventoryComparison;
-  return { success: true, comparison } satisfies EquipAttemptResult;
+  return { success: true, comparison, returnedItem } satisfies EquipAttemptResult;
 }
 
 function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaItem | null {
@@ -2164,11 +2178,16 @@ function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaI
 
 function equipSlotFromStash(unitId: string, slot: EquipmentSlotId): boolean {
   const stash = inventory.getStash();
-  const index = stash.findIndex((entry) => matchesSlot(entry.id, slot));
-  if (index === -1) {
-    return false;
+  const candidates = rankEquipmentCandidates(stash, slot);
+  for (const index of candidates) {
+    const equipped = inventory.equipFromStash(index, unitId, (id, entry) =>
+      equipItemToSaunoja(id, entry, { allowDowngrade: false })
+    );
+    if (equipped) {
+      return true;
+    }
   }
-  return inventory.equipFromStash(index, unitId, equipItemToSaunoja);
+  return false;
 }
 
 function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
@@ -2372,7 +2391,7 @@ const onUnitDied = ({
         const receipt = inventory.addLoot(drop, {
           unitId: selectedAttendant?.id,
           sourceTableId: lootResult.tableId,
-          equip: equipItemToSaunoja
+          equip: (unit, lootItem) => equipItemToSaunoja(unit, lootItem, { allowDowngrade: false })
         });
         if (receipt.equipped) {
           const ownerName = selectedAttendant?.name ?? 'our champion';

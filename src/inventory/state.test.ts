@@ -5,6 +5,7 @@ import {
   type InventoryComparison,
   type EquipAttemptResult
 } from './state.ts';
+import { rankEquipmentCandidates } from '../items/equip.ts';
 
 const SAMPLE_ITEM = {
   id: 'emberglass-arrow',
@@ -41,6 +42,18 @@ describe('InventoryState', () => {
     expect(inventory.getStashSize()).toBe(0);
   });
 
+  it('stores returned items when auto-equip replaces gear', () => {
+    const inventory = new InventoryState({ now: () => 550 });
+    const equip = vi.fn().mockReturnValue({
+      success: true,
+      returnedItem: { id: 'glacier-brand', name: 'Glacier Brand', quantity: 1 }
+    } satisfies EquipAttemptResult);
+    const receipt = inventory.addItem(SAMPLE_ITEM, { unitId: 's1', equip });
+    expect(receipt.equipped).toBe(true);
+    expect(inventory.getStashSize()).toBe(1);
+    expect(inventory.getStash()[0]?.id).toBe('glacier-brand');
+  });
+
   it('adds items to stash when auto-equip is disabled', () => {
     const equip = vi.fn().mockReturnValue(true);
     const inventory = new InventoryState({ now: () => 600, autoEquip: false });
@@ -70,6 +83,56 @@ describe('InventoryState', () => {
     expect(equipEvent?.from).toBe('stash');
     expect(equipEvent?.comparison).toBeUndefined();
     stop();
+  });
+
+  it('returns replaced stash items to the stash', () => {
+    const equip = vi.fn().mockReturnValue({
+      success: true,
+      returnedItem: { id: 'glacier-brand', name: 'Glacier Brand', quantity: 1 }
+    } satisfies EquipAttemptResult);
+    const inventory = new InventoryState({ now: () => 720 });
+    inventory.addItem(SAMPLE_ITEM, { autoEquip: false });
+
+    const equipped = inventory.equipFromStash(0, 's1', equip);
+    expect(equipped).toBe(true);
+    expect(inventory.getStashSize()).toBe(1);
+    expect(inventory.getStash()[0]?.id).toBe('glacier-brand');
+  });
+
+  it('falls back to the next best stash upgrade when the top choice fails', () => {
+    const inventory = new InventoryState({ now: () => 780 });
+    inventory.addItem(
+      { id: 'emberglass-arrow', name: 'Emberglass Arrow', quantity: 1, rarity: 'legendary' },
+      { autoEquip: false }
+    );
+    inventory.addItem(
+      { id: 'glacier-brand', name: 'Glacier Brand', quantity: 1, rarity: 'rare' },
+      { autoEquip: false }
+    );
+
+    const order = rankEquipmentCandidates(inventory.getStash(), 'weapon');
+    expect(order).toEqual([0, 1]);
+
+    let equipped = false;
+    const attempts: boolean[] = [];
+    for (const index of order) {
+      const result = inventory.equipFromStash(index, 's1', (_unit, entry) =>
+        entry.id === 'emberglass-arrow'
+          ? ({ success: false, reason: 'slot-occupied' } satisfies EquipAttemptResult)
+          : ({ success: true } satisfies EquipAttemptResult)
+      );
+      attempts.push(result);
+      if (result) {
+        equipped = true;
+        break;
+      }
+    }
+
+    expect(attempts[0]).toBe(false);
+    expect(equipped).toBe(true);
+    const remaining = inventory.getStash();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0]?.id).toBe('emberglass-arrow');
   });
 
   it('discards items from the stash', () => {
@@ -134,6 +197,21 @@ describe('InventoryState', () => {
     expect(equipEvent?.from).toBe('inventory');
     expect(equipEvent?.comparison).toEqual(comparison);
     stop();
+  });
+
+  it('returns replaced inventory items to the ready inventory', () => {
+    const equip = vi.fn().mockReturnValue({
+      success: true,
+      returnedItem: { id: 'glacier-brand', name: 'Glacier Brand', quantity: 1 }
+    } satisfies EquipAttemptResult);
+    const inventory = new InventoryState({ now: () => 1220 });
+    inventory.addItem(SAMPLE_ITEM, { autoEquip: false });
+    inventory.moveToInventory(0);
+
+    const equipped = inventory.equipFromInventory(0, 's1', equip);
+    expect(equipped).toBe(true);
+    expect(inventory.getInventory()).toHaveLength(1);
+    expect(inventory.getInventory()[0]?.id).toBe('glacier-brand');
   });
 
   it('discards items from the ready inventory', () => {
