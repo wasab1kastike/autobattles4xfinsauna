@@ -2,12 +2,7 @@
 
 ## Unreleased
 
-- Restore the published docs bundle to the pre-refresh assets so the mirror
-  stops churning the large PNG art files on every release iteration.
 
-- Mirror the freshly generated `dist/` build into `docs/` so the published
-  sauna battle demo advertises the latest commit hash and versioned assets in
-  its polished build badge.
 
 - Refresh the HUD inventory toggle so it renders the sauna bucket crest from
   `inventory-saunabucket-01.png`, keeping the quartermaster control aligned with
