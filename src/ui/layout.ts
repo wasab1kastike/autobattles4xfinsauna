@@ -18,24 +18,11 @@ export type HudLayoutDock = {
   actions: HTMLDivElement;
 };
 
-export type HudBottomTabId = 'roster' | 'policies';
-
-export type HudBottomTabs = {
-  container: HTMLDivElement;
-  tabList: HTMLDivElement;
-  panels: Record<HudBottomTabId, HTMLDivElement>;
-  getActive(): HudBottomTabId;
-  setActive(id: HudBottomTabId): void;
-  setBadge(id: HudBottomTabId, value: number | string | null): void;
-  onChange(handler: (id: HudBottomTabId) => void): () => void;
-};
-
 export type HudLayout = {
   root: HTMLDivElement;
   regions: HudLayoutRegions;
   anchors: HudLayoutAnchors;
   dock: HudLayoutDock;
-  tabs: HudBottomTabs;
   /**
    * @deprecated Prefer {@link regions.left}. Maintained for backwards compatibility.
    */
@@ -73,27 +60,6 @@ const ANCHOR_DATASET_NAMES: Record<keyof HudLayoutAnchors, string> = {
   topRightCluster: 'top-right-cluster',
   commandDock: 'command-dock',
 };
-
-const BOTTOM_TAB_ORDER: HudBottomTabId[] = ['roster', 'policies'];
-
-const BOTTOM_TAB_LABELS: Record<HudBottomTabId, string> = {
-  roster: 'Roster',
-  policies: 'Policies',
-};
-
-type BottomTabState = {
-  container: HTMLDivElement;
-  tabList: HTMLDivElement;
-  panelWrapper: HTMLDivElement;
-  buttons: Record<HudBottomTabId, HTMLButtonElement>;
-  badges: Record<HudBottomTabId, HTMLSpanElement>;
-  panels: Record<HudBottomTabId, HTMLDivElement>;
-  listeners: Set<(id: HudBottomTabId) => void>;
-  active: HudBottomTabId;
-  keydownHandler: ((event: KeyboardEvent) => void) | null;
-};
-
-const bottomTabStates = new WeakMap<HTMLDivElement, BottomTabState>();
 
 type CommandDockSection = 'tabs' | 'actions';
 
@@ -194,280 +160,6 @@ function applyVariantClasses(
   }
 }
 
-function ensureBottomTabs(
-  region: HTMLDivElement,
-  doc: Document,
-  overlay: HTMLElement
-): HudBottomTabs {
-  let container = region.querySelector<HTMLDivElement>('[data-hud-bottom-tabs]');
-  if (!container) {
-    container = doc.createElement('div');
-    container.dataset.hudBottomTabs = 'true';
-    region.appendChild(container);
-  }
-  container.classList.add('hud-bottom-tabs');
-
-  let chrome = container.querySelector<HTMLDivElement>('[data-hud-bottom-tabs-chrome]');
-  if (!chrome) {
-    chrome = doc.createElement('div');
-    chrome.dataset.hudBottomTabsChrome = 'true';
-    container.appendChild(chrome);
-  }
-  chrome.classList.add('hud-bottom-tabs__chrome');
-
-  let tabList = chrome.querySelector<HTMLDivElement>('[data-hud-bottom-tablist]');
-  if (!tabList) {
-    tabList = doc.createElement('div');
-    tabList.dataset.hudBottomTablist = 'true';
-    chrome.appendChild(tabList);
-  }
-  tabList.classList.add('hud-bottom-tabs__list');
-  tabList.setAttribute('role', 'tablist');
-
-  let panelWrapper = chrome.querySelector<HTMLDivElement>('[data-hud-bottom-panels]');
-  if (!panelWrapper) {
-    panelWrapper = doc.createElement('div');
-    panelWrapper.dataset.hudBottomPanels = 'true';
-    chrome.appendChild(panelWrapper);
-  }
-  panelWrapper.classList.add('hud-bottom-tabs__panels');
-
-  const buttons = {} as Record<HudBottomTabId, HTMLButtonElement>;
-  const badges = {} as Record<HudBottomTabId, HTMLSpanElement>;
-  const panels = {} as Record<HudBottomTabId, HTMLDivElement>;
-
-  for (const tabId of BOTTOM_TAB_ORDER) {
-    const labelText = BOTTOM_TAB_LABELS[tabId];
-
-    let button = tabList.querySelector<HTMLButtonElement>(`[data-hud-tab="${tabId}"]`);
-    let labelEl: HTMLSpanElement;
-    let badgeEl: HTMLSpanElement;
-    if (!button) {
-      button = doc.createElement('button');
-      button.type = 'button';
-      button.dataset.hudTab = tabId;
-      button.className = 'hud-bottom-tabs__tab';
-      labelEl = doc.createElement('span');
-      labelEl.className = 'hud-bottom-tabs__label';
-      button.appendChild(labelEl);
-      badgeEl = doc.createElement('span');
-      badgeEl.className = 'hud-bottom-tabs__badge';
-      badgeEl.hidden = true;
-      button.appendChild(badgeEl);
-      tabList.appendChild(button);
-    } else {
-      button.classList.add('hud-bottom-tabs__tab');
-      labelEl =
-        button.querySelector<HTMLSpanElement>('.hud-bottom-tabs__label') ??
-        (() => {
-          const span = doc.createElement('span');
-          span.className = 'hud-bottom-tabs__label';
-          button.prepend(span);
-          return span;
-        })();
-      badgeEl =
-        button.querySelector<HTMLSpanElement>('.hud-bottom-tabs__badge') ??
-        (() => {
-          const span = doc.createElement('span');
-          span.className = 'hud-bottom-tabs__badge';
-          span.hidden = true;
-          button.appendChild(span);
-          return span;
-        })();
-    }
-    labelEl.textContent = labelText;
-
-    const buttonId = `hud-bottom-tab-${tabId}`;
-    button.id = buttonId;
-    button.setAttribute('role', 'tab');
-    button.tabIndex = -1;
-
-    buttons[tabId] = button;
-    badges[tabId] = badgeEl;
-
-    let panel = panelWrapper.querySelector<HTMLDivElement>(
-      `[data-hud-tab-panel="${tabId}"]`
-    );
-    if (!panel) {
-      if (tabId === 'roster') {
-        panel =
-          overlay.querySelector<HTMLDivElement>('#resource-bar') ?? doc.createElement('div');
-      } else {
-        panel = doc.createElement('div');
-      }
-    }
-
-    panel.dataset.hudTabPanel = tabId;
-    panel.classList.add('hud-bottom-tabs__panel');
-    if (tabId === 'roster') {
-      panel.id = 'resource-bar';
-      panel.classList.add('hud-bottom-tabs__panel--roster');
-    } else if (!panel.id) {
-      panel.id = `hud-bottom-panel-${tabId}`;
-    }
-
-    panel.setAttribute('role', 'tabpanel');
-    panel.setAttribute('aria-labelledby', buttonId);
-    if (panel.parentElement !== panelWrapper) {
-      panelWrapper.appendChild(panel);
-    }
-
-    button.setAttribute('aria-controls', panel.id);
-
-    panels[tabId] = panel;
-  }
-
-  let state = bottomTabStates.get(container);
-  if (!state) {
-    const initial = container.dataset.hudTabActive as HudBottomTabId | undefined;
-    const active = initial && BOTTOM_TAB_ORDER.includes(initial) ? initial : 'roster';
-    state = {
-      container,
-      tabList,
-      panelWrapper,
-      buttons,
-      badges,
-      panels,
-      listeners: new Set(),
-      active,
-      keydownHandler: null,
-    } satisfies BottomTabState;
-    bottomTabStates.set(container, state);
-  } else {
-    const previousList = state.tabList;
-    state.tabList = tabList;
-    state.panelWrapper = panelWrapper;
-    state.buttons = buttons;
-    state.badges = badges;
-    state.panels = panels;
-    if (state.keydownHandler && previousList !== tabList) {
-      previousList.removeEventListener('keydown', state.keydownHandler);
-      tabList.addEventListener('keydown', state.keydownHandler);
-    }
-  }
-
-  const updateDom = (): void => {
-    const active = state!.active;
-    container.dataset.hudTabActive = active;
-    for (const tabId of BOTTOM_TAB_ORDER) {
-      const button = state!.buttons[tabId];
-      const panel = state!.panels[tabId];
-      const isActive = tabId === active;
-      if (button) {
-        button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        button.tabIndex = isActive ? 0 : -1;
-        button.dataset.active = isActive ? 'true' : 'false';
-      }
-      if (panel) {
-        panel.hidden = !isActive;
-        panel.dataset.active = isActive ? 'true' : 'false';
-        panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
-      }
-    }
-  };
-
-  const setActive = (nextId: HudBottomTabId): void => {
-    const safeId = BOTTOM_TAB_ORDER.includes(nextId) ? nextId : 'roster';
-    const prev = state!.active;
-    state!.active = safeId;
-    updateDom();
-    if (prev !== safeId) {
-      for (const listener of state!.listeners) {
-        listener(safeId);
-      }
-    }
-  };
-
-  const handleKeyDown = (event: KeyboardEvent): void => {
-    if (event.defaultPrevented) {
-      return;
-    }
-    const key = event.key;
-    if (key === 'ArrowLeft' || key === 'ArrowRight') {
-      const direction = key === 'ArrowLeft' ? -1 : 1;
-      const currentIndex = BOTTOM_TAB_ORDER.indexOf(state!.active);
-      const nextIndex = (currentIndex + direction + BOTTOM_TAB_ORDER.length) % BOTTOM_TAB_ORDER.length;
-      const nextId = BOTTOM_TAB_ORDER[nextIndex];
-      setActive(nextId);
-      state!.buttons[nextId]?.focus({ preventScroll: true });
-      event.preventDefault();
-      return;
-    }
-    if (key === 'Home') {
-      const first = BOTTOM_TAB_ORDER[0];
-      setActive(first);
-      state!.buttons[first]?.focus({ preventScroll: true });
-      event.preventDefault();
-      return;
-    }
-    if (key === 'End') {
-      const last = BOTTOM_TAB_ORDER[BOTTOM_TAB_ORDER.length - 1];
-      setActive(last);
-      state!.buttons[last]?.focus({ preventScroll: true });
-      event.preventDefault();
-    }
-  };
-
-  if (!state.keydownHandler) {
-    state.keydownHandler = handleKeyDown;
-    tabList.addEventListener('keydown', handleKeyDown);
-  }
-
-  for (const tabId of BOTTOM_TAB_ORDER) {
-    const button = state.buttons[tabId];
-    if (!button.dataset.hudTabBound) {
-      button.addEventListener('click', () => {
-        setActive(tabId);
-      });
-      button.dataset.hudTabBound = 'true';
-    }
-  }
-
-  updateDom();
-
-  const setBadge = (id: HudBottomTabId, value: number | string | null): void => {
-    const badge = state!.badges[id];
-    const button = state!.buttons[id];
-    if (!badge || !button) {
-      return;
-    }
-    if (value === null || value === '' || (typeof value === 'number' && !Number.isFinite(value))) {
-      badge.textContent = '';
-      badge.hidden = true;
-      button.removeAttribute('data-badge');
-      return;
-    }
-    const text = String(value);
-    const numeric = Number(text);
-    if (text.length === 0 || (!Number.isNaN(numeric) && numeric <= 0)) {
-      badge.textContent = '';
-      badge.hidden = true;
-      button.removeAttribute('data-badge');
-      return;
-    }
-    badge.textContent = text;
-    badge.hidden = false;
-    button.setAttribute('data-badge', text);
-  };
-
-  const onChange = (handler: (id: HudBottomTabId) => void): (() => void) => {
-    state!.listeners.add(handler);
-    return () => {
-      state!.listeners.delete(handler);
-    };
-  };
-
-  return {
-    container,
-    tabList,
-    panels,
-    getActive: () => state!.active,
-    setActive,
-    setBadge,
-    onChange,
-  } satisfies HudBottomTabs;
-}
-
 export function ensureHudLayout(overlay: HTMLElement): HudLayout {
   const doc = overlay.ownerDocument ?? document;
   const root = ensureRoot(overlay, doc);
@@ -503,15 +195,9 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     'actions',
   );
 
-  const tabs = ensureBottomTabs(regions.bottom, doc, overlay);
-
   regions.top.append(anchors.topLeftCluster, anchors.topRightCluster);
   regions.bottom.appendChild(anchors.commandDock);
   anchors.commandDock.append(commandDockTabs, commandDockActions);
-
-  if (tabs.container.parentElement !== commandDockTabs) {
-    commandDockTabs.appendChild(tabs.container);
-  }
 
   for (const child of Array.from(anchors.commandDock.children)) {
     if (child === commandDockTabs || child === commandDockActions) {
@@ -521,7 +207,7 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
       child instanceof HTMLElement &&
       child.dataset?.hudBottomTabs === 'true'
     ) {
-      commandDockTabs.appendChild(child);
+      child.remove();
       continue;
     }
     commandDockActions.appendChild(child);
@@ -582,7 +268,6 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
       tabs: commandDockTabs,
       actions: commandDockActions,
     },
-    tabs,
     actions: regions.left,
     side: regions.right,
     mobileBar,
