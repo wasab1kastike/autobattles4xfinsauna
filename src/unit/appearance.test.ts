@@ -12,7 +12,7 @@ function makeSampler(sequence: number[]): () => number {
 
 describe('unit appearance helpers', () => {
   it('normalizes candidate identifiers', () => {
-    expect(normalizeAppearanceId('  saunoja-seer  ')).toBe('saunoja-03');
+    expect(normalizeAppearanceId('  saunoja-seer  ')).toBe('saunoja-seer');
     expect(normalizeAppearanceId('unit-enemy-orc-1')).toBe('enemy-orc-1');
     expect(normalizeAppearanceId('unknown-variant')).toBeNull();
     expect(normalizeAppearanceId(42)).toBeNull();
@@ -22,9 +22,9 @@ describe('unit appearance helpers', () => {
     const sample = resolveUnitAppearance('soldier', undefined, makeSampler([0, 0.4, 0.9]));
     const followUp = resolveUnitAppearance('soldier', undefined, makeSampler([0.4]));
     const final = resolveUnitAppearance('soldier', undefined, makeSampler([0.9]));
-    expect(sample).toBe('saunoja-01');
-    expect(followUp).toBe('saunoja-02');
-    expect(final).toBe('saunoja-03');
+    expect(sample).toBe('saunoja');
+    expect(followUp).toBe('saunoja-guardian');
+    expect(final).toBe('saunoja-seer');
   });
 
   it('prefers explicit variants when they match the archetype', () => {
@@ -35,8 +35,8 @@ describe('unit appearance helpers', () => {
   });
 
   it('resolves saunoja appearances independently', () => {
-    expect(resolveSaunojaAppearance('saunoja')).toBe('saunoja-01');
-    expect(resolveSaunojaAppearance('archer', makeSampler([0]))).toBe('saunoja-01');
-    expect(resolveSaunojaAppearance(undefined, makeSampler([0.75]))).toBe('saunoja-03');
+    expect(resolveSaunojaAppearance('saunoja')).toBe('saunoja');
+    expect(resolveSaunojaAppearance('archer', makeSampler([0]))).toBe('saunoja');
+    expect(resolveSaunojaAppearance(undefined, makeSampler([0.75]))).toBe('saunoja-seer');
   });
 });

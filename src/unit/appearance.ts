@@ -2,19 +2,13 @@ import type { UnitArchetypeId } from './types.ts';
 
 export type UnitAppearanceId =
   | UnitArchetypeId
-  | 'saunoja-01'
-  | 'saunoja-02'
-  | 'saunoja-03'
+  | 'saunoja'
+  | 'saunoja-guardian'
+  | 'saunoja-seer'
   | 'enemy-orc-1'
   | 'enemy-orc-2';
 
-const LEGACY_APPEARANCE_ALIASES: Readonly<Record<string, UnitAppearanceId>> = Object.freeze({
-  saunoja: 'saunoja-01',
-  'saunoja-guardian': 'saunoja-02',
-  'saunoja-seer': 'saunoja-03'
-});
-
-const SAUNOJA_APPEARANCES = ['saunoja-01', 'saunoja-02', 'saunoja-03'] as const satisfies readonly UnitAppearanceId[];
+const SAUNOJA_APPEARANCES = ['saunoja', 'saunoja-guardian', 'saunoja-seer'] as const satisfies readonly UnitAppearanceId[];
 const ORC_APPEARANCES = ['enemy-orc-1', 'enemy-orc-2'] as const satisfies readonly UnitAppearanceId[];
 
 const UNIT_APPEARANCE_VARIANTS: Readonly<Record<UnitArchetypeId, readonly UnitAppearanceId[]>> = Object.freeze({
@@ -27,14 +21,16 @@ const UNIT_APPEARANCE_VARIANTS: Readonly<Record<UnitArchetypeId, readonly UnitAp
 });
 
 const VALID_APPEARANCE_IDS: ReadonlySet<UnitAppearanceId> = new Set<UnitAppearanceId>([
-  ...SAUNOJA_APPEARANCES,
-  ...ORC_APPEARANCES,
-  'soldier',
-  'archer',
-  'avanto-marauder',
-  'raider',
-  'raider-captain',
-  'raider-shaman'
+  ...new Set<UnitAppearanceId>([
+    ...SAUNOJA_APPEARANCES,
+    ...ORC_APPEARANCES,
+    'soldier',
+    'archer',
+    'avanto-marauder',
+    'raider',
+    'raider-captain',
+    'raider-shaman'
+  ])
 ]);
 
 function clamp01(value: number): number {
@@ -74,10 +70,6 @@ export function normalizeAppearanceId(candidate: unknown): UnitAppearanceId | nu
     return null;
   }
   const normalized = trimmed.startsWith('unit-') ? trimmed.slice(5) : trimmed;
-  const legacy = LEGACY_APPEARANCE_ALIASES[normalized];
-  if (legacy) {
-    return legacy;
-  }
   return VALID_APPEARANCE_IDS.has(normalized as UnitAppearanceId)
     ? (normalized as UnitAppearanceId)
     : null;
@@ -107,7 +99,7 @@ export function resolveSaunojaAppearance(
   if (normalizedCandidate && SAUNOJA_APPEARANCES.includes(normalizedCandidate)) {
     return normalizedCandidate;
   }
-  return sampleVariant(SAUNOJA_APPEARANCES, random, 'saunoja-02');
+  return sampleVariant(SAUNOJA_APPEARANCES, random, 'saunoja-guardian');
 }
 
 export function getUnitAppearanceVariants(

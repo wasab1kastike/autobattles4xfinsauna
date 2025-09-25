@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { makeSaunoja, SAUNOJA_DEFAULT_UPKEEP, SAUNOJA_UPKEEP_MAX } from './saunoja.ts';
 import { applyDamage } from './combat.ts';
 
-const SAUNOJA_APPEARANCES = new Set(['saunoja-01', 'saunoja-02', 'saunoja-03']);
+const SAUNOJA_APPEARANCES = new Set(['saunoja', 'saunoja-guardian', 'saunoja-seer']);
 
 describe('makeSaunoja', () => {
   it('applies defaults and clamps mutable values', () => {
@@ -67,7 +67,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.behavior).toBe('defend');
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
-    expect(saunoja.appearanceId).toBe('saunoja-01');
+    expect(saunoja.appearanceId).toBe('saunoja');
     randomSpy.mockRestore();
   });
 

@@ -52,7 +52,7 @@ describe('drawSaunojas', () => {
       {
         id: 'unit-1',
         name: 'Uno',
-        appearanceId: 'saunoja-02',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 0, r: 0 },
         maxHp: 10,
         hp: 6,
@@ -76,7 +76,7 @@ describe('drawSaunojas', () => {
       {
         id: 'solo',
         name: 'Solo',
-        appearanceId: 'saunoja-02',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 1, r: 1 },
         maxHp: 8,
         hp: 4,
@@ -113,7 +113,7 @@ describe('drawSaunojas', () => {
 
     const assets = {
       placeholder: createSpriteStub(),
-      'unit-saunoja-02': guardianSprite,
+      'unit-saunoja-guardian': guardianSprite,
       'unit-archer': archerSprite,
       'unit-soldier': soldierSprite
     } satisfies Record<string, HTMLImageElement>;
@@ -122,7 +122,7 @@ describe('drawSaunojas', () => {
       {
         id: 'south',
         name: 'South',
-        appearanceId: 'saunoja-02',
+        appearanceId: 'saunoja-guardian',
         coord: { q: -1, r: 2 },
         maxHp: 18,
         hp: 12,
@@ -135,7 +135,7 @@ describe('drawSaunojas', () => {
       {
         id: 'north',
         name: 'North',
-        appearanceId: 'saunoja-02',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 0, r: -1 },
         maxHp: 14,
         hp: 8,
@@ -148,7 +148,7 @@ describe('drawSaunojas', () => {
       {
         id: 'center',
         name: 'Center',
-        appearanceId: 'saunoja-02',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 1, r: 0 },
         maxHp: 16,
         hp: 5,
@@ -226,7 +226,7 @@ describe('drawSaunojas', () => {
 
     const drawCalls = (ctx.drawImage as unknown as Mock).mock.calls;
     sorted.forEach(({ unit, coord }, index) => {
-      const spriteId = spriteChoices.get(unit.id)?.trim() ? spriteChoices.get(unit.id)!.trim() : 'saunoja-02';
+      const spriteId = spriteChoices.get(unit.id)?.trim() ? spriteChoices.get(unit.id)!.trim() : 'saunoja-guardian';
       const placement = getSpritePlacement({
         coord,
         hexSize: radius,
@@ -249,7 +249,7 @@ describe('drawSaunojas', () => {
 
     const assets = {
       placeholder: createSpriteStub(),
-      'unit-saunoja-02': createSpriteStub()
+      'unit-saunoja-guardian': createSpriteStub()
     } satisfies Record<string, HTMLImageElement>;
 
     const { ctx } = createMockContext();
@@ -298,14 +298,14 @@ describe('drawSaunojas', () => {
       hexSize: 28,
       origin: { x: 0, y: 0 },
       zoom: 1,
-      type: 'saunoja-02'
+      type: 'saunoja-guardian'
     });
     const placementB = getSpritePlacement({
       coord: units[1]!.coord,
       hexSize: 28,
       origin: { x: 0, y: 0 },
       zoom: 1,
-      type: 'saunoja-02'
+      type: 'saunoja-guardian'
     });
 
     expect(drawCalls[0][1]).toBe(placementA.drawX);
