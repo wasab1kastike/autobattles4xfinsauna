@@ -8,14 +8,14 @@
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 3.404255319,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.340425532,
+        "scaleY": 0.340425532
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 168,
+        "height": 188
       }
     },
     {
@@ -25,14 +25,14 @@
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 3.265306122,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.326530612,
+        "scaleY": 0.326530612
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 176,
+        "height": 196
       }
     },
     {
@@ -67,40 +67,6 @@
       "source": {
         "width": 64,
         "height": 64
-      }
-    },
-    {
-      "id": "enemy-orc-1",
-      "canvas": {
-        "width": 64,
-        "height": 64
-      },
-      "transform": {
-        "translateX": 10.666666496,
-        "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
-      },
-      "source": {
-        "width": 1024,
-        "height": 1536
-      }
-    },
-    {
-      "id": "enemy-orc-2",
-      "canvas": {
-        "width": 64,
-        "height": 64
-      },
-      "transform": {
-        "translateX": 10.666666496,
-        "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
-      },
-      "source": {
-        "width": 1024,
-        "height": 1536
       }
     },
     {
@@ -206,37 +172,20 @@
       }
     },
     {
-      "id": "raider",
-      "canvas": {
-        "width": 64,
-        "height": 64
-      },
-      "transform": {
-        "translateX": 10.666666496,
-        "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
-      },
-      "source": {
-        "width": 1024,
-        "height": 1536
-      }
-    },
-    {
       "id": "raider-captain",
       "canvas": {
         "width": 64,
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 3.417475728,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.310679612,
+        "scaleY": 0.310679612
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 184,
+        "height": 206
       }
     },
     {
@@ -246,65 +195,65 @@
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 4.830188679,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.301886792,
+        "scaleY": 0.301886792
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 180,
+        "height": 212
       }
     },
     {
-      "id": "saunoja-01",
+      "id": "raider",
       "canvas": {
         "width": 64,
         "height": 64
       },
       "transform": {
-        "translateX": 0,
+        "translateX": 3.555555556,
         "translateY": 0,
-        "scaleX": 0.0625,
-        "scaleY": 0.0625
+        "scaleX": 0.323232323,
+        "scaleY": 0.323232323
       },
       "source": {
-        "width": 1024,
-        "height": 1024
+        "width": 176,
+        "height": 198
       }
     },
     {
-      "id": "saunoja-02",
+      "id": "saunoja-guardian",
       "canvas": {
         "width": 64,
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 2.909090909,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.363636364,
+        "scaleY": 0.363636364
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 160,
+        "height": 176
       }
     },
     {
-      "id": "saunoja-03",
+      "id": "saunoja-seer",
       "canvas": {
         "width": 64,
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 2.909090909,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.363636364,
+        "scaleY": 0.363636364
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 160,
+        "height": 176
       }
     },
     {
@@ -314,14 +263,14 @@
         "height": 64
       },
       "transform": {
-        "translateX": 10.666666496,
+        "translateX": 4.173913043,
         "translateY": 0,
-        "scaleX": 0.041666667,
-        "scaleY": 0.041666667
+        "scaleX": 0.347826087,
+        "scaleY": 0.347826087
       },
       "source": {
-        "width": 1024,
-        "height": 1536
+        "width": 160,
+        "height": 184
       }
     }
   ]

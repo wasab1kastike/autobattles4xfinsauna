@@ -2,11 +2,6 @@
 
 ## Unreleased
 
-- Adopt the new high-resolution Saunoja (01–03) and orc (1–2) PNG renders for
-  every spawn, randomising battlefield appearances across the polished variants
-  while refreshing the sprite atlas metadata so the upgraded silhouettes stay
-  perfectly framed on their hex bases.
-
 - Extend unit spawning with dedicated appearance samplers that fall back to the
   provided deterministic RNG, ensuring Saunoja recruits and invading orcs roll
   across every polished model without desynchronising combat scaling, and cover
