@@ -2,9 +2,9 @@ import farm from '../../assets/sprites/farm.svg';
 import barracks from '../../assets/sprites/barracks.svg';
 import city from '../../assets/sprites/city.svg';
 import mine from '../../assets/sprites/mine.svg';
-import saunojaVanguard from '../../assets/units/saunoja-01.png';
-import saunojaGuardian from '../../assets/units/saunoja-02.png';
-import saunojaSeer from '../../assets/units/saunoja-03.png';
+import saunojaVariant01 from '../../assets/units/saunoja-01.png';
+import saunojaVariant02 from '../../assets/units/saunoja-02.png';
+import saunojaVariant03 from '../../assets/units/saunoja-03.png';
 import enemyOrcVanguard from '../../assets/units/enemy-orc-1.png';
 import enemyOrcWarlock from '../../assets/units/enemy-orc-2.png';
 import saunaBeerIcon from '../../assets/ui/sauna-beer.svg';
@@ -31,8 +31,8 @@ export const assetPaths: AssetPaths = {
     'building-barracks': barracks,
     'building-city': city,
     'building-mine': mine,
-    'unit-soldier': saunojaGuardian,
-    'unit-archer': saunojaSeer,
+    'unit-soldier': saunojaVariant02,
+    'unit-archer': saunojaVariant03,
     'unit-avanto-marauder': enemyOrcVanguard,
     'unit-marauder': enemyOrcVanguard,
     'unit-raider': enemyOrcVanguard,
@@ -40,9 +40,13 @@ export const assetPaths: AssetPaths = {
     'unit-raider-shaman': enemyOrcWarlock,
     'unit-enemy-orc-1': enemyOrcVanguard,
     'unit-enemy-orc-2': enemyOrcWarlock,
-    'unit-saunoja': saunojaVanguard,
-    'unit-saunoja-guardian': saunojaGuardian,
-    'unit-saunoja-seer': saunojaSeer,
+    'unit-saunoja-01': saunojaVariant01,
+    'unit-saunoja-02': saunojaVariant02,
+    'unit-saunoja-03': saunojaVariant03,
+    // Compatibility aliases for legacy save data and tooling.
+    'unit-saunoja': saunojaVariant01,
+    'unit-saunoja-guardian': saunojaVariant02,
+    'unit-saunoja-seer': saunojaVariant03,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,
