@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Swap enemy combatants over to the new orc portrait PNGs, retune the sprite
+  metadata for their taller aspect ratio, and map player-controlled units to the
+  freshly supplied Saunoja renders so battlefield and HUD art stays polished and
+  consistent.
+
 - Refresh the Saunoja unit icons with the newly supplied high-resolution PNG
   renders, update the sprite metadata to honor their native sizes, and route the
   asset loader through the polished artwork for both battlefield and roster

@@ -2,15 +2,11 @@ import farm from '../../assets/sprites/farm.svg';
 import barracks from '../../assets/sprites/barracks.svg';
 import city from '../../assets/sprites/city.svg';
 import mine from '../../assets/sprites/mine.svg';
-import soldier from '../../assets/sprites/soldier.svg';
-import archer from '../../assets/sprites/archer.svg';
-import avantoMarauder from '../../assets/sprites/avanto-marauder.svg';
-import raider from '../../assets/sprites/raider.svg';
-import raiderCaptain from '../../assets/sprites/raider-captain.svg';
-import raiderShaman from '../../assets/sprites/raider-shaman.svg';
-import saunojaDefault from '../../assets/units/saunoja-01.png';
+import saunojaVanguard from '../../assets/units/saunoja-01.png';
 import saunojaGuardian from '../../assets/units/saunoja-02.png';
 import saunojaSeer from '../../assets/units/saunoja-03.png';
+import enemyOrcVanguard from '../../assets/units/enemy-orc-1.png';
+import enemyOrcWarlock from '../../assets/units/enemy-orc-2.png';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
@@ -33,14 +29,14 @@ export const assetPaths: AssetPaths = {
     'building-barracks': barracks,
     'building-city': city,
     'building-mine': mine,
-    'unit-soldier': soldier,
-    'unit-archer': archer,
-    'unit-avanto-marauder': avantoMarauder,
-    'unit-marauder': avantoMarauder,
-    'unit-raider': raider,
-    'unit-raider-captain': raiderCaptain,
-    'unit-raider-shaman': raiderShaman,
-    'unit-saunoja': saunojaDefault,
+    'unit-soldier': saunojaGuardian,
+    'unit-archer': saunojaSeer,
+    'unit-avanto-marauder': enemyOrcVanguard,
+    'unit-marauder': enemyOrcVanguard,
+    'unit-raider': enemyOrcVanguard,
+    'unit-raider-captain': enemyOrcWarlock,
+    'unit-raider-shaman': enemyOrcWarlock,
+    'unit-saunoja': saunojaVanguard,
     'unit-saunoja-guardian': saunojaGuardian,
     'unit-saunoja-seer': saunojaSeer,
     'icon-sauna-beer': uiIcons.saunaBeer,
