@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh the HUD inventory toggle so it renders the sauna bucket crest from
+  `inventory-saunabucket-01.png`, keeping the quartermaster control aligned with
+  the polished stash artwork.
+
 - Swap the quartermaster HUD toggle over to the polished sauna bucket crest,
   align it beneath the artocoin shop control, and keep the overlay visuals in
   step with the refreshed inventory branding.
