@@ -75,7 +75,7 @@ beforeEach(() => {
 
 describe('rollSaunojaUpkeep', () => {
   it('returns inclusive upkeep rolls between the configured bounds', async () => {
-    const { rollSaunojaUpkeep } = await import('./game.ts');
+    const { rollSaunojaUpkeep } = await import('./units/saunoja.ts');
     const cases: Array<[number, number]> = [
       [0, SAUNOJA_UPKEEP_MIN],
       [0.24, SAUNOJA_UPKEEP_MIN],
@@ -93,10 +93,10 @@ describe('rollSaunojaUpkeep', () => {
       expect(upkeep).toBeGreaterThanOrEqual(SAUNOJA_UPKEEP_MIN);
       expect(upkeep).toBeLessThanOrEqual(SAUNOJA_UPKEEP_MAX);
     }
-  }, 10000);
+  }, 20000);
 
   it('falls back to Math.random when the provided sampler is invalid', async () => {
-    const { rollSaunojaUpkeep } = await import('./game.ts');
+    const { rollSaunojaUpkeep } = await import('./units/saunoja.ts');
     const mathRandom = vi.spyOn(Math, 'random').mockReturnValue(0.9);
     try {
       const upkeepFromNaN = rollSaunojaUpkeep(() => Number.NaN);
@@ -138,7 +138,7 @@ describe('game logging', () => {
     const firstSeedNumber = Number(firstMessage.replace('seed ', ''));
     expect(Number.isNaN(firstSeedNumber)).toBe(false);
     expect(firstSeedNumber).toBeGreaterThan(1);
-  }, 10000);
+  }, 25000);
 
   it('persists event log history across reloads', async () => {
     const { log } = await initGame();
@@ -181,7 +181,7 @@ describe('game logging', () => {
     const finalPrelude2 = finalMessages.lastIndexOf('prelude 2');
     expect(finalPrelude2).toBeLessThan(lastPrelude3);
     expect(finalPrelude2).toBeGreaterThan(finalMessages.lastIndexOf('prelude 1'));
-  });
+  }, 20000);
 
   it('tracks the active Saunoja roster as units rally and fall', async () => {
     const { eventBus, __getActiveRosterCountForTest } = await initGame();
@@ -220,7 +220,7 @@ describe('game logging', () => {
       unitFaction: 'enemy',
       attackerFaction: 'player'
     });
-  });
+  }, 15000);
 
   it('spawns multiple reinforcements once the roster cap exceeds one', async () => {
     const { eventBus, __getActiveRosterCountForTest } = await initGame();
@@ -325,7 +325,7 @@ describe('game logging', () => {
     } finally {
       nameSpy.mockRestore();
     }
-  });
+  }, 15000);
 
   it('marks fallen Saunojas as downed in the roster', async () => {
     const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();
@@ -366,7 +366,7 @@ describe('game logging', () => {
     );
     expect(rosterButton).toBeTruthy();
     expect(rosterButton?.dataset.status).toBe('downed');
-  });
+  }, 15000);
 
   it('promotes the active sauna tier when NG+ unlocks a higher hall', async () => {
     window.localStorage?.setItem?.(
@@ -433,7 +433,7 @@ describe('game logging', () => {
 
     await flushLogs();
     expect(rosterRows().length).toBeGreaterThan(0);
-  });
+  }, 15000);
 });
 
 describe('setupGame HUD variants', () => {

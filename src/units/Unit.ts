@@ -5,6 +5,7 @@ import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
 import type { UnitBehavior, UnitStats } from '../unit/types.ts';
+import { normalizeAppearanceId } from '../unit/appearance.ts';
 import type {
   CombatParticipant,
   CombatHookMap,
@@ -47,6 +48,7 @@ export class Unit {
   private immortal = false;
   private experience = 0;
   private behavior: UnitBehavior;
+  private appearanceId: string;
 
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
@@ -61,12 +63,14 @@ export class Unit {
     public readonly faction: string,
     public readonly stats: UnitStats,
     public readonly priorityFactions: string[] = [],
-    behavior?: UnitBehavior
+    behavior?: UnitBehavior,
+    appearanceId?: string
   ) {
     this.coord = cloneCoord(coord);
     this.renderCoord = cloneCoord(coord);
     this.maxHealth = stats.health;
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
+    this.appearanceId = this.sanitizeAppearanceId(appearanceId);
   }
 
   setCoord(coord: AxialCoord, options?: { snapRender?: boolean }): void {
@@ -120,6 +124,22 @@ export class Unit {
 
   setBehavior(behavior: UnitBehavior): void {
     this.behavior = behavior;
+  }
+
+  getAppearanceId(): string {
+    return this.appearanceId;
+  }
+
+  setAppearanceId(appearanceId?: string | null): void {
+    this.appearanceId = this.sanitizeAppearanceId(appearanceId ?? undefined);
+  }
+
+  private sanitizeAppearanceId(candidate?: string): string {
+    const normalized = normalizeAppearanceId(candidate);
+    if (normalized) {
+      return normalized;
+    }
+    return this.type;
   }
 
   attack(target: Unit): CombatResolution | null {

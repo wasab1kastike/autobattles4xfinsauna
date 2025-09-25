@@ -52,6 +52,7 @@ describe('drawSaunojas', () => {
       {
         id: 'unit-1',
         name: 'Uno',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 0, r: 0 },
         maxHp: 10,
         hp: 6,
@@ -75,6 +76,7 @@ describe('drawSaunojas', () => {
       {
         id: 'solo',
         name: 'Solo',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 1, r: 1 },
         maxHp: 8,
         hp: 4,
@@ -120,6 +122,7 @@ describe('drawSaunojas', () => {
       {
         id: 'south',
         name: 'South',
+        appearanceId: 'saunoja-guardian',
         coord: { q: -1, r: 2 },
         maxHp: 18,
         hp: 12,
@@ -132,6 +135,7 @@ describe('drawSaunojas', () => {
       {
         id: 'north',
         name: 'North',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 0, r: -1 },
         maxHp: 14,
         hp: 8,
@@ -144,6 +148,7 @@ describe('drawSaunojas', () => {
       {
         id: 'center',
         name: 'Center',
+        appearanceId: 'saunoja-guardian',
         coord: { q: 1, r: 0 },
         maxHp: 16,
         hp: 5,

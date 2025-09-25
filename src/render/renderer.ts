@@ -348,7 +348,8 @@ export function drawUnits(
       }
     }
 
-    const spriteKey = `unit-${unit.type}`;
+    const appearanceId = unit.getAppearanceId();
+    const spriteKey = `unit-${appearanceId}`;
     const fallbackSprite = assets.images[spriteKey] ?? placeholder;
     const slice = assets.atlas?.slices[spriteKey] ?? null;
     const atlasCanvas = assets.atlas ? assets.atlas.canvas : null;
@@ -365,7 +366,7 @@ export function drawUnits(
       hexSize: mapRenderer.hexSize,
       origin,
       zoom: camera.zoom,
-      type: unit.type
+      type: appearanceId
     };
     const precomputedPlacement = getSpritePlacement(placementInput);
 

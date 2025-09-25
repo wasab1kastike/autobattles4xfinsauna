@@ -60,6 +60,7 @@ export function loadUnits(): Saunoja[] {
         makeSaunoja({
           id: idValue,
           name: typeof data.name === 'string' ? data.name : undefined,
+          appearanceId: data.appearanceId,
           coord,
           maxHp: typeof data.maxHp === 'number' ? data.maxHp : undefined,
           hp: typeof data.hp === 'number' ? data.hp : undefined,
@@ -96,6 +97,7 @@ export function saveUnits(units: readonly Saunoja[]): void {
       id: unit.id,
       name: unit.name,
       coord: { q: unit.coord.q, r: unit.coord.r },
+      appearanceId: unit.appearanceId,
       maxHp: unit.maxHp,
       hp: unit.hp,
       steam: unit.steam,

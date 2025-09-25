@@ -16,6 +16,7 @@ export interface SpawnBundleOptions {
   readonly availableSlots: number;
   readonly eliteOdds?: number;
   readonly random?: () => number;
+  readonly appearanceRandom?: () => number;
   readonly difficultyMultiplier?: number;
   readonly rampTier?: number;
 }
@@ -30,8 +31,12 @@ function defaultIdFactory(): string {
   return `e${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
 }
 
-function buildSpawnOptions(level: number): UnitSpawnOptions {
-  return { level } satisfies UnitSpawnOptions;
+function buildSpawnOptions(
+  level: number,
+  random: () => number,
+  appearanceRandom: () => number
+): UnitSpawnOptions {
+  return { level, random, appearanceRandom } satisfies UnitSpawnOptions;
 }
 
 export function pickRampBundle(
@@ -95,6 +100,9 @@ export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult
   const tierQuantityScale = 1 + rampTier * 0.25;
   const tierLevelBonus = Math.floor(rampTier / 2);
 
+  const appearanceRandom =
+    typeof options.appearanceRandom === 'function' ? options.appearanceRandom : Math.random;
+
   for (const spec of options.bundle.units) {
     const scaledQuantity = Math.max(
       1,
@@ -109,7 +117,7 @@ export function spawnEnemyBundle(options: SpawnBundleOptions): SpawnBundleResult
     for (let index = 0; index < iterations; index += 1) {
       const levelBoost = random() < eliteOdds ? 1 : 0;
       const spawnLevel = Math.max(1, scaledLevel + levelBoost);
-      const spawnOptions = buildSpawnOptions(spawnLevel);
+      const spawnOptions = buildSpawnOptions(spawnLevel, random, appearanceRandom);
       const coord = options.pickEdge();
       if (!coord) {
         return {
