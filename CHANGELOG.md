@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-
+- Update the GitHub Pages workflow to upload a uniquely named deployment
+  artifact so reruns never collide on the default `github-pages` bundle and the
+  publishing job can deploy our polished builds without manual retries.
 
 - Refresh the HUD inventory toggle so it renders the sauna bucket crest from
   `inventory-saunabucket-01.png`, keeping the quartermaster control aligned with
