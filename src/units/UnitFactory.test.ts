@@ -76,11 +76,11 @@ describe('UnitFactory', () => {
     const unit = spawnUnit(state, 'soldier', 's-appearance', origin, 'player', {
       appearanceRandom: () => 0.4
     }) as Unit;
-    expect(unit.getAppearanceId()).toBe('saunoja-guardian');
+    expect(unit.getAppearanceId()).toBe('saunoja-02');
     const alternate = spawnUnit(state, 'soldier', 's-appearance-2', origin, 'player', {
       appearanceRandom: () => 0.9
     }) as Unit;
-    expect(alternate.getAppearanceId()).toBe('saunoja-seer');
+    expect(alternate.getAppearanceId()).toBe('saunoja-03');
   });
 
   it('falls back to the generic RNG when appearanceRandom is absent', () => {
@@ -90,7 +90,7 @@ describe('UnitFactory', () => {
     try {
       const unit = spawnUnit(state, 'soldier', 's-random', origin, 'player');
       expect(unit).not.toBeNull();
-      expect(unit!.getAppearanceId()).toBe('saunoja');
+      expect(unit!.getAppearanceId()).toBe('saunoja-01');
     } finally {
       mathRandomSpy.mockRestore();
     }
