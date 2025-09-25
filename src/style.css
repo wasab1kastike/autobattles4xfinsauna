@@ -1442,21 +1442,16 @@ body > #game-container {
   letter-spacing: 0.16em;
 }
 
-#resource-bar,
-.roster-hud-container {
+#resource-bar {
   pointer-events: auto;
   align-self: stretch;
   width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: clamp(12px, 1.8vw, 20px);
+  justify-content: center;
 }
 
-#resource-bar > .sauna-roster,
-.roster-hud-container > .sauna-roster {
-  width: min(100%, clamp(360px, 32vw, 480px));
-  margin: 0 auto;
+#resource-bar > .sauna-roster {
+  width: min(100%, 960px);
 }
 
 .sauna-roster {
@@ -2015,16 +2010,6 @@ body > #game-container {
   overflow-y: auto;
   padding-right: 6px;
   scrollbar-gutter: stable both-edges;
-}
-
-#right-panel-policies {
-  display: grid;
-  gap: clamp(18px, 2.4vw, 24px);
-  padding-bottom: clamp(12px, 2vw, 18px);
-}
-
-#right-panel-policies .policy-card {
-  width: 100%;
 }
 
 .panel-section--log {
