@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Stage the quartermaster stash against the freshly supplied sauna bucket art,
+  folding the PNG into the panel backdrop with responsive gradients so the
+  inventory overlay lands with richer, polished ambience across desktop and
+  mobile layouts.
+
 - Swap enemy combatants over to the new orc portrait PNGs, retune the sprite
   metadata for their taller aspect ratio, and map player-controlled units to the
   freshly supplied Saunoja renders so battlefield and HUD art stays polished and
