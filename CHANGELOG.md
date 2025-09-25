@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Retire the bottom roster/policies dock, promote the roster summary into the
+  command console column, add a polished policies tab to the right panel, and
+  sweep layout/tests so the streamlined HUD chrome stays consistent.
+
+
 
 - Refresh the HUD inventory toggle so it renders the sauna bucket crest from
   `inventory-saunabucket-01.png`, keeping the quartermaster control aligned with
