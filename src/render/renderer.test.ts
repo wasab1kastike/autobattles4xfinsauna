@@ -103,6 +103,7 @@ function createStubUnit(
     id,
     faction,
     coord,
+    renderCoord: { ...coord },
     type,
     stats: {
       health: 10,
@@ -114,7 +115,9 @@ function createStubUnit(
     getMaxHealth: () => 10,
     getVisionRange: () => visionRange,
     getShield: () => 0,
-    combatKeywords: null
+    combatKeywords: null,
+    getAppearanceId: () => type,
+    setAppearanceId: () => {}
   } as unknown as Unit;
 }
 

@@ -4,6 +4,8 @@ import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts'
 import { createLoadoutFromItems, loadoutToItems } from '../items/equip.ts';
 import type { EquipmentMap } from '../items/types.ts';
 import type { UnitBehavior } from '../unit/types.ts';
+import { resolveSaunojaAppearance } from '../unit/appearance.ts';
+import type { UnitAppearanceId } from '../unit/appearance.ts';
 
 export type SaunojaItemRarity =
   | 'common'
@@ -62,6 +64,8 @@ export interface Saunoja {
   id: string;
   /** Display name shown in UI panels and tooltips. */
   name: string;
+  /** Chosen sprite appearance for battlefield and HUD rendering. */
+  appearanceId: UnitAppearanceId;
   /** Axial hex coordinate locating the unit on the map. */
   coord: AxialCoord;
   /** Maximum hit points the unit can have. */
@@ -105,6 +109,8 @@ export interface Saunoja {
 export interface SaunojaInit {
   id: string;
   name?: string;
+  appearanceId?: unknown;
+  appearanceRandom?: () => number;
   coord?: AxialCoord;
   maxHp?: number;
   hp?: number;
@@ -134,6 +140,33 @@ export const SAUNOJA_UPKEEP_MIN = 1;
 export const SAUNOJA_UPKEEP_MAX = 4;
 export const SAUNOJA_DEFAULT_UPKEEP = 1;
 const DEFAULT_BEHAVIOR: UnitBehavior = 'defend';
+
+function clamp01(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  if (value <= 0) {
+    return 0;
+  }
+  if (value >= 1) {
+    return 1 - Number.EPSILON;
+  }
+  return value;
+}
+
+export function rollSaunojaUpkeep(random: () => number = Math.random): number {
+  const rng = typeof random === 'function' ? random : Math.random;
+  const lowerBound = Math.ceil(Math.min(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
+  const upperBound = Math.floor(Math.max(SAUNOJA_UPKEEP_MIN, SAUNOJA_UPKEEP_MAX));
+  const span = Math.max(1, upperBound - lowerBound + 1);
+
+  const rawSample = Number(rng());
+  const sample = Number.isFinite(rawSample) ? rawSample : Math.random();
+  const normalized = clamp01(sample);
+  const index = Math.min(Math.floor(normalized * span), span - 1);
+
+  return lowerBound + index;
+}
 
 const DEFAULT_STATS: SaunojaStatBlock = {
   health: DEFAULT_MAX_HP,
@@ -373,7 +406,9 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     items,
     modifiers,
     combatKeywords = null,
-    combatHooks = null
+    combatHooks = null,
+    appearanceId,
+    appearanceRandom
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -452,10 +487,14 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   } satisfies SaunojaStatBlock;
 
   const resolvedName = resolveSaunojaName(name);
+  const appearanceSampler =
+    typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
+  const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
 
   return {
     id,
     name: resolvedName,
+    appearanceId: resolvedAppearance,
     coord: { q: coord.q, r: coord.r },
     maxHp: resolvedMaxHp,
     hp: resolvedHp,

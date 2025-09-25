@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Extend unit spawning with dedicated appearance samplers that fall back to the
+  provided deterministic RNG, ensuring Saunoja recruits and invading orcs roll
+  across every polished model without desynchronising combat scaling, and cover
+  the behaviour with fresh Vitest cases.
+
+- Randomize Saunoja and orc battlefield models so freshly spawned units pull
+  from every high-fidelity render, persist attendant appearances across saves,
+  and update the renderer plus atlas metadata to honor the polished variants.
+
 - Stage the quartermaster stash against the freshly supplied sauna bucket art,
   folding the PNG into the panel backdrop with responsive gradients so the
   inventory overlay lands with richer, polished ambience across desktop and

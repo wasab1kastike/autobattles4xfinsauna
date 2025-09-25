@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
 import { createUnit, spawnUnit } from './UnitFactory.ts';
 import { SOLDIER_STATS, SOLDIER_COST, getSoldierStats } from './Soldier.ts';
 import { ARCHER_STATS, ARCHER_COST } from './Archer.ts';
 import { getAvantoMarauderStats } from './AvantoMarauder.ts';
 import { eventBus } from '../events/EventBus.ts';
+import type { Unit } from './Unit.ts';
 
 const origin = { q: 0, r: 0 };
 
@@ -67,6 +68,52 @@ describe('UnitFactory', () => {
     const unit = createUnit('avanto-marauder', 'enemy1', origin, 'enemy', { level: 3 });
     expect(unit).not.toBeNull();
     expect(unit!.stats).toEqual(getAvantoMarauderStats(3));
+  });
+
+  it('samples saunoja appearances using the provided RNG', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 100);
+    const unit = spawnUnit(state, 'soldier', 's-appearance', origin, 'player', {
+      appearanceRandom: () => 0.4
+    }) as Unit;
+    expect(unit.getAppearanceId()).toBe('saunoja-guardian');
+    const alternate = spawnUnit(state, 'soldier', 's-appearance-2', origin, 'player', {
+      appearanceRandom: () => 0.9
+    }) as Unit;
+    expect(alternate.getAppearanceId()).toBe('saunoja-seer');
+  });
+
+  it('falls back to the generic RNG when appearanceRandom is absent', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 100);
+    const mathRandomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.12);
+    try {
+      const unit = spawnUnit(state, 'soldier', 's-random', origin, 'player');
+      expect(unit).not.toBeNull();
+      expect(unit!.getAppearanceId()).toBe('saunoja');
+    } finally {
+      mathRandomSpy.mockRestore();
+    }
+  });
+
+  it('reuses the deterministic RNG when only random is provided', () => {
+    const samples: string[] = [];
+    let cursor = 0;
+    const deterministic = () => {
+      const sequence = [0.1, 0.85, 0.6, 0.3];
+      const value = sequence[cursor % sequence.length];
+      cursor += 1;
+      return value;
+    };
+
+    for (let index = 0; index < 3; index += 1) {
+      const unit = createUnit('raider', `enemy-${index}`, origin, 'enemy', {
+        random: deterministic
+      }) as Unit;
+      samples.push(unit.getAppearanceId());
+    }
+
+    expect(samples).toEqual(['enemy-orc-1', 'enemy-orc-2', 'enemy-orc-2']);
   });
 });
 
