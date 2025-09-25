@@ -23,9 +23,9 @@ type UnitSpriteId =
   | 'raider'
   | 'raider-captain'
   | 'raider-shaman'
-  | 'saunoja'
-  | 'saunoja-guardian'
-  | 'saunoja-seer'
+  | 'saunoja-01'
+  | 'saunoja-02'
+  | 'saunoja-03'
   | 'enemy-orc-1'
   | 'enemy-orc-2'
   | 'default';
@@ -98,9 +98,9 @@ export const UNIT_SPRITE_MAP: Record<UnitSpriteId, UnitSpriteMetadata> = {
   'raider-shaman': ENEMY_WARLOCK_META,
   'enemy-orc-1': ENEMY_VANGUARD_META,
   'enemy-orc-2': ENEMY_WARLOCK_META,
-  saunoja: PLAYER_SQUARE_META,
-  'saunoja-guardian': PLAYER_TALL_META,
-  'saunoja-seer': PLAYER_TALL_META
+  'saunoja-01': PLAYER_SQUARE_META,
+  'saunoja-02': PLAYER_TALL_META,
+  'saunoja-03': PLAYER_TALL_META
 };
 
 export function getUnitSpriteMetadata(type: string): UnitSpriteMetadata {
