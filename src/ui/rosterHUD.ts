@@ -1,4 +1,4 @@
-import { ensureHudLayout } from './layout.ts';
+import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 import type { UnitBehavior } from '../unit/types.ts';
 
@@ -78,10 +78,27 @@ export function setupRosterHUD(
   const doc = container.ownerDocument ?? document;
   const overlay =
     container.closest<HTMLElement>('#ui-overlay') ?? doc.getElementById('ui-overlay');
-  if (overlay) {
-    ensureHudLayout(overlay);
-  }
+  const layout = overlay ? ensureHudLayout(overlay) : null;
+  const bottomTabs = layout?.tabs ?? null;
+  let suppressTabSync = false;
 
+  const syncBottomTab = (id: HudBottomTabId): void => {
+    if (!bottomTabs) {
+      return;
+    }
+    if (bottomTabs.getActive() === id) {
+      return;
+    }
+    suppressTabSync = true;
+    try {
+      bottomTabs.setActive(id);
+    } finally {
+      suppressTabSync = false;
+    }
+  };
+
+  container.classList.add('hud-bottom-tabs__panel');
+  container.classList.add('hud-bottom-tabs__panel--roster');
   container.replaceChildren();
 
   const root = doc.createElement('section');
@@ -239,11 +256,17 @@ export function setupRosterHUD(
 
   const handleToggleClick = () => {
     const next = !isExpanded;
+    if (next && !suppressTabSync) {
+      syncBottomTab('roster');
+    }
     setExpanded(next);
   };
   toggle.addEventListener('click', handleToggleClick);
 
   const handleExpandRequest = () => {
+    if (!suppressTabSync) {
+      syncBottomTab('roster');
+    }
     setExpanded(true);
   };
   const handleCollapseRequest = () => {
@@ -251,6 +274,9 @@ export function setupRosterHUD(
   };
   const handleToggleRequest = () => {
     const next = !isExpanded;
+    if (next && !suppressTabSync) {
+      syncBottomTab('roster');
+    }
     setExpanded(next);
   };
 

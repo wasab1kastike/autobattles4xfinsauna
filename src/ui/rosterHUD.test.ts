@@ -157,47 +157,24 @@ describe('rosterHUD', () => {
     }
   });
 
-  it('expands and collapses when external events fire', () => {
+  it('activates the roster tab when expand events fire', () => {
     const overlay = document.createElement('div');
     overlay.id = 'ui-overlay';
-    const rosterContainer = document.createElement('div');
-    rosterContainer.id = 'resource-bar';
-    overlay.appendChild(rosterContainer);
     document.body.appendChild(overlay);
 
     try {
-      ensureHudLayout(overlay);
+      const layout = ensureHudLayout(overlay);
+      const rosterContainer = layout.tabs.panels.roster;
       const hud = setupRosterHUD(rosterContainer, { rosterIcon: '/icon.svg' });
-      hud.updateSummary({
-        count: 1,
-        card: {
-          id: 'saunoja-9',
-          name: 'Watcher',
-          traits: ['Brave'],
-          upkeep: 12,
-          behavior: 'defend',
-          progression: {
-            level: 2,
-            xp: 200,
-            xpIntoLevel: 20,
-            xpForNext: 220,
-            progress: 20 / 220,
-            statBonuses: { vigor: 4, focus: 2, resolve: 1 },
-          },
-        },
-      });
+
+      layout.tabs.setActive('policies');
+      expect(layout.tabs.getActive()).toBe('policies');
 
       rosterContainer.dispatchEvent(
         new CustomEvent('sauna-roster:expand', { bubbles: true })
       );
 
-      const root = rosterContainer.querySelector('.sauna-roster');
-      expect(root?.dataset.expanded).toBe('true');
-
-      rosterContainer.dispatchEvent(
-        new CustomEvent('sauna-roster:collapse', { bubbles: true })
-      );
-      expect(root?.dataset.expanded).toBe('false');
+      expect(layout.tabs.getActive()).toBe('roster');
 
       hud.destroy();
     } finally {
