@@ -27,7 +27,10 @@ import {
 import type { SaunaTierId } from '../sauna/tiers.ts';
 import type { PurchaseSaunaTierResult } from '../progression/saunaShop.ts';
 
-const INVENTORY_ICON_URL = new URL('../../assets/ui/inventory-saunabucket-01.png', import.meta.url).href;
+const INVENTORY_BUCKET_ICON_URL = new URL(
+  '../../assets/ui/inventory-saunabucket-01.png',
+  import.meta.url
+).href;
 
 export interface InventoryHudOptions {
   readonly getSelectedUnitId?: () => string | null;
@@ -173,11 +176,13 @@ function createInventoryButton(): InventoryToggleElements {
   iconWrap.setAttribute('aria-hidden', 'true');
 
   const icon = document.createElement('img');
-  icon.src = INVENTORY_ICON_URL;
+  icon.src = INVENTORY_BUCKET_ICON_URL;
+  icon.srcset = `${INVENTORY_BUCKET_ICON_URL} 1x`;
   icon.alt = '';
   icon.decoding = 'async';
   icon.loading = 'lazy';
-  icon.className = 'h-[115%] w-[115%] object-cover drop-shadow-[0_12px_18px_rgba(10,18,36,0.5)]';
+  icon.draggable = false;
+  icon.className = 'h-[112%] w-[112%] object-contain drop-shadow-[0_12px_18px_rgba(10,18,36,0.5)]';
 
   iconWrap.append(icon);
 
