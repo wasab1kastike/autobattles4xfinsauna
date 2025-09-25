@@ -150,6 +150,56 @@ function formatLocation(location: InventoryCollection | 'equipped'): string {
   }
 }
 
+type InventoryToggleElements = {
+  button: HTMLButtonElement;
+  badge: HTMLSpanElement;
+};
+
+function createInventoryButton(): InventoryToggleElements {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className =
+    'group relative inline-flex items-center gap-3 rounded-hud-pill border border-white/14 bg-[linear-gradient(135deg,rgba(20,32,52,0.9),rgba(9,14,26,0.92))] px-[1.05rem] py-2.5 font-semibold text-sky-100/85 shadow-[0_18px_32px_rgba(6,12,24,0.55)] transition-all duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-300 hover:-translate-y-0.5 hover:shadow-[0_22px_40px_rgba(6,12,24,0.6)]';
+  button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-label', 'Open quartermaster stash');
+  button.title = 'Open quartermaster stash';
+  button.dataset.state = 'closed';
+
+  const iconWrap = document.createElement('span');
+  iconWrap.className =
+    'relative flex h-[1.85rem] w-[1.85rem] flex-shrink-0 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,rgba(145,196,255,0.38),rgba(34,59,104,0.82))] shadow-[inset_0_1px_0_rgba(255,255,255,0.32)]';
+  iconWrap.setAttribute('aria-hidden', 'true');
+
+  const chestBody = document.createElement('span');
+  chestBody.className =
+    'absolute left-[18%] right-[18%] bottom-[18%] h-[42%] rounded-[11px] bg-[linear-gradient(160deg,rgba(70,108,160,0.96),rgba(29,48,84,0.96))] shadow-[0_6px_14px_rgba(8,16,32,0.55)]';
+
+  const chestLid = document.createElement('span');
+  chestLid.className =
+    'absolute left-[18%] right-[18%] top-[18%] h-[26%] rounded-[9px] bg-[linear-gradient(140deg,rgba(224,236,255,0.92),rgba(122,168,220,0.3))] shadow-[0_3px_8px_rgba(10,18,32,0.45)]';
+
+  const chestHandle = document.createElement('span');
+  chestHandle.className =
+    'absolute left-1/2 top-[36%] h-[32%] w-[32%] -translate-x-1/2 rounded-full border border-white/45 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.78),rgba(156,206,255,0.25))] shadow-[0_4px_10px_rgba(9,17,32,0.35)]';
+
+  iconWrap.append(chestBody, chestHandle, chestLid);
+
+  const label = document.createElement('span');
+  label.className =
+    'text-[0.76rem] uppercase tracking-[0.14em] text-sky-50/85 transition-colors duration-150 group-hover:text-sky-50';
+  label.textContent = 'Inventory';
+
+  const badge = document.createElement('span');
+  badge.className =
+    'absolute -right-2 -top-2 flex h-[1.45rem] min-w-[1.45rem] items-center justify-center rounded-full border border-white/35 bg-[radial-gradient(circle_at_30%_28%,rgba(255,255,255,0.92),rgba(59,160,246,0.66))] text-[0.7rem] font-bold text-slate-950 shadow-[0_10px_20px_rgba(6,16,32,0.45)] transition-transform duration-150 ease-out group-hover:-translate-y-0.5';
+  badge.hidden = true;
+  badge.setAttribute('aria-hidden', 'true');
+
+  button.append(iconWrap, label, badge);
+
+  return { button, badge } satisfies InventoryToggleElements;
+}
+
 function createShopButton(): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -193,40 +243,29 @@ export function setupInventoryHud(
   const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
+  overlay.querySelector('#inventory-stash-layer')?.remove();
   overlay.querySelector('#inventory-shop-panel')?.remove();
 
-  const stashSlot = tabs.panels.stash;
-  const previousStashSlotId = stashSlot.id || null;
-  const previousStashDescribedBy = stashSlot.getAttribute('aria-describedby');
-  const stashSlotId = previousStashSlotId || 'hud-bottom-panel-stash';
-  stashSlot.id = stashSlotId;
-  stashSlot.replaceChildren();
+  const { button: inventoryButton, badge: inventoryBadge } = createInventoryButton();
+  inventoryButton.dataset.ui = 'inventory-toggle';
+  topLeftCluster.prepend(inventoryButton);
 
-  const stashProxy = doc.createElement('p');
-  stashProxy.id = 'inventory-stash-panel-proxy';
-  stashProxy.className = 'sr-only';
-  stashProxy.textContent =
-    'Quartermaster stash drawer opens alongside the command dock. Focus shifts to the drawer when this tab is active.';
-  stashSlot.appendChild(stashProxy);
+  const stashLayer = doc.createElement('div');
+  stashLayer.id = 'inventory-stash-layer';
+  stashLayer.className = 'inventory-stash-layer';
+  stashLayer.dataset.open = 'false';
 
-  const describedByTokens = [previousStashDescribedBy, stashProxy.id]
-    .map((token) => token?.trim())
-    .filter((token): token is string => Boolean(token && token.length > 0));
-  if (describedByTokens.length > 0) {
-    stashSlot.setAttribute('aria-describedby', describedByTokens.join(' '));
-  } else {
-    stashSlot.removeAttribute('aria-describedby');
-  }
+  const stashScrim = doc.createElement('div');
+  stashScrim.className = 'inventory-stash-scrim';
+  stashScrim.dataset.open = 'false';
+  stashScrim.setAttribute('aria-hidden', 'true');
 
-  const stashButton =
-    tabs.tabList.querySelector<HTMLButtonElement>('[data-hud-tab="stash"]') ?? null;
-  const previousAriaControls = stashButton?.getAttribute('aria-controls') ?? null;
-  if (stashButton) {
-    const controlTargets = [stashSlotId, 'inventory-stash-panel'].filter(Boolean).join(' ');
-    stashButton.setAttribute('aria-controls', controlTargets);
-  }
+  stashLayer.appendChild(stashScrim);
+  overlay.appendChild(stashLayer);
 
   const rosterHudPanel = tabs.panels.roster;
+  let stashCount = 0;
+  let isStashOpen = false;
 
   const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle'): void => {
     if (!rosterHudPanel) {
@@ -239,8 +278,27 @@ export function setupInventoryHud(
   const requestRosterExpand = (): void => dispatchRosterEvent('expand');
   const requestRosterCollapse = (): void => dispatchRosterEvent('collapse');
 
-  const updateStashBadge = (count: number): void => {
-    tabs.setBadge('stash', count > 0 ? count : null);
+  const updateInventoryButtonAccessibility = (): void => {
+    const baseLabel = isStashOpen ? 'Close quartermaster stash' : 'Open quartermaster stash';
+    const suffix =
+      stashCount > 0 ? ` (${stashCount} ${stashCount === 1 ? 'item' : 'items'})` : '';
+    inventoryButton.setAttribute('aria-label', `${baseLabel}${suffix}`);
+    inventoryButton.title = `${baseLabel}${suffix}`;
+  };
+
+  const updateInventoryBadge = (count: number): void => {
+    stashCount = Math.max(0, count);
+    if (stashCount > 0) {
+      const badgeValue = stashCount > 99 ? '99+' : String(stashCount);
+      inventoryBadge.hidden = false;
+      inventoryBadge.textContent = badgeValue;
+      inventoryButton.dataset.count = String(stashCount);
+    } else {
+      inventoryBadge.hidden = true;
+      inventoryBadge.textContent = '';
+      inventoryButton.dataset.count = '0';
+    }
+    updateInventoryButtonAccessibility();
   };
 
   const shopNumberFormatter = new Intl.NumberFormat('en-US');
@@ -325,10 +383,8 @@ export function setupInventoryHud(
         next ? 'Close artocoin shop' : 'Open artocoin shop'
       );
       if (next) {
-        if (tabs.getActive() === 'stash') {
-          tabs.setActive('roster');
-          requestRosterExpand();
-        }
+        setStashOpen(false, false);
+        requestRosterCollapse();
         overlay.classList.add('inventory-shop-open');
         const view = resolveView();
         shopPanel?.update(view);
@@ -340,6 +396,13 @@ export function setupInventoryHud(
         }
       } else {
         overlay.classList.remove('inventory-shop-open');
+        if (!isStashOpen) {
+          if (tabs.getActive() === 'roster') {
+            requestRosterExpand();
+          } else {
+            requestRosterCollapse();
+          }
+        }
         try {
           shopButton?.focus({ preventScroll: true });
         } catch (error) {
@@ -360,9 +423,11 @@ export function setupInventoryHud(
 
   const panelCallbacks: StashPanelCallbacks = {
     onClose: () => {
-      if (tabs.getActive() === 'stash') {
-        tabs.setActive('roster');
-        requestRosterExpand();
+      setStashOpen(false, false);
+      try {
+        inventoryButton.focus({ preventScroll: true });
+      } catch (error) {
+        console.warn('Unable to restore focus to inventory toggle', error);
       }
     },
     onCollectionChange: (next) => {
@@ -427,11 +492,18 @@ export function setupInventoryHud(
 
   const panel = createStashPanel(panelCallbacks);
   panel.element.id = 'inventory-stash-panel';
-  const stashButtonLabelId = stashButton?.id?.trim();
-  if (stashButtonLabelId) {
-    panel.element.setAttribute('aria-labelledby', stashButtonLabelId);
+  panel.element.dataset.variant = 'popup';
+  stashLayer.appendChild(panel.element);
+
+  const inventoryButtonId =
+    inventoryButton.id && inventoryButton.id.trim().length > 0
+      ? inventoryButton.id
+      : 'inventory-toggle';
+  if (!inventoryButton.id || inventoryButton.id.trim().length === 0) {
+    inventoryButton.id = inventoryButtonId;
   }
-  stashSlot.appendChild(panel.element);
+  panel.element.setAttribute('aria-labelledby', inventoryButtonId);
+  inventoryButton.setAttribute('aria-controls', panel.element.id);
 
   let collection: InventoryCollection = 'stash';
   const filters = createDefaultFilterState();
@@ -439,10 +511,21 @@ export function setupInventoryHud(
   let sort: InventorySort = 'newest';
   let page = 1;
 
-  const applyStashOpen = (open: boolean, focusPanel: boolean): void => {
+  const setStashOpen = (open: boolean, focusPanel: boolean): void => {
+    if (isStashOpen === open) {
+      return;
+    }
+    isStashOpen = open;
     panel.setOpen(open);
+    stashLayer.dataset.open = open ? 'true' : 'false';
+    stashScrim.dataset.open = open ? 'true' : 'false';
+    overlay.classList.toggle('inventory-panel-open', open);
+    inventoryButton.dataset.state = open ? 'open' : 'closed';
+    inventoryButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+    updateInventoryButtonAccessibility();
     if (open) {
-      overlay.classList.add('inventory-panel-open');
+      setShopOpen(false);
+      requestRosterCollapse();
       if (focusPanel) {
         try {
           panel.focus();
@@ -450,31 +533,38 @@ export function setupInventoryHud(
           console.warn('Unable to focus stash panel', error);
         }
       }
-    } else {
-      overlay.classList.remove('inventory-panel-open');
-    }
-  };
-
-  const unsubscribeTabs = tabs.onChange((tabId) => {
-    const open = tabId === 'stash';
-    if (open) {
-      setShopOpen(false);
-      requestRosterCollapse();
-    } else if (tabId === 'roster') {
+    } else if (tabs.getActive() === 'roster') {
       requestRosterExpand();
     } else {
       requestRosterCollapse();
     }
-    applyStashOpen(open, open);
+  };
+
+  const handleInventoryButtonClick = () => {
+    setStashOpen(!isStashOpen, !isStashOpen);
+  };
+  inventoryButton.addEventListener('click', handleInventoryButtonClick);
+
+  const handleScrimClick = () => setStashOpen(false, false);
+  stashScrim.addEventListener('click', handleScrimClick);
+
+  updateInventoryButtonAccessibility();
+
+  const unsubscribeTabs = tabs.onChange((tabId) => {
+    if (tabId === 'roster' && !isStashOpen) {
+      requestRosterExpand();
+    } else {
+      requestRosterCollapse();
+    }
   });
 
   const initialTab = tabs.getActive();
-  applyStashOpen(initialTab === 'stash', false);
   if (initialTab === 'roster') {
     requestRosterExpand();
   } else {
     requestRosterCollapse();
   }
+  setStashOpen(false, false);
 
   function computeView(): InventoryPanelView {
     const comparisonContext = options.getComparisonContext?.() ?? null;
@@ -513,7 +603,7 @@ export function setupInventoryHud(
     const view = computeView();
     const stashSummary = view.collections.find((entry) => entry.id === 'stash');
     const stashCount = stashSummary?.count ?? 0;
-    updateStashBadge(stashCount);
+    updateInventoryBadge(stashCount);
     panel.render(view);
   }
 
@@ -628,14 +718,12 @@ export function setupInventoryHud(
     }
     if (event.code === 'KeyI' && !event.metaKey && !event.ctrlKey && !event.altKey) {
       event.preventDefault();
-      const active = tabs.getActive();
-      const next = active === 'stash' ? 'roster' : 'stash';
-      tabs.setActive(next);
-      if (next === 'roster') {
-        requestRosterExpand();
-      } else {
-        requestRosterCollapse();
-      }
+      setStashOpen(!isStashOpen, true);
+      return;
+    }
+    if (event.key === 'Escape' && isStashOpen) {
+      event.preventDefault();
+      setStashOpen(false, false);
     }
   };
   window.addEventListener('keydown', onKeyDown);
@@ -646,26 +734,13 @@ export function setupInventoryHud(
     unsubscribe();
     unsubscribeTabs();
     window.removeEventListener('keydown', onKeyDown);
-    if (stashButton) {
-      if (previousAriaControls !== null) {
-        stashButton.setAttribute('aria-controls', previousAriaControls);
-      } else {
-        stashButton.removeAttribute('aria-controls');
-      }
-    }
-    stashSlot.replaceChildren();
-    if (previousStashDescribedBy && previousStashDescribedBy.trim().length > 0) {
-      stashSlot.setAttribute('aria-describedby', previousStashDescribedBy);
-    } else {
-      stashSlot.removeAttribute('aria-describedby');
-    }
-    if (previousStashSlotId) {
-      stashSlot.id = previousStashSlotId;
-    } else {
-      stashSlot.removeAttribute('id');
-    }
+    inventoryButton.removeEventListener('click', handleInventoryButtonClick);
+    stashScrim.removeEventListener('click', handleScrimClick);
+    setStashOpen(false, false);
     panel.destroy();
-    updateStashBadge(0);
+    updateInventoryBadge(0);
+    stashLayer.remove();
+    inventoryButton.remove();
     overlay.classList.remove('inventory-panel-open');
     if (shopButton && onShopButtonClick) {
       shopButton.removeEventListener('click', onShopButtonClick);

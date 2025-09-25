@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Relocate the quartermaster stash behind a polished inventory crest toggle, add
+  a glassmorphism popup with responsive scrim, and update the HUD layout plus
+  tests so the command dock no longer reserves a bottom tab for the drawer.
+
 - Extend unit spawning with dedicated appearance samplers that fall back to the
   provided deterministic RNG, ensuring Saunoja recruits and invading orcs roll
   across every polished model without desynchronising combat scaling, and cover

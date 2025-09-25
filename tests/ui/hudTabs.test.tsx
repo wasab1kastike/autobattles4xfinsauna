@@ -31,31 +31,29 @@ describe('HUD bottom tabs', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates roster, stash, and policies panels with roster active by default', () => {
+  it('creates roster and policies panels with roster active by default', () => {
     const layout = ensureHudLayout(overlay);
     const { tabs } = layout;
 
     expect(tabs.panels.roster.dataset.hudTabPanel).toBe('roster');
-    expect(tabs.panels.stash.dataset.hudTabPanel).toBe('stash');
     expect(tabs.panels.policies.dataset.hudTabPanel).toBe('policies');
 
     expect(tabs.panels.roster.hidden).toBe(false);
-    expect(tabs.panels.stash.hidden).toBe(true);
-
-    tabs.setActive('stash');
-
-    expect(tabs.panels.stash.hidden).toBe(false);
-    expect(tabs.panels.roster.hidden).toBe(true);
     expect(tabs.panels.policies.hidden).toBe(true);
+
+    tabs.setActive('policies');
+
+    expect(tabs.panels.policies.hidden).toBe(false);
+    expect(tabs.panels.roster.hidden).toBe(true);
   });
 
   it('sets badges and emits change notifications', () => {
     const { tabs } = ensureHudLayout(overlay);
-    const stashTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="stash"]');
-    expect(stashTab).not.toBeNull();
+    const policiesTab = overlay.querySelector<HTMLButtonElement>('[data-hud-tab="policies"]');
+    expect(policiesTab).not.toBeNull();
 
-    tabs.setBadge('stash', 12);
-    expect(stashTab?.getAttribute('data-badge')).toBe('12');
+    tabs.setBadge('policies', 12);
+    expect(policiesTab?.getAttribute('data-badge')).toBe('12');
 
     const received: HudBottomTabId[] = [];
     const unsubscribe = tabs.onChange((id) => {

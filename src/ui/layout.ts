@@ -18,7 +18,7 @@ export type HudLayoutDock = {
   actions: HTMLDivElement;
 };
 
-export type HudBottomTabId = 'roster' | 'stash' | 'policies';
+export type HudBottomTabId = 'roster' | 'policies';
 
 export type HudBottomTabs = {
   container: HTMLDivElement;
@@ -74,11 +74,10 @@ const ANCHOR_DATASET_NAMES: Record<keyof HudLayoutAnchors, string> = {
   commandDock: 'command-dock',
 };
 
-const BOTTOM_TAB_ORDER: HudBottomTabId[] = ['roster', 'stash', 'policies'];
+const BOTTOM_TAB_ORDER: HudBottomTabId[] = ['roster', 'policies'];
 
 const BOTTOM_TAB_LABELS: Record<HudBottomTabId, string> = {
   roster: 'Roster',
-  stash: 'Stash',
   policies: 'Policies',
 };
 
@@ -303,8 +302,6 @@ function ensureBottomTabs(
     if (tabId === 'roster') {
       panel.id = 'resource-bar';
       panel.classList.add('hud-bottom-tabs__panel--roster');
-    } else if (tabId === 'stash') {
-      panel.classList.add('hud-bottom-tabs__panel--stash');
     } else if (!panel.id) {
       panel.id = `hud-bottom-panel-${tabId}`;
     }
