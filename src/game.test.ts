@@ -436,6 +436,100 @@ describe('game logging', () => {
   }, 15000);
 });
 
+describe('inventory integration', () => {
+  it('auto-equips upgrades by moving the previous item to the stash', async () => {
+    const { loadUnits: loadRoster, __getInventoryStateForTest, __getEquipHandlerForTest } =
+      await initGame();
+
+    const inventory = __getInventoryStateForTest();
+    const equipHandler = __getEquipHandlerForTest();
+    const roster = loadRoster();
+    expect(roster.length).toBeGreaterThan(0);
+    const unitId = roster[0]?.id ?? '';
+    expect(unitId).not.toBe('');
+
+    const starter = {
+      id: 'birch-sap-satchel',
+      name: 'Birch Sap Satchel',
+      quantity: 1,
+      rarity: 'common'
+    } as const;
+    const upgrade = {
+      id: 'midnight-bloodwine',
+      name: 'Midnight Bloodwine',
+      quantity: 1,
+      rarity: 'mythic'
+    } as const;
+
+    inventory.addItem(starter, { unitId, equip: equipHandler });
+
+    let updatedRoster = loadRoster();
+    let equipped = updatedRoster.find((entry) => entry.id === unitId)?.items ?? [];
+    expect(equipped.some((item) => item.id === starter.id)).toBe(true);
+
+    const receipt = inventory.addItem(upgrade, { unitId, equip: equipHandler });
+    expect(receipt.equipped).toBe(true);
+
+    updatedRoster = loadRoster();
+    equipped = updatedRoster.find((entry) => entry.id === unitId)?.items ?? [];
+    expect(equipped.some((item) => item.id === upgrade.id)).toBe(true);
+
+    const stashIds = inventory.getStash().map((entry) => entry.id);
+    expect(stashIds).toContain(starter.id);
+  });
+
+  it('replaces equipment slots with the highest tier stash option', async () => {
+    const {
+      loadUnits: loadRoster,
+      __getInventoryStateForTest,
+      __getEquipHandlerForTest,
+      __equipSlotFromStashForTest
+    } = await initGame();
+
+    const inventory = __getInventoryStateForTest();
+    const equipHandler = __getEquipHandlerForTest();
+    const roster = loadRoster();
+    expect(roster.length).toBeGreaterThan(0);
+    const unitId = roster[0]?.id ?? '';
+    expect(unitId).not.toBe('');
+
+    const baseSupply = {
+      id: 'birch-sap-satchel',
+      name: 'Birch Sap Satchel',
+      quantity: 1,
+      rarity: 'common'
+    } as const;
+    const rareSupply = {
+      id: 'aurora-distillate',
+      name: 'Aurora Distillate',
+      quantity: 1,
+      rarity: 'rare'
+    } as const;
+    const mythicSupply = {
+      id: 'midnight-bloodwine',
+      name: 'Midnight Bloodwine',
+      quantity: 1,
+      rarity: 'mythic'
+    } as const;
+
+    inventory.addItem(baseSupply, { unitId, equip: equipHandler });
+    inventory.addItem(rareSupply, { autoEquip: false });
+    inventory.addItem(mythicSupply, { autoEquip: false });
+
+    const replaced = __equipSlotFromStashForTest(unitId, 'supply');
+    expect(replaced).toBe(true);
+
+    const updatedRoster = loadRoster();
+    const equipped = updatedRoster.find((entry) => entry.id === unitId)?.items ?? [];
+    expect(equipped.some((item) => item.id === mythicSupply.id)).toBe(true);
+
+    const stashIds = inventory.getStash().map((entry) => entry.id);
+    expect(stashIds).toContain(baseSupply.id);
+    expect(stashIds).toContain(rareSupply.id);
+    expect(stashIds).not.toContain(mythicSupply.id);
+  });
+});
+
 describe('setupGame HUD variants', () => {
   it('initializes classic HUD controllers when hudVariant is classic', async () => {
     vi.resetModules();
