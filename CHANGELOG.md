@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-- Sync the GitHub Pages shell with the latest build assets so the docs site
-  loads the fresh hashed bundles, and copy the non-cacheable headers across to
-  prevent browsers from clinging to outdated scripts and styles.
-
 - Ensure auto-equip replaces existing gear by parking the previous item in the
   stash, teach the roster replace action to pick the highest-tier stash option,
   and verify the polished flow with new integration tests so attendants always
