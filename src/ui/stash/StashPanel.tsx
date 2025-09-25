@@ -8,6 +8,11 @@ import type {
   InventorySort
 } from '../../state/inventory.ts';
 
+const STASH_PANEL_ART_URL = new URL(
+  '../../../assets/ui/inventory-saunabucket-01.png',
+  import.meta.url
+).href;
+
 export interface StashPanelCallbacks {
   readonly onClose?: () => void;
   readonly onCollectionChange?: (collection: InventoryCollection) => void;
@@ -64,6 +69,7 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
   element.tabIndex = -1;
   element.dataset.open = 'false';
   element.setAttribute('aria-label', 'Quartermaster stash');
+  element.style.setProperty('--stash-panel-art', `url("${STASH_PANEL_ART_URL}")`);
 
   const header = document.createElement('header');
   header.className = panelStyles.header;
