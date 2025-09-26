@@ -8,7 +8,11 @@ import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { resolveSaunojaAppearance } from './unit/appearance.ts';
 import { eventBus, eventScheduler } from './events';
-import { POLICY_EVENTS, type PolicyAppliedEvent } from './data/policies.ts';
+import {
+  POLICY_EVENTS,
+  type PolicyAppliedEvent,
+  type PolicyRevokedEvent
+} from './data/policies.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
@@ -2293,6 +2297,19 @@ const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
 };
 eventBus.on(POLICY_EVENTS.APPLIED, onPolicyApplied);
 
+const onPolicyRevoked = ({ policy }: PolicyRevokedEvent): void => {
+  logEvent({
+    type: 'policy',
+    message: `Sauna council shelves policy: ${policy.name} until further notice.`,
+    metadata: {
+      policy: policy.id,
+      name: policy.name,
+      status: 'revoked'
+    }
+  });
+};
+eventBus.on(POLICY_EVENTS.REVOKED, onPolicyRevoked);
+
 const onUnitDied = ({
   unitId,
   attackerId,
@@ -2472,6 +2489,7 @@ export function cleanup(): void {
   }
 
   eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);
+  eventBus.off(POLICY_EVENTS.REVOKED, onPolicyRevoked);
   if (pauseListenerAttached) {
     eventBus.off('game:pause-changed', onPauseChanged);
     pauseListenerAttached = false;

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Extend policy lifecycle handling so toggleable edicts can be disabled and
+  re-enabled without repaying their costs, emit dedicated revoke events for
+  listeners, persist the enabled state in saves, and refresh the HUD plus logs
+  to reflect the new lifecycle hooks.
+
 - Teach the build metadata pipeline to honor a `SOURCE_COMMIT` override so
   release tooling can inject the freshly committed hash before mirroring the
   docs bundle, keeping the published build badge in perfect sync, and relax the
