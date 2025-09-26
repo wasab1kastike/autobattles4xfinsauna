@@ -5,6 +5,7 @@ import {
   type PolicyAppliedEvent,
   type PolicyDefinition,
   type PolicyRejectedEvent,
+  type PolicyRevokedEvent
 } from '../../data/policies.ts';
 import { eventBus } from '../../events';
 
@@ -124,7 +125,15 @@ export function createPolicyPanel(container: HTMLElement, state: GameState): Pol
     actions.append(costChip, action);
 
     const handleClick = (): void => {
-      if (state.applyPolicy(def.id)) {
+      let updated = false;
+      if (state.hasPolicy(def.id)) {
+        if (def.toggleable) {
+          updated = state.setPolicyEnabled(def.id, false);
+        }
+      } else {
+        updated = state.setPolicyEnabled(def.id, true);
+      }
+      if (updated) {
         updatePolicyCard(def);
       }
     };
@@ -156,11 +165,18 @@ export function createPolicyPanel(container: HTMLElement, state: GameState): Pol
     }
 
     const applied = state.hasPolicy(def.id);
+    const unlocked = state.isPolicyUnlocked(def.id);
     const missing = def.prerequisites.filter((req) => !req.isSatisfied(state));
-    const affordable = state.canAfford(def.cost, def.resource);
+    const requiresResources = !unlocked;
+    const affordable = requiresResources ? state.canAfford(def.cost, def.resource) : true;
 
-    elements.action.disabled = applied || missing.length > 0 || !affordable;
-    elements.action.textContent = applied ? 'Enacted' : 'Enact Policy';
+    if (applied) {
+      elements.action.disabled = !def.toggleable;
+      elements.action.textContent = def.toggleable ? 'Disable Policy' : 'Enacted';
+    } else {
+      elements.action.disabled = missing.length > 0 || !affordable;
+      elements.action.textContent = unlocked && def.toggleable ? 'Reinstate Policy' : 'Enact Policy';
+    }
 
     let status = 'ready';
     let badgeText = 'Ready';
@@ -173,6 +189,10 @@ export function createPolicyPanel(container: HTMLElement, state: GameState): Pol
       status = 'applied';
       badgeText = 'Enacted';
       statusLine = def.visuals.flair ?? 'Policy active.';
+    } else if (unlocked && def.toggleable) {
+      status = 'disabled';
+      badgeText = 'Disabled';
+      statusLine = 'Policy revoked—reenact to restore its effects.';
     } else if (missing.length > 0) {
       status = 'locked';
       badgeText = 'Locked';
@@ -192,7 +212,7 @@ export function createPolicyPanel(container: HTMLElement, state: GameState): Pol
     elements.card.dataset.status = status;
     elements.stateBadge.textContent = badgeText;
     elements.statusCopy.textContent = statusLine;
-    const emphasizeCost = !applied && missing.length === 0 && !affordable;
+    const emphasizeCost = !applied && requiresResources && missing.length === 0 && !affordable;
     elements.costChip.classList.toggle('policy-card__cost--warning', emphasizeCost);
   }
 
@@ -217,15 +237,18 @@ export function createPolicyPanel(container: HTMLElement, state: GameState): Pol
   const handleResourceChanged = (_payload: unknown): void => updatePolicyCards();
   const handlePolicyApplied = (_event: PolicyAppliedEvent): void => updatePolicyCards();
   const handlePolicyRejected = (_event: PolicyRejectedEvent): void => updatePolicyCards();
+  const handlePolicyRevoked = (_event: PolicyRevokedEvent): void => updatePolicyCards();
 
   eventBus.on('resourceChanged', handleResourceChanged);
   eventBus.on(POLICY_EVENTS.APPLIED, handlePolicyApplied);
   eventBus.on(POLICY_EVENTS.REJECTED, handlePolicyRejected);
+  eventBus.on(POLICY_EVENTS.REVOKED, handlePolicyRevoked);
 
   const destroy = (): void => {
     eventBus.off('resourceChanged', handleResourceChanged);
     eventBus.off(POLICY_EVENTS.APPLIED, handlePolicyApplied);
     eventBus.off(POLICY_EVENTS.REJECTED, handlePolicyRejected);
+    eventBus.off(POLICY_EVENTS.REVOKED, handlePolicyRevoked);
     disposers.forEach((dispose) => dispose());
     policyElements.clear();
   };

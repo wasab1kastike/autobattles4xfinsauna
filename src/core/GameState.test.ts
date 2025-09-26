@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GameState, Resource } from './GameState';
 import { eventBus } from '../events/EventBus';
-import { POLICY_EVENTS, type PolicyAppliedEvent, type PolicyRejectedEvent } from '../data/policies.ts';
+import {
+  POLICY_EVENTS,
+  type PolicyAppliedEvent,
+  type PolicyRejectedEvent,
+  type PolicyRevokedEvent
+} from '../data/policies.ts';
 import { HexMap } from '../hexmap.ts';
 import { Farm } from '../buildings/index.ts';
 import '../events';
@@ -107,10 +112,10 @@ describe('GameState', () => {
 
   it('persists applied policies and derived modifiers when saving', () => {
     const state = new GameState(1000);
-    (state as any).policies.add('eco');
-    (state as any).policies.add('temperance');
-    state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
-    state.nightWorkSpeedMultiplier = 1.05;
+    state.addResource(Resource.SAUNAKUNNIA, 100);
+    state.addResource(Resource.SAUNA_BEER, 60);
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('temperance', true)).toBe(true);
 
     state.save();
 
@@ -118,8 +123,8 @@ describe('GameState', () => {
     expect(serialized).not.toBeNull();
     const parsed = JSON.parse(serialized ?? '{}');
 
-    expect(parsed.policies).toContain('eco');
-    expect(parsed.policies).toContain('temperance');
+    expect(parsed.policies.eco).toEqual({ enabled: true, unlocked: true });
+    expect(parsed.policies['temperance']).toEqual({ enabled: true, unlocked: true });
     expect(parsed.passiveGeneration[Resource.SAUNA_BEER]).toBe(2);
     expect(parsed.nightWorkSpeedMultiplier).toBeCloseTo(1.05);
   });
@@ -175,6 +180,61 @@ describe('GameState', () => {
     expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(5);
   });
 
+  it('toggles eligible policies and emits revoke events without double-charging', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 50);
+
+    const appliedSpy = vi.fn<(payload: PolicyAppliedEvent) => void>();
+    const revokedSpy = vi.fn<(payload: PolicyRevokedEvent) => void>();
+    eventBus.on(POLICY_EVENTS.APPLIED, appliedSpy);
+    eventBus.on(POLICY_EVENTS.REVOKED, revokedSpy);
+
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.hasPolicy('eco')).toBe(true);
+    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(35);
+    expect(state.isPolicyUnlocked('eco')).toBe(true);
+    expect(state.togglePolicy('eco')).toBe(true);
+    expect(state.hasPolicy('eco')).toBe(false);
+    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(35);
+    expect(state.togglePolicy('eco')).toBe(true);
+    expect(state.hasPolicy('eco')).toBe(true);
+    expect(state.getResource(Resource.SAUNAKUNNIA)).toBe(35);
+
+    eventBus.off(POLICY_EVENTS.APPLIED, appliedSpy);
+    eventBus.off(POLICY_EVENTS.REVOKED, revokedSpy);
+
+    expect(appliedSpy).toHaveBeenCalledTimes(2);
+    expect(revokedSpy).toHaveBeenCalledTimes(1);
+    expect(state.isPolicyUnlocked('eco')).toBe(true);
+    expect((state as any).passiveGeneration[Resource.SAUNA_BEER]).toBe(2);
+    state.setPolicyEnabled('eco', false);
+    expect((state as any).passiveGeneration[Resource.SAUNA_BEER]).toBe(1);
+  });
+
+  it('persists disabled toggleable policies and restores unlocked status', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 50);
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('eco', false)).toBe(true);
+    state.save();
+
+    const raw = localStorage.getItem('gameState');
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw ?? '{}');
+    expect(parsed.policies.eco).toEqual({ enabled: false, unlocked: true });
+
+    const loaded = new GameState(1000);
+    expect(loaded.load()).toBe(true);
+    expect(loaded.hasPolicy('eco')).toBe(false);
+    expect(loaded.isPolicyUnlocked('eco')).toBe(true);
+    expect(loaded.getResource(Resource.SAUNAKUNNIA)).toBe(35);
+    expect((loaded as any).passiveGeneration[Resource.SAUNA_BEER]).toBe(1);
+
+    expect(loaded.setPolicyEnabled('eco', true)).toBe(true);
+    expect(loaded.getResource(Resource.SAUNAKUNNIA)).toBe(35);
+    expect(loaded.hasPolicy('eco')).toBe(true);
+  });
+
   it('rejects policies when prerequisites are missing', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNAKUNNIA, 100);
@@ -213,6 +273,26 @@ describe('GameState', () => {
     expect(appliedTemperance).toBe(true);
     expect(appliedPolicies).toContain('temperance');
     expect(state.nightWorkSpeedMultiplier).toBeGreaterThan(1);
+  });
+
+  it('rejects disabling policies that are not toggleable', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 80);
+    state.addResource(Resource.SAUNA_BEER, 60);
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('temperance', true)).toBe(true);
+
+    const rejections: PolicyRejectedEvent[] = [];
+    const listener = (payload: PolicyRejectedEvent): void => {
+      rejections.push(payload);
+    };
+
+    eventBus.on(POLICY_EVENTS.REJECTED, listener);
+    expect(state.setPolicyEnabled('temperance', false)).toBe(false);
+    eventBus.off(POLICY_EVENTS.REJECTED, listener);
+
+    expect(rejections.at(-1)?.reason).toBe('not-toggleable');
+    expect(state.hasPolicy('temperance')).toBe(true);
   });
 
   it('constructs and upgrades buildings when affordable', () => {
