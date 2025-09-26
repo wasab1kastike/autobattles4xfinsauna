@@ -1,11 +1,16 @@
 import { eventBus } from './EventBus';
-import { listPolicies, type PolicyAppliedEvent, type PolicyEffectHook, type PolicyDefinition } from '../data/policies.ts';
+import {
+  listPolicies,
+  type PolicyEffectHook,
+  type PolicyDefinition,
+  type PolicyEffectPayload
+} from '../data/policies.ts';
 
 const disposers: Array<() => void> = [];
 
 function subscribeEffect(definition: PolicyDefinition, effect: PolicyEffectHook): void {
-  const seenStates = new WeakSet<PolicyAppliedEvent['state']>();
-  const listener = (payload: PolicyAppliedEvent): void => {
+  const seenStates = new WeakSet<PolicyEffectPayload['state']>();
+  const listener = (payload: PolicyEffectPayload): void => {
     if (payload.policy.id !== definition.id) {
       return;
     }
@@ -18,7 +23,7 @@ function subscribeEffect(definition: PolicyDefinition, effect: PolicyEffectHook)
     }
   };
 
-  eventBus.on<PolicyAppliedEvent>(effect.event, listener);
+  eventBus.on<PolicyEffectPayload>(effect.event, listener);
   disposers.push(() => eventBus.off(effect.event, listener));
 }
 

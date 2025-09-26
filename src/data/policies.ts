@@ -6,10 +6,15 @@ import saunaRosterIcon from '../../assets/ui/saunoja-roster.svg';
 
 export const POLICY_EVENTS = {
   APPLIED: 'policy:applied',
-  REJECTED: 'policy:rejected'
+  REJECTED: 'policy:rejected',
+  REVOKED: 'policy:revoked'
 } as const;
 
 export type PolicyEventName = (typeof POLICY_EVENTS)[keyof typeof POLICY_EVENTS];
+
+export type PolicyLifecycleEventName =
+  | typeof POLICY_EVENTS.APPLIED
+  | typeof POLICY_EVENTS.REVOKED;
 
 export type PolicyId = 'eco' | 'temperance' | 'steam-diplomats';
 
@@ -18,11 +23,18 @@ export interface PolicyAppliedEvent {
   readonly state: GameState;
 }
 
+export interface PolicyRevokedEvent {
+  readonly policy: PolicyDefinition;
+  readonly state: GameState;
+}
+
 export type PolicyRejectionReason =
   | 'unknown-policy'
   | 'already-applied'
   | 'prerequisites-not-met'
-  | 'insufficient-resources';
+  | 'insufficient-resources'
+  | 'not-toggleable'
+  | 'not-applied';
 
 export interface PolicyRejectedEvent {
   readonly policyId: string;
@@ -45,10 +57,12 @@ export interface PolicyVisuals {
   readonly flair?: string;
 }
 
+export type PolicyEffectPayload = PolicyAppliedEvent | PolicyRevokedEvent;
+
 export interface PolicyEffectHook {
-  readonly event: typeof POLICY_EVENTS.APPLIED;
+  readonly event: PolicyLifecycleEventName;
   readonly once?: boolean;
-  readonly invoke: (payload: PolicyAppliedEvent) => void;
+  readonly invoke: (payload: PolicyEffectPayload) => void;
 }
 
 export interface PolicyDefinition {
@@ -61,6 +75,7 @@ export interface PolicyDefinition {
   readonly visuals: PolicyVisuals;
   readonly effects: readonly PolicyEffectHook[];
   readonly spotlight?: string;
+  readonly toggleable?: boolean;
 }
 
 const POLICY_DEFINITIONS: PolicyDefinition[] = [
@@ -81,13 +96,21 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
     effects: [
       {
         event: POLICY_EVENTS.APPLIED,
-        once: true,
+        once: false,
         invoke: ({ state }) => {
           state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
         }
+      },
+      {
+        event: POLICY_EVENTS.REVOKED,
+        once: false,
+        invoke: ({ state }) => {
+          state.modifyPassiveGeneration(Resource.SAUNA_BEER, -1);
+        }
       }
     ],
-    spotlight: 'Sustainably expand your brewing line with solar-heated mash tuns.'
+    spotlight: 'Sustainably expand your brewing line with solar-heated mash tuns.',
+    toggleable: true
   },
   {
     id: 'temperance',

@@ -13,7 +13,8 @@ import {
   getPolicyDefinition,
   POLICY_EVENTS,
   type PolicyAppliedEvent,
-  type PolicyRejectedEvent
+  type PolicyRejectedEvent,
+  type PolicyRevokedEvent
 } from '../data/policies.ts';
 export { PASSIVE_GENERATION, Resource } from './resources.ts';
 import {
@@ -35,13 +36,20 @@ function createBuilding(type: string): Building | undefined {
   return BUILDING_FACTORIES[type]?.();
 }
 
+type SerializedPolicyStatus = {
+  enabled?: boolean;
+  unlocked?: boolean;
+};
+
+type SerializedPolicies = Record<string, SerializedPolicyStatus> | string[];
+
 // Shape of the serialized game state stored in localStorage.
 type SerializedState = {
   resources: Record<Resource, number>;
   lastSaved: number;
   buildings: Record<string, number>;
   buildingPlacements: Record<string, string>;
-  policies: string[];
+  policies: SerializedPolicies;
   passiveGeneration: Record<Resource, number>;
   nightWorkSpeedMultiplier: number;
   enemyScaling?: EnemyScalingMultipliers;
@@ -64,6 +72,11 @@ const DEFAULT_ENEMY_SCALING: EnemyScalingMultipliers = Object.freeze({
   strength: 1
 });
 
+interface PolicyStatus {
+  enabled: boolean;
+  unlocked: boolean;
+}
+
 function sanitizeMultiplier(value: unknown, min: number, max: number, fallback: number): number {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -84,6 +97,14 @@ function sanitizeEnemyScaling(
 }
 
 export class GameState {
+  private static readonly EMPTY_POLICY: PolicyStatus = Object.freeze({
+    enabled: false,
+    unlocked: false
+  });
+
+  /** Track the unlocked/enabled status for each policy. */
+  private policies = new Map<string, PolicyStatus>();
+
   /** Current amounts of each resource. */
   resources: Record<Resource, number> = {
     [Resource.SAUNA_BEER]: 0,
@@ -103,9 +124,6 @@ export class GameState {
 
   /** Mapping of tile coordinates to constructed building instances. */
   private buildingPlacements = new Map<string, Building>();
-
-  /** Policies currently applied. */
-  private policies = new Set<string>();
 
   /** Modifier for work speed during night, affected by policies. */
   nightWorkSpeedMultiplier = 1;
@@ -137,12 +155,23 @@ export class GameState {
     this.buildingPlacements.forEach((b, k) => {
       placements[k] = b.type;
     });
+    const serializedPolicies: Record<string, SerializedPolicyStatus> = {};
+    this.policies.forEach((status, id) => {
+      if (!status.unlocked && !status.enabled) {
+        return;
+      }
+      serializedPolicies[id] = {
+        enabled: status.enabled,
+        unlocked: status.unlocked
+      } satisfies SerializedPolicyStatus;
+    });
+
     const serialized: SerializedState = {
       resources: this.resources,
       lastSaved: this.lastSaved,
       buildings: this.buildings,
       buildingPlacements: placements,
-      policies: Array.from(this.policies),
+      policies: serializedPolicies,
       passiveGeneration: { ...this.passiveGeneration },
       nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
       enemyScaling: { ...this.enemyScaling },
@@ -205,20 +234,44 @@ export class GameState {
     this.ngPlus = ensureNgPlusRunState(savedNgPlus);
 
     // Reset derived policy state and repopulate applied policies from the save.
-    this.policies = new Set();
+    this.policies = new Map();
     this.passiveGeneration = { ...PASSIVE_GENERATION };
     this.nightWorkSpeedMultiplier = 1;
-    const savedPolicies = Array.isArray(data.policies)
-      ? data.policies.filter((policy): policy is string => typeof policy === 'string')
-      : [];
-    savedPolicies.forEach((policyId) => {
-      const definition = getPolicyDefinition(policyId);
-      if (!definition) {
-        return;
-      }
-      this.policies.add(definition.id);
-      eventBus.emit(POLICY_EVENTS.APPLIED, { policy: definition, state: this });
-    });
+    const rawPolicies = data.policies;
+    if (Array.isArray(rawPolicies)) {
+      rawPolicies
+        .filter((policy): policy is string => typeof policy === 'string')
+        .forEach((policyId) => {
+          const definition = getPolicyDefinition(policyId);
+          if (!definition) {
+            return;
+          }
+          this.policies.set(definition.id, { enabled: true, unlocked: true });
+          eventBus.emit(POLICY_EVENTS.APPLIED, { policy: definition, state: this });
+        });
+    } else if (rawPolicies && typeof rawPolicies === 'object') {
+      Object.entries(rawPolicies as Record<string, SerializedPolicyStatus>).forEach(
+        ([policyId, status]) => {
+          if (!status || typeof status !== 'object') {
+            return;
+          }
+          const definition = getPolicyDefinition(policyId);
+          if (!definition) {
+            return;
+          }
+          const enabled = Boolean(status.enabled);
+          const unlocked = Boolean(status.unlocked ?? status.enabled);
+          const normalized: PolicyStatus = {
+            enabled,
+            unlocked: unlocked || enabled
+          };
+          this.policies.set(definition.id, normalized);
+          if (normalized.enabled) {
+            eventBus.emit(POLICY_EVENTS.APPLIED, { policy: definition, state: this });
+          }
+        }
+      );
+    }
 
     if (data.passiveGeneration) {
       const sanitized: Record<Resource, number> = { ...PASSIVE_GENERATION };
@@ -445,40 +498,109 @@ export class GameState {
       eventBus.emit(POLICY_EVENTS.REJECTED, payload);
       return false;
     }
-
-    const missing = definition.prerequisites.filter((requirement) => !requirement.isSatisfied(this));
-    if (missing.length > 0) {
-      const payload: PolicyRejectedEvent = {
-        policyId: definition.id,
-        policy: definition,
-        state: this,
-        reason: 'prerequisites-not-met',
-        missingPrerequisites: missing
-      };
-      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
-      return false;
-    }
-
-    if (!this.spend(definition.cost, definition.resource)) {
-      const payload: PolicyRejectedEvent = {
-        policyId: definition.id,
-        policy: definition,
-        state: this,
-        reason: 'insufficient-resources'
-      };
-      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
-      return false;
-    }
-
-    this.policies.add(definition.id);
-    const payload: PolicyAppliedEvent = { policy: definition, state: this };
-    eventBus.emit(POLICY_EVENTS.APPLIED, payload);
-    return true;
+    return this.setPolicyEnabled(definition.id, true);
   }
 
   /** Check if a policy has been applied. */
   hasPolicy(policy: string): boolean {
-    return this.policies.has(policy);
+    return this.policies.get(policy)?.enabled === true;
+  }
+
+  /** Determine whether a policy has been unlocked at least once. */
+  isPolicyUnlocked(policy: string): boolean {
+    return this.policies.get(policy)?.unlocked === true;
+  }
+
+  /** Toggle a policy between its enabled and disabled states. */
+  togglePolicy(policyId: string): boolean {
+    const nextEnabled = !this.hasPolicy(policyId);
+    return this.setPolicyEnabled(policyId, nextEnabled);
+  }
+
+  /** Enable or disable a policy, emitting lifecycle events as needed. */
+  setPolicyEnabled(policyId: string, enabled: boolean): boolean {
+    const definition = getPolicyDefinition(policyId);
+    if (!definition) {
+      const payload: PolicyRejectedEvent = {
+        policyId,
+        state: this,
+        reason: 'unknown-policy'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    const current = this.policies.get(definition.id) ?? GameState.EMPTY_POLICY;
+
+    if (enabled) {
+      if (current.enabled) {
+        return true;
+      }
+
+      const missing = definition.prerequisites.filter(
+        (requirement) => !requirement.isSatisfied(this)
+      );
+      if (missing.length > 0) {
+        const payload: PolicyRejectedEvent = {
+          policyId: definition.id,
+          policy: definition,
+          state: this,
+          reason: 'prerequisites-not-met',
+          missingPrerequisites: missing
+        };
+        eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+        return false;
+      }
+
+      if (!current.unlocked) {
+        if (!this.spend(definition.cost, definition.resource)) {
+          const payload: PolicyRejectedEvent = {
+            policyId: definition.id,
+            policy: definition,
+            state: this,
+            reason: 'insufficient-resources'
+          };
+          eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+          return false;
+        }
+      }
+
+      this.policies.set(definition.id, { enabled: true, unlocked: true });
+      const payload: PolicyAppliedEvent = { policy: definition, state: this };
+      eventBus.emit(POLICY_EVENTS.APPLIED, payload);
+      return true;
+    }
+
+    if (!current.unlocked) {
+      const payload: PolicyRejectedEvent = {
+        policyId: definition.id,
+        policy: definition,
+        state: this,
+        reason: 'not-applied'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    if (!definition.toggleable) {
+      const payload: PolicyRejectedEvent = {
+        policyId: definition.id,
+        policy: definition,
+        state: this,
+        reason: 'not-toggleable'
+      };
+      eventBus.emit(POLICY_EVENTS.REJECTED, payload);
+      return false;
+    }
+
+    if (!current.enabled) {
+      return true;
+    }
+
+    this.policies.set(definition.id, { enabled: false, unlocked: true });
+    const payload: PolicyRevokedEvent = { policy: definition, state: this };
+    eventBus.emit(POLICY_EVENTS.REVOKED, payload);
+    return true;
   }
 
   /** Retrieve the sanitized NG+ state for the current run. */
