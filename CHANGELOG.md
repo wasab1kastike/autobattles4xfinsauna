@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Teach the build metadata pipeline to honor a `SOURCE_COMMIT` override so
+  release tooling can inject the freshly committed hash before mirroring the
+  docs bundle, keeping the published build badge in perfect sync, and relax the
+  docs verifier to accept docs-only follow-up commits that reference the
+  freshly built release hash.
+
 - Update the GitHub Pages workflow to upload a uniquely named deployment
   artifact so reruns never collide on the default `github-pages` bundle and the
   publishing job can deploy our polished builds without manual retries.
