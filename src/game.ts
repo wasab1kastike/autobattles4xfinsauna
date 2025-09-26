@@ -300,6 +300,48 @@ function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
   }
 }
 
+const hudEventUnsubscribers = new Set<() => void>();
+
+function registerHudEventListener<T>(event: string, handler: (payload: T) => void): () => void {
+  eventBus.on(event, handler);
+  let active = true;
+  const unsubscribe = () => {
+    if (!active) {
+      return;
+    }
+    active = false;
+    eventBus.off(event, handler);
+    hudEventUnsubscribers.delete(unsubscribe);
+  };
+  hudEventUnsubscribers.add(unsubscribe);
+  return unsubscribe;
+}
+
+function teardownHudEventListeners(): void {
+  for (const unsubscribe of Array.from(hudEventUnsubscribers)) {
+    try {
+      unsubscribe();
+    } catch (error) {
+      console.warn('Failed to remove HUD event listener', error);
+    }
+  }
+  hudEventUnsubscribers.clear();
+}
+
+function getHudEventListenerCount(event: string): number {
+  const listenersMap: Map<string, unknown[]> | undefined =
+    (eventBus as unknown as { listeners?: Map<string, unknown[]> }).listeners;
+  if (!listenersMap) {
+    return 0;
+  }
+  const listeners = listenersMap.get(event);
+  return Array.isArray(listeners) ? listeners.length : 0;
+}
+
+function getTrackedHudListenerCount(): number {
+  return hudEventUnsubscribers.size;
+}
+
 function disposeUiV2Controllers(): void {
   uiV2RosterController?.dispose();
   uiV2RosterController = null;
@@ -1038,15 +1080,15 @@ export interface SetupGameOptions {
   hudVariant?: 'classic' | 'v2';
 }
 
-export function setupGame(
+function configureHud(
   canvasEl: HTMLCanvasElement,
   resourceBarEl: HTMLElement,
   overlayEl: HTMLElement,
-  options: SetupGameOptions = {}
+  hudVariant: 'classic' | 'v2'
 ): void {
-  const hudVariant = options.hudVariant ?? 'classic';
   const useClassicHud = hudVariant === 'classic';
   overlayEl.dataset.hudVariant = hudVariant;
+  teardownHudEventListeners();
   disposeUiV2Controllers();
   hudElapsedMs = 0;
   notifyHudElapsed();
@@ -1209,10 +1251,7 @@ export function setupGame(
         ) => {
           listener(payload);
         };
-        eventBus.on('resourceChanged', handler);
-        return () => {
-          eventBus.off('resourceChanged', handler);
-        };
+        return registerHudEventListener('resourceChanged', handler);
       },
       getArtocoinBalance: () => getArtocoinBalance(),
       subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
@@ -1255,6 +1294,34 @@ export function setupGame(
     addEvent = () => {};
   }
 }
+
+export function setupGame(
+  canvasEl: HTMLCanvasElement,
+  resourceBarEl: HTMLElement,
+  overlayEl: HTMLElement,
+  options: SetupGameOptions = {}
+): void {
+  const hudVariant = options.hudVariant ?? 'classic';
+  configureHud(canvasEl, resourceBarEl, overlayEl, hudVariant);
+}
+
+export function reconfigureHud(
+  canvasEl: HTMLCanvasElement,
+  resourceBarEl: HTMLElement,
+  overlayEl: HTMLElement,
+  options: SetupGameOptions = {}
+): void {
+  const hudVariant = options.hudVariant ?? 'classic';
+  configureHud(canvasEl, resourceBarEl, overlayEl, hudVariant);
+}
+
+export const __TEST__ = {
+  registerHudEventListener: <T>(event: string, handler: (payload: T) => void) =>
+    registerHudEventListener<T>(event, handler),
+  teardownHudEventListeners,
+  getHudEventListenerCount,
+  getTrackedHudListenerCount
+};
 
 const map = new HexMap(10, 10, 32);
 const animator = new Animator(() => invalidateFrame());
@@ -2680,6 +2747,7 @@ export function cleanup(): void {
     disposeRightPanel();
     disposeRightPanel = null;
   }
+  teardownHudEventListeners();
   if (inventoryHudController) {
     inventoryHudController.destroy();
     inventoryHudController = null;

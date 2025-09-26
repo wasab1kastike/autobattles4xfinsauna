@@ -1,5 +1,5 @@
 import './style.css';
-import { setupGame, start, handleCanvasClick, cleanup, disableUiV2 } from './game.ts';
+import { setupGame, start, handleCanvasClick, cleanup, disableUiV2, reconfigureHud } from './game.ts';
 import { loadSaunaSettings } from './game/saunaSettings.ts';
 import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.tsx';
 import { assetPaths, setAssets } from './game/assets.ts';
@@ -269,7 +269,7 @@ export function returnToClassicHud(): void {
   uiV2Handle = null;
   hudVariant = 'classic';
 
-  setupGame(canvas, resourceBar, overlay, { hudVariant: 'classic' });
+  reconfigureHud(canvas, resourceBar, overlay, { hudVariant: 'classic' });
 }
 
 export function init(): void {
