@@ -29,6 +29,42 @@ function getCurrentCommit() {
   }
 }
 
+function getParentCommit() {
+  try {
+    return execSync('git rev-parse --short HEAD^', {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .toString()
+      .trim();
+  } catch (error) {
+    if (process.env.DEBUG) {
+      console.error('Unable to resolve HEAD parent commit:', error);
+    }
+    return null;
+  }
+}
+
+function isDocsOnlyCommit() {
+  try {
+    const diff = execSync('git diff --name-only HEAD^ HEAD', {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+      .toString()
+      .trim();
+
+    if (!diff) {
+      return false;
+    }
+
+    return diff.split('\n').every((file) => file.startsWith('docs/'));
+  } catch (error) {
+    if (process.env.DEBUG) {
+      console.error('Unable to inspect HEAD diff:', error);
+    }
+    return false;
+  }
+}
+
 function collectDocsBundles() {
   try {
     return readdirSync(docsAssetsDir)
@@ -80,7 +116,11 @@ if (currentCommit === 'unknown') {
 }
 
 if (docsCommit && docsCommit !== currentCommit) {
-  fail(`Docs bundle commit ${docsCommit} does not match HEAD ${currentCommit}. Run \`npm run build\` to refresh docs/.`);
+  const parentCommit = getParentCommit();
+  const docsOnly = isDocsOnlyCommit();
+  if (!parentCommit || docsCommit !== parentCommit || !docsOnly) {
+    fail(`Docs bundle commit ${docsCommit} does not match HEAD ${currentCommit}. Run \`npm run build\` to refresh docs/.`);
+  }
 }
 
 if (process.exitCode) {
