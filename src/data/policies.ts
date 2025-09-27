@@ -3,7 +3,6 @@ import { Resource } from '../core/resources.ts';
 import saunaBeerIcon from '../../assets/ui/sauna-beer.svg';
 import resourceIcon from '../../assets/ui/resource.svg';
 import saunaRosterIcon from '../../assets/ui/saunoja-roster.svg';
-import type { PolicyUnitModifiers } from '../policies/types.ts';
 
 export const POLICY_EVENTS = {
   APPLIED: 'policy:applied',
@@ -17,12 +16,7 @@ export type PolicyLifecycleEventName =
   | typeof POLICY_EVENTS.APPLIED
   | typeof POLICY_EVENTS.REVOKED;
 
-export type PolicyId =
-  | 'eco'
-  | 'temperance'
-  | 'steam-diplomats'
-  | 'battle-rhythm'
-  | 'shieldwall-doctrine';
+export type PolicyId = 'eco' | 'temperance' | 'steam-diplomats';
 
 export interface PolicyAppliedEvent {
   readonly policy: PolicyDefinition;
@@ -80,7 +74,6 @@ export interface PolicyDefinition {
   readonly prerequisites: readonly PolicyPrerequisite[];
   readonly visuals: PolicyVisuals;
   readonly effects: readonly PolicyEffectHook[];
-  readonly unitModifiers?: PolicyUnitModifiers;
   readonly spotlight?: string;
   readonly toggleable?: boolean;
 }
@@ -186,70 +179,6 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       }
     ],
     spotlight: 'Trade envoys pipe artisanal steam through every new supply line.'
-  },
-  {
-    id: 'battle-rhythm',
-    name: 'Battle Rhythm Doctrine',
-    description:
-      'Concerted training regimens raise attack tempo and accuracy, but the drills strain supply lines.',
-    cost: 40,
-    resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Secure the Aurora Temperance Treaty to synchronise the night shift cadence.',
-        isSatisfied: (state) => state.hasPolicy('temperance')
-      }
-    ],
-    visuals: {
-      icon: saunaRosterIcon,
-      gradient: 'linear-gradient(160deg, rgba(252, 211, 77, 0.95), rgba(248, 113, 113, 0.88))',
-      accentColor: '#f97316',
-      badges: ['Combat', 'Discipline'],
-      flair: 'Metronomes echo through the barracks as sparring pairs whirl in unison.'
-    },
-    effects: [],
-    unitModifiers: {
-      statMultipliers: {
-        attackDamage: 1.15,
-        movementRange: 1.05
-      },
-      hitChanceBonus: 0.05,
-      damageDealtMultiplier: 1.1,
-      upkeepMultiplier: 1.1
-    },
-    spotlight: 'Drumbeats roll across the training grounds, pushing every strike to land true.',
-    toggleable: true
-  },
-  {
-    id: 'shieldwall-doctrine',
-    name: 'Shieldwall Doctrine',
-    description:
-      'Layered steam shields harden the vanguard, absorbing blows at the cost of heartier rations.',
-    cost: 55,
-    resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Adopt the Battle Rhythm Doctrine to coordinate defensive stances.',
-        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
-      }
-    ],
-    visuals: {
-      icon: resourceIcon,
-      gradient: 'linear-gradient(170deg, rgba(96, 165, 250, 0.92), rgba(59, 130, 246, 0.88))',
-      accentColor: '#3b82f6',
-      badges: ['Defense', 'Logistics'],
-      flair: 'Glowing ward sigils shimmer across interlocked shields as steam condenses into armor.'
-    },
-    effects: [],
-    unitModifiers: {
-      statMultipliers: {
-        defense: 1.3
-      },
-      damageTakenMultiplier: 0.85,
-      upkeepDelta: 1.5
-    },
-    spotlight: 'The sauna guard braces as one, steam-wreathed shields catching the brunt of the assault.',
-    toggleable: true
   }
 ];
 
