@@ -9,24 +9,28 @@ export class GameClock {
   private speed = 1;
   private lastTick = 0;
   private accumulator = 0;
-  private running = false;
-  private intervalEnabled = true;
 
   constructor(private readonly baseInterval: number, private readonly onTick: TickCallback) {}
 
   /** Start ticking. */
   start(): void {
     this.stop();
-    this.running = true;
-    this.accumulator = 0;
     this.lastTick = Date.now();
-    this.setupTimer();
+    const interval = this.baseInterval / this.speed;
+    this.timer = setInterval(() => {
+      const now = Date.now();
+      const delta = now - this.lastTick;
+      this.lastTick = now;
+      this.onTick(delta);
+    }, interval);
   }
 
   /** Stop ticking. */
   stop(): void {
-    this.running = false;
-    this.clearTimer();
+    if (this.timer !== null) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   /** Set the speed multiplier and restart ticking if running. */
@@ -35,8 +39,8 @@ export class GameClock {
       throw new Error('Speed multiplier must be positive');
     }
     this.speed = multiplier;
-    if (this.running && this.intervalEnabled) {
-      this.setupTimer();
+    if (this.timer !== null) {
+      this.start();
     }
   }
 
@@ -53,53 +57,10 @@ export class GameClock {
    * animation frame loop to keep ticks in sync with rendering.
    */
   tick(deltaMs: number): void {
-    if (this.timer !== null) {
-      return;
-    }
     this.accumulator += deltaMs * this.speed;
     while (this.accumulator >= this.baseInterval) {
       this.accumulator -= this.baseInterval;
       this.onTick(this.baseInterval);
-    }
-  }
-
-  /**
-   * Enable or disable the internal interval driver. When disabled, the clock
-   * can still be advanced via {@link tick}.
-   */
-  setIntervalEnabled(enabled: boolean): void {
-    if (this.intervalEnabled === enabled) {
-      return;
-    }
-    this.intervalEnabled = enabled;
-    if (!enabled) {
-      this.clearTimer();
-      return;
-    }
-    if (this.running) {
-      this.lastTick = Date.now();
-      this.setupTimer();
-    }
-  }
-
-  private setupTimer(): void {
-    this.clearTimer();
-    if (!this.running || !this.intervalEnabled) {
-      return;
-    }
-    const interval = this.baseInterval / this.speed;
-    this.timer = setInterval(() => {
-      const now = Date.now();
-      const delta = now - this.lastTick;
-      this.lastTick = now;
-      this.onTick(delta);
-    }, interval);
-  }
-
-  private clearTimer(): void {
-    if (this.timer !== null) {
-      clearInterval(this.timer);
-      this.timer = null;
     }
   }
 }
