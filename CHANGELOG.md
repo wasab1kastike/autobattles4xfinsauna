@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-- Ensure the UI v2 roster controller defensively clones roster summaries before
-  broadcasting so memoized docks react to in-place mutations, and cover the
-  regression with a targeted Vitest harness.
-
 - Extract sauna lifecycle wiring into `game/setup/sauna.ts`, add a reusable
   right-panel initializer, and adjust game setup to consume the new helpers with
   focused unit coverage for tier persistence, UI toggling, and spawn queue
