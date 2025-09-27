@@ -2332,7 +2332,6 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   running = false;
-  clock.stop();
   gameLoopCallback = null;
   idleFrameCount = 0;
   unitVisionSnapshots.clear();
@@ -2430,7 +2429,6 @@ export async function start(): Promise<void> {
     return;
   }
   running = true;
-  clock.start();
   if (!pauseListenerAttached) {
     eventBus.on('game:pause-changed', onPauseChanged);
     pauseListenerAttached = true;
