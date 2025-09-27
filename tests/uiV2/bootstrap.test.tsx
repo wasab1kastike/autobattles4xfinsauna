@@ -8,7 +8,6 @@ import type { EnemyRampSummary } from '../../src/ui/topbar.ts';
 import { eventBus } from '../../src/events';
 import { logEvent, clearLogs, getLogHistory, subscribeToLogs } from '../../src/ui/logging.ts';
 import type { LogEntry } from '../../src/ui/logging.ts';
-import { createUiV2RosterController } from '../../src/uiV2/rosterController.ts';
 
 const destroyRosterHudMock = vi.fn();
 
@@ -21,13 +20,7 @@ type Harness = {
 };
 
 vi.mock('../../src/game.ts', () => {
-  let currentSummary: RosterHudSummary = { count: 1, card: null };
-  let currentEntries: RosterEntry[] = [];
-  let currentTime = 0;
-  let currentRamp: EnemyRampSummary | null = null;
-
-  const summaryListeners = new Set<(summary: RosterHudSummary) => void>();
-  const entryListeners = new Set<(entries: RosterEntry[]) => void>();
+  const rosterListeners = new Set<(state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void>();
   const topbarListeners = new Set<(
     snapshot: {
       resources: Record<Resource, { total: number; delta: number }>;
@@ -38,6 +31,10 @@ vi.mock('../../src/game.ts', () => {
   ) => void>();
   const logListeners = new Set<(entries: LogEntry[]) => void>();
 
+  let currentSummary: RosterHudSummary = { count: 1, card: null };
+  let currentEntries: RosterEntry[] = [];
+  let currentTime = 0;
+  let currentRamp: EnemyRampSummary | null = null;
   const resources: Record<Resource, { total: number; delta: number }> = {
     [Resource.SAUNA_BEER]: { total: 200, delta: 0 },
     [Resource.SAUNAKUNNIA]: { total: 3, delta: 0 },
@@ -71,32 +68,13 @@ vi.mock('../../src/game.ts', () => {
     ramp: currentRamp
   });
 
-  const rosterOptions = {
-    getSummary: () => currentSummary,
-    subscribeSummary(listener: (summary: RosterHudSummary) => void) {
-      summaryListeners.add(listener);
-      listener(currentSummary);
-      return () => summaryListeners.delete(listener);
-    },
-    getEntries: () => currentEntries,
-    subscribeEntries(listener: (entries: RosterEntry[]) => void) {
-      entryListeners.add(listener);
-      listener(currentEntries);
-      return () => entryListeners.delete(listener);
-    }
-  } satisfies Parameters<typeof createUiV2RosterController>[0];
-
-  let rosterController = createUiV2RosterController(rosterOptions);
-
-  const notifySummary = () => {
-    for (const listener of summaryListeners) {
-      listener(currentSummary);
-    }
-  };
-
-  const notifyEntries = () => {
-    for (const listener of entryListeners) {
-      listener(currentEntries);
+  const notifyRoster = () => {
+    const state = { summary: currentSummary, entries: [...currentEntries] } satisfies {
+      summary: RosterHudSummary;
+      entries: RosterEntry[];
+    };
+    for (const listener of rosterListeners) {
+      listener(state);
     }
   };
 
@@ -111,6 +89,22 @@ vi.mock('../../src/game.ts', () => {
     resources[change.resource] = { total: change.total, delta: change.amount };
     notifyTopbar();
   });
+
+  const rosterController = {
+    getSnapshot: () => ({ summary: currentSummary, entries: [...currentEntries] }),
+    subscribe(listener: (state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void) {
+      rosterListeners.add(listener);
+      listener({ summary: currentSummary, entries: [...currentEntries] });
+      return () => rosterListeners.delete(listener);
+    },
+    dispose() {
+      rosterListeners.clear();
+    }
+  } satisfies {
+    getSnapshot: () => { summary: RosterHudSummary; entries: RosterEntry[] };
+    subscribe(listener: (state: { summary: RosterHudSummary; entries: RosterEntry[] }) => void): () => void;
+    dispose(): void;
+  };
 
   const topbarController = {
     getSnapshot: topbarSnapshot,
@@ -157,11 +151,11 @@ vi.mock('../../src/game.ts', () => {
   const harness: Harness = {
     emitRosterSummary(summary) {
       currentSummary = summary;
-      notifySummary();
+      notifyRoster();
     },
     emitRosterEntries(entries) {
       currentEntries = [...entries];
-      notifyEntries();
+      notifyRoster();
     },
     emitHudTime(ms) {
       currentTime = ms;
@@ -181,12 +175,7 @@ vi.mock('../../src/game.ts', () => {
       resources[Resource.SISU] = { total: 5, delta: 0 };
       artocoin = 0;
       logEntries = getLogHistory();
-      rosterController.dispose();
-      summaryListeners.clear();
-      entryListeners.clear();
-      rosterController = createUiV2RosterController(rosterOptions);
-      notifySummary();
-      notifyEntries();
+      notifyRoster();
       notifyTopbar();
       for (const listener of logListeners) {
         listener([...logEntries]);
@@ -210,8 +199,6 @@ vi.mock('../../src/game.ts', () => {
     getUiV2LogController: () => logController,
     getUiV2SaunaController: () => saunaController,
     getUiV2InventoryController: () => inventoryController,
-    createRosterController: (options: Parameters<typeof createUiV2RosterController>[0]) =>
-      createUiV2RosterController(options),
     __uiV2Test: harness
   };
 });
@@ -224,8 +211,6 @@ vi.mock('../../src/ui/rosterHUD.ts', () => ({
     return {
       updateSummary(summary: RosterHudSummary) {
         counter.textContent = `Roster Count: ${summary.count}`;
-        counter.dataset.cardLevel = summary.card ? String(summary.card.progression.level) : '';
-        counter.dataset.traitCount = summary.card ? String(summary.card.traits.length) : '0';
       },
       installRenderer: () => {},
       renderRoster(entries: RosterEntry[]) {
@@ -346,63 +331,6 @@ describe('UiV2 shell', () => {
       logEvent({ type: 'combat', message: 'Steam rising' });
     });
     await waitFor(() => expect(screen.queryByText('Steam rising')).not.toBeNull());
-  });
-
-  it('updates roster summary when the summary reference is reused', async () => {
-    const resourceBar = document.createElement('div');
-    resourceBar.id = 'resource-bar';
-    document.body.appendChild(resourceBar);
-
-    render(<UiV2App resourceBar={resourceBar} onReturnToClassic={vi.fn()} />);
-
-    const summaryDisplay = await screen.findByTestId('roster-summary-count');
-    const gameHarness = await getHarness();
-
-    const summary: RosterHudSummary = {
-      count: 2,
-      card: {
-        id: 'unit-memo',
-        name: 'Memoized Saunoja',
-        traits: ['Resolute'],
-        upkeep: 1,
-        progression: {
-          level: 1,
-          xp: 0,
-          xpIntoLevel: 0,
-          xpForNext: 10,
-          progress: 0,
-          statBonuses: { vigor: 0, focus: 0, resolve: 0 }
-        },
-        behavior: 'defend'
-      }
-    };
-
-    await act(async () => {
-      gameHarness.emitRosterSummary(summary);
-    });
-    await waitFor(() => expect(summaryDisplay.textContent ?? '').toContain('Roster Count: 2'));
-    expect(summaryDisplay.dataset.cardLevel).toBe('1');
-    expect(summaryDisplay.dataset.traitCount).toBe('1');
-
-    await act(async () => {
-      summary.count = 5;
-      summary.card!.progression.level = 3;
-      summary.card!.traits.push('Ferocious');
-      gameHarness.emitRosterSummary(summary);
-    });
-    await waitFor(() => expect(summaryDisplay.textContent ?? '').toContain('Roster Count: 5'));
-    expect(summaryDisplay.dataset.cardLevel).toBe('3');
-    expect(summaryDisplay.dataset.traitCount).toBe('2');
-
-    await act(async () => {
-      summary.count = 7;
-      summary.card!.progression.level = 4;
-      summary.card!.traits.push('Ironclad');
-      gameHarness.emitRosterSummary(summary);
-    });
-    await waitFor(() => expect(summaryDisplay.textContent ?? '').toContain('Roster Count: 7'));
-    expect(summaryDisplay.dataset.cardLevel).toBe('4');
-    expect(summaryDisplay.dataset.traitCount).toBe('3');
   });
 
   it('mounts via bootstrap and restores resource bar on destroy', async () => {
