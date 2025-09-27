@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Start the main game clock immediately after assets load, stop it during
+  general cleanup to avoid lingering intervals, and add a regression test that
+  guards the lifecycle hook.
+
 - Extract HUD coordination, selection overlay, and progression helpers from
   `src/game.ts` into dedicated modules, wire the orchestrator through the new
   interfaces, and add focused unit tests for each subsystem to lock in the
