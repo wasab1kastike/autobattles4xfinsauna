@@ -2,11 +2,6 @@
 
 ## Unreleased
 
-- Extract HUD coordination, selection overlay, and progression helpers from
-  `src/game.ts` into dedicated modules, wire the orchestrator through the new
-  interfaces, and add focused unit tests for each subsystem to lock in the
-  refactor.
-
 - Fix the HUD variant toggle so returning to the classic overlay reconfigures
   existing controllers without stacking event listeners, ensure resource-change
   hooks are cleaned up before reattachment, and add regression coverage for the
