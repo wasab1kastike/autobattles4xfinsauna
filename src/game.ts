@@ -169,6 +169,7 @@ import {
   setPurchasedTierIds,
   subscribeToSaunaShop as subscribeToSaunaShopState
 } from './game/saunaShopState.ts';
+import { initializeClassicHud, initializeModernHud } from './game/setup/hud.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -1078,42 +1079,8 @@ export function setupGame(
     rosterHud.destroy();
     rosterHud = null;
   }
-  if (useClassicHud) {
-    rosterHud = setupRosterHUD(resourceBarEl, { rosterIcon: uiIcons.saunojaRoster });
-    if (pendingRosterRenderer) {
-      rosterHud.installRenderer(pendingRosterRenderer);
-    }
-    if (pendingRosterEntries) {
-      rosterHud.renderRoster(pendingRosterEntries);
-      pendingRosterEntries = null;
-    }
-    if (pendingRosterSummary) {
-      rosterHud.updateSummary(pendingRosterSummary);
-      pendingRosterSummary = null;
-    }
-  } else {
-    pendingRosterRenderer = null;
-    pendingRosterEntries = null;
-    pendingRosterSummary = null;
-  }
-
   saunaUiController?.dispose();
   saunaUiController = null;
-  if (useClassicHud) {
-    saunaUiController = setupSaunaUI(sauna, {
-      getActiveTierId: () => currentTierId,
-      setActiveTierId: (tierId, opts) => {
-        const unlocked = setActiveTier(tierId, { persist: opts?.persist });
-        if (unlocked) {
-          saunaUiController?.update();
-          updateRosterDisplay();
-        }
-        return unlocked;
-      },
-      getTierContext: () => getTierContext()
-    });
-  }
-
   topbarControls?.dispose();
   topbarControls = null;
   actionBarController?.destroy();
@@ -1154,18 +1121,6 @@ export function setupGame(
       return used;
     }
   } satisfies ActionBarAbilityHandlers;
-
-  if (useClassicHud) {
-    topbarControls = setupTopbar(state, {
-      saunakunnia: uiIcons.resource,
-      sisu: uiIcons.sisu,
-      saunaBeer: uiIcons.saunaBeer,
-      artocoin: uiIcons.artocoin
-    });
-  }
-
-  actionBarController = setupActionBar(state, overlayEl, actionBarAbilities);
-
   inventoryHudController?.destroy();
   inventoryHudController = null;
   const buildSaunaShopViewModel = (): SaunaShopViewModel => {
@@ -1178,82 +1133,121 @@ export function setupGame(
       }))
     } satisfies SaunaShopViewModel;
   };
-  if (useClassicHud) {
-    inventoryHudController = setupInventoryHud(inventory, {
-      getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-      getComparisonContext: () => getSelectedInventoryContext(),
-      onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
-      getUseUiV2,
-      onUseUiV2Change: setUseUiV2,
-      getSaunaShopViewModel: () => buildSaunaShopViewModel(),
-      onPurchaseSaunaTier: (tierId) =>
-        purchaseSaunaTier(getSaunaTier(tierId), {
-          getCurrentBalance: () => getArtocoinBalance()
-        }),
-      subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
-    });
-  }
 
-  if (!useClassicHud) {
-    uiV2RosterController = createUiV2RosterController({
-      getSummary: () => getRosterSummarySnapshot(),
-      subscribeSummary: (listener) => subscribeRosterSummary(listener),
-      getEntries: () => getRosterEntriesSnapshot(),
-      subscribeEntries: (listener) => subscribeRosterEntries(listener)
-    });
-    uiV2TopbarController = createUiV2TopbarController({
-      getResource: (resource) => state.getResource(resource),
-      subscribeResourceChange: (listener) => {
-        const handler = (
-          payload: { resource: Resource; total: number; amount: number }
-        ) => {
-          listener(payload);
-        };
-        eventBus.on('resourceChanged', handler);
-        return () => {
-          eventBus.off('resourceChanged', handler);
-        };
-      },
-      getArtocoinBalance: () => getArtocoinBalance(),
-      subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
-      getElapsedMs: () => getHudElapsedMs(),
-      subscribeHudTime: (listener) => subscribeHudTime(listener),
-      getEnemyRamp: () => lastEnemyRampSummary,
-      subscribeEnemyRamp: (listener) => subscribeEnemyRamp(listener)
-    });
-    uiV2InventoryController = createUiV2InventoryController({
-      buildSaunaShopViewModel,
-      subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
-      getUseUiV2,
-      setUseUiV2
-    });
-    uiV2LogController = createUiV2LogController({
-      getHistory: () => getLogHistory(),
-      subscribe: (listener) => subscribeToLogs(listener)
-    });
-    uiV2SaunaController = createUiV2SaunaController({
-      getSauna: () => sauna,
-      setupSaunaUi: (saunaInstance, controllerOptions) =>
-        setupSaunaUI(saunaInstance, controllerOptions),
-      setExternalController: setExternalSaunaUiController,
-      getActiveTierId: () => currentTierId,
-      setActiveTierId: (tierId, opts) => setActiveTier(tierId, opts),
-      getTierContext: () => getTierContext()
-    });
-  }
+  const hudResult = useClassicHud
+    ? initializeClassicHud({
+        resourceBarEl,
+        rosterIcon: uiIcons.saunojaRoster,
+        sauna,
+        previousDisposeRightPanel: disposeRightPanel,
+        pendingRosterRenderer,
+        pendingRosterEntries,
+        pendingRosterSummary,
+        setupRosterHUD,
+        setupSaunaUi: (saunaInstance, options) => setupSaunaUI(saunaInstance, options),
+        getActiveTierId: () => currentTierId,
+        setActiveTier: (tierId, options) => setActiveTier(tierId, options),
+        getTierContext: () => getTierContext(),
+        setupTopbar: () =>
+          setupTopbar(state, {
+            saunakunnia: uiIcons.resource,
+            sisu: uiIcons.sisu,
+            saunaBeer: uiIcons.saunaBeer,
+            artocoin: uiIcons.artocoin
+          }),
+        setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
+        actionBarAbilities,
+        setupInventoryHud: () =>
+          setupInventoryHud(inventory, {
+            getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
+            getComparisonContext: () => getSelectedInventoryContext(),
+            onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
+            getUseUiV2,
+            onUseUiV2Change: setUseUiV2,
+            getSaunaShopViewModel: () => buildSaunaShopViewModel(),
+            onPurchaseSaunaTier: (tierId) =>
+              purchaseSaunaTier(getSaunaTier(tierId), {
+                getCurrentBalance: () => getArtocoinBalance()
+              }),
+            subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
+          }),
+        createRightPanel: (onRendererReady) => initializeRightPanel(onRendererReady),
+        syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
+        updateRosterDisplay: () => updateRosterDisplay(),
+        startTutorialIfNeeded: () => startTutorialIfNeeded()
+      })
+    : initializeModernHud({
+        previousDisposeRightPanel: disposeRightPanel,
+        setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
+        actionBarAbilities,
+        createRosterController: (options) => createUiV2RosterController(options),
+        rosterSummary: {
+          getSummary: () => getRosterSummarySnapshot(),
+          subscribeSummary: (listener) => subscribeRosterSummary(listener),
+          getEntries: () => getRosterEntriesSnapshot(),
+          subscribeEntries: (listener) => subscribeRosterEntries(listener)
+        },
+        createTopbarController: (options) => createUiV2TopbarController(options),
+        topbar: {
+          getResource: (resource) => state.getResource(resource),
+          subscribeResourceChange: (listener) => {
+            const handler = (
+              payload: { resource: Resource; total: number; amount: number }
+            ) => {
+              listener(payload);
+            };
+            eventBus.on('resourceChanged', handler);
+            return () => {
+              eventBus.off('resourceChanged', handler);
+            };
+          },
+          getArtocoinBalance: () => getArtocoinBalance(),
+          subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
+          getElapsedMs: () => getHudElapsedMs(),
+          subscribeHudTime: (listener) => subscribeHudTime(listener),
+          getEnemyRamp: () => lastEnemyRampSummary,
+          subscribeEnemyRamp: (listener) => subscribeEnemyRamp(listener)
+        },
+        createInventoryController: (options) => createUiV2InventoryController(options),
+        inventory: {
+          buildSaunaShopViewModel,
+          subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
+          getUseUiV2,
+          setUseUiV2
+        },
+        createLogController: (options) => createUiV2LogController(options),
+        log: {
+          getHistory: () => getLogHistory(),
+          subscribe: (listener) => subscribeToLogs(listener)
+        },
+        createSaunaController: (options) => createUiV2SaunaController(options),
+        sauna: {
+          getSauna: () => sauna,
+          setupSaunaUi: (saunaInstance, controllerOptions) =>
+            setupSaunaUI(saunaInstance, controllerOptions),
+          setExternalController: setExternalSaunaUiController,
+          getActiveTierId: () => currentTierId,
+          setActiveTierId: (tierId, opts) => setActiveTier(tierId, opts),
+          getTierContext: () => getTierContext()
+        }
+      });
 
-  if (useClassicHud) {
-    initializeRightPanel();
-    syncSaunojaRosterWithUnits();
-    updateRosterDisplay();
-    startTutorialIfNeeded();
-  } else {
-    if (disposeRightPanel) {
-      disposeRightPanel();
-      disposeRightPanel = null;
-    }
-    addEvent = () => {};
-  }
+  rosterHud = hudResult.rosterHud;
+  pendingRosterRenderer = hudResult.pendingRosterRenderer;
+  pendingRosterEntries = hudResult.pendingRosterEntries;
+  pendingRosterSummary = hudResult.pendingRosterSummary;
+  saunaUiController = hudResult.saunaUiController;
+  topbarControls = hudResult.topbarControls;
+  actionBarController = hudResult.actionBarController;
+  inventoryHudController = hudResult.inventoryHudController;
+  disposeRightPanel = hudResult.disposeRightPanel;
+  addEvent = hudResult.addEvent;
+  uiV2RosterController = hudResult.uiV2RosterController;
+  uiV2TopbarController = hudResult.uiV2TopbarController;
+  uiV2InventoryController = hudResult.uiV2InventoryController;
+  uiV2LogController = hudResult.uiV2LogController;
+  uiV2SaunaController = hudResult.uiV2SaunaController;
+  hudResult.postSetup?.();
 }
 
 const map = new HexMap(10, 10, 32);
@@ -2043,14 +2037,14 @@ function getSelectedInventoryContext(): InventoryComparisonContext | null {
   } satisfies InventoryComparisonContext;
 }
 
-function initializeRightPanel(): void {
-  if (disposeRightPanel) {
-    disposeRightPanel();
-    disposeRightPanel = null;
-  }
+function initializeRightPanel(
+  onRosterRendererReady: (renderer: (entries: RosterEntry[]) => void) => void
+): { addEvent: (event: GameEvent) => void; dispose: () => void } {
   const rightPanel = setupRightPanel(state, {
     onRosterSelect: focusSaunojaById,
-    onRosterRendererReady: installRosterRenderer,
+    onRosterRendererReady: (renderer) => {
+      onRosterRendererReady(renderer);
+    },
     onRosterEquipSlot: equipSlotFromStash,
     onRosterUnequipSlot: unequipSlotToStash,
     onRosterBehaviorChange: (unitId, nextBehavior) => {
@@ -2077,9 +2071,11 @@ function initializeRightPanel(): void {
       return next;
     }
   });
-  addEvent = rightPanel.addEvent;
-  installRosterRenderer(rightPanel.renderRoster);
-  disposeRightPanel = rightPanel.dispose;
+  onRosterRendererReady(rightPanel.renderRoster);
+  return {
+    addEvent: rightPanel.addEvent,
+    dispose: rightPanel.dispose
+  };
 }
 
 function updateSaunaHud(): void {
@@ -2768,7 +2764,10 @@ export async function start(): Promise<void> {
 export { logEvent as log };
 
 export function __rebuildRightPanelForTest(): void {
-  initializeRightPanel();
+  disposeRightPanel?.();
+  const bridge = initializeRightPanel((renderer) => installRosterRenderer(renderer));
+  addEvent = bridge.addEvent;
+  disposeRightPanel = bridge.dispose;
   updateRosterDisplay();
 }
 
