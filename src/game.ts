@@ -19,13 +19,7 @@ import { createSauna, pickFreeTileAround } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
-import type {
-  SaunaStatusPayload,
-  SelectionItemSlot,
-  SelectionStatusChip,
-  UnitSelectionPayload,
-  UnitStatusPayload
-} from './ui/fx/types.ts';
+import type { SaunaStatusPayload, UnitStatusPayload } from './ui/fx/types.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
@@ -83,18 +77,11 @@ import type {
 } from './inventory/state.ts';
 import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
-import { tryGetUnitArchetype } from './unit/archetypes.ts';
-import { computeUnitStats, applyEquipment } from './unit/calc.ts';
+import { applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
-import {
-  getLevelProgress,
-  getTotalStatAwards,
-  getStatAwardsForLevel,
-  getLevelForExperience,
-  type StatAwards
-} from './progression/experiencePlan.ts';
+import { getLevelProgress, getTotalStatAwards, getStatAwardsForLevel } from './progression/experiencePlan.ts';
 import {
   createNgPlusRng,
   ensureNgPlusRunState,
@@ -169,16 +156,51 @@ import {
   setPurchasedTierIds,
   subscribeToSaunaShop as subscribeToSaunaShopState
 } from './game/saunaShopState.ts';
+import {
+  configureHudSnapshotProviders,
+  setPendingRosterRenderer,
+  getPendingRosterRenderer,
+  setPendingRosterEntries,
+  getPendingRosterEntries,
+  clearPendingRosterEntries,
+  setPendingRosterSummary,
+  getPendingRosterSummary,
+  clearPendingRosterSummary,
+  notifyRosterSummary,
+  notifyRosterEntries,
+  addHudElapsedMs,
+  getEnemyRampSummarySnapshot,
+  registerHudEventListener,
+  teardownHudEventListeners,
+  getHudEventListenerCount,
+  getTrackedHudListenerCount,
+  subscribeRosterSummary as hudSubscribeRosterSummary,
+  subscribeRosterEntries as hudSubscribeRosterEntries,
+  subscribeHudTime as hudSubscribeHudTime,
+  subscribeEnemyRamp as hudSubscribeEnemyRamp,
+  getHudElapsedMs as getHudElapsedMsSnapshot,
+  resetHudTracking,
+  setLastRosterEntries,
+  setLastRosterSummary,
+  getLastRosterEntries,
+  getLastRosterSummary
+} from './game/hud.ts';
+import { syncSelectionOverlay } from './game/selection.ts';
+import {
+  createProgressionManager,
+  XP_STANDARD_KILL,
+  XP_ELITE_KILL,
+  XP_BOSS_KILL,
+  XP_OBJECTIVE_COMPLETION,
+  type ExperienceContext,
+  type ExperienceGrantResult,
+  type ExperienceSource,
+  isEliteUnit
+} from './game/progression.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
-
-const XP_STANDARD_KILL = 6;
-const XP_ELITE_KILL = 40;
-const XP_BOSS_KILL = 250;
-const XP_OBJECTIVE_COMPLETION = 200;
-const MAX_LEVEL = getLevelForExperience(Number.MAX_SAFE_INTEGER);
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -236,111 +258,13 @@ let actionBarController: ActionBarController | null = null;
 let saunaUiController: SaunaUIController | null = null;
 let inventoryHudController: { destroy(): void } | null = null;
 let rosterHud: RosterHudController | null = null;
-let pendingRosterSummary: RosterHudSummary | null = null;
-let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
-let pendingRosterEntries: RosterEntry[] | null = null;
-let lastRosterSummary: RosterHudSummary | null = null;
-let lastRosterEntries: RosterEntry[] = [];
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
-const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
-const rosterEntriesListeners = new Set<(entries: RosterEntry[]) => void>();
-let hudElapsedMs = 0;
-const hudTimeListeners = new Set<(elapsedMs: number) => void>();
-let lastEnemyRampSummary: EnemyRampSummary | null = null;
-const enemyRampListeners = new Set<(
-  summary: EnemyRampSummary | null
-) => void>();
 let uiV2RosterController: UiV2RosterController | null = null;
 let uiV2TopbarController: UiV2TopbarController | null = null;
 let uiV2InventoryController: UiV2InventoryController | null = null;
 let uiV2LogController: UiV2LogController | null = null;
 let uiV2SaunaController: UiV2SaunaController | null = null;
-
-function notifyRosterSummary(summary: RosterHudSummary): void {
-  lastRosterSummary = summary;
-  for (const listener of rosterSummaryListeners) {
-    try {
-      listener(summary);
-    } catch (error) {
-      console.warn('Failed to notify roster summary listener', error);
-    }
-  }
-}
-
-function notifyRosterEntries(entries: RosterEntry[]): void {
-  lastRosterEntries = entries;
-  for (const listener of rosterEntriesListeners) {
-    try {
-      listener(entries);
-    } catch (error) {
-      console.warn('Failed to notify roster entries listener', error);
-    }
-  }
-}
-
-function notifyHudElapsed(): void {
-  for (const listener of hudTimeListeners) {
-    try {
-      listener(hudElapsedMs);
-    } catch (error) {
-      console.warn('Failed to notify HUD time listener', error);
-    }
-  }
-}
-
-function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
-  lastEnemyRampSummary = summary;
-  for (const listener of enemyRampListeners) {
-    try {
-      listener(summary);
-    } catch (error) {
-      console.warn('Failed to notify enemy ramp listener', error);
-    }
-  }
-}
-
-const hudEventUnsubscribers = new Set<() => void>();
-
-function registerHudEventListener<T>(event: string, handler: (payload: T) => void): () => void {
-  eventBus.on(event, handler);
-  let active = true;
-  const unsubscribe = () => {
-    if (!active) {
-      return;
-    }
-    active = false;
-    eventBus.off(event, handler);
-    hudEventUnsubscribers.delete(unsubscribe);
-  };
-  hudEventUnsubscribers.add(unsubscribe);
-  return unsubscribe;
-}
-
-function teardownHudEventListeners(): void {
-  for (const unsubscribe of Array.from(hudEventUnsubscribers)) {
-    try {
-      unsubscribe();
-    } catch (error) {
-      console.warn('Failed to remove HUD event listener', error);
-    }
-  }
-  hudEventUnsubscribers.clear();
-}
-
-function getHudEventListenerCount(event: string): number {
-  const listenersMap: Map<string, unknown[]> | undefined =
-    (eventBus as unknown as { listeners?: Map<string, unknown[]> }).listeners;
-  if (!listenersMap) {
-    return 0;
-  }
-  const listeners = listenersMap.get(event);
-  return Array.isArray(listeners) ? listeners.length : 0;
-}
-
-function getTrackedHudListenerCount(): number {
-  return hudEventUnsubscribers.size;
-}
 
 function disposeUiV2Controllers(): void {
   uiV2RosterController?.dispose();
@@ -389,109 +313,23 @@ function getSelectedSaunoja(): Saunoja | null {
   return saunojas.find((unit) => unit.selected) ?? null;
 }
 
-function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
-  const attachedUnit = getAttachedUnitFor(attendant);
-  const itemsSource = Array.isArray(attendant.items) ? attendant.items : [];
-  const modifiersSource = Array.isArray(attendant.modifiers) ? attendant.modifiers : [];
-  const items: SelectionItemSlot[] = itemsSource.map((item, index) => ({
-    id: typeof item.id === 'string' && item.id.length > 0 ? item.id : `${attendant.id}-item-${index}`,
-    name: item.name?.trim() || 'Artifact',
-    icon: item.icon || undefined,
-    rarity: item.rarity || undefined,
-    quantity:
-      Number.isFinite(item.quantity) && item.quantity > 1
-        ? Math.max(1, Math.round(item.quantity))
-        : undefined
-  }));
-  const statuses: SelectionStatusChip[] = modifiersSource.map((modifier, index) => ({
-    id:
-      typeof modifier.id === 'string' && modifier.id.length > 0
-        ? modifier.id
-        : `modifier-${index}`,
-    label: modifier.name?.trim() || modifier.id || 'Status',
-    remaining: Number.isFinite(modifier.remaining) ? Math.max(0, modifier.remaining) : Infinity,
-    duration: Number.isFinite(modifier.duration) ? Math.max(0, modifier.duration) : Infinity,
-    stacks:
-      Number.isFinite(modifier.stacks) && (modifier.stacks as number) > 1
-        ? Math.max(1, Math.round(modifier.stacks as number))
-        : undefined
-  }));
-
-  const hpValue = Number.isFinite(attendant.hp) ? Math.max(0, attendant.hp) : 0;
-  const maxHpValue = Number.isFinite(attendant.maxHp) ? Math.max(1, attendant.maxHp) : 1;
-  const shieldValue = Number.isFinite(attendant.shield) ? Math.max(0, attendant.shield) : 0;
-  const coordSource = attachedUnit?.coord ?? attendant.coord;
-
-  return {
-    id: attachedUnit?.id ?? attendant.id,
-    name: attendant.name?.trim() || 'Saunoja',
-    faction: attachedUnit?.faction ?? 'player',
-    coord: { q: coordSource.q, r: coordSource.r },
-    hp: hpValue,
-    maxHp: maxHpValue,
-    shield: shieldValue,
-    items,
-    statuses
-  } satisfies UnitSelectionPayload;
-}
-
-function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
-  const hpValue = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
-  const maxHpValue = Number.isFinite(unit.getMaxHealth()) ? Math.max(1, unit.getMaxHealth()) : 1;
-  const shieldValue = Number.isFinite(unit.getShield()) ? Math.max(0, unit.getShield()) : 0;
-  const attachedSaunoja = unitToSaunoja.get(unit.id) ?? null;
-  const name = attachedSaunoja?.name?.trim() || describeUnit(unit, attachedSaunoja);
-  const faction = typeof unit.faction === 'string' && unit.faction.trim().length > 0
-    ? unit.faction
-    : 'enemy';
-  return {
-    id: unit.id,
-    name,
-    faction,
-    coord: { q: unit.coord.q, r: unit.coord.r },
-    hp: hpValue,
-    maxHp: maxHpValue,
-    shield: shieldValue,
-    items: [],
-    statuses: []
-  } satisfies UnitSelectionPayload;
-}
-
-function syncSelectionOverlay(): void {
-  if (!unitFx) {
-    return;
-  }
-
-  let selectionPayload: UnitSelectionPayload | null = null;
-
-  if (selectedUnitId) {
-    const attachedSaunoja = saunojas.find((unit) => {
-      const attachedId = saunojaToUnit.get(unit.id) ?? unit.id;
-      return attachedId === selectedUnitId;
-    });
-
-    if (attachedSaunoja) {
-      selectionPayload = buildSelectionPayload(attachedSaunoja);
-    } else {
-      const unit = unitsById.get(selectedUnitId);
-      if (unit) {
-        selectionPayload = buildSelectionPayloadFromUnit(unit);
-      } else {
-        selectedUnitId = null;
-      }
-    }
-  }
-
-  if (!selectionPayload) {
-    const selectedSaunoja = getSelectedSaunoja();
-    if (selectedSaunoja) {
-      const attachedUnit = getAttachedUnitFor(selectedSaunoja);
-      selectedUnitId = attachedUnit?.id ?? selectedSaunoja.id;
-      selectionPayload = buildSelectionPayload(selectedSaunoja);
-    }
-  }
-
-  unitFx.setSelection(selectionPayload);
+function updateSelectionOverlay(): void {
+  const nextSelectedId = syncSelectionOverlay({
+    unitFx,
+    selectedUnitId,
+    getSelectedSaunoja,
+    getAttachedUnitFor,
+    findSaunojaByAttachedUnitId: (unitId) => {
+      const attendant = saunojas.find((unit) => {
+        const attachedId = saunojaToUnit.get(unit.id) ?? unit.id;
+        return attachedId === unitId;
+      });
+      return attendant ?? null;
+    },
+    getUnitById: (unitId) => unitsById.get(unitId) ?? null,
+    describeUnit
+  });
+  selectedUnitId = nextSelectedId;
 }
 
 let objectiveTracker: ObjectiveTracker | null = null;
@@ -668,7 +506,7 @@ function refreshAllSaunojaPolicyAdjustments(): boolean {
   }
   if (changed) {
     updateRosterDisplay();
-    syncSelectionOverlay();
+    updateSelectionOverlay();
   }
   return changed;
 }
@@ -680,6 +518,22 @@ function withSaunojaBaseline<T>(attendant: Saunoja, mutate: (baseline: SaunojaPo
   return result;
 }
 
+const progression = createProgressionManager({
+  getRoster: () => saunojas,
+  getAttachedUnitFor,
+  findSaunojaByUnit: (unit) => unitToSaunoja.get(unit.id) ?? null,
+  withSaunojaBaseline,
+  log: (event) => logEvent(event)
+});
+
+const {
+  buildProgression,
+  grantSaunojaExperience,
+  grantExperienceToUnit,
+  grantExperienceToRoster,
+  calculateKillExperience
+} = progression;
+
 function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly EquippedItem[]): SaunojaStatBlock {
   const resolvedLoadout = loadout ?? loadoutItems(attendant.equipment);
   const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
@@ -687,194 +541,6 @@ function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly Equipped
   return effective;
 }
 
-function buildProgression(attendant: Saunoja): RosterEntry['progression'] {
-  const progress = getLevelProgress(attendant.xp);
-  return {
-    level: progress.level,
-    xp: Math.max(0, Math.floor(attendant.xp)),
-    xpIntoLevel: progress.xpIntoLevel,
-    xpForNext: progress.xpForNext,
-    progress: progress.progressToNext,
-    statBonuses: getTotalStatAwards(progress.level)
-  } satisfies RosterEntry['progression'];
-}
-
-type ExperienceSource = 'kill' | 'objective' | 'test';
-
-type ExperienceContext = {
-  source: ExperienceSource;
-  label?: string;
-  elite?: boolean;
-  boss?: boolean;
-};
-
-type ExperienceGrantResult = {
-  xpAwarded: number;
-  totalXp: number;
-  level: number;
-  levelsGained: number;
-  statBonuses: StatAwards;
-};
-
-function describeStatBonuses(bonuses: StatAwards): string {
-  const parts: string[] = [];
-  if (bonuses.vigor > 0) {
-    parts.push(`+${bonuses.vigor} Vigor`);
-  }
-  if (bonuses.focus > 0) {
-    parts.push(`+${bonuses.focus} Focus`);
-  }
-  if (bonuses.resolve > 0) {
-    parts.push(`+${bonuses.resolve} Resolve`);
-  }
-  return parts.length > 0 ? parts.join(', ') : '+0 Vigor, +0 Focus, +0 Resolve';
-}
-
-function grantSaunojaExperience(
-  attendant: Saunoja,
-  amount: number,
-  context: ExperienceContext
-): ExperienceGrantResult | null {
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return null;
-  }
-  const before = getLevelProgress(attendant.xp);
-  const nextXp = Math.max(0, Math.floor(attendant.xp + amount));
-  if (nextXp === attendant.xp) {
-    return null;
-  }
-  attendant.xp = nextXp;
-  const after = getLevelProgress(attendant.xp);
-  const levelsGained = Math.max(0, after.level - before.level);
-  const statBonuses: StatAwards = { vigor: 0, focus: 0, resolve: 0 };
-  let bonusHealth = 0;
-  if (levelsGained > 0) {
-    withSaunojaBaseline(attendant, (baseline) => {
-      for (let level = before.level + 1; level <= after.level && level <= MAX_LEVEL; level++) {
-        const award = getStatAwardsForLevel(level);
-        statBonuses.vigor += award.vigor;
-        statBonuses.focus += award.focus;
-        statBonuses.resolve += award.resolve;
-
-        const baseStats = baseline.base;
-        const baseHealth = Number.isFinite(baseStats.health)
-          ? baseStats.health
-          : attendant.effectiveStats.health;
-        baseStats.health = Math.max(1, Math.round(baseHealth + award.vigor));
-
-        const baseAttack = Number.isFinite(baseStats.attackDamage)
-          ? baseStats.attackDamage
-          : attendant.effectiveStats.attackDamage;
-        baseStats.attackDamage = Math.max(0, Math.round(baseAttack + award.focus));
-
-        const currentDefense = Number.isFinite(baseStats.defense)
-          ? baseStats.defense ?? 0
-          : attendant.effectiveStats.defense ?? 0;
-        const nextDefense = currentDefense + award.resolve;
-        baseStats.defense = nextDefense > 0 ? nextDefense : undefined;
-      }
-    });
-    bonusHealth = statBonuses.vigor;
-  }
-
-  if (bonusHealth > 0) {
-    attendant.hp += bonusHealth;
-  }
-
-  const attachedUnit = getAttachedUnitFor(attendant);
-  if (attachedUnit) {
-    attachedUnit.setExperience(attendant.xp);
-  }
-
-  if (context.source === 'kill') {
-    const slayerName = attendant.name?.trim() || 'Our champion';
-    const foeLabel = context.label?.trim() || 'their foe';
-    const flourish = context.boss ? ' Boss toppled!' : context.elite ? ' Elite threat routed!' : '';
-    logEvent({
-      type: 'combat',
-      message: `${slayerName} earns ${amount} XP for defeating ${foeLabel}.${flourish}`,
-      metadata: {
-        slayer: slayerName,
-        foe: foeLabel,
-        xpAward: amount,
-        boss: Boolean(context.boss),
-        elite: Boolean(context.elite)
-      }
-    });
-  }
-
-  if (levelsGained > 0) {
-    const summary = describeStatBonuses(statBonuses);
-    const unitName = attendant.name?.trim() || 'Our champion';
-    logEvent({
-      type: 'progression',
-      message: `${unitName} reaches Level ${after.level}! ${summary}.`,
-      metadata: {
-        unit: unitName,
-        level: after.level,
-        levelsGained,
-        bonuses: statBonuses
-      }
-    });
-  }
-
-  return {
-    xpAwarded: amount,
-    totalXp: attendant.xp,
-    level: after.level,
-    levelsGained,
-    statBonuses
-  } satisfies ExperienceGrantResult;
-}
-
-function grantExperienceToUnit(
-  unit: Unit | null,
-  amount: number,
-  context: ExperienceContext
-): ExperienceGrantResult | null {
-  if (!unit) {
-    return null;
-  }
-  const attendant = unitToSaunoja.get(unit.id);
-  if (!attendant) {
-    return null;
-  }
-  return grantSaunojaExperience(attendant, amount, context);
-}
-
-function grantExperienceToRoster(amount: number, context: ExperienceContext): boolean {
-  if (!Number.isFinite(amount) || amount <= 0) {
-    return false;
-  }
-  let updated = false;
-  for (const attendant of saunojas) {
-    const result = grantSaunojaExperience(attendant, amount, context);
-    if (result) {
-      updated = true;
-    }
-  }
-  return updated;
-}
-
-function calculateKillExperience(target: Unit | null): {
-  xp: number;
-  elite: boolean;
-  boss: boolean;
-} {
-  if (!target) {
-    return { xp: XP_STANDARD_KILL, elite: false, boss: false };
-  }
-  const typeLabel = target.type?.toLowerCase?.() ?? '';
-  const boss = typeLabel.includes('boss');
-  if (boss) {
-    return { xp: XP_BOSS_KILL, elite: true, boss: true };
-  }
-  const elite = isEliteUnit(target);
-  if (elite) {
-    return { xp: XP_ELITE_KILL, elite: true, boss: false };
-  }
-  return { xp: XP_STANDARD_KILL, elite: false, boss: false };
-}
 
 const handleObjectiveProgress = (progress: ObjectiveProgress): void => {
   if (!progress) {
@@ -1027,14 +693,15 @@ function startTutorialIfNeeded(): void {
 }
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
-  pendingRosterRenderer = renderer;
+  setPendingRosterRenderer(renderer);
   if (!rosterHud) {
     return;
   }
   rosterHud.installRenderer(renderer);
-  if (pendingRosterEntries) {
-    rosterHud.renderRoster(pendingRosterEntries);
-    pendingRosterEntries = null;
+  const pendingEntries = getPendingRosterEntries();
+  if (pendingEntries) {
+    rosterHud.renderRoster(pendingEntries);
+    clearPendingRosterEntries();
   }
 }
 
@@ -1090,11 +757,7 @@ function configureHud(
   overlayEl.dataset.hudVariant = hudVariant;
   teardownHudEventListeners();
   disposeUiV2Controllers();
-  hudElapsedMs = 0;
-  notifyHudElapsed();
-  notifyEnemyRamp(null);
-  lastRosterEntries = [];
-  lastRosterSummary = null;
+  resetHudTracking();
   canvas = canvasEl;
   if (unitFx) {
     unitFx.dispose();
@@ -1115,28 +778,31 @@ function configureHud(
     getUnitById: (id) => unitsById.get(id),
     requestDraw: invalidateFrame
   });
-  syncSelectionOverlay();
+  updateSelectionOverlay();
   if (rosterHud) {
     rosterHud.destroy();
     rosterHud = null;
   }
   if (useClassicHud) {
     rosterHud = setupRosterHUD(resourceBarEl, { rosterIcon: uiIcons.saunojaRoster });
-    if (pendingRosterRenderer) {
-      rosterHud.installRenderer(pendingRosterRenderer);
+    const pendingRenderer = getPendingRosterRenderer();
+    if (pendingRenderer) {
+      rosterHud.installRenderer(pendingRenderer);
     }
-    if (pendingRosterEntries) {
-      rosterHud.renderRoster(pendingRosterEntries);
-      pendingRosterEntries = null;
+    const pendingEntries = getPendingRosterEntries();
+    if (pendingEntries) {
+      rosterHud.renderRoster(pendingEntries);
+      clearPendingRosterEntries();
     }
-    if (pendingRosterSummary) {
-      rosterHud.updateSummary(pendingRosterSummary);
-      pendingRosterSummary = null;
+    const pendingSummary = getPendingRosterSummary();
+    if (pendingSummary) {
+      rosterHud.updateSummary(pendingSummary);
+      clearPendingRosterSummary();
     }
   } else {
-    pendingRosterRenderer = null;
-    pendingRosterEntries = null;
-    pendingRosterSummary = null;
+    setPendingRosterRenderer(null);
+    clearPendingRosterEntries();
+    clearPendingRosterSummary();
   }
 
   saunaUiController?.dispose();
@@ -1257,7 +923,7 @@ function configureHud(
       subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
       getElapsedMs: () => getHudElapsedMs(),
       subscribeHudTime: (listener) => subscribeHudTime(listener),
-      getEnemyRamp: () => lastEnemyRampSummary,
+      getEnemyRamp: () => getEnemyRampSummarySnapshot(),
       subscribeEnemyRamp: (listener) => subscribeEnemyRamp(listener)
     });
     uiV2InventoryController = createUiV2InventoryController({
@@ -1503,7 +1169,7 @@ function syncSaunojaRosterWithUnits(): boolean {
 
   if (changed) {
     saveUnits();
-    syncSelectionOverlay();
+    updateSelectionOverlay();
   }
 
   return changed;
@@ -2154,10 +1820,7 @@ function updateSaunaHud(): void {
 }
 
 function updateTopbarHud(deltaMs: number): void {
-  if (Number.isFinite(deltaMs) && deltaMs > 0) {
-    hudElapsedMs += deltaMs;
-  }
-  notifyHudElapsed();
+  addHudElapsedMs(deltaMs);
   topbarControls?.update(deltaMs);
 }
 
@@ -2212,7 +1875,7 @@ function setSelectedCoord(next: AxialCoord | null): boolean {
     return false;
   }
   selected = next ? { q: next.q, r: next.r } : null;
-  syncSelectionOverlay();
+  updateSelectionOverlay();
   return true;
 }
 
@@ -2243,27 +1906,9 @@ function clearSaunojaSelection(): boolean {
     changed = true;
   }
   if (!changed) {
-    syncSelectionOverlay();
+    updateSelectionOverlay();
   }
   return changed;
-}
-
-function isEliteUnit(unit: Unit | null): boolean {
-  if (!unit) {
-    return false;
-  }
-  const archetype = tryGetUnitArchetype(unit.type);
-  if (!archetype) {
-    return false;
-  }
-  const baseline = computeUnitStats(archetype, 1);
-  const stats = unit.stats;
-  return (
-    stats.health > baseline.health ||
-    stats.attackDamage > baseline.attackDamage ||
-    stats.attackRange > baseline.attackRange ||
-    stats.movementRange > baseline.movementRange
-  );
 }
 
 function focusSaunoja(target: Saunoja): boolean {
@@ -2284,7 +1929,7 @@ function focusSaunoja(target: Saunoja): boolean {
   if (previousUnitId !== selectedUnitId) {
     changed = true;
   }
-  syncSelectionOverlay();
+  updateSelectionOverlay();
   return changed;
 }
 
@@ -2330,7 +1975,7 @@ export function handleCanvasClick(world: PixelCoord): void {
     const deselected = deselectAllSaunojas();
     const coordChanged = setSelectedCoord(enemyTarget.coord);
     selectedUnitId = enemyTarget.id;
-    syncSelectionOverlay();
+    updateSelectionOverlay();
     if (deselected) {
       saveUnits();
       updateRosterDisplay();
@@ -2369,7 +2014,7 @@ function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResu
   saveUnits();
   updateRosterDisplay();
   if (attendant.selected) {
-    syncSelectionOverlay();
+    updateSelectionOverlay();
   }
   const previous = beforeLoadout.find((entry) => entry.slot === outcome.slot) ?? null;
   const comparison: InventoryComparison = {
@@ -2396,7 +2041,7 @@ function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaI
   saveUnits();
   updateRosterDisplay();
   if (attendant.selected) {
-    syncSelectionOverlay();
+    updateSelectionOverlay();
   }
   const { id, name, description, icon, rarity, quantity } = outcome.removed;
   return { id, name, description, icon, rarity, quantity } satisfies SaunojaItem;
@@ -2606,7 +2251,7 @@ const onUnitDied = ({
     detachSaunoja(unitId);
     if (selectedUnitId === unitId) {
       selectedUnitId = null;
-      syncSelectionOverlay();
+      updateSelectionOverlay();
     }
     invalidateFrame();
   }
@@ -2768,9 +2413,9 @@ export function cleanup(): void {
     rosterHud.destroy();
     rosterHud = null;
   }
-  pendingRosterEntries = null;
-  pendingRosterSummary = null;
-  pendingRosterRenderer = null;
+  clearPendingRosterEntries();
+  clearPendingRosterSummary();
+  setPendingRosterRenderer(null);
   disposeTutorial();
 }
 
@@ -3063,15 +2708,21 @@ function buildRosterSummary(): RosterHudSummary {
   return { count: total, card } satisfies RosterHudSummary;
 }
 
+configureHudSnapshotProviders({
+  getRosterSummary: () => buildRosterSummary(),
+  getRosterEntries: () => buildRosterEntries()
+});
+
 function refreshRosterPanel(entries?: RosterEntry[]): void {
   const view = entries ?? buildRosterEntries();
-  pendingRosterEntries = view;
+  setPendingRosterEntries(view);
   notifyRosterEntries(view);
-  syncSelectionOverlay();
+  updateSelectionOverlay();
   if (!rosterHud) {
     return;
   }
   rosterHud.renderRoster(view);
+  clearPendingRosterEntries();
 }
 
 function updateRosterDisplay(): void {
@@ -3079,97 +2730,57 @@ function updateRosterDisplay(): void {
   notifyRosterSummary(summary);
   if (rosterHud) {
     rosterHud.updateSummary(summary);
-    pendingRosterSummary = null;
+    clearPendingRosterSummary();
   } else {
-    pendingRosterSummary = summary;
+    setPendingRosterSummary(summary);
   }
   refreshRosterPanel();
-  syncSelectionOverlay();
+  updateSelectionOverlay();
 }
 
 export function getRosterSummarySnapshot(): RosterHudSummary {
-  if (lastRosterSummary) {
-    return lastRosterSummary;
+  const lastSummary = getLastRosterSummary();
+  if (lastSummary) {
+    return lastSummary;
   }
-  if (pendingRosterSummary) {
-    return pendingRosterSummary;
+  const pendingSummary = getPendingRosterSummary();
+  if (pendingSummary) {
+    return pendingSummary;
   }
   return buildRosterSummary();
 }
 
 export function getRosterEntriesSnapshot(): RosterEntry[] {
-  if (lastRosterEntries.length > 0) {
-    return lastRosterEntries;
+  const lastEntries = getLastRosterEntries();
+  if (lastEntries.length > 0) {
+    return lastEntries;
   }
-  if (pendingRosterEntries && pendingRosterEntries.length > 0) {
-    return pendingRosterEntries;
+  const pendingEntries = getPendingRosterEntries();
+  if (pendingEntries && pendingEntries.length > 0) {
+    return pendingEntries;
   }
   return buildRosterEntries();
 }
 
-export function subscribeRosterSummary(
+export const subscribeRosterSummary = (
   listener: (summary: RosterHudSummary) => void
-): () => void {
-  rosterSummaryListeners.add(listener);
-  try {
-    listener(getRosterSummarySnapshot());
-  } catch (error) {
-    console.warn('Failed to deliver roster summary snapshot', error);
-  }
-  return () => {
-    rosterSummaryListeners.delete(listener);
-  };
-}
+): () => void => hudSubscribeRosterSummary(listener);
 
-export function subscribeRosterEntries(
+export const subscribeRosterEntries = (
   listener: (entries: RosterEntry[]) => void
-): () => void {
-  rosterEntriesListeners.add(listener);
-  try {
-    listener(getRosterEntriesSnapshot());
-  } catch (error) {
-    console.warn('Failed to deliver roster entries snapshot', error);
-  }
-  return () => {
-    rosterEntriesListeners.delete(listener);
-  };
-}
+): () => void => hudSubscribeRosterEntries(listener);
 
-export function subscribeHudTime(
+export const subscribeHudTime = (
   listener: (elapsedMs: number) => void
-): () => void {
-  hudTimeListeners.add(listener);
-  try {
-    listener(hudElapsedMs);
-  } catch (error) {
-    console.warn('Failed to deliver HUD time snapshot', error);
-  }
-  return () => {
-    hudTimeListeners.delete(listener);
-  };
-}
+): () => void => hudSubscribeHudTime(listener);
 
-export function getHudElapsedMs(): number {
-  return hudElapsedMs;
-}
+export const getHudElapsedMs = (): number => getHudElapsedMsSnapshot();
 
-export function subscribeEnemyRamp(
+export const subscribeEnemyRamp = (
   listener: (summary: EnemyRampSummary | null) => void
-): () => void {
-  enemyRampListeners.add(listener);
-  try {
-    listener(lastEnemyRampSummary);
-  } catch (error) {
-    console.warn('Failed to deliver enemy ramp snapshot', error);
-  }
-  return () => {
-    enemyRampListeners.delete(listener);
-  };
-}
+): () => void => hudSubscribeEnemyRamp(listener);
 
-export function getEnemyRampSummarySnapshot(): EnemyRampSummary | null {
-  return lastEnemyRampSummary;
-}
+export { getEnemyRampSummarySnapshot };
 
 export function getGameStateInstance(): GameState {
   return state;
