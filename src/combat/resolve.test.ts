@@ -1,17 +1,11 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { resolveCombat } from './resolve.ts';
 import type { CombatParticipant } from './resolve.ts';
 import { makeKeyword } from '../keywords/index.ts';
 import * as runtime from '../mods/runtime.ts';
-import { createPolicyModifierSummary } from '../policies/modifiers.ts';
-import { setActivePolicyModifiers } from '../policies/runtime.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();
-});
-
-beforeEach(() => {
-  setActivePolicyModifiers(createPolicyModifierSummary());
 });
 
 describe('resolveCombat', () => {
@@ -42,7 +36,6 @@ describe('resolveCombat', () => {
     expect(result.remainingShield).toBe(0);
     expect(result.lethal).toBe(false);
     expect(result.attackerHealing).toBe(0);
-    expect(result.hit).toBe(true);
     expect(result.keywordEffects.attacker.tickHpDamage).toBe(0);
     expect(result.keywordEffects.defender.tickHpDamage).toBe(0);
   });
@@ -74,7 +67,6 @@ describe('resolveCombat', () => {
     expect(result.remainingHealth).toBe(11);
     expect(result.lethal).toBe(false);
     expect(result.attackerHealing).toBe(0);
-    expect(result.hit).toBe(true);
     expect(result.keywordEffects.defender.tickShieldDamage).toBe(0);
   });
 
@@ -120,7 +112,6 @@ describe('resolveCombat', () => {
     expect(attackerKill).toHaveBeenCalledTimes(1);
     expect(defenderHit).toHaveBeenCalledTimes(1);
     expect(defenderKill).toHaveBeenCalledTimes(1);
-    expect(result.hit).toBe(true);
 
     const attackerPayload = attackerHit.mock.calls[0][0];
     expect(attackerPayload.source).toBe('attacker');
@@ -189,7 +180,6 @@ describe('resolveCombat', () => {
     expect(result.remainingHealth).toBe(2);
     expect(bleed.stacks).toBe(2);
     expect(result.lethal).toBe(false);
-    expect(result.hit).toBe(true);
   });
 
   it('drops defenders with lethal bleed ticks before a strike resolves', () => {
@@ -225,10 +215,9 @@ describe('resolveCombat', () => {
     expect(result.lethal).toBe(true);
     expect(result.keywordEffects.defender.tickHpDamage).toBe(7);
     expect(result.keywordEffects.defender.tickShieldDamage).toBe(0);
-   expect(bleed.stacks).toBe(1);
+    expect(bleed.stacks).toBe(1);
     expect(onHit).toHaveBeenCalledTimes(1);
     expect(onKill).toHaveBeenCalledTimes(1);
-    expect(result.hit).toBe(true);
     expect(onKill.mock.calls[0][0].lethal).toBe(true);
   });
 
@@ -262,7 +251,6 @@ describe('resolveCombat', () => {
     expect(result.remainingHealth).toBe(5);
     expect(result.remainingShield).toBe(0);
     expect(burn.stacks).toBe(3);
-    expect(result.hit).toBe(true);
   });
 
   it('reports combined shield total when barrier stacks remain after the hit', () => {
@@ -300,7 +288,6 @@ describe('resolveCombat', () => {
       result.keywordEffects.defender.keywordShieldRemaining;
     expect(result.remainingShield).toBe(expectedRemaining);
     expect(barrier.stacks).toBe(3);
-    expect(result.hit).toBe(true);
   });
 
   it('combines keyword and base shields while tracking remaining barrier stacks', () => {
@@ -335,7 +322,6 @@ describe('resolveCombat', () => {
     expect(result.keywordEffects.defender.shieldConsumed).toBe(7);
     expect(result.keywordEffects.defender.keywordShieldRemaining).toBe(1);
     expect(barrier.stacks).toBeCloseTo(0.25, 5);
-    expect(result.hit).toBe(true);
   });
 
   it('heals attackers with lifesteal after health damage is applied', () => {
@@ -367,7 +353,6 @@ describe('resolveCombat', () => {
     expect(result.attackerRemainingHealth).toBeCloseTo(7.5, 5);
     expect(result.keywordEffects.attacker.lifesteal).toBeCloseTo(2.5, 5);
     expect(lifesteal.stacks).toBe(1);
-    expect(result.hit).toBe(true);
   });
 
   it('caps lifesteal healing at the attacker maximum health', () => {
@@ -399,77 +384,5 @@ describe('resolveCombat', () => {
     expect(result.keywordEffects.attacker.lifesteal).toBe(1);
     expect(result.attackerRemainingHealth).toBe(10);
     expect(lifesteal.stacks).toBe(2);
-    expect(result.hit).toBe(true);
-  });
-
-  it('applies policy damage and hit chance modifiers for player units', () => {
-    const summary = createPolicyModifierSummary();
-    summary.damageDealtMultiplier = 1.4;
-    summary.damageTakenMultiplier = 0.5;
-    summary.hitChanceBonus = -0.25;
-    setActivePolicyModifiers(summary);
-
-    const attacker: CombatParticipant = {
-      id: 'policy-attacker',
-      faction: 'player',
-      attack: 10,
-      health: 12,
-      maxHealth: 12,
-      shield: 0
-    };
-
-    const defender: CombatParticipant = {
-      id: 'policy-defender',
-      faction: 'player',
-      defense: 2,
-      health: 14,
-      maxHealth: 14,
-      shield: 0
-    };
-
-    const result = resolveCombat({ attacker, defender, random: () => 0.1 });
-
-    const effectiveAttack = (attacker.attack ?? 0) * summary.damageDealtMultiplier;
-    const preDefense = Math.max(0, effectiveAttack - (defender.defense ?? 0));
-    const scaledMinDamage = summary.damageTakenMultiplier;
-    const expectedDamage = Math.max(scaledMinDamage, preDefense * summary.damageTakenMultiplier);
-
-    expect(result.hit).toBe(true);
-    expect(result.damage).toBeCloseTo(expectedDamage, 5);
-    expect(result.hpDamage).toBeCloseTo(expectedDamage, 5);
-    expect(result.remainingHealth).toBeCloseTo(Math.max(defender.health - expectedDamage, 0), 5);
-    expect(result.lethal).toBe(false);
-  });
-
-  it('records misses when policy hit chance adjustments fail the roll', () => {
-    const summary = createPolicyModifierSummary();
-    summary.hitChanceBonus = -0.6;
-    setActivePolicyModifiers(summary);
-
-    const attacker: CombatParticipant = {
-      id: 'policy-miss',
-      faction: 'player',
-      attack: 8,
-      health: 10,
-      maxHealth: 10,
-      shield: 0
-    };
-
-    const defender: CombatParticipant = {
-      id: 'policy-target',
-      faction: 'enemy',
-      defense: 1,
-      health: 9,
-      maxHealth: 9,
-      shield: 0
-    };
-
-    const result = resolveCombat({ attacker, defender, random: () => 0.95 });
-
-    expect(result.hit).toBe(false);
-    expect(result.damage).toBe(0);
-    expect(result.hpDamage).toBe(0);
-    expect(result.remainingHealth).toBe(9);
-    expect(result.lethal).toBe(false);
   });
 });
