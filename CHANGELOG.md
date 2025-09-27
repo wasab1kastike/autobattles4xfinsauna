@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Introduce combat doctrine policies that boost roster attack, defense, and hit
+  reliability while raising upkeep, propagate toggle events through Saunoja
+  stat recalculations, and wire combat resolution plus economy ticks to respect
+  the new damage, hit chance, and upkeep modifiers with dedicated tests.
+
 - Extend policy lifecycle handling so toggleable edicts can be disabled and
   re-enabled without repaying their costs, emit dedicated revoke events for
   listeners, persist the enabled state in saves, and refresh the HUD plus logs
