@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Gate the `GameClock` interval whenever the animation-frame driver is active so
+  the simulation tick only fires once per cadence, expose an interval toggle on
+  the clock for future drivers, and add regression coverage that advances fake
+  frames alongside timers to guard against double ticks.
+
 - Start the main game clock immediately after assets load, stop it during
   general cleanup to avoid lingering intervals, and add a regression test that
   guards the lifecycle hook.
