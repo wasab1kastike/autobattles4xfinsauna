@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Extract sauna lifecycle wiring into `game/setup/sauna.ts`, add a reusable
+  right-panel initializer, and adjust game setup to consume the new helpers with
+  focused unit coverage for tier persistence, UI toggling, and spawn queue
+  management.
+
 - Guard modifier application so `onApply` failures unwind partial state, skip
   addition events, and cover the regression with a focused runtime test to keep
   gameplay modifiers cleanly indexed.
