@@ -8,8 +8,6 @@ import {
 import { SOLDIER_STATS } from '../units/Soldier.ts';
 import { ARCHER_STATS } from '../units/Archer.ts';
 import { AVANTO_MARAUDER_STATS } from '../units/AvantoMarauder.ts';
-import { combinePolicyModifiers } from '../policies/modifiers.ts';
-import { getPolicyDefinition } from '../data/policies.ts';
 
 describe('computeUnitStats', () => {
   it('returns base archetype stats at level 1', () => {
@@ -73,21 +71,5 @@ describe('computeUnitStats', () => {
       movementRange: 2,
       visionRange: 3
     });
-  });
-
-  it('combines combat policy modifiers for downstream stat scaling', () => {
-    const battle = getPolicyDefinition('battle-rhythm');
-    const shieldwall = getPolicyDefinition('shieldwall-doctrine');
-    expect(battle).toBeTruthy();
-    expect(shieldwall).toBeTruthy();
-
-    const summary = combinePolicyModifiers([battle!, shieldwall!]);
-    expect(summary.statMultipliers.attackDamage).toBeCloseTo(1.15, 5);
-    expect(summary.statMultipliers.movementRange).toBeCloseTo(1.05, 5);
-    expect(summary.statMultipliers.defense).toBeCloseTo(1.3, 5);
-    expect(summary.hitChanceBonus).toBeCloseTo(0.05, 5);
-    expect(summary.damageTakenMultiplier).toBeCloseTo(0.85, 5);
-    expect(summary.upkeepMultiplier).toBeCloseTo(1.1, 5);
-    expect(summary.upkeepDelta).toBeCloseTo(1.5, 5);
   });
 });

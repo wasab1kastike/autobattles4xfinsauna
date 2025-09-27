@@ -1,5 +1,4 @@
 import { triggerModifierHook } from '../mods/runtime.ts';
-import { getActivePolicyModifiers } from '../policies/runtime.ts';
 import {
   createKeywordEffectsLog,
   createKeywordEngine,
@@ -30,9 +29,6 @@ export interface CombatParticipant {
   readonly shield?: number;
   readonly hooks?: CombatHookMap | null;
   readonly keywords?: CombatKeywordRegistry | null;
-  readonly hitChanceBonus?: number;
-  readonly damageTakenMultiplier?: number;
-  readonly damageDealtMultiplier?: number;
 }
 
 export interface CombatSnapshot {
@@ -63,7 +59,6 @@ export interface CombatResolution {
   readonly attackerHealing: number;
   readonly attackerRemainingHealth?: number;
   readonly attackerRemainingShield?: number;
-  readonly hit: boolean;
   readonly keywordEffects: KeywordEffectSummary;
 }
 
@@ -72,7 +67,6 @@ export interface ResolveCombatArgs {
   readonly defender: CombatParticipant;
   readonly baseDamage?: number;
   readonly minimumDamage?: number;
-  readonly random?: () => number;
 }
 
 function clampNonNegative(value: number): number {
@@ -189,18 +183,6 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     : clampNonNegative(attacker?.attack ?? 0);
   const defenseValue = clampNonNegative(defender.defense ?? 0);
 
-  const policyModifiers = getActivePolicyModifiers();
-  const attackerDamageModifier = clampNonNegative(
-    (attacker?.damageDealtMultiplier ?? 1) *
-      (attacker?.faction === 'player' ? policyModifiers.damageDealtMultiplier : 1)
-  );
-  const defenderDamageModifier = clampNonNegative(
-    (defender.damageTakenMultiplier ?? 1) *
-      (defender.faction === 'player' ? policyModifiers.damageTakenMultiplier : 1)
-  );
-  const attackerHitBonus = (attacker?.hitChanceBonus ?? 0) +
-    (attacker?.faction === 'player' ? policyModifiers.hitChanceBonus : 0);
-
   const keywordEffects = createKeywordEffectsLog();
 
   const defenderState = toCombatantState(defender);
@@ -227,34 +209,9 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
   }
   const totalShieldBefore = clampNonNegative(defenderState.shield);
 
-  const clampProbability = (value: number): number => {
-    if (!Number.isFinite(value)) {
-      return 1;
-    }
-    if (value <= 0) {
-      return 0;
-    }
-    if (value >= 1) {
-      return 1;
-    }
-    return value;
-  };
-
-  const randomSample = typeof args.random === 'function' ? args.random : Math.random;
-  const hitChance = clampProbability(1 + attackerHitBonus);
-  let didHit = true;
-  if (attacker && hitChance < 1) {
-    const roll = clampProbability(randomSample());
-    didHit = roll <= hitChance;
-  }
-
-  const effectiveAttackValue = clampNonNegative(attackValue * attackerDamageModifier);
-  const preDefenseDamage = Math.max(0, effectiveAttackValue - defenseValue);
-  const scaledMinDamage = clampNonNegative(minDamage * defenderDamageModifier);
-  const adjustedDamage = Math.max(0, preDefenseDamage * defenderDamageModifier);
-  const rawDamage = didHit && defenderAliveBefore ? Math.max(scaledMinDamage, adjustedDamage) : 0;
-  const shieldDamage = didHit && defenderAliveBefore ? Math.min(totalShieldBefore, rawDamage) : 0;
-  const hpDamage = didHit && defenderAliveBefore ? Math.max(0, rawDamage - shieldDamage) : 0;
+  const rawDamage = defenderAliveBefore ? Math.max(minDamage, attackValue - defenseValue) : 0;
+  const shieldDamage = defenderAliveBefore ? Math.min(totalShieldBefore, rawDamage) : 0;
+  const hpDamage = defenderAliveBefore ? Math.max(0, rawDamage - shieldDamage) : 0;
 
   defenderState.shield = Math.max(0, totalShieldBefore - shieldDamage);
 
@@ -277,10 +234,8 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
   const lethal = remainingHealth <= 0;
 
   let attackerHealing = 0;
-  if (attackerEngine && attackerState && didHit) {
+  if (attackerEngine && attackerState) {
     attackerHealing = attackerEngine.applyHit(hpDamage, attackerState, defenderState);
-    keywordEffects.attacker.keywordShieldRemaining = attackerEngine.getShieldValue();
-  } else if (attackerEngine) {
     keywordEffects.attacker.keywordShieldRemaining = attackerEngine.getShieldValue();
   } else {
     keywordEffects.attacker.keywordShieldRemaining = 0;
@@ -305,12 +260,10 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     ...payloadBase,
     source: 'defender'
   };
-  if (didHit) {
-    fireParticipantHooks(defender, 'onHit', defenderPayload);
-    triggerModifierHook('combat:onHit', defenderPayload);
-  }
+  fireParticipantHooks(defender, 'onHit', defenderPayload);
+  triggerModifierHook('combat:onHit', defenderPayload);
 
-  if (attacker && didHit) {
+  if (attacker) {
     const attackerPayload: CombatHookPayload = {
       ...payloadBase,
       source: 'attacker'
@@ -339,7 +292,6 @@ export function resolveCombat(args: ResolveCombatArgs): CombatResolution {
     attackerHealing,
     attackerRemainingHealth: attackerState?.health,
     attackerRemainingShield: attackerState?.shield,
-    hit: didHit,
     keywordEffects
   };
 }
