@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { Resource } from '../core/GameState.ts';
 import {
   getGameStateInstance,
@@ -152,7 +152,7 @@ function useLogs(): LogState {
 
 type ResourceBadgesProps = ResourceSnapshot;
 
-function ResourceBadges({ resources, artocoin, elapsedMs, ramp }: ResourceBadgesProps) {
+const ResourceBadges = memo(function ResourceBadges({ resources, artocoin, elapsedMs, ramp }: ResourceBadgesProps) {
   const entries = useMemo(
     () => [
       {
@@ -249,7 +249,7 @@ function ResourceBadges({ resources, artocoin, elapsedMs, ramp }: ResourceBadges
       </article>
     </div>
   );
-}
+});
 
 type RosterSummaryDockProps = {
   resourceBar: HTMLElement;
@@ -257,7 +257,7 @@ type RosterSummaryDockProps = {
   entries: RosterEntry[];
 };
 
-function RosterSummaryDock({ resourceBar, summary, entries }: RosterSummaryDockProps) {
+const RosterSummaryDock = memo(function RosterSummaryDock({ resourceBar, summary, entries }: RosterSummaryDockProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const controllerRef = useRef<RosterHudController | null>(null);
 
@@ -295,13 +295,13 @@ function RosterSummaryDock({ resourceBar, summary, entries }: RosterSummaryDockP
   }, [entries]);
 
   return <div ref={containerRef} className="w-full" />;
-}
+});
 
 type RosterPanelMountProps = {
   entries: RosterEntry[];
 };
 
-function RosterPanelMount({ entries }: RosterPanelMountProps) {
+const RosterPanelMount = memo(function RosterPanelMount({ entries }: RosterPanelMountProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const rendererRef = useRef<ReturnType<typeof createRosterPanel> | null>(null);
 
@@ -328,13 +328,13 @@ function RosterPanelMount({ entries }: RosterPanelMountProps) {
   }, [entries]);
 
   return <div ref={containerRef} className="min-h-[320px]" />;
-}
+});
 
 type LogsPanelProps = {
   entries: LogEntry[];
 };
 
-function LogsPanel({ entries }: LogsPanelProps) {
+const LogsPanel = memo(function LogsPanel({ entries }: LogsPanelProps) {
   const grouped = useMemo(() => entries.slice(-80), [entries]);
   return (
     <section className="flex h-full flex-col">
@@ -380,9 +380,9 @@ function LogsPanel({ entries }: LogsPanelProps) {
       </div>
     </section>
   );
-}
+});
 
-function SaunaControls() {
+const SaunaControls = memo(function SaunaControls() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -406,7 +406,7 @@ function SaunaControls() {
       className="min-w-[240px] rounded-2xl border border-white/10 bg-white/8 p-2 shadow-[0_18px_40px_rgba(10,16,28,0.55)]"
     />
   );
-}
+});
 
 export interface UiV2AppProps {
   resourceBar: HTMLElement;
