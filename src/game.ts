@@ -178,7 +178,6 @@ import {
   subscribeRosterEntries as hudSubscribeRosterEntries,
   subscribeHudTime as hudSubscribeHudTime,
   subscribeEnemyRamp as hudSubscribeEnemyRamp,
-  notifyEnemyRamp,
   getHudElapsedMs as getHudElapsedMsSnapshot,
   resetHudTracking,
   setLastRosterEntries,
@@ -307,8 +306,6 @@ function scheduleGameLoop(): void {
 }
 
 const onPauseChanged = () => {
-  const paused = isGamePaused();
-  clock.setIntervalEnabled(!paused);
   invalidateFrame();
 };
 
@@ -2434,7 +2431,7 @@ export async function start(): Promise<void> {
   }
   running = true;
   const supportsAnimationFrame = typeof requestAnimationFrame === 'function';
-  clock.setIntervalEnabled(!isGamePaused());
+  clock.setIntervalEnabled(true);
   clock.start();
   if (!pauseListenerAttached) {
     eventBus.on('game:pause-changed', onPauseChanged);
