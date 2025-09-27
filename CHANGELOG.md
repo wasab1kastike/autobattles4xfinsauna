@@ -2,10 +2,6 @@
 
 ## Unreleased
 
-- Pause toggles now disable the game clock interval while the sauna is paused,
-  restart it on resume, and ship a regression test to ensure no background ticks
-  sneak through the pause gate.
-
 - Gate the `GameClock` interval whenever the animation-frame driver is active so
   the simulation tick only fires once per cadence, expose an interval toggle on
   the clock for future drivers, and add regression coverage that advances fake
