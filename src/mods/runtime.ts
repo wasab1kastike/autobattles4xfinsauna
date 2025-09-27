@@ -120,7 +120,13 @@ export class ModifierRuntime {
     this.indexHooks(active);
 
     const context: ModifierHookContext = { runtime: this, modifier: active };
-    definition.onApply?.(context);
+    try {
+      definition.onApply?.(context);
+    } catch (error) {
+      this.modifiers.delete(active.id);
+      this.unindexHooks(active);
+      throw error;
+    }
 
     this.emit('modifierAdded', { modifier: active });
     this.emitter?.emit('modifierAdded', { modifier: active });

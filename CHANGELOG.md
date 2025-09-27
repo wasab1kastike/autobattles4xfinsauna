@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Guard modifier application so `onApply` failures unwind partial state, skip
+  addition events, and cover the regression with a focused runtime test to keep
+  gameplay modifiers cleanly indexed.
+
 - Refactor game HUD initialization into dedicated helpers that configure
   classic and modern overlays with shared ability wiring, centralize right panel
   lifecycle management, and cover both flows with targeted unit tests to ease
