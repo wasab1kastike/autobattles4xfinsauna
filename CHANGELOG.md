@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Refactor game HUD initialization into dedicated helpers that configure
+  classic and modern overlays with shared ability wiring, centralize right panel
+  lifecycle management, and cover both flows with targeted unit tests to ease
+  future HUD tweaks.
+
 - Introduce combat doctrine policies that boost roster attack, defense, and hit
   reliability while raising upkeep, propagate toggle events through Saunoja
   stat recalculations, and wire combat resolution plus economy ticks to respect
