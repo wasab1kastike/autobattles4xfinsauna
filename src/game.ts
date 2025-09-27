@@ -2430,6 +2430,8 @@ export async function start(): Promise<void> {
     return;
   }
   running = true;
+  const supportsAnimationFrame = typeof requestAnimationFrame === 'function';
+  clock.setIntervalEnabled(true);
   clock.start();
   if (!pauseListenerAttached) {
     eventBus.on('game:pause-changed', onPauseChanged);
@@ -2444,6 +2446,9 @@ export async function start(): Promise<void> {
     animationFrameId = null;
     if (!running) {
       return;
+    }
+    if (supportsAnimationFrame) {
+      clock.setIntervalEnabled(false);
     }
     const delta = now - last;
     last = now;
