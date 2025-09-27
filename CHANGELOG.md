@@ -2,12 +2,6 @@
 
 ## Unreleased
 
-- Fix the HUD variant toggle so returning to the classic overlay reconfigures
-  existing controllers without stacking event listeners, ensure resource-change
-  hooks are cleaned up before reattachment, and add regression coverage for the
-  listener counts and log feed to guard against duplicated output when UI v2 is
-  disabled.
-
 - Introduce combat doctrine policies that boost roster attack, defense, and hit
   reliability while raising upkeep, propagate toggle events through Saunoja
   stat recalculations, and wire combat resolution plus economy ticks to respect
