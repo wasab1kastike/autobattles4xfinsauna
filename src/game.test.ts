@@ -222,41 +222,6 @@ describe('game logging', () => {
     });
   }, 15000);
 
-  it('updates roster stats and upkeep when combat policies toggle', async () => {
-    const { getGameStateInstance, getRosterEntriesSnapshot } = await initGame();
-    const state = getGameStateInstance();
-    state.addResource(Resource.SAUNAKUNNIA, 200);
-
-    await flushLogs();
-    const baselineRoster = getRosterEntriesSnapshot();
-    const initial = baselineRoster[0];
-    expect(initial).toBeDefined();
-
-    state.applyPolicy('eco');
-    state.applyPolicy('temperance');
-    state.applyPolicy('battle-rhythm');
-    state.applyPolicy('shieldwall-doctrine');
-
-    await flushLogs();
-
-    const boostedRoster = getRosterEntriesSnapshot();
-    const boosted = boostedRoster[0];
-    expect(boosted.baseStats.attackDamage).toBeGreaterThan(initial.baseStats.attackDamage);
-    expect(boosted.baseStats.movementRange).toBeGreaterThanOrEqual(initial.baseStats.movementRange);
-    expect(boosted.upkeep).toBeGreaterThan(initial.upkeep);
-
-    state.togglePolicy('shieldwall-doctrine');
-    state.togglePolicy('battle-rhythm');
-
-    await flushLogs();
-
-    const revertedRoster = getRosterEntriesSnapshot();
-    const reverted = revertedRoster[0];
-    expect(reverted.baseStats.attackDamage).toBeLessThanOrEqual(boosted.baseStats.attackDamage);
-    expect(reverted.baseStats.attackDamage).toBeGreaterThanOrEqual(initial.baseStats.attackDamage);
-    expect(reverted.upkeep).toBeLessThanOrEqual(boosted.upkeep);
-  });
-
   it('spawns multiple reinforcements once the roster cap exceeds one', async () => {
     const { eventBus, __getActiveRosterCountForTest } = await initGame();
     const { Unit } = await import('./units/Unit.ts');

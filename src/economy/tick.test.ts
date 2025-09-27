@@ -1,4 +1,4 @@
-import { describe, expect, it, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
 import { createSauna } from '../sim/sauna.ts';
 import { runEconomyTick } from './tick.ts';
@@ -6,17 +6,11 @@ import { createPlayerSpawnTierQueue } from '../world/spawn/tier_helpers.ts';
 import type { Unit } from '../units/Unit.ts';
 import { Unit as UnitClass } from '../units/Unit.ts';
 import { getSoldierStats } from '../units/Soldier.ts';
-import { createPolicyModifierSummary } from '../policies/modifiers.ts';
-import { getActivePolicyModifiers, setActivePolicyModifiers } from '../policies/runtime.ts';
 
 function makeUnit(id: string, faction: string): Unit {
   const stats = getSoldierStats();
   return new UnitClass(id, 'soldier', { q: 0, r: 0 }, faction, stats);
 }
-
-afterEach(() => {
-  setActivePolicyModifiers(createPolicyModifierSummary());
-});
 
 describe('runEconomyTick', () => {
   it('spawns a reinforcement when heat crosses the threshold and upkeep remains', () => {
@@ -54,50 +48,6 @@ describe('runEconomyTick', () => {
     expect(spawned).toHaveLength(1);
     expect(sauna.heatTracker.getHeat()).toBeLessThan(sauna.playerSpawnThreshold);
     expect(sauna.playerSpawnTimer).toBeGreaterThan(0);
-  });
-
-  it('applies policy upkeep modifiers when draining resources', () => {
-    const state = new GameState(1000);
-    state.addResource(Resource.SAUNA_BEER, 100);
-    const sauna = createSauna(
-      { q: 0, r: 0 },
-      { baseThreshold: 5, heatPerSecond: 0, initialHeat: 0 }
-    );
-    const unit = makeUnit('u-policy', 'player');
-    const units: Unit[] = [unit];
-
-    const evaluateUpkeep = (): number => {
-      const modifiers = getActivePolicyModifiers();
-      return Math.max(
-        0,
-        Math.round((4 + modifiers.upkeepDelta) * modifiers.upkeepMultiplier)
-      );
-    };
-
-    const runDrain = () =>
-      runEconomyTick({
-        dt: 5,
-        state,
-        sauna,
-        heat: sauna.heatTracker,
-        units,
-        getUnitUpkeep: () => evaluateUpkeep(),
-        pickSpawnTile: () => null,
-        spawnBaseUnit: () => null,
-        minUpkeepReserve: 0
-      });
-
-    setActivePolicyModifiers(createPolicyModifierSummary());
-    const baseline = runDrain();
-    expect(baseline.upkeepDrain).toBe(4);
-
-    const summary = createPolicyModifierSummary();
-    summary.upkeepDelta = -1;
-    summary.upkeepMultiplier = 0.5;
-    setActivePolicyModifiers(summary);
-
-    const modified = runDrain();
-    expect(modified.upkeepDrain).toBe(2);
   });
 
   it('drains upkeep from active player units on the five-second cadence', () => {

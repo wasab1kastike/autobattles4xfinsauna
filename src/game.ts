@@ -10,7 +10,6 @@ import { resolveSaunojaAppearance } from './unit/appearance.ts';
 import { eventBus, eventScheduler } from './events';
 import {
   POLICY_EVENTS,
-  listPolicies,
   type PolicyAppliedEvent,
   type PolicyRevokedEvent
 } from './data/policies.ts';
@@ -65,12 +64,6 @@ import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
 import { runEconomyTick } from './economy/tick.ts';
-import {
-  combinePolicyModifiers,
-  createPolicyModifierSummary,
-  type PolicyModifierSummary
-} from './policies/modifiers.ts';
-import { setActivePolicyModifiers } from './policies/runtime.ts';
 import { InventoryState } from './inventory/state.ts';
 import type { InventoryComparisonContext } from './state/inventory.ts';
 import type { UnitBehavior } from './unit/types.ts';
@@ -219,10 +212,6 @@ applyNgPlusState(currentNgPlusState);
 
 let canvas: HTMLCanvasElement | null = null;
 let saunojas: Saunoja[] = [];
-type SaunojaPolicyBaseline = { base: SaunojaStatBlock; upkeep: number };
-const saunojaPolicyBaselines = new WeakMap<Saunoja, SaunojaPolicyBaseline>();
-let policyModifiers: PolicyModifierSummary = createPolicyModifierSummary();
-setActivePolicyModifiers(policyModifiers);
 const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
@@ -520,124 +509,6 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   }
 }
 
-function cloneStatBlock(stats: SaunojaStatBlock): SaunojaStatBlock {
-  const clone: SaunojaStatBlock = {
-    health: stats.health,
-    attackDamage: stats.attackDamage,
-    attackRange: stats.attackRange,
-    movementRange: stats.movementRange
-  } satisfies SaunojaStatBlock;
-  if (typeof stats.defense === 'number') {
-    clone.defense = stats.defense;
-  }
-  if (typeof stats.shield === 'number') {
-    clone.shield = stats.shield;
-  }
-  if (typeof stats.visionRange === 'number') {
-    clone.visionRange = stats.visionRange;
-  }
-  return clone;
-}
-
-function ensureSaunojaPolicyBaseline(attendant: Saunoja): SaunojaPolicyBaseline {
-  let baseline = saunojaPolicyBaselines.get(attendant);
-  if (!baseline) {
-    const upkeep = Number.isFinite(attendant.upkeep) ? Math.max(0, attendant.upkeep) : SAUNOJA_DEFAULT_UPKEEP;
-    baseline = { base: cloneStatBlock(attendant.baseStats), upkeep } satisfies SaunojaPolicyBaseline;
-    saunojaPolicyBaselines.set(attendant, baseline);
-  }
-  return baseline;
-}
-
-function areStatBlocksEqual(a: SaunojaStatBlock, b: SaunojaStatBlock): boolean {
-  return (
-    Math.round(a.health) === Math.round(b.health) &&
-    Math.round(a.attackDamage) === Math.round(b.attackDamage) &&
-    Math.round(a.attackRange) === Math.round(b.attackRange) &&
-    Math.round(a.movementRange) === Math.round(b.movementRange) &&
-    Math.round(a.defense ?? 0) === Math.round(b.defense ?? 0) &&
-    Math.round(a.shield ?? 0) === Math.round(b.shield ?? 0) &&
-    Math.round(a.visionRange ?? 0) === Math.round(b.visionRange ?? 0)
-  );
-}
-
-function applyPolicyModifiersToSaunoja(
-  attendant: Saunoja,
-  baseline: SaunojaPolicyBaseline,
-  previousBase: SaunojaStatBlock,
-  previousEffective: SaunojaStatBlock,
-  previousUpkeep: number
-): boolean {
-  const multipliers = policyModifiers.statMultipliers;
-  const base = baseline.base;
-  const adjustedBase: SaunojaStatBlock = {
-    health: Math.max(1, Math.round(base.health * multipliers.health)),
-    attackDamage: Math.max(0, Math.round(base.attackDamage * multipliers.attackDamage)),
-    attackRange: Math.max(0, Math.round(base.attackRange * multipliers.attackRange)),
-    movementRange: Math.max(0, Math.round(base.movementRange * multipliers.movementRange))
-  } satisfies SaunojaStatBlock;
-
-  if (typeof base.defense === 'number') {
-    adjustedBase.defense = Math.max(0, Math.round(base.defense * multipliers.defense));
-  }
-  if (typeof base.shield === 'number') {
-    adjustedBase.shield = Math.max(0, Math.round(base.shield));
-  }
-  if (typeof base.visionRange === 'number') {
-    adjustedBase.visionRange = Math.max(0, Math.round(base.visionRange));
-  }
-
-  const loadout = loadoutItems(attendant.equipment);
-  const effective = applyEquipment(adjustedBase, loadout);
-
-  attendant.baseStats = adjustedBase;
-  applyEffectiveStats(attendant, effective);
-
-  const upkeepBase = baseline.upkeep;
-  const adjustedUpkeepRaw = (upkeepBase + policyModifiers.upkeepDelta) * policyModifiers.upkeepMultiplier;
-  const nextUpkeep = Math.max(0, Math.round(adjustedUpkeepRaw));
-  attendant.upkeep = nextUpkeep;
-
-  const baseChanged = !areStatBlocksEqual(previousBase, adjustedBase);
-  const effectiveChanged = !areStatBlocksEqual(previousEffective, effective);
-  const upkeepChanged = Math.round(previousUpkeep) !== nextUpkeep;
-
-  return baseChanged || effectiveChanged || upkeepChanged;
-}
-
-function refreshSaunojaPolicyAdjustments(attendant: Saunoja): boolean {
-  const baseline = ensureSaunojaPolicyBaseline(attendant);
-  const previousBase = cloneStatBlock(attendant.baseStats);
-  const previousEffective = cloneStatBlock(attendant.effectiveStats);
-  const previousUpkeep = Number.isFinite(attendant.upkeep) ? Math.round(attendant.upkeep) : 0;
-  const changed = applyPolicyModifiersToSaunoja(attendant, baseline, previousBase, previousEffective, previousUpkeep);
-  if (changed) {
-    eventBus.emit('unit:stats:changed', { unitId: attendant.id, stats: attendant.effectiveStats });
-  }
-  return changed;
-}
-
-function refreshAllSaunojaPolicyAdjustments(): boolean {
-  let changed = false;
-  for (const attendant of saunojas) {
-    if (refreshSaunojaPolicyAdjustments(attendant)) {
-      changed = true;
-    }
-  }
-  if (changed) {
-    updateRosterDisplay();
-    syncSelectionOverlay();
-  }
-  return changed;
-}
-
-function withSaunojaBaseline<T>(attendant: Saunoja, mutate: (baseline: SaunojaPolicyBaseline) => T): T {
-  const baseline = ensureSaunojaPolicyBaseline(attendant);
-  const result = mutate(baseline);
-  refreshSaunojaPolicyAdjustments(attendant);
-  return result;
-}
-
 function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly EquippedItem[]): SaunojaStatBlock {
   const resolvedLoadout = loadout ?? loadoutItems(attendant.equipment);
   const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
@@ -707,37 +578,36 @@ function grantSaunojaExperience(
   const statBonuses: StatAwards = { vigor: 0, focus: 0, resolve: 0 };
   let bonusHealth = 0;
   if (levelsGained > 0) {
-    withSaunojaBaseline(attendant, (baseline) => {
-      for (let level = before.level + 1; level <= after.level && level <= MAX_LEVEL; level++) {
-        const award = getStatAwardsForLevel(level);
-        statBonuses.vigor += award.vigor;
-        statBonuses.focus += award.focus;
-        statBonuses.resolve += award.resolve;
+    for (let level = before.level + 1; level <= after.level && level <= MAX_LEVEL; level++) {
+      const award = getStatAwardsForLevel(level);
+      statBonuses.vigor += award.vigor;
+      statBonuses.focus += award.focus;
+      statBonuses.resolve += award.resolve;
 
-        const baseStats = baseline.base;
-        const baseHealth = Number.isFinite(baseStats.health)
-          ? baseStats.health
-          : attendant.effectiveStats.health;
-        baseStats.health = Math.max(1, Math.round(baseHealth + award.vigor));
+      const baseHealth = Number.isFinite(attendant.baseStats.health)
+        ? attendant.baseStats.health
+        : attendant.effectiveStats.health;
+      attendant.baseStats.health = Math.max(1, Math.round(baseHealth + award.vigor));
 
-        const baseAttack = Number.isFinite(baseStats.attackDamage)
-          ? baseStats.attackDamage
-          : attendant.effectiveStats.attackDamage;
-        baseStats.attackDamage = Math.max(0, Math.round(baseAttack + award.focus));
+      const baseAttack = Number.isFinite(attendant.baseStats.attackDamage)
+        ? attendant.baseStats.attackDamage
+        : attendant.effectiveStats.attackDamage;
+      attendant.baseStats.attackDamage = Math.max(0, Math.round(baseAttack + award.focus));
 
-        const currentDefense = Number.isFinite(baseStats.defense)
-          ? baseStats.defense ?? 0
-          : attendant.effectiveStats.defense ?? 0;
-        const nextDefense = currentDefense + award.resolve;
-        baseStats.defense = nextDefense > 0 ? nextDefense : undefined;
-      }
-    });
+      const currentDefense = Number.isFinite(attendant.baseStats.defense)
+        ? attendant.baseStats.defense ?? 0
+        : attendant.effectiveStats.defense ?? 0;
+      const nextDefense = currentDefense + award.resolve;
+      attendant.baseStats.defense = nextDefense > 0 ? nextDefense : undefined;
+    }
     bonusHealth = statBonuses.vigor;
   }
 
   if (bonusHealth > 0) {
     attendant.hp += bonusHealth;
   }
+
+  recomputeEffectiveStats(attendant);
 
   const attachedUnit = getAttachedUnitFor(attendant);
   if (attachedUnit) {
@@ -909,13 +779,10 @@ function computeInventoryStatDeltas(
 
 function updateBaseStatsFromUnit(attendant: Saunoja, unit: Unit | null): void {
   if (!unit) {
-    refreshSaunojaPolicyAdjustments(attendant);
     return;
   }
   const hasEquipment = loadoutItems(attendant.equipment).length > 0;
   if (hasEquipment) {
-    ensureSaunojaPolicyBaseline(attendant);
-    refreshSaunojaPolicyAdjustments(attendant);
     return;
   }
   const base: SaunojaStatBlock = {
@@ -933,9 +800,8 @@ function updateBaseStatsFromUnit(attendant: Saunoja, unit: Unit | null): void {
         ? Math.max(0, unit.stats.visionRange)
         : attendant.baseStats.visionRange
   } satisfies SaunojaStatBlock;
-  const baseline = ensureSaunojaPolicyBaseline(attendant);
-  baseline.base = cloneStatBlock(base);
-  refreshSaunojaPolicyAdjustments(attendant);
+  attendant.baseStats = base;
+  recomputeEffectiveStats(attendant);
 }
 
 function resumeTutorialPause(): void {
@@ -1016,10 +882,7 @@ function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
 
 function refreshSaunojaPersona(saunoja: Saunoja): void {
   saunoja.traits = generateTraits();
-  const nextUpkeep = rollSaunojaUpkeep();
-  withSaunojaBaseline(saunoja, (baseline) => {
-    baseline.upkeep = nextUpkeep;
-  });
+  saunoja.upkeep = rollSaunojaUpkeep();
   saunoja.xp = 0;
   if (typeof saunoja.appearanceId !== 'string' || saunoja.appearanceId.trim().length === 0) {
     saunoja.appearanceId = resolveSaunojaAppearance();
@@ -1326,7 +1189,6 @@ function detachSaunoja(unitId: string): void {
   if (!saunoja) {
     return;
   }
-  saunojaPolicyBaselines.delete(saunoja);
   unitVisionSnapshots.delete(unitId);
   unitToSaunoja.delete(unitId);
   if (saunojaToUnit.get(saunoja.id) === unitId) {
@@ -1355,10 +1217,6 @@ function claimSaunoja(
     });
     saunojas.push(match);
     created = true;
-    saunojaPolicyBaselines.set(match, {
-      base: cloneStatBlock(match.baseStats),
-      upkeep: Number.isFinite(match.upkeep) ? Math.max(0, match.upkeep) : SAUNOJA_DEFAULT_UPKEEP
-    });
   }
 
   const previousUnitId = saunojaToUnit.get(match.id);
@@ -1369,9 +1227,9 @@ function claimSaunoja(
   unitToSaunoja.set(unit.id, match);
   saunojaToUnit.set(match.id, unit.id);
 
-  ensureSaunojaPolicyBaseline(match);
   applySaunojaBehaviorPreference(match, match.behavior, unit);
   updateBaseStatsFromUnit(match, unit);
+  applyEffectiveStats(match, match.effectiveStats);
   unit.setExperience(match.xp);
   if (typeof match.appearanceId === 'string' && match.appearanceId.trim().length > 0) {
     unit.setAppearanceId(match.appearanceId);
@@ -1525,34 +1383,16 @@ const onUnitStatsChanged = (): void => {
 
 eventBus.on('unit:stats:changed', onUnitStatsChanged);
 
-const onPolicyLifecycleChanged = (): void => {
-  recalculatePolicyModifiers();
-};
-
-eventBus.on(POLICY_EVENTS.APPLIED, onPolicyLifecycleChanged);
-eventBus.on(POLICY_EVENTS.REVOKED, onPolicyLifecycleChanged);
-
 function resolveUnitUpkeep(unit: Unit): number {
   const attendant = unitToSaunoja.get(unit.id);
   if (!attendant) {
     return 0;
   }
   const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
-  return Math.max(0, Math.round(upkeep));
+  return upkeep > 0 ? upkeep : 0;
 }
 
 const state = new GameState(1000);
-
-function recalculatePolicyModifiers(): void {
-  const activePolicies = listPolicies().filter((definition) => state.hasPolicy(definition.id));
-  const summary = combinePolicyModifiers(activePolicies);
-  policyModifiers = summary;
-  setActivePolicyModifiers(summary);
-  if (refreshAllSaunojaPolicyAdjustments()) {
-    saveUnits();
-  }
-}
-
 const inventory = new InventoryState();
 reloadSaunaShopState();
 const restoredSave = state.load(map);
@@ -1956,10 +1796,6 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   endScreen = controller;
 };
 saunojas = loadUnits();
-for (const unit of saunojas) {
-  const upkeep = Number.isFinite(unit.upkeep) ? Math.max(0, unit.upkeep) : SAUNOJA_DEFAULT_UPKEEP;
-  saunojaPolicyBaselines.set(unit, { base: cloneStatBlock(unit.baseStats), upkeep });
-}
 if (saunojas.length === 0) {
   const seeded = makeSaunoja({
     id: 'saunoja-1',
@@ -1970,10 +1806,6 @@ if (saunojas.length === 0) {
   refreshSaunojaPersona(seeded);
   seeded.upkeep = SAUNOJA_DEFAULT_UPKEEP;
   saunojas.push(seeded);
-  saunojaPolicyBaselines.set(seeded, {
-    base: cloneStatBlock(seeded.baseStats),
-    upkeep: SAUNOJA_DEFAULT_UPKEEP
-  });
   saveUnits();
   if (import.meta.env.DEV) {
     const storage = getSaunojaStorage();
@@ -1999,7 +1831,6 @@ if (saunojas.length === 0) {
     saveUnits();
   }
 }
-recalculatePolicyModifiers();
 const hasActivePlayerUnit = units.some((unit) => unit.faction === 'player' && !unit.isDead());
 if (!hasActivePlayerUnit) {
   if (!state.canAfford(SOLDIER_COST, Resource.SAUNA_BEER)) {
@@ -2659,8 +2490,6 @@ export function cleanup(): void {
 
   eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);
   eventBus.off(POLICY_EVENTS.REVOKED, onPolicyRevoked);
-  eventBus.off(POLICY_EVENTS.APPLIED, onPolicyLifecycleChanged);
-  eventBus.off(POLICY_EVENTS.REVOKED, onPolicyLifecycleChanged);
   if (pauseListenerAttached) {
     eventBus.off('game:pause-changed', onPauseChanged);
     pauseListenerAttached = false;
