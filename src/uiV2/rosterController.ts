@@ -1,4 +1,4 @@
-import type { RosterHudSummary } from '../ui/rosterHUD.ts';
+import type { RosterHudSummary, RosterCardViewModel } from '../ui/rosterHUD.ts';
 import type { RosterEntry } from '../ui/rightPanel.tsx';
 
 export type UiV2RosterState = {
@@ -19,11 +19,33 @@ export interface UiV2RosterControllerOptions {
   subscribeEntries(listener: (entries: RosterEntry[]) => void): () => void;
 }
 
+function cloneRosterCard(card: RosterCardViewModel | null): RosterCardViewModel | null {
+  if (!card) {
+    return null;
+  }
+  const { progression } = card;
+  return {
+    ...card,
+    traits: [...card.traits],
+    progression: {
+      ...progression,
+      statBonuses: { ...progression.statBonuses }
+    }
+  } satisfies RosterCardViewModel;
+}
+
+function cloneRosterHudSummary(summary: RosterHudSummary): RosterHudSummary {
+  return {
+    ...summary,
+    card: cloneRosterCard(summary.card)
+  } satisfies RosterHudSummary;
+}
+
 export function createUiV2RosterController(
   options: UiV2RosterControllerOptions
 ): UiV2RosterController {
-  let currentSummary = options.getSummary();
-  let currentEntries = options.getEntries();
+  let currentSummary = cloneRosterHudSummary(options.getSummary());
+  let currentEntries = [...options.getEntries()];
   const listeners = new Set<(state: UiV2RosterState) => void>();
 
   const emit = () => {
@@ -41,7 +63,7 @@ export function createUiV2RosterController(
   };
 
   const unsubscribeSummary = options.subscribeSummary((summary) => {
-    currentSummary = summary;
+    currentSummary = cloneRosterHudSummary(summary);
     emit();
   });
   const unsubscribeEntries = options.subscribeEntries((entries) => {
