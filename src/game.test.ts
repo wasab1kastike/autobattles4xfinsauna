@@ -304,6 +304,61 @@ describe('game logging', () => {
     expect(__getActiveRosterCountForTest()).toBe(baseline + 2);
   });
 
+  it('heals newly spawned Saunoja units to their boosted max HP', async () => {
+    const {
+      eventBus,
+      __syncSaunojaRosterForTest,
+      __grantRosterExperienceForTest,
+      __getAttachedUnitIdForTest,
+      getRosterEntriesSnapshot
+    } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+    const { getSoldierStats } = await import('./units/Soldier.ts');
+
+    const spawnCoord = { q: 0, r: 0 } as const;
+    const createSoldier = (id: string) => new Unit(id, 'soldier', spawnCoord, 'player', getSoldierStats());
+
+    const initialUnit = createSoldier('boosted-hero');
+    eventBus.emit('unitSpawned', { unit: initialUnit });
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    const baselineMax = initialUnit.getMaxHealth();
+
+    const rosterAfterSpawn = getRosterEntriesSnapshot();
+    const assignedSaunoja = rosterAfterSpawn.find(
+      (entry) => __getAttachedUnitIdForTest(entry.id) === initialUnit.id
+    );
+    expect(assignedSaunoja).toBeDefined();
+    const saunojaId = assignedSaunoja!.id;
+
+    __grantRosterExperienceForTest(5000);
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    const boostedRoster = getRosterEntriesSnapshot();
+    const boostedEntry = boostedRoster.find((entry) => entry.id === saunojaId);
+    expect(boostedEntry).toBeDefined();
+    const boostedMax = boostedEntry?.stats.maxHealth ?? 0;
+    expect(boostedMax).toBeGreaterThan(baselineMax);
+
+    eventBus.emit('unitDied', { unitId: initialUnit.id, unitFaction: 'player' });
+    await flushLogs();
+
+    const replacement = createSoldier(initialUnit.id);
+    replacement.stats.health = 1;
+    eventBus.emit('unitSpawned', { unit: replacement });
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    const respawnRoster = getRosterEntriesSnapshot();
+    const respawnEntry = respawnRoster.find((entry) => entry.id === saunojaId);
+    expect(respawnEntry).toBeDefined();
+    expect(replacement.getMaxHealth()).toBe(respawnEntry?.stats.maxHealth ?? 0);
+    expect(replacement.stats.health).toBe(replacement.getMaxHealth());
+    expect(__getAttachedUnitIdForTest(saunojaId)).toBe(replacement.id);
+  });
+
   it('records spawn and casualty events with sauna flavor', async () => {
     const { eventBus } = await initGame();
     const { Unit } = await import('./units/Unit.ts');
