@@ -40,8 +40,6 @@ export interface InventoryHudOptions {
     item: InventoryItem,
     source: InventoryCollection
   ) => EquipAttemptResult;
-  readonly getUseUiV2?: () => boolean;
-  readonly onUseUiV2Change?: (enabled: boolean) => void;
   readonly getSaunaShopViewModel?: () => SaunaShopViewModel | null;
   readonly onPurchaseSaunaTier?: (tierId: SaunaTierId) => PurchaseSaunaTierResult;
   readonly subscribeToSaunaShop?: (listener: () => void) => () => void;
@@ -476,17 +474,6 @@ export function setupInventoryHud(
         enabled
           ? 'Auto-equip enabled. Newly recovered gear will try to arm your selected attendant.'
           : 'Auto-equip disabled. Loot will head to the stash until you equip it manually.',
-        'info'
-      );
-    },
-    getUiV2State: () => options.getUseUiV2?.() ?? false,
-    onUiV2Change: (enabled) => {
-      options.onUseUiV2Change?.(enabled);
-      showToast(
-        toastStack,
-        enabled
-          ? 'Experimental HUD enabled. Reload to try the React/Tailwind experience.'
-          : 'Classic HUD restored for your next session.',
         'info'
       );
     }

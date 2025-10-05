@@ -145,20 +145,6 @@ import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 import { getLogHistory, logEvent, subscribeToLogs } from './ui/logging.ts';
 import {
-  createUiV2RosterController,
-  type UiV2RosterController
-} from './uiV2/rosterController.ts';
-import {
-  createUiV2TopbarController,
-  type UiV2TopbarController
-} from './uiV2/topbarController.ts';
-import {
-  createUiV2InventoryController,
-  type UiV2InventoryController
-} from './uiV2/inventoryController.ts';
-import { createUiV2LogController, type UiV2LogController } from './uiV2/logController.ts';
-import { createUiV2SaunaController, type UiV2SaunaController } from './uiV2/saunaController.ts';
-import {
   addArtocoinSpend,
   getArtocoinBalance,
   getArtocoinsSpentThisRun,
@@ -169,7 +155,7 @@ import {
   setPurchasedTierIds,
   subscribeToSaunaShop as subscribeToSaunaShopState
 } from './game/saunaShopState.ts';
-import { initializeClassicHud, initializeModernHud } from './game/setup/hud.ts';
+import { initializeClassicHud } from './game/setup/hud.ts';
 import {
   createSaunaLifecycle,
   type SaunaLifecycleResult,
@@ -254,11 +240,6 @@ let lastEnemyRampSummary: EnemyRampSummary | null = null;
 const enemyRampListeners = new Set<(
   summary: EnemyRampSummary | null
 ) => void>();
-let uiV2RosterController: UiV2RosterController | null = null;
-let uiV2TopbarController: UiV2TopbarController | null = null;
-let uiV2InventoryController: UiV2InventoryController | null = null;
-let uiV2LogController: UiV2LogController | null = null;
-let uiV2SaunaController: UiV2SaunaController | null = null;
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
 let getTierContextRef: () => SaunaTierContext = () => ({
@@ -267,8 +248,6 @@ let getTierContextRef: () => SaunaTierContext = () => ({
 });
 let getActiveTierIdRef: () => SaunaTierId = () => DEFAULT_SAUNA_TIER_ID;
 let getActiveTierLimitRef: () => number = () => 0;
-let getUseUiV2Ref: () => boolean = () => false;
-let setUseUiV2Ref: (next: boolean) => void = () => {};
 let updateRosterCapRef: (value: number, options?: { persist?: boolean }) => number = (value) => value;
 let resolveSpawnLimitRef: () => number = () => MIN_SPAWN_LIMIT;
 let setActiveTierRef: (
@@ -276,10 +255,6 @@ let setActiveTierRef: (
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = () => false;
 let spawnTierQueue: PlayerSpawnTierHelpers;
-
-export const disableUiV2 = (): void => {
-  setUseUiV2Ref(false);
-};
 
 function notifyRosterSummary(summary: RosterHudSummary): void {
   lastRosterSummary = summary;
@@ -324,18 +299,6 @@ function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
   }
 }
 
-function disposeUiV2Controllers(): void {
-  uiV2RosterController?.dispose();
-  uiV2RosterController = null;
-  uiV2TopbarController?.dispose();
-  uiV2TopbarController = null;
-  uiV2InventoryController?.dispose();
-  uiV2InventoryController = null;
-  uiV2LogController?.dispose();
-  uiV2LogController = null;
-  uiV2SaunaController?.dispose();
-  uiV2SaunaController = null;
-}
 const IDLE_FRAME_LIMIT = 10;
 
 let animationFrameId: number | null = null;
@@ -1058,20 +1021,12 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
-export interface SetupGameOptions {
-  hudVariant?: 'classic' | 'v2';
-}
-
 export function setupGame(
   canvasEl: HTMLCanvasElement,
   resourceBarEl: HTMLElement,
-  overlayEl: HTMLElement,
-  options: SetupGameOptions = {}
+  overlayEl: HTMLElement
 ): void {
-  const hudVariant = options.hudVariant ?? 'classic';
-  const useClassicHud = hudVariant === 'classic';
-  overlayEl.dataset.hudVariant = hudVariant;
-  disposeUiV2Controllers();
+  overlayEl.dataset.hudVariant = 'classic';
   hudElapsedMs = 0;
   notifyHudElapsed();
   notifyEnemyRamp(null);
@@ -1157,119 +1112,61 @@ export function setupGame(
     } satisfies SaunaShopViewModel;
   };
 
-  const hudResult = useClassicHud
-    ? initializeClassicHud({
-        resourceBarEl,
-        rosterIcon: uiIcons.saunojaRoster,
-        sauna,
-        previousDisposeRightPanel: disposeRightPanel,
-        pendingRosterRenderer,
-        pendingRosterEntries,
-        pendingRosterSummary,
-        setupRosterHUD,
-        setupSaunaUi: (saunaInstance, options) => setupSaunaUI(saunaInstance, options),
-        getActiveTierId: () => getActiveTierIdRef(),
-        setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
-        getTierContext: () => getTierContextRef(),
-        setupTopbar: () =>
-          setupTopbar(state, {
-            saunakunnia: uiIcons.resource,
-            sisu: uiIcons.sisu,
-            saunaBeer: uiIcons.saunaBeer,
-            artocoin: uiIcons.artocoin
+  const hudResult = initializeClassicHud({
+    resourceBarEl,
+    rosterIcon: uiIcons.saunojaRoster,
+    sauna,
+    previousDisposeRightPanel: disposeRightPanel,
+    pendingRosterRenderer,
+    pendingRosterEntries,
+    pendingRosterSummary,
+    setupRosterHUD,
+    setupSaunaUi: (saunaInstance, options) => setupSaunaUI(saunaInstance, options),
+    getActiveTierId: () => getActiveTierIdRef(),
+    setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
+    getTierContext: () => getTierContextRef(),
+    setupTopbar: () =>
+      setupTopbar(state, {
+        saunakunnia: uiIcons.resource,
+        sisu: uiIcons.sisu,
+        saunaBeer: uiIcons.saunaBeer,
+        artocoin: uiIcons.artocoin
+      }),
+    setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
+    actionBarAbilities,
+    setupInventoryHud: () =>
+      setupInventoryHud(inventory, {
+        getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
+        getComparisonContext: () => getSelectedInventoryContext(),
+        onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
+        getSaunaShopViewModel: () => buildSaunaShopViewModel(),
+        onPurchaseSaunaTier: (tierId) =>
+          purchaseSaunaTier(getSaunaTier(tierId), {
+            getCurrentBalance: () => getArtocoinBalance()
           }),
-        setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
-        actionBarAbilities,
-        setupInventoryHud: () =>
-          setupInventoryHud(inventory, {
-            getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-            getComparisonContext: () => getSelectedInventoryContext(),
-            onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
-            getUseUiV2: () => getUseUiV2Ref(),
-            onUseUiV2Change: (next) => setUseUiV2Ref(next),
-            getSaunaShopViewModel: () => buildSaunaShopViewModel(),
-            onPurchaseSaunaTier: (tierId) =>
-              purchaseSaunaTier(getSaunaTier(tierId), {
-                getCurrentBalance: () => getArtocoinBalance()
-              }),
-            subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
-          }),
-        createRightPanel: (onRendererReady) =>
-          createRightPanelBridge(
-            {
-              state,
-              sauna,
-              getSaunojas: () => saunojas,
-              getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
-              focusSaunojaById,
-              equipSlotFromStash,
-              unequipSlotToStash,
-              saveUnits,
-              updateRosterDisplay,
-              getActiveTierLimit: () => getActiveTierLimitRef(),
-              updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
-            },
-            onRendererReady
-          ),
-        syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
-        updateRosterDisplay: () => updateRosterDisplay(),
-        startTutorialIfNeeded: () => startTutorialIfNeeded()
-      })
-    : initializeModernHud({
-        previousDisposeRightPanel: disposeRightPanel,
-        setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
-        actionBarAbilities,
-        createRosterController: (options) => createUiV2RosterController(options),
-        rosterSummary: {
-          getSummary: () => getRosterSummarySnapshot(),
-          subscribeSummary: (listener) => subscribeRosterSummary(listener),
-          getEntries: () => getRosterEntriesSnapshot(),
-          subscribeEntries: (listener) => subscribeRosterEntries(listener)
+        subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
+      }),
+    createRightPanel: (onRendererReady) =>
+      createRightPanelBridge(
+        {
+          state,
+          sauna,
+          getSaunojas: () => saunojas,
+          getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+          focusSaunojaById,
+          equipSlotFromStash,
+          unequipSlotToStash,
+          saveUnits,
+          updateRosterDisplay,
+          getActiveTierLimit: () => getActiveTierLimitRef(),
+          updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
         },
-        createTopbarController: (options) => createUiV2TopbarController(options),
-        topbar: {
-          getResource: (resource) => state.getResource(resource),
-          subscribeResourceChange: (listener) => {
-            const handler = (
-              payload: { resource: Resource; total: number; amount: number }
-            ) => {
-              listener(payload);
-            };
-            eventBus.on('resourceChanged', handler);
-            return () => {
-              eventBus.off('resourceChanged', handler);
-            };
-          },
-          getArtocoinBalance: () => getArtocoinBalance(),
-          subscribeArtocoinChange: (listener) => onArtocoinChange(listener),
-          getElapsedMs: () => getHudElapsedMs(),
-          subscribeHudTime: (listener) => subscribeHudTime(listener),
-          getEnemyRamp: () => lastEnemyRampSummary,
-          subscribeEnemyRamp: (listener) => subscribeEnemyRamp(listener)
-        },
-        createInventoryController: (options) => createUiV2InventoryController(options),
-        inventory: {
-          buildSaunaShopViewModel,
-          subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
-          getUseUiV2: () => getUseUiV2Ref(),
-          setUseUiV2: (next) => setUseUiV2Ref(next)
-        },
-        createLogController: (options) => createUiV2LogController(options),
-        log: {
-          getHistory: () => getLogHistory(),
-          subscribe: (listener) => subscribeToLogs(listener)
-        },
-        createSaunaController: (options) => createUiV2SaunaController(options),
-        sauna: {
-          getSauna: () => sauna,
-          setupSaunaUi: (saunaInstance, controllerOptions) =>
-            setupSaunaUI(saunaInstance, controllerOptions),
-          setExternalController: setExternalSaunaUiController,
-          getActiveTierId: () => getActiveTierIdRef(),
-          setActiveTierId: (tierId, opts) => setActiveTierRef(tierId, opts),
-          getTierContext: () => getTierContextRef()
-        }
-      });
+        onRendererReady
+      ),
+    syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
+    updateRosterDisplay: () => updateRosterDisplay(),
+    startTutorialIfNeeded: () => startTutorialIfNeeded()
+  });
 
   rosterHud = hudResult.rosterHud;
   pendingRosterRenderer = hudResult.pendingRosterRenderer;
@@ -1281,11 +1178,6 @@ export function setupGame(
   inventoryHudController = hudResult.inventoryHudController;
   disposeRightPanel = hudResult.disposeRightPanel;
   addEvent = hudResult.addEvent;
-  uiV2RosterController = hudResult.uiV2RosterController;
-  uiV2TopbarController = hudResult.uiV2TopbarController;
-  uiV2InventoryController = hudResult.uiV2InventoryController;
-  uiV2LogController = hudResult.uiV2LogController;
-  uiV2SaunaController = hudResult.uiV2SaunaController;
   hudResult.postSetup?.();
 }
 
@@ -1614,8 +1506,6 @@ sauna = saunaLifecycle.sauna;
 getTierContextRef = saunaLifecycle.getTierContext;
 getActiveTierIdRef = saunaLifecycle.getActiveTierId;
 getActiveTierLimitRef = saunaLifecycle.getActiveTierLimit;
-getUseUiV2Ref = saunaLifecycle.getUseUiV2;
-setUseUiV2Ref = saunaLifecycle.setUseUiV2;
 updateRosterCapRef = saunaLifecycle.updateRosterCap;
 resolveSpawnLimitRef = saunaLifecycle.resolveSpawnLimit;
 setActiveTierRef = saunaLifecycle.setActiveTier;
@@ -3013,24 +2903,4 @@ export function setRosterCapValue(
   options: { persist?: boolean } = {}
 ): number {
   return updateRosterCapRef(value, options);
-}
-
-export function getUiV2RosterController(): UiV2RosterController | null {
-  return uiV2RosterController;
-}
-
-export function getUiV2TopbarController(): UiV2TopbarController | null {
-  return uiV2TopbarController;
-}
-
-export function getUiV2InventoryController(): UiV2InventoryController | null {
-  return uiV2InventoryController;
-}
-
-export function getUiV2LogController(): UiV2LogController | null {
-  return uiV2LogController;
-}
-
-export function getUiV2SaunaController(): UiV2SaunaController | null {
-  return uiV2SaunaController;
 }

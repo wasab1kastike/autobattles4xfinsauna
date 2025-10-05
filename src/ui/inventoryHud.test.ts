@@ -35,8 +35,7 @@ describe('setupInventoryHud', () => {
       setOpen: setOpenMock,
       focus: focusMock,
       destroy: destroyMock,
-      setAutoEquip: vi.fn(),
-      setUiV2: vi.fn()
+      setAutoEquip: vi.fn()
     } satisfies StashPanelController;
   });
 

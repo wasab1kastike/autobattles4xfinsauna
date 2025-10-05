@@ -38,8 +38,6 @@ export interface SaunaLifecycleResult {
   getTierContext: () => SaunaTierContext;
   getActiveTierId: () => SaunaTierId;
   getActiveTierLimit: () => number;
-  getUseUiV2: () => boolean;
-  setUseUiV2: (next: boolean) => void;
   updateRosterCap: (value: number, options?: { persist?: boolean }) => number;
   setActiveTier: (
     tierId: SaunaTierId,
@@ -85,7 +83,6 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   });
 
   let currentTierId: SaunaTierId = saunaSettings.activeTierId;
-  let useUiV2 = saunaSettings.useUiV2;
   const initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolveTierContext());
   if (!initialTierStatus.unlocked) {
     currentTierId = DEFAULT_SAUNA_TIER_ID;
@@ -99,15 +96,10 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   };
 
   const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, getActiveTierLimit());
-  if (
-    initialRosterCap !== saunaSettings.maxRosterSize ||
-    saunaSettings.activeTierId !== currentTierId ||
-    saunaSettings.useUiV2 !== useUiV2
-  ) {
+  if (initialRosterCap !== saunaSettings.maxRosterSize || saunaSettings.activeTierId !== currentTierId) {
     saveSaunaSettings({
       maxRosterSize: initialRosterCap,
-      activeTierId: currentTierId,
-      useUiV2
+      activeTierId: currentTierId
     });
   }
 
@@ -137,8 +129,6 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
 
   const resolveSpawnLimit = (): number => Math.max(minSpawnLimit, sauna.maxRosterSize);
 
-  const getUseUiV2 = (): boolean => useUiV2;
-
   const spawnTierQueue = createPlayerSpawnTierQueue({
     getTier: () => getSaunaTier(currentTierId),
     getRosterLimit: () => getActiveTierLimit(),
@@ -150,11 +140,8 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   let lastPersistedRosterCap = initialRosterCap;
   let lastPersistedTierId = currentTierId;
 
-  const persistSaunaSettings = (cap: number, overrides?: { useUiV2?: boolean }): void => {
-    if (typeof overrides?.useUiV2 === 'boolean') {
-      useUiV2 = overrides.useUiV2;
-    }
-    saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId, useUiV2 });
+  const persistSaunaSettings = (cap: number): void => {
+    saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId });
     lastPersistedRosterCap = cap;
     lastPersistedTierId = currentTierId;
   };
@@ -213,14 +200,6 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     }
   };
 
-  const setUseUiV2 = (next: boolean): void => {
-    const normalized = Boolean(next);
-    if (useUiV2 === normalized) {
-      return;
-    }
-    persistSaunaSettings(sauna.maxRosterSize, { useUiV2: normalized });
-  };
-
   const setActiveTier = (
     tierId: SaunaTierId,
     options: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void } = {}
@@ -252,8 +231,6 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     getTierContext,
     getActiveTierId: () => currentTierId,
     getActiveTierLimit,
-    getUseUiV2,
-    setUseUiV2,
     updateRosterCap,
     setActiveTier,
     syncActiveTierWithUnlocks,
