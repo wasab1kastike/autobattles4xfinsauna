@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Remove the experimental HUD v2 implementation, simplify game and shell
+  initialization to always load the classic HUD, prune the associated settings
+  persistence and toggles, and update tests plus documentation to reflect the
+  classic-only experience.
+
 - Extract sauna lifecycle wiring into `game/setup/sauna.ts`, add a reusable
   right-panel initializer, and adjust game setup to consume the new helpers with
   focused unit coverage for tier persistence, UI toggling, and spawn queue

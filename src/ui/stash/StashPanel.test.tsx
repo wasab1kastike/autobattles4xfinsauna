@@ -158,32 +158,22 @@ describe('createStashPanel', () => {
     expect(callbacks.onCollectionChange).toHaveBeenCalledWith('inventory');
   });
 
-  it('wires settings toggles to callbacks', () => {
+  it('wires the auto-equip toggle to callbacks', () => {
     const callbacks = {
       onAutoEquipChange: vi.fn(),
-      onUiV2Change: vi.fn(),
-      getAutoEquipState: () => true,
-      getUiV2State: () => false
+      getAutoEquipState: () => true
     } satisfies Partial<StashPanelCallbacks>;
 
     const panel = createStashPanel(callbacks);
     container.appendChild(panel.element);
 
     const toggles = panel.element.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    expect(toggles).toHaveLength(2);
+    expect(toggles).toHaveLength(1);
     expect(toggles[0]?.checked).toBe(true);
-    expect(toggles[1]?.checked).toBe(false);
 
     toggles[0]!.checked = false;
     toggles[0]!.dispatchEvent(new Event('change'));
     expect(callbacks.onAutoEquipChange).toHaveBeenCalledWith(false);
-
-    toggles[1]!.checked = true;
-    toggles[1]!.dispatchEvent(new Event('change'));
-    expect(callbacks.onUiV2Change).toHaveBeenCalledWith(true);
-
-    panel.setUiV2(false);
-    expect(toggles[1]?.checked).toBe(false);
   });
 
   it('falls back to focusing without options when preventScroll throws', () => {
