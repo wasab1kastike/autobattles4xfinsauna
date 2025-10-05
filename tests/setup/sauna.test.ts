@@ -67,8 +67,7 @@ beforeEach(() => {
   loadSaunaSettingsMock.mockReset();
   loadSaunaSettingsMock.mockReturnValue({
     maxRosterSize: 2,
-    activeTierId: DEFAULT_SAUNA_TIER_ID,
-    useUiV2: false
+    activeTierId: DEFAULT_SAUNA_TIER_ID
   });
   saveSaunaSettingsMock.mockReset();
   setPurchasedTierIdsMock.mockReset();
@@ -97,21 +96,7 @@ describe('createSaunaLifecycle', () => {
     expect(saveSaunaSettingsMock).toHaveBeenCalledTimes(1);
     expect(saveSaunaSettingsMock).toHaveBeenLastCalledWith({
       maxRosterSize: limit,
-      activeTierId: lifecycle.getActiveTierId(),
-      useUiV2: false
-    });
-  });
-
-  it('persists when toggling UI v2 usage', () => {
-    const lifecycle = createLifecycle();
-    saveSaunaSettingsMock.mockClear();
-
-    lifecycle.setUseUiV2(true);
-
-    expect(saveSaunaSettingsMock).toHaveBeenCalledWith({
-      maxRosterSize: lifecycle.sauna.maxRosterSize,
-      activeTierId: lifecycle.getActiveTierId(),
-      useUiV2: true
+      activeTierId: lifecycle.getActiveTierId()
     });
   });
 

@@ -1,7 +1,5 @@
 import './style.css';
-import { setupGame, start, handleCanvasClick, cleanup, disableUiV2 } from './game.ts';
-import { loadSaunaSettings } from './game/saunaSettings.ts';
-import { bootstrapUiV2, type UiV2Handle } from './uiV2/bootstrap.tsx';
+import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { createHud, type HudController, type LoadingHandle, type BannerOptions } from './ui/hud.ts';
@@ -27,8 +25,6 @@ let initToken = 0;
 let canvasRef: HTMLCanvasElement | null = null;
 let hud: HudController = createHud(null);
 let loaderHandle: LoadingHandle | null = null;
-let hudVariant: 'classic' | 'v2' = 'classic';
-let uiV2Handle: UiV2Handle | null = null;
 let resourceBarRef: HTMLElement | null = null;
 let overlayRef: HTMLElement | null = null;
 
@@ -232,8 +228,6 @@ function attachCanvasInputs(canvas: HTMLCanvasElement): void {
 export function destroy(): void {
   initToken += 1;
   clearCleanupHandlers();
-  uiV2Handle?.destroy();
-  uiV2Handle = null;
   loaderHandle?.dispose();
   loaderHandle = null;
   if (canvasRef) {
@@ -244,32 +238,6 @@ export function destroy(): void {
   overlayRef = null;
   hud.removeTransientUI();
   cleanup();
-}
-
-export function returnToClassicHud(): void {
-  disableUiV2();
-
-  if (hudVariant === 'classic') {
-    return;
-  }
-
-  const overlay = overlayRef;
-  const resourceBar = resourceBarRef;
-  const canvas = canvasRef;
-
-  if (!overlay || !resourceBar || !canvas) {
-    console.warn('Unable to restore the classic HUD: required DOM references are unavailable.');
-    uiV2Handle?.destroy();
-    uiV2Handle = null;
-    hudVariant = 'classic';
-    return;
-  }
-
-  uiV2Handle?.destroy();
-  uiV2Handle = null;
-  hudVariant = 'classic';
-
-  setupGame(canvas, resourceBar, overlay, { hudVariant: 'classic' });
 }
 
 export function init(): void {
@@ -295,9 +263,6 @@ export function init(): void {
 
   const runToken = ++initToken;
 
-  const storedSettings = loadSaunaSettings();
-  hudVariant = storedSettings.useUiV2 ? 'v2' : 'classic';
-
   canvasRef = canvas;
   resourceBarRef = resourceBar;
   overlayRef = overlay;
@@ -306,10 +271,7 @@ export function init(): void {
   const mobileViewport = useIsMobile();
   addCleanup(() => mobileViewport.dispose());
 
-  setupGame(canvas, resourceBar, overlay, { hudVariant });
-  if (hudVariant === 'v2') {
-    uiV2Handle = bootstrapUiV2({ overlay, resourceBar, canvas, onReturnToClassic: returnToClassicHud });
-  }
+  setupGame(canvas, resourceBar, overlay);
   attachCanvasInputs(canvas);
 
   const resize = () => resizeCanvasToDisplaySize(canvas);

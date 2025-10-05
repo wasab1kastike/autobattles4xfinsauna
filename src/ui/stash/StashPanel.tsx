@@ -25,8 +25,6 @@ export interface StashPanelCallbacks {
   readonly onItemTrash?: (item: InventoryListItemView) => void;
   readonly getAutoEquipState?: () => boolean;
   readonly onAutoEquipChange?: (enabled: boolean) => void;
-  readonly getUiV2State?: () => boolean;
-  readonly onUiV2Change?: (enabled: boolean) => void;
 }
 
 export interface StashPanelController {
@@ -36,7 +34,6 @@ export interface StashPanelController {
   focus(): void;
   destroy(): void;
   setAutoEquip(enabled: boolean): void;
-  setUiV2(enabled: boolean): void;
 }
 
 interface FilterSlot {
@@ -220,17 +217,10 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
     'Try outfitting the selected attendant as soon as new gear arrives.',
     (value) => callbacks.onAutoEquipChange?.(value)
   );
-  const uiVariantToggle = buildToggle(
-    'inventory-ui-variant-toggle',
-    'Experimental HUD',
-    'Swap to the React/Tailwind HUD. You can revert at any time.',
-    (value) => callbacks.onUiV2Change?.(value)
-  );
 
   autoEquipToggle.setChecked(callbacks.getAutoEquipState?.() ?? false);
-  uiVariantToggle.setChecked(callbacks.getUiV2State?.() ?? false);
 
-  settings.append(autoEquipToggle.root, uiVariantToggle.root);
+  settings.append(autoEquipToggle.root);
   controls.appendChild(settings);
 
   const filterSection = document.createElement('div');
@@ -361,9 +351,6 @@ export function createStashPanel(callbacks: StashPanelCallbacks): StashPanelCont
     },
     setAutoEquip(enabled: boolean) {
       autoEquipToggle.setChecked(enabled);
-    },
-    setUiV2(enabled: boolean) {
-      uiVariantToggle.setChecked(enabled);
     }
   } satisfies StashPanelController;
 
