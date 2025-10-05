@@ -419,11 +419,10 @@ describe('game logging', () => {
 
     const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
     const parsed = stored
-      ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string; useUiV2: boolean })
+      ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string })
       : null;
     expect(parsed?.activeTierId).toBe('mythic-conclave');
     expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
-    expect(parsed?.useUiV2).toBe(false);
   });
 
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
@@ -471,8 +470,8 @@ describe('game logging', () => {
   }, 15000);
 });
 
-describe('setupGame HUD variants', () => {
-  it('initializes classic HUD controllers when hudVariant is classic', async () => {
+describe('setupGame classic HUD', () => {
+  it('initializes the classic HUD controllers', async () => {
     vi.resetModules();
     renderGameShell();
 
@@ -481,11 +480,6 @@ describe('setupGame HUD variants', () => {
     const topbarModule = await import('./ui/topbar.ts');
     const rightPanelModule = await import('./ui/rightPanel.tsx');
     const inventoryModule = await import('./ui/inventoryHud.ts');
-    const v2RosterModule = await import('./uiV2/rosterController.ts');
-    const v2TopbarModule = await import('./uiV2/topbarController.ts');
-    const v2InventoryModule = await import('./uiV2/inventoryController.ts');
-    const v2LogModule = await import('./uiV2/logController.ts');
-    const v2SaunaModule = await import('./uiV2/saunaController.ts');
 
     const rosterHudSpy = vi.spyOn(rosterHudModule, 'setupRosterHUD');
     const saunaSpy = vi.spyOn(saunaModule, 'setupSaunaUI');
@@ -493,75 +487,19 @@ describe('setupGame HUD variants', () => {
     const rightPanelSpy = vi.spyOn(rightPanelModule, 'setupRightPanel');
     const inventorySpy = vi.spyOn(inventoryModule, 'setupInventoryHud');
 
-    const v2RosterSpy = vi.spyOn(v2RosterModule, 'createUiV2RosterController');
-    const v2TopbarSpy = vi.spyOn(v2TopbarModule, 'createUiV2TopbarController');
-    const v2InventorySpy = vi.spyOn(v2InventoryModule, 'createUiV2InventoryController');
-    const v2LogSpy = vi.spyOn(v2LogModule, 'createUiV2LogController');
-    const v2SaunaSpy = vi.spyOn(v2SaunaModule, 'createUiV2SaunaController');
-
     const { setupGame } = await import('./game.ts');
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     const resourceBar = document.getElementById('resource-bar') as HTMLElement;
     const overlay = document.getElementById('ui-overlay') as HTMLElement;
 
-    setupGame(canvas, resourceBar, overlay, { hudVariant: 'classic' });
+    setupGame(canvas, resourceBar, overlay);
 
     expect(rosterHudSpy).toHaveBeenCalled();
     expect(saunaSpy).toHaveBeenCalled();
     expect(topbarSpy).toHaveBeenCalled();
     expect(rightPanelSpy).toHaveBeenCalled();
     expect(inventorySpy).toHaveBeenCalled();
-    expect(v2RosterSpy).not.toHaveBeenCalled();
-    expect(v2TopbarSpy).not.toHaveBeenCalled();
-    expect(v2InventorySpy).not.toHaveBeenCalled();
-    expect(v2LogSpy).not.toHaveBeenCalled();
-    expect(v2SaunaSpy).not.toHaveBeenCalled();
-  });
-
-  it('initializes UI v2 controllers when hudVariant is v2', async () => {
-    vi.resetModules();
-    renderGameShell();
-
-    const rosterHudModule = await import('./ui/rosterHUD.ts');
-    const saunaModule = await import('./ui/sauna.tsx');
-    const topbarModule = await import('./ui/topbar.ts');
-    const rightPanelModule = await import('./ui/rightPanel.tsx');
-    const inventoryModule = await import('./ui/inventoryHud.ts');
-    const v2RosterModule = await import('./uiV2/rosterController.ts');
-    const v2TopbarModule = await import('./uiV2/topbarController.ts');
-    const v2InventoryModule = await import('./uiV2/inventoryController.ts');
-    const v2LogModule = await import('./uiV2/logController.ts');
-    const v2SaunaModule = await import('./uiV2/saunaController.ts');
-
-    const rosterHudSpy = vi.spyOn(rosterHudModule, 'setupRosterHUD');
-    const saunaSpy = vi.spyOn(saunaModule, 'setupSaunaUI');
-    const topbarSpy = vi.spyOn(topbarModule, 'setupTopbar');
-    const rightPanelSpy = vi.spyOn(rightPanelModule, 'setupRightPanel');
-    const inventorySpy = vi.spyOn(inventoryModule, 'setupInventoryHud');
-
-    const v2RosterSpy = vi.spyOn(v2RosterModule, 'createUiV2RosterController');
-    const v2TopbarSpy = vi.spyOn(v2TopbarModule, 'createUiV2TopbarController');
-    const v2InventorySpy = vi.spyOn(v2InventoryModule, 'createUiV2InventoryController');
-    const v2LogSpy = vi.spyOn(v2LogModule, 'createUiV2LogController');
-    const v2SaunaSpy = vi.spyOn(v2SaunaModule, 'createUiV2SaunaController');
-
-    const { setupGame } = await import('./game.ts');
-    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
-    const resourceBar = document.getElementById('resource-bar') as HTMLElement;
-    const overlay = document.getElementById('ui-overlay') as HTMLElement;
-
-    setupGame(canvas, resourceBar, overlay, { hudVariant: 'v2' });
-
-    expect(rosterHudSpy).not.toHaveBeenCalled();
-    expect(saunaSpy).not.toHaveBeenCalled();
-    expect(topbarSpy).not.toHaveBeenCalled();
-    expect(rightPanelSpy).not.toHaveBeenCalled();
-    expect(inventorySpy).not.toHaveBeenCalled();
-    expect(v2RosterSpy).toHaveBeenCalled();
-    expect(v2TopbarSpy).toHaveBeenCalled();
-    expect(v2InventorySpy).toHaveBeenCalled();
-    expect(v2LogSpy).toHaveBeenCalled();
-    expect(v2SaunaSpy).toHaveBeenCalled();
+    expect(overlay.dataset.hudVariant).toBe('classic');
   });
 });
 

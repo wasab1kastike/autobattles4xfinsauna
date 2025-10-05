@@ -169,28 +169,14 @@ function ensureCommandDockSection(
   return element;
 }
 
-function applyVariantClasses(
-  overlay: HTMLElement,
-  regions: HudLayoutRegions,
-  isUiV2: boolean
-): void {
-  if (isUiV2) {
-    overlay.classList.add(...OVERLAY_GRID_CLASSES.base);
-    for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
-      keyof HudLayoutRegions,
-      string[]
-    ]>) {
-      regions[name].classList.add(...classes);
-    }
-  } else {
-    overlay.classList.remove(...OVERLAY_GRID_CLASSES.base);
-    overlay.classList.remove(OVERLAY_GRID_CLASSES.collapsed);
-    for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
-      keyof HudLayoutRegions,
-      string[]
-    ]>) {
-      regions[name].classList.remove(...classes);
-    }
+function applyVariantClasses(overlay: HTMLElement, regions: HudLayoutRegions): void {
+  overlay.classList.remove(...OVERLAY_GRID_CLASSES.base);
+  overlay.classList.remove(OVERLAY_GRID_CLASSES.collapsed);
+  for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
+    keyof HudLayoutRegions,
+    string[]
+  ]>) {
+    regions[name].classList.remove(...classes);
   }
 }
 
@@ -527,8 +513,7 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     commandDockActions.appendChild(child);
   }
 
-  const isUiV2 = overlay.dataset.hudVariant === 'v2';
-  applyVariantClasses(overlay, regions, isUiV2);
+  applyVariantClasses(overlay, regions);
 
   const topbar = overlay.querySelector<HTMLElement>('#topbar');
   if (topbar && topbar.parentElement !== anchors.topLeftCluster) {
