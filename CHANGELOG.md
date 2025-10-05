@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ensure Saunoja reinforcements spawn at 100% health by syncing unit and
+  attendant HP to their boosted maximums when effective stats increase, keeping
+  fresh recruits battle ready even after roster upgrades.
+
 - Remove the experimental HUD v2 implementation, simplify game and shell
   initialization to always load the classic HUD, prune the associated settings
   persistence and toggles, and update tests plus documentation to reflect the

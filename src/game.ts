@@ -504,6 +504,13 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
     } else if (attendant.shield <= 0) {
       unit.setShield(0);
     }
+    const unitMaxHealth = unit.getMaxHealth();
+    if (unit.stats.health < unitMaxHealth) {
+      unit.stats.health = unitMaxHealth;
+    }
+    if (attendant.hp < attendant.maxHp) {
+      attendant.hp = attendant.maxHp;
+    }
   }
 }
 
