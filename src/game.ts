@@ -38,6 +38,11 @@ import {
 } from './sauna/tiers.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
 import { GameRuntime, type GameRuntimeContext } from './game/runtime/GameRuntime.ts';
+import {
+  createRosterService,
+  type RosterPersonaBaseline,
+  type RosterService
+} from './game/runtime/rosterService.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import {
   setupActionBar,
@@ -208,7 +213,7 @@ function applyNgPlusState(next: NgPlusState): void {
 applyNgPlusState(currentNgPlusState);
 
 let saunojas: Saunoja[] = [];
-type SaunojaPolicyBaseline = { base: SaunojaStatBlock; upkeep: number };
+type SaunojaPolicyBaseline = RosterPersonaBaseline;
 const saunojaPolicyBaselines = new WeakMap<Saunoja, SaunojaPolicyBaseline>();
 let policyModifiers: PolicyModifierSummary = createPolicyModifierSummary();
 setActivePolicyModifiers(policyModifiers);
@@ -216,8 +221,16 @@ const unitToSaunoja = new Map<string, Saunoja>();
 const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
 let playerSpawnSequence = 0;
-let selected: AxialCoord | null = null;
-let selectedUnitId: string | null = null;
+let rosterService: RosterService = createRosterService({
+  roster: saunojas,
+  loadRosterFromStorage: () => loadRosterFromStorage(),
+  saveRosterToStorage: (entries) => persistRosterToStorage(entries),
+  withBaseline: (saunoja, mutate) => withSaunojaBaseline(saunoja, mutate),
+  getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+  resolveAppearanceId: () => resolveSaunojaAppearance(),
+  generateTraits: () => generateTraits(),
+  rollUpkeep: () => rollSaunojaUpkeep()
+});
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
@@ -385,6 +398,7 @@ function syncSelectionOverlay(): void {
   }
 
   let selectionPayload: UnitSelectionPayload | null = null;
+  let selectedUnitId = rosterService.getSelectedUnitId();
 
   if (selectedUnitId) {
     const attachedSaunoja = saunojas.find((unit) => {
@@ -399,6 +413,7 @@ function syncSelectionOverlay(): void {
       if (unit) {
         selectionPayload = buildSelectionPayloadFromUnit(unit);
       } else {
+        rosterService.setSelectedUnitId(null);
         selectedUnitId = null;
       }
     }
@@ -409,6 +424,7 @@ function syncSelectionOverlay(): void {
     if (selectedSaunoja) {
       const attachedUnit = getAttachedUnitFor(selectedSaunoja);
       selectedUnitId = attachedUnit?.id ?? selectedSaunoja.id;
+      rosterService.setSelectedUnitId(selectedUnitId);
       selectionPayload = buildSelectionPayload(selectedSaunoja);
     }
   }
@@ -971,35 +987,19 @@ function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void
 }
 
 export function loadUnits(): Saunoja[] {
-  return loadRosterFromStorage();
+  return rosterService.loadUnits();
 }
 
 export function saveUnits(): void {
-  persistRosterToStorage(saunojas);
+  rosterService.saveUnits();
 }
 
 function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
-  const traits = Array.isArray(saunoja.traits) ? saunoja.traits : [];
-  const hasTraits = traits.length >= 3;
-  const upkeepValid = Number.isFinite(saunoja.upkeep);
-  const xpValid = Number.isFinite(saunoja.xp);
-  const appearanceValid =
-    typeof saunoja.appearanceId === 'string' && saunoja.appearanceId.trim().length > 0;
-  return !hasTraits || !upkeepValid || !xpValid || !appearanceValid;
+  return rosterService.isPersonaMissing(saunoja);
 }
 
 function refreshSaunojaPersona(saunoja: Saunoja): void {
-  saunoja.traits = generateTraits();
-  const nextUpkeep = rollSaunojaUpkeep();
-  withSaunojaBaseline(saunoja, (baseline) => {
-    baseline.upkeep = nextUpkeep;
-  });
-  saunoja.xp = 0;
-  if (typeof saunoja.appearanceId !== 'string' || saunoja.appearanceId.trim().length === 0) {
-    saunoja.appearanceId = resolveSaunojaAppearance();
-  }
-  const attached = getAttachedUnitFor(saunoja);
-  attached?.setAppearanceId(saunoja.appearanceId);
+  rosterService.refreshPersona(saunoja);
 }
 
 function hexDistance(a: AxialCoord, b: AxialCoord): number {
@@ -1570,7 +1570,7 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   });
   endScreen = controller;
 };
-saunojas = loadUnits();
+loadUnits();
 for (const unit of saunojas) {
   const upkeep = Number.isFinite(unit.upkeep) ? Math.max(0, unit.upkeep) : SAUNOJA_DEFAULT_UPKEEP;
   saunojaPolicyBaselines.set(unit, { base: cloneStatBlock(unit.baseStats), upkeep });
@@ -1706,54 +1706,24 @@ if (!restoredSave) {
 
 const storedSelection = saunojas.find((unit) => unit.selected);
 if (storedSelection) {
-  selected = { q: storedSelection.coord.q, r: storedSelection.coord.r };
-}
-
-function coordsEqual(a: AxialCoord | null, b: AxialCoord | null): boolean {
-  if (!a || !b) {
-    return a === b;
-  }
-  return a.q === b.q && a.r === b.r;
+  rosterService.setSelectedCoord(storedSelection.coord);
 }
 
 function setSelectedCoord(next: AxialCoord | null): boolean {
-  if (coordsEqual(selected, next)) {
-    return false;
-  }
-  selected = next ? { q: next.q, r: next.r } : null;
-  syncSelectionOverlay();
-  return true;
-}
-
-function deselectAllSaunojas(except?: Saunoja): boolean {
-  let changed = false;
-  for (const unit of saunojas) {
-    if (except && unit === except) {
-      continue;
-    }
-    if (unit.selected) {
-      unit.selected = false;
-      changed = true;
-    }
+  const changed = rosterService.setSelectedCoord(next);
+  if (changed) {
+    syncSelectionOverlay();
   }
   return changed;
 }
 
+function deselectAllSaunojas(except?: Saunoja): boolean {
+  return rosterService.deselectAllSaunojas(except);
+}
+
 function clearSaunojaSelection(): boolean {
-  let changed = false;
-  if (selectedUnitId !== null) {
-    selectedUnitId = null;
-    changed = true;
-  }
-  if (deselectAllSaunojas()) {
-    changed = true;
-  }
-  if (setSelectedCoord(null)) {
-    changed = true;
-  }
-  if (!changed) {
-    syncSelectionOverlay();
-  }
+  const changed = rosterService.clearSaunojaSelection();
+  syncSelectionOverlay();
   return changed;
 }
 
@@ -1776,23 +1746,7 @@ function isEliteUnit(unit: Unit | null): boolean {
 }
 
 function focusSaunoja(target: Saunoja): boolean {
-  let changed = false;
-  const previousUnitId = selectedUnitId;
-  const attachedUnit = getAttachedUnitFor(target);
-  selectedUnitId = attachedUnit?.id ?? target.id;
-  if (!target.selected) {
-    target.selected = true;
-    changed = true;
-  }
-  if (deselectAllSaunojas(target)) {
-    changed = true;
-  }
-  if (setSelectedCoord(target.coord)) {
-    changed = true;
-  }
-  if (previousUnitId !== selectedUnitId) {
-    changed = true;
-  }
+  const changed = rosterService.focusSaunoja(target);
   syncSelectionOverlay();
   return changed;
 }
@@ -2069,8 +2023,8 @@ const onUnitDied = ({
     units.splice(idx, 1);
     unitsById.delete(unitId);
     detachSaunoja(unitId);
-    if (selectedUnitId === unitId) {
-      selectedUnitId = null;
+    if (rosterService.getSelectedUnitId() === unitId) {
+      rosterService.setSelectedUnitId(null);
       syncSelectionOverlay();
     }
     invalidateFrame();
@@ -2172,7 +2126,7 @@ export function __rebuildRightPanelForTest(): void {
       focusSaunojaById,
       equipSlotFromStash,
       unequipSlotToStash,
-      saveUnits,
+      rosterService,
       updateRosterDisplay,
       getActiveTierLimit: () => getActiveTierLimitRef(),
       updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
@@ -2576,16 +2530,6 @@ function createGameRuntime(): GameRuntime {
     notifyHudElapsed: () => notifyHudElapsed(),
     notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
     syncSelectionOverlay: () => syncSelectionOverlay(),
-    focusSaunoja: (target) => focusSaunoja(target),
-    focusSaunojaById: (unitId) => focusSaunojaById(unitId),
-    getSelectedUnitId: () => selectedUnitId,
-    setSelectedUnitId: (next) => {
-      selectedUnitId = next;
-    },
-    setSelectedCoord: (coord) => setSelectedCoord(coord),
-    deselectAllSaunojas: (except) => deselectAllSaunojas(except),
-    clearSaunojaSelection: () => clearSaunojaSelection(),
-    saveUnits: () => saveUnits(),
     updateRosterDisplay: () => updateRosterDisplay(),
     getSelectedInventoryContext: () => getSelectedInventoryContext(),
     equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),
@@ -2654,7 +2598,7 @@ function createGameRuntime(): GameRuntime {
     getIdleFrameLimit: () => IDLE_FRAME_LIMIT
   } satisfies GameRuntimeContext;
 
-  return new GameRuntime(context);
+  return new GameRuntime(context, rosterService);
 }
 
 export function setRosterCapValue(
