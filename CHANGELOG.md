@@ -5,9 +5,7 @@
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`
   composes action bar, top bar, sauna overlay, inventory HUD, and right panel
-  controllers from injected dependencies, keeping the polished gradients and
-  blur layers stable across restarts.
-
+  controllers from injected dependencies, keeping the 
 - Extract a dedicated roster runtime service that centralizes Saunoja loading,
   persistence, persona refresh, and selection state, inject the service into
   `GameRuntime`, and update the HUD plus right panel bridges to consume the new
