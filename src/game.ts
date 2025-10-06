@@ -334,8 +334,6 @@ function getSelectedSaunoja(): Saunoja | null {
   return saunojas.find((unit) => unit.selected) ?? null;
 }
 
-const SELECTABLE_BEHAVIORS: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
-
 function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
   const attachedUnit = getAttachedUnitFor(attendant);
   const itemsSource = Array.isArray(attendant.items) ? attendant.items : [];
@@ -378,9 +376,7 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
     maxHp: maxHpValue,
     shield: shieldValue,
     items,
-    statuses,
-    behavior: attendant.behavior ?? 'defend',
-    behaviorOptions: SELECTABLE_BEHAVIORS
+    statuses
   } satisfies UnitSelectionPayload;
 }
 
@@ -393,9 +389,6 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
   const faction = typeof unit.faction === 'string' && unit.faction.trim().length > 0
     ? unit.faction
     : 'enemy';
-  const behavior = attachedSaunoja?.behavior ?? unit.getBehavior();
-  const behaviorOptions = attachedSaunoja || unit.faction === 'player' ? SELECTABLE_BEHAVIORS : [];
-
   return {
     id: unit.id,
     name,
@@ -405,9 +398,7 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
     maxHp: maxHpValue,
     shield: shieldValue,
     items: [],
-    statuses: [],
-    behavior,
-    behaviorOptions
+    statuses: []
   } satisfies UnitSelectionPayload;
 }
 
@@ -1062,16 +1053,7 @@ export function setupGame(
     overlay: overlayEl,
     mapRenderer,
     getUnitById: (id) => unitsById.get(id),
-    requestDraw: invalidateFrame,
-    onBehaviorChange: (unitId, behavior) => {
-      const changed = setSaunojaBehaviorPreference(unitId, behavior);
-      if (!changed) {
-        return;
-      }
-      saveUnits();
-      updateRosterDisplay();
-      syncSelectionOverlay();
-    }
+    requestDraw: invalidateFrame
   });
   combatAnimations = createUnitCombatAnimator({
     getUnitById: (id) => unitsById.get(id),
