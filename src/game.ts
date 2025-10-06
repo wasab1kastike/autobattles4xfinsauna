@@ -1895,6 +1895,7 @@ export function draw(): void {
   if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
     ctx.translate(shakeOffset.x, shakeOffset.y);
   }
+  const selected = rosterService.getSelectedCoord();
   const saunojaLayer =
     overlaySaunojas.length > 0
       ? {
