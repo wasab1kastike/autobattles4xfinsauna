@@ -42,7 +42,7 @@ function instantiateArchetype(
   options?: UnitSpawnOptions
 ): Unit {
   const level = normalizeLevel(options?.level);
-  const stats = computeUnitStats(archetype, level);
+  const stats = { ...computeUnitStats(archetype, level) };
   const appearanceSampler = resolveAppearanceSampler(options);
   const appearance = resolveUnitAppearance(
     archetype.id,
