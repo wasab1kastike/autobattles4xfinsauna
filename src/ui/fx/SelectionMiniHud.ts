@@ -1,7 +1,6 @@
 import type { PixelCoord } from '../../hex/HexUtils.ts';
 import { axialToPixel } from '../../hex/HexUtils.ts';
 import { getFactionAccent } from '../../theme/factionPalette.ts';
-import type { UnitBehavior } from '../../unit/types.ts';
 import type {
   SelectionItemSlot,
   SelectionStatusChip,
@@ -13,7 +12,6 @@ interface SelectionMiniHudOptions {
   project: (point: PixelCoord, offsetY?: number) => PixelCoord | null;
   getVerticalLift: () => number;
   getHexSize: () => number;
-  onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
 }
 
 interface SelectionMiniHudElements {
@@ -27,9 +25,6 @@ interface SelectionMiniHudElements {
   hpMeter: HTMLElement;
   hpFill: HTMLElement;
   shieldFill: HTMLElement;
-  behavior: HTMLElement;
-  behaviorValue: HTMLElement;
-  behaviorOptions: HTMLElement;
   items: HTMLElement;
   statuses: HTMLElement;
 }
@@ -54,13 +49,6 @@ const rarityAccents = new Map<string, { base: string; glow: string }>([
 ]);
 
 const neutralAccent = { tint: 'rgba(165, 180, 252, 0.85)', halo: 'rgba(129, 140, 248, 0.35)' } as const;
-
-const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
-const behaviorLabels: Record<UnitBehavior, string> = {
-  defend: 'Defend',
-  attack: 'Attack',
-  explore: 'Explore'
-};
 
 const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
@@ -141,101 +129,6 @@ function ensureStyles(): void {
       align-items: center;
       gap: 12px;
       margin-bottom: 12px;
-    }
-
-    .ui-selection-mini-hud__behavior {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .ui-selection-mini-hud__behavior[hidden] {
-      display: none;
-    }
-
-    .ui-selection-mini-hud__behavior-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .ui-selection-mini-hud__behavior-label {
-      font-size: 0.72rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: rgba(148, 163, 184, 0.82);
-      font-weight: 600;
-    }
-
-    .ui-selection-mini-hud__behavior-value {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: rgba(226, 232, 240, 0.92);
-      letter-spacing: 0.04em;
-      text-shadow: 0 6px 16px rgba(15, 23, 42, 0.55);
-    }
-
-    .ui-selection-mini-hud__behavior-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .ui-selection-mini-hud__behavior-option {
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 999px;
-      padding: 6px 14px;
-      background: linear-gradient(135deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.7));
-      color: rgba(226, 232, 240, 0.9);
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
-      box-shadow: 0 10px 26px rgba(8, 25, 53, 0.34);
-    }
-
-    .ui-selection-mini-hud__behavior-option::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: radial-gradient(circle at 50% 0%, rgba(148, 197, 253, 0.18), transparent 65%);
-      opacity: 0;
-      transition: opacity 140ms ease;
-      pointer-events: none;
-    }
-
-    .ui-selection-mini-hud__behavior-option:is(:hover, :focus-visible) {
-      transform: translateY(-1px);
-      border-color: rgba(148, 197, 253, 0.42);
-      box-shadow: 0 14px 32px rgba(14, 116, 144, 0.28);
-    }
-
-    .ui-selection-mini-hud__behavior-option:is(:hover, :focus-visible)::after {
-      opacity: 1;
-    }
-
-    .ui-selection-mini-hud__behavior-option.is-active {
-      background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(37, 99, 235, 0.18));
-      border-color: rgba(125, 211, 252, 0.55);
-      color: rgba(244, 247, 255, 0.95);
-      box-shadow: 0 16px 32px rgba(14, 116, 144, 0.32);
-    }
-
-    .ui-selection-mini-hud__behavior-option.is-active::after {
-      opacity: 1;
-    }
-
-    .ui-selection-mini-hud__behavior-option:disabled {
-      opacity: 0.6;
-      cursor: default;
-      filter: grayscale(0.2);
-      box-shadow: 0 0 0 rgba(0, 0, 0, 0);
     }
 
     .ui-selection-mini-hud__title {
@@ -463,38 +356,6 @@ function resolveFactionAccent(faction: string): { tint: string; halo: string } {
   };
 }
 
-function formatBehaviorLabel(behavior: UnitBehavior | undefined): string {
-  if (!behavior) {
-    return '—';
-  }
-  const label = behaviorLabels[behavior];
-  if (label) {
-    return label;
-  }
-  return behavior.charAt(0).toUpperCase() + behavior.slice(1);
-}
-
-function normalizeBehaviorOptions(options: readonly UnitBehavior[] | undefined): UnitBehavior[] {
-  if (!options || options.length === 0) {
-    return [];
-  }
-  const seen = new Set<UnitBehavior>();
-  const ordered: UnitBehavior[] = [];
-  for (const canonical of behaviorOrder) {
-    if (options.includes(canonical) && !seen.has(canonical)) {
-      seen.add(canonical);
-      ordered.push(canonical);
-    }
-  }
-  for (const candidate of options) {
-    if (!seen.has(candidate)) {
-      seen.add(candidate);
-      ordered.push(candidate);
-    }
-  }
-  return ordered;
-}
-
 function createElements(root: HTMLElement): SelectionMiniHudElements {
   ensureStyles();
 
@@ -525,31 +386,6 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
   const faction = document.createElement('span');
   faction.className = 'ui-selection-mini-hud__faction';
   header.appendChild(faction);
-
-  const behavior = document.createElement('div');
-  behavior.className = 'ui-selection-mini-hud__behavior';
-  behavior.hidden = true;
-  card.appendChild(behavior);
-
-  const behaviorHeader = document.createElement('div');
-  behaviorHeader.className = 'ui-selection-mini-hud__behavior-header';
-  behavior.appendChild(behaviorHeader);
-
-  const behaviorLabel = document.createElement('span');
-  behaviorLabel.className = 'ui-selection-mini-hud__behavior-label';
-  behaviorLabel.textContent = 'Behavior';
-  behaviorHeader.appendChild(behaviorLabel);
-
-  const behaviorValue = document.createElement('span');
-  behaviorValue.className = 'ui-selection-mini-hud__behavior-value';
-  behaviorValue.textContent = '—';
-  behaviorHeader.appendChild(behaviorValue);
-
-  const behaviorOptions = document.createElement('div');
-  behaviorOptions.className = 'ui-selection-mini-hud__behavior-options';
-  behaviorOptions.setAttribute('role', 'group');
-  behaviorOptions.setAttribute('aria-label', 'Unit behavior');
-  behavior.appendChild(behaviorOptions);
 
   const hpBlock = document.createElement('div');
   hpBlock.className = 'ui-selection-mini-hud__hp';
@@ -595,9 +431,6 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
     hpMeter,
     hpFill,
     shieldFill,
-    behavior,
-    behaviorValue,
-    behaviorOptions,
     items,
     statuses
   } satisfies SelectionMiniHudElements;
@@ -768,71 +601,6 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     elements.entry.style.opacity = '0';
   }
 
-  function renderBehavior(payload: UnitSelectionPayload | null): void {
-    if (!payload || !payload.behavior) {
-      elements.behavior.hidden = true;
-      elements.behaviorValue.textContent = '—';
-      elements.behaviorOptions.replaceChildren();
-      elements.behaviorOptions.hidden = true;
-      elements.behaviorOptions.setAttribute('aria-hidden', 'true');
-      return;
-    }
-
-    elements.behavior.hidden = false;
-    elements.behaviorValue.textContent = formatBehaviorLabel(payload.behavior);
-
-    const nameLabel = payload.name?.trim() ?? 'Unit';
-    elements.behaviorOptions.setAttribute('aria-label', `${nameLabel} behavior`);
-
-    const available = normalizeBehaviorOptions(payload.behaviorOptions);
-    elements.behaviorOptions.replaceChildren();
-    if (available.length === 0) {
-      elements.behaviorOptions.hidden = true;
-      elements.behaviorOptions.setAttribute('aria-hidden', 'true');
-      return;
-    }
-
-    elements.behaviorOptions.hidden = false;
-    elements.behaviorOptions.setAttribute('aria-hidden', 'false');
-
-    const canChange = typeof options.onBehaviorChange === 'function';
-
-    for (const candidate of available) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'ui-selection-mini-hud__behavior-option';
-      button.dataset.behavior = candidate;
-      const label = formatBehaviorLabel(candidate);
-      button.textContent = label;
-      const isActive = candidate === payload.behavior;
-      button.classList.toggle('is-active', isActive);
-      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      const actionable = canChange && !isActive;
-      button.disabled = !actionable;
-      const title = actionable ? `Set ${nameLabel} to ${label}` : `${label}`;
-      button.title = title;
-      button.setAttribute('aria-label', title);
-      if (actionable) {
-        button.addEventListener('click', (event) => {
-          event.stopPropagation();
-          if (!state.payload) {
-            return;
-          }
-          if (state.payload.behavior === candidate) {
-            return;
-          }
-          options.onBehaviorChange?.(state.payload.id, candidate);
-          state.payload = {
-            ...state.payload,
-            behavior: candidate
-          } satisfies UnitSelectionPayload;
-          renderBehavior(state.payload);
-        });
-      }
-      elements.behaviorOptions.appendChild(button);
-    }
-  }
-
   function refreshPosition(): void {
     if (!state.payload) {
       hide();
@@ -863,7 +631,6 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     state.payload = payload;
     state.status = null;
     if (!payload) {
-      renderBehavior(null);
       hide();
       return;
     }
@@ -879,7 +646,6 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     updateHpDisplay();
     renderItems(elements.items, payload.items ?? []);
     renderStatuses(elements.statuses, payload.statuses ?? []);
-    renderBehavior(payload);
 
     show();
     refreshPosition();
