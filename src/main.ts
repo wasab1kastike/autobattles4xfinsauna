@@ -28,6 +28,13 @@ let loaderHandle: LoadingHandle | null = null;
 let resourceBarRef: HTMLElement | null = null;
 let overlayRef: HTMLElement | null = null;
 
+const gameOrchestrator = {
+  setup: setupGame,
+  start,
+  handleCanvasClick,
+  cleanup,
+};
+
 function applyBuildIdentity(): void {
   if (typeof document === 'undefined') {
     return;
@@ -174,7 +181,7 @@ const bootstrapLoader = createBootstrapLoader({
   assetPaths,
   loadAssets,
   setAssets,
-  startGame: start,
+  startGame: () => gameOrchestrator.start(),
   shouldAbort: (token) => token !== initToken,
 });
 
@@ -191,7 +198,7 @@ function onWheel(event: WheelEvent): void {
 function onCanvasClick(event: MouseEvent): void {
   if (!canvasRef) return;
   const world = screenToWorld(canvasRef, event.clientX, event.clientY);
-  handleCanvasClick(world);
+  gameOrchestrator.handleCanvasClick(world);
 }
 
 function attachCanvasInputs(canvas: HTMLCanvasElement): void {
@@ -219,7 +226,7 @@ function attachCanvasInputs(canvas: HTMLCanvasElement): void {
     },
     onTap: (position) => {
       const world = screenToWorld(canvas, position.x, position.y);
-      handleCanvasClick(world);
+      gameOrchestrator.handleCanvasClick(world);
     },
   });
   addCleanup(detachGestures);
@@ -237,7 +244,7 @@ export function destroy(): void {
   resourceBarRef = null;
   overlayRef = null;
   hud.removeTransientUI();
-  cleanup();
+  gameOrchestrator.cleanup();
 }
 
 export function init(): void {
@@ -271,15 +278,16 @@ export function init(): void {
   const mobileViewport = useIsMobile();
   addCleanup(() => mobileViewport.dispose());
 
-  setupGame(canvas, resourceBar, overlay);
+  gameOrchestrator.setup(canvas, resourceBar, overlay);
   attachCanvasInputs(canvas);
 
   const resize = () => resizeCanvasToDisplaySize(canvas);
   window.addEventListener('resize', resize);
   addCleanup(() => window.removeEventListener('resize', resize));
 
-  window.addEventListener('beforeunload', cleanup);
-  addCleanup(() => window.removeEventListener('beforeunload', cleanup));
+  const unloadHandler = () => gameOrchestrator.cleanup();
+  window.addEventListener('beforeunload', unloadHandler);
+  addCleanup(() => window.removeEventListener('beforeunload', unloadHandler));
 
   resize();
 
