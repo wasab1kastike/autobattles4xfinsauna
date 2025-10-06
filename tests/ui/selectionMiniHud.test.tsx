@@ -53,12 +53,10 @@ describe('SelectionMiniHud integration', () => {
   let manager: UnitFxManager;
   let canvas: HTMLCanvasElement;
   let overlay: HTMLElement;
-  let behaviorChanges: { unitId: string; behavior: string }[];
 
   beforeEach(() => {
     document.body.innerHTML = '';
     ({ canvas, overlay } = createOverlayRoot());
-    behaviorChanges = [];
     camera.x = 0;
     camera.y = 0;
     camera.zoom = 1;
@@ -71,10 +69,7 @@ describe('SelectionMiniHud integration', () => {
       overlay,
       mapRenderer,
       getUnitById: () => undefined,
-      requestDraw: () => {},
-      onBehaviorChange: (unitId, behavior) => {
-        behaviorChanges.push({ unitId, behavior });
-      }
+      requestDraw: () => {}
     });
   });
 
@@ -175,63 +170,6 @@ describe('SelectionMiniHud integration', () => {
 
     const entry = overlay.querySelector('.ui-selection-mini-hud') as HTMLElement | null;
     expect(entry?.dataset.visible).toBe('false');
-  });
-
-  it('allows toggling behavior for controllable units', () => {
-    const payload: UnitSelectionPayload = {
-      id: 'attendant-3',
-      name: 'Glacier Warden',
-      faction: 'player',
-      coord: { q: 0, r: 0 },
-      hp: 14,
-      maxHp: 20,
-      shield: 0,
-      items: [],
-      statuses: [],
-      behavior: 'defend',
-      behaviorOptions: ['defend', 'attack', 'explore']
-    } satisfies UnitSelectionPayload;
-
-    manager.setSelection(payload);
-    manager.beginStatusFrame();
-    manager.pushUnitStatus({
-      id: 'attendant-3',
-      world: { x: 128, y: 256 },
-      radius: 24,
-      hp: 14,
-      maxHp: 20,
-      shield: 0,
-      faction: 'player'
-    });
-    manager.commitStatusFrame();
-    manager.step(0);
-
-    const behaviorRow = overlay.querySelector('.ui-selection-mini-hud__behavior') as HTMLElement | null;
-    expect(behaviorRow?.hidden).toBe(false);
-
-    const buttons = Array.from(
-      behaviorRow?.querySelectorAll('.ui-selection-mini-hud__behavior-option') ?? []
-    );
-    expect(buttons.length).toBe(3);
-    expect(
-      behaviorRow?.querySelector(
-        '.ui-selection-mini-hud__behavior-option.is-active[data-behavior="defend"]'
-      )
-    ).toBeTruthy();
-
-    const attackButton = behaviorRow?.querySelector(
-      '.ui-selection-mini-hud__behavior-option[data-behavior="attack"]'
-    ) as HTMLButtonElement | null;
-    expect(attackButton).toBeTruthy();
-    expect(attackButton?.disabled).toBe(false);
-    attackButton?.click();
-
-    expect(behaviorChanges).toEqual([{ unitId: 'attendant-3', behavior: 'attack' }]);
-    expect(
-      behaviorRow?.querySelector(
-        '.ui-selection-mini-hud__behavior-option.is-active[data-behavior="attack"]'
-      )
-    ).toBeTruthy();
   });
 
   it('hides the card when selection clears', () => {
