@@ -15,6 +15,7 @@ describe('UnitFactory', () => {
     state.addResource(Resource.SAUNA_BEER, 100);
     const unit = spawnUnit(state, 'soldier', 's1', origin, 'player');
     expect(unit).not.toBeNull();
+    expect(unit!.stats.health).toBe(unit!.getMaxHealth());
     expect(unit!.stats).toEqual(SOLDIER_STATS);
     expect(unit!.type).toBe('soldier');
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(100 - SOLDIER_COST);
@@ -25,6 +26,7 @@ describe('UnitFactory', () => {
     state.addResource(Resource.SAUNA_BEER, 200);
     const unit = spawnUnit(state, 'archer', 'a1', origin, 'player');
     expect(unit).not.toBeNull();
+    expect(unit!.stats.health).toBe(unit!.getMaxHealth());
     expect(unit!.stats).toEqual(ARCHER_STATS);
     expect(unit!.type).toBe('archer');
     expect(state.getResource(Resource.SAUNA_BEER)).toBe(200 - ARCHER_COST);
@@ -61,12 +63,14 @@ describe('UnitFactory', () => {
     state.addResource(Resource.SAUNA_BEER, 500);
     const unit = spawnUnit(state, 'soldier', 's2', origin, 'player', { level: 4 });
     expect(unit).not.toBeNull();
+    expect(unit!.stats.health).toBe(unit!.getMaxHealth());
     expect(unit!.stats).toEqual(getSoldierStats(4));
   });
 
   it('creates archetype instances without spending resources', () => {
     const unit = createUnit('avanto-marauder', 'enemy1', origin, 'enemy', { level: 3 });
     expect(unit).not.toBeNull();
+    expect(unit!.stats.health).toBe(unit!.getMaxHealth());
     expect(unit!.stats).toEqual(getAvantoMarauderStats(3));
   });
 
@@ -114,6 +118,30 @@ describe('UnitFactory', () => {
     }
 
     expect(samples).toEqual(['enemy-orc-1', 'enemy-orc-2', 'enemy-orc-2']);
+  });
+
+  it('normalizes freshly spawned unit health to the computed maximum', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 1_000);
+
+    const cases: Array<[
+      Parameters<typeof spawnUnit>[1],
+      number | undefined
+    ]> = [
+      ['soldier', undefined],
+      ['archer', undefined],
+      ['raider', 2],
+      ['raider-captain', 5],
+      ['raider-shaman', 7]
+    ];
+
+    for (const [type, level] of cases) {
+      const unit = spawnUnit(state, type, `${type}-${level ?? 'default'}`, origin, 'enemy', {
+        level
+      });
+      expect(unit).not.toBeNull();
+      expect(unit!.stats.health).toBe(unit!.getMaxHealth());
+    }
   });
 });
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Normalize freshly spawned units so their health always matches the computed
+  maximum, clone archetype stat blocks before adjustment, and cover the
+  regression with focused unit and factory tests to keep reinforcements battle
+  ready.
+
 - Ensure Saunoja reinforcements spawn at 100% health by syncing unit and
   attendant HP to their boosted maximums when effective stats increase, keeping
   fresh recruits battle ready even after roster upgrades.
