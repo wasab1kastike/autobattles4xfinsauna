@@ -3,6 +3,12 @@
 ## Unreleased
 
 
+- Extract a dedicated roster runtime service that centralizes Saunoja loading,
+  persistence, persona refresh, and selection state, inject the service into
+  `GameRuntime`, and update the HUD plus right panel bridges to consume the new
+  helpers while preserving polished selection behaviour.
+
+
 - Introduce a `GameRuntime` orchestrator that centralizes canvas state, game
   loop scheduling, and HUD lifecycle management, refactoring `game.ts` and
   `main.ts` to delegate through the runtime singleton so input handlers and the

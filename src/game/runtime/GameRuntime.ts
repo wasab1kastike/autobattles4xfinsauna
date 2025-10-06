@@ -1,6 +1,6 @@
 import type { GameState } from '../../core/GameState.ts';
 import type { HexMap } from '../../hexmap.ts';
-import type { AxialCoord, PixelCoord } from '../../hex/HexUtils.ts';
+import type { PixelCoord } from '../../hex/HexUtils.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { Saunoja, SaunojaItem } from '../../units/saunoja.ts';
 import type { Sauna } from '../../sim/sauna.ts';
@@ -39,6 +39,7 @@ import { POLICY_EVENTS } from '../../data/policies.ts';
 import { getAssets } from '../../game/assets.ts';
 import { resetGamePause } from '../pause.ts';
 import { initializeRightPanel as createRightPanelBridge } from '../setup/rightPanel.ts';
+import type { RosterService } from './rosterService.ts';
 
 export interface GameRuntimeContext {
   readonly state: GameState;
@@ -53,14 +54,6 @@ export interface GameRuntimeContext {
   notifyHudElapsed(): void;
   notifyEnemyRamp(summary: EnemyRampSummary | null): void;
   syncSelectionOverlay(): void;
-  focusSaunoja(target: Saunoja): boolean;
-  focusSaunojaById(unitId: string): void;
-  getSelectedUnitId(): string | null;
-  setSelectedUnitId(next: string | null): void;
-  setSelectedCoord(coord: AxialCoord | null): boolean;
-  deselectAllSaunojas(except?: Saunoja): boolean;
-  clearSaunojaSelection(): boolean;
-  saveUnits(): void;
   updateRosterDisplay(): void;
   getSelectedInventoryContext(): InventoryComparisonContext | null;
   equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult;
@@ -116,6 +109,7 @@ export interface GameRuntimeContext {
 
 export class GameRuntime {
   private readonly ctx: GameRuntimeContext;
+  private readonly rosterService: RosterService;
 
   private canvas: HTMLCanvasElement | null = null;
   private unitFx: UnitFxManager | null = null;
@@ -140,8 +134,9 @@ export class GameRuntime {
   private gameLoopCallback: FrameRequestCallback | null = null;
   private pauseListenerAttached = false;
 
-  constructor(context: GameRuntimeContext) {
+  constructor(context: GameRuntimeContext, rosterService: RosterService) {
     this.ctx = context;
+    this.rosterService = rosterService;
   }
 
   getCanvas(): HTMLCanvasElement | null {
@@ -433,10 +428,19 @@ export class GameRuntime {
             sauna: this.ctx.getSauna(),
             getSaunojas: () => this.ctx.getSaunojas(),
             getAttachedUnitFor: (attendant) => this.ctx.getAttachedUnitFor(attendant),
-            focusSaunojaById: (id) => this.ctx.focusSaunojaById(id),
+            focusSaunojaById: (id) => {
+              const changed = this.rosterService.focusSaunojaById(id);
+              this.ctx.syncSelectionOverlay();
+              if (!changed) {
+                return;
+              }
+              this.rosterService.saveUnits();
+              this.ctx.updateRosterDisplay();
+              this.invalidateFrame();
+            },
             equipSlotFromStash: (unitId, slot) => this.ctx.equipSlotFromStash(unitId, slot),
             unequipSlotToStash: (unitId, slot) => this.ctx.unequipSlotToStash(unitId, slot),
-            saveUnits: () => this.ctx.saveUnits(),
+            rosterService: this.rosterService,
             updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
             getActiveTierLimit: () => this.ctx.getActiveTierLimit(),
             updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts)
@@ -600,11 +604,12 @@ export class GameRuntime {
       (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
     );
     if (target) {
-      const selectionChanged = this.ctx.focusSaunoja(target);
+      const selectionChanged = this.rosterService.focusSaunoja(target);
+      this.ctx.syncSelectionOverlay();
       if (!selectionChanged) {
         return;
       }
-      this.ctx.saveUnits();
+      this.rosterService.saveUnits();
       this.ctx.updateRosterDisplay();
       this.invalidateFrame();
       return;
@@ -619,17 +624,17 @@ export class GameRuntime {
     );
 
     if (enemyTarget) {
-      const previousUnitId = this.ctx.getSelectedUnitId();
-      const deselected = this.ctx.deselectAllSaunojas();
-      const coordChanged = this.ctx.setSelectedCoord(enemyTarget.coord);
-      this.ctx.setSelectedUnitId(enemyTarget.id);
+      const previousUnitId = this.rosterService.getSelectedUnitId();
+      const deselected = this.rosterService.deselectAllSaunojas();
+      const coordChanged = this.rosterService.setSelectedCoord(enemyTarget.coord);
+      this.rosterService.setSelectedUnitId(enemyTarget.id);
       this.ctx.syncSelectionOverlay();
       if (deselected) {
-        this.ctx.saveUnits();
+        this.rosterService.saveUnits();
         this.ctx.updateRosterDisplay();
       }
       if (
-        previousUnitId !== this.ctx.getSelectedUnitId() ||
+        previousUnitId !== this.rosterService.getSelectedUnitId() ||
         coordChanged ||
         deselected
       ) {
@@ -638,13 +643,14 @@ export class GameRuntime {
       return;
     }
 
-    const selectionCleared = this.ctx.clearSaunojaSelection();
+    const selectionCleared = this.rosterService.clearSaunojaSelection();
+    this.ctx.syncSelectionOverlay();
 
     if (!selectionCleared) {
       return;
     }
 
-    this.ctx.saveUnits();
+    this.rosterService.saveUnits();
     this.ctx.updateRosterDisplay();
     this.invalidateFrame();
   }
