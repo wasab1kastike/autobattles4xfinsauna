@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add polished behavior controls to the battlefield unit popup so attendants can
+  switch between defend, attack, and explore routines without leaving the
+  overlay, immediately syncing the roster and persistence state.
+
 - Ensure Saunoja reinforcements spawn at 100% health by syncing unit and
   attendant HP to their boosted maximums when effective stats increase, keeping
   fresh recruits battle ready even after roster upgrades.
