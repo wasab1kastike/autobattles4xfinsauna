@@ -3,6 +3,15 @@
 ## Unreleased
 
 
+- Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`
+  composes action bar, top bar, sauna overlay, inventory HUD, and right panel
+  controllers from injected dependencies, keeping the polished gradients and
+  blur layers stable across restarts.
+
+- Fix the classic renderer to derive the selected hex from the roster service
+  during draws so the tactical map paints correctly after the HUD adapter
+  refactor instead of crashing once the HUD loads.
+
 - Extract a dedicated roster runtime service that centralizes Saunoja loading,
   persistence, persona refresh, and selection state, inject the service into
   `GameRuntime`, and update the HUD plus right panel bridges to consume the new
