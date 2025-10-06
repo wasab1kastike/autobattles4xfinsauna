@@ -3,6 +3,12 @@
 ## Unreleased
 
 
+- Introduce a `GameRuntime` orchestrator that centralizes canvas state, game
+  loop scheduling, and HUD lifecycle management, refactoring `game.ts` and
+  `main.ts` to delegate through the runtime singleton so input handlers and the
+  polished ability wiring stay aligned across restarts.
+
+
 - Normalize freshly spawned units so their health always matches the computed
   maximum, clone archetype stat blocks before adjustment, and cover the
   regression with focused unit and factory tests to keep reinforcements battle

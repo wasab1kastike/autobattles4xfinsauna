@@ -37,6 +37,7 @@ import {
   type SaunaTierId
 } from './sauna/tiers.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
+import { GameRuntime, type GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import {
   setupActionBar,
@@ -206,7 +207,6 @@ function applyNgPlusState(next: NgPlusState): void {
 
 applyNgPlusState(currentNgPlusState);
 
-let canvas: HTMLCanvasElement | null = null;
 let saunojas: Saunoja[] = [];
 type SaunojaPolicyBaseline = { base: SaunojaStatBlock; upkeep: number };
 const saunojaPolicyBaselines = new WeakMap<Saunoja, SaunojaPolicyBaseline>();
@@ -218,18 +218,6 @@ const unitsById = new Map<string, Unit>();
 let playerSpawnSequence = 0;
 let selected: AxialCoord | null = null;
 let selectedUnitId: string | null = null;
-let addEvent: (event: GameEvent) => void = () => {};
-let disposeRightPanel: (() => void) | null = null;
-let topbarControls: TopbarControls | null = null;
-let actionBarController: ActionBarController | null = null;
-let saunaUiController: SaunaUIController | null = null;
-let inventoryHudController: { destroy(): void } | null = null;
-let rosterHud: RosterHudController | null = null;
-let pendingRosterSummary: RosterHudSummary | null = null;
-let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
-let pendingRosterEntries: RosterEntry[] | null = null;
-let lastRosterSummary: RosterHudSummary | null = null;
-let lastRosterEntries: RosterEntry[] = [];
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
@@ -256,8 +244,17 @@ let setActiveTierRef: (
 ) => boolean = () => false;
 let spawnTierQueue: PlayerSpawnTierHelpers;
 
+let runtimeInstance: GameRuntime | null = null;
+
+function getGameRuntime(): GameRuntime {
+  if (!runtimeInstance) {
+    runtimeInstance = createGameRuntime();
+  }
+  return runtimeInstance;
+}
+
 function notifyRosterSummary(summary: RosterHudSummary): void {
-  lastRosterSummary = summary;
+  getGameRuntime().setLastRosterSummary(summary);
   for (const listener of rosterSummaryListeners) {
     try {
       listener(summary);
@@ -268,7 +265,7 @@ function notifyRosterSummary(summary: RosterHudSummary): void {
 }
 
 function notifyRosterEntries(entries: RosterEntry[]): void {
-  lastRosterEntries = entries;
+  getGameRuntime().setLastRosterEntries(entries);
   for (const listener of rosterEntriesListeners) {
     try {
       listener(entries);
@@ -301,29 +298,8 @@ function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
 
 const IDLE_FRAME_LIMIT = 10;
 
-let animationFrameId: number | null = null;
-let running = false;
-let unitFx: UnitFxManager | null = null;
-let combatAnimations: UnitCombatAnimator | null = null;
-let frameDirty = true;
-let idleFrameCount = 0;
-let gameLoopCallback: FrameRequestCallback | null = null;
-let pauseListenerAttached = false;
-
 export function invalidateFrame(): void {
-  frameDirty = true;
-  idleFrameCount = 0;
-  scheduleGameLoop();
-}
-
-function scheduleGameLoop(): void {
-  if (!running || !gameLoopCallback) {
-    return;
-  }
-  if (animationFrameId !== null) {
-    return;
-  }
-  animationFrameId = requestAnimationFrame(gameLoopCallback);
+  getGameRuntime().invalidateFrame();
 }
 
 const onPauseChanged = () => {
@@ -403,6 +379,7 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
 }
 
 function syncSelectionOverlay(): void {
+  const unitFx = getGameRuntime().getUnitFx();
   if (!unitFx) {
     return;
   }
@@ -979,14 +956,17 @@ function startTutorialIfNeeded(): void {
 }
 
 function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
-  pendingRosterRenderer = renderer;
+  const runtime = getGameRuntime();
+  runtime.setPendingRosterRenderer(renderer);
+  const rosterHud = runtime.getRosterHud();
   if (!rosterHud) {
     return;
   }
   rosterHud.installRenderer(renderer);
-  if (pendingRosterEntries) {
-    rosterHud.renderRoster(pendingRosterEntries);
-    pendingRosterEntries = null;
+  const pendingEntries = runtime.getPendingRosterEntries();
+  if (pendingEntries) {
+    rosterHud.renderRoster(pendingEntries);
+    runtime.setPendingRosterEntries(null);
   }
 }
 
@@ -1033,159 +1013,10 @@ export function setupGame(
   resourceBarEl: HTMLElement,
   overlayEl: HTMLElement
 ): void {
-  overlayEl.dataset.hudVariant = 'classic';
   hudElapsedMs = 0;
   notifyHudElapsed();
   notifyEnemyRamp(null);
-  lastRosterEntries = [];
-  lastRosterSummary = null;
-  canvas = canvasEl;
-  if (unitFx) {
-    unitFx.dispose();
-    unitFx = null;
-  }
-  if (combatAnimations) {
-    combatAnimations.dispose();
-    combatAnimations = null;
-  }
-  unitFx = createUnitFxManager({
-    canvas: canvasEl,
-    overlay: overlayEl,
-    mapRenderer,
-    getUnitById: (id) => unitsById.get(id),
-    requestDraw: invalidateFrame
-  });
-  combatAnimations = createUnitCombatAnimator({
-    getUnitById: (id) => unitsById.get(id),
-    requestDraw: invalidateFrame
-  });
-  syncSelectionOverlay();
-  if (rosterHud) {
-    rosterHud.destroy();
-    rosterHud = null;
-  }
-  saunaUiController?.dispose();
-  saunaUiController = null;
-  topbarControls?.dispose();
-  topbarControls = null;
-  actionBarController?.destroy();
-  actionBarController = null;
-
-  const actionBarAbilities: ActionBarAbilityHandlers = {
-    useSisuBurst: () => {
-      const used = useSisuBurst(state, units);
-      if (used) {
-        playSafe('sisu');
-        logEvent({
-          type: 'ability',
-          message: `Sisu bursts forth, spending ${SISU_BURST_COST} grit to steel our attendants.`,
-          metadata: {
-            ability: 'sisu-burst',
-            cost: SISU_BURST_COST
-          }
-        });
-      } else {
-        playSafe('error');
-      }
-      return used;
-    },
-    torille: () => {
-      const used = torille(state, units, sauna.pos, map);
-      if (used) {
-        logEvent({
-          type: 'ability',
-          message: `Torille! Our warriors regroup at the sauna to rally their spirits for ${TORILLE_COST} SISU.`,
-          metadata: {
-            ability: 'torille',
-            cost: TORILLE_COST
-          }
-        });
-      } else {
-        playSafe('error');
-      }
-      return used;
-    }
-  } satisfies ActionBarAbilityHandlers;
-  inventoryHudController?.destroy();
-  inventoryHudController = null;
-  const buildSaunaShopViewModel = (): SaunaShopViewModel => {
-    const context = getTierContextRef();
-    return {
-      balance: getArtocoinBalance(),
-      tiers: listSaunaTiers().map((tier) => ({
-        tier,
-        status: evaluateSaunaTier(tier, context)
-      }))
-    } satisfies SaunaShopViewModel;
-  };
-
-  const hudResult = initializeClassicHud({
-    resourceBarEl,
-    rosterIcon: uiIcons.saunojaRoster,
-    sauna,
-    previousDisposeRightPanel: disposeRightPanel,
-    pendingRosterRenderer,
-    pendingRosterEntries,
-    pendingRosterSummary,
-    setupRosterHUD,
-    setupSaunaUi: (saunaInstance, options) => setupSaunaUI(saunaInstance, options),
-    getActiveTierId: () => getActiveTierIdRef(),
-    setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
-    getTierContext: () => getTierContextRef(),
-    setupTopbar: () =>
-      setupTopbar(state, {
-        saunakunnia: uiIcons.resource,
-        sisu: uiIcons.sisu,
-        saunaBeer: uiIcons.saunaBeer,
-        artocoin: uiIcons.artocoin
-      }),
-    setupActionBar: (abilities) => setupActionBar(state, overlayEl, abilities),
-    actionBarAbilities,
-    setupInventoryHud: () =>
-      setupInventoryHud(inventory, {
-        getSelectedUnitId: () => saunojas.find((unit) => unit.selected)?.id ?? null,
-        getComparisonContext: () => getSelectedInventoryContext(),
-        onEquip: (unitId, item, _source) => equipItemToSaunoja(unitId, item),
-        getSaunaShopViewModel: () => buildSaunaShopViewModel(),
-        onPurchaseSaunaTier: (tierId) =>
-          purchaseSaunaTier(getSaunaTier(tierId), {
-            getCurrentBalance: () => getArtocoinBalance()
-          }),
-        subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
-      }),
-    createRightPanel: (onRendererReady) =>
-      createRightPanelBridge(
-        {
-          state,
-          sauna,
-          getSaunojas: () => saunojas,
-          getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
-          focusSaunojaById,
-          equipSlotFromStash,
-          unequipSlotToStash,
-          saveUnits,
-          updateRosterDisplay,
-          getActiveTierLimit: () => getActiveTierLimitRef(),
-          updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
-        },
-        onRendererReady
-      ),
-    syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
-    updateRosterDisplay: () => updateRosterDisplay(),
-    startTutorialIfNeeded: () => startTutorialIfNeeded()
-  });
-
-  rosterHud = hudResult.rosterHud;
-  pendingRosterRenderer = hudResult.pendingRosterRenderer;
-  pendingRosterEntries = hudResult.pendingRosterEntries;
-  pendingRosterSummary = hudResult.pendingRosterSummary;
-  saunaUiController = hudResult.saunaUiController;
-  topbarControls = hudResult.topbarControls;
-  actionBarController = hudResult.actionBarController;
-  inventoryHudController = hudResult.inventoryHudController;
-  disposeRightPanel = hudResult.disposeRightPanel;
-  addEvent = hudResult.addEvent;
-  hudResult.postSetup?.();
+  getGameRuntime().setupGame(canvasEl, resourceBarEl, overlayEl);
 }
 
 const map = new HexMap(10, 10, 32);
@@ -1402,7 +1233,7 @@ function registerUnit(unit: Unit): void {
     }
     persona = unitToSaunoja.get(unit.id) ?? null;
   }
-  if (canvas) {
+  if (getGameRuntime().getCanvas()) {
     invalidateFrame();
   }
   if (unit.faction === 'player') {
@@ -1441,11 +1272,11 @@ eventBus.on('modifierRemoved', onModifierChanged);
 eventBus.on('modifierExpired', onModifierChanged);
 
 const onSaunaDamaged = (payload: SaunaDamagedPayload): void => {
-  saunaUiController?.handleDamage?.(payload);
+  getGameRuntime().getSaunaUiController()?.handleDamage?.(payload);
 };
 
 const onSaunaDestroyed = (payload: SaunaDestroyedPayload): void => {
-  saunaUiController?.handleDestroyed?.(payload);
+  getGameRuntime().getSaunaUiController()?.handleDestroyed?.(payload);
 };
 
 eventBus.on('saunaDamaged', onSaunaDamaged);
@@ -1530,7 +1361,7 @@ const syncLifecycleWithUnlocks = (
     onTierChanged: (context) => {
       tierChanged = true;
       options.onTierChanged?.(context);
-      saunaUiController?.update?.();
+      getGameRuntime().getSaunaUiController()?.update?.();
       updateRosterDisplay();
     }
   });
@@ -1624,9 +1455,8 @@ const clock = new GameClock(1000, (deltaMs) => {
     spawnCycles: scalingSnapshot.spawnCycles
   } satisfies EnemyRampSummary;
   notifyEnemyRamp(rampSummary);
-  if (topbarControls) {
-    topbarControls.setEnemyRampSummary(rampSummary);
-  }
+  const topbarControls = getGameRuntime().getTopbarControls();
+  topbarControls?.setEnemyRampSummary(rampSummary);
   const rosterProgress = objectiveTracker?.getProgress().roster;
   recordEnemyScalingTelemetry(scalingSnapshot, {
     wipeSince: rosterProgress?.wipeSince ?? null,
@@ -1659,14 +1489,11 @@ const clock = new GameClock(1000, (deltaMs) => {
 });
 
 const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
-  if (running) {
-    running = false;
+  const runtime = getGameRuntime();
+  if (runtime.isRunning()) {
+    runtime.stopLoop();
   }
   clock.stop();
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
   invalidateFrame();
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) {
@@ -1832,7 +1659,7 @@ function getSelectedInventoryContext(): InventoryComparisonContext | null {
 }
 
 function updateSaunaHud(): void {
-  saunaUiController?.update();
+  getGameRuntime().getSaunaUiController()?.update();
 }
 
 function updateTopbarHud(deltaMs: number): void {
@@ -1840,7 +1667,7 @@ function updateTopbarHud(deltaMs: number): void {
     hudElapsedMs += deltaMs;
   }
   notifyHudElapsed();
-  topbarControls?.update(deltaMs);
+  getGameRuntime().getTopbarControls()?.update(deltaMs);
 }
 
 
@@ -1984,54 +1811,7 @@ function focusSaunojaById(unitId: string): void {
 }
 
 export function handleCanvasClick(world: PixelCoord): void {
-  const clicked = pixelToAxial(world.x, world.y, map.hexSize);
-  const target = saunojas.find(
-    (unit) => unit.coord.q === clicked.q && unit.coord.r === clicked.r
-  );
-  if (target) {
-    const selectionChanged = focusSaunoja(target);
-    if (!selectionChanged) {
-      return;
-    }
-    saveUnits();
-    updateRosterDisplay();
-    invalidateFrame();
-    return;
-  }
-
-  const enemyTarget = units.find(
-    (unit) =>
-      unit.faction !== 'player' &&
-      !unit.isDead() &&
-      unit.coord.q === clicked.q &&
-      unit.coord.r === clicked.r
-  );
-
-  if (enemyTarget) {
-    const previousUnitId = selectedUnitId;
-    const deselected = deselectAllSaunojas();
-    const coordChanged = setSelectedCoord(enemyTarget.coord);
-    selectedUnitId = enemyTarget.id;
-    syncSelectionOverlay();
-    if (deselected) {
-      saveUnits();
-      updateRosterDisplay();
-    }
-    if (previousUnitId !== selectedUnitId || coordChanged || deselected) {
-      invalidateFrame();
-    }
-    return;
-  }
-
-  const selectionCleared = clearSaunojaSelection();
-
-  if (!selectionCleared) {
-    return;
-  }
-
-  saveUnits();
-  updateRosterDisplay();
-  invalidateFrame();
+  getGameRuntime().handleCanvasClick(world);
 }
 
 function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
@@ -2098,33 +1878,36 @@ function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
 }
 
 export function draw(): void {
-  frameDirty = false;
-  idleFrameCount = 0;
+  const runtime = getGameRuntime();
+  runtime.markFrameClean();
+  runtime.resetIdleFrameCount();
+  const canvas = runtime.getCanvas();
   if (!canvas) {
     return;
   }
   const ctx = canvas.getContext('2d');
   const assets = getAssets();
   if (!ctx || !assets) {
-    frameDirty = true;
+    runtime.markFrameDirty();
     return;
   }
   const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+  const combatAnimations = runtime.getCombatAnimations();
   if (combatAnimations) {
     combatAnimations.step(now);
   }
+  const unitFx = runtime.getUnitFx();
   if (unitFx) {
     unitFx.step(now);
   }
   const shakeOffset = unitFx?.getShakeOffset() ?? { x: 0, y: 0 };
   const fxOptions = unitFx
     ? {
-        getUnitAlpha: (unit: Unit) => unitFx!.getUnitAlpha(unit.id),
-        beginOverlayFrame: () => unitFx!.beginStatusFrame(),
-        pushUnitStatus: (status: UnitStatusPayload) => unitFx!.pushUnitStatus(status),
-        pushSaunaStatus: (status: SaunaStatusPayload | null) =>
-          unitFx!.pushSaunaStatus(status),
-        commitOverlayFrame: () => unitFx!.commitStatusFrame()
+        getUnitAlpha: (unit: Unit) => unitFx.getUnitAlpha(unit.id),
+        beginOverlayFrame: () => unitFx.beginStatusFrame(),
+        pushUnitStatus: (status: UnitStatusPayload) => unitFx.pushUnitStatus(status),
+        pushSaunaStatus: (status: SaunaStatusPayload | null) => unitFx.pushSaunaStatus(status),
+        commitOverlayFrame: () => unitFx.commitStatusFrame()
       }
     : undefined;
   const friendlyVisionSources = friendlyVisionUnitScratch;
@@ -2368,156 +2151,18 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
-  running = false;
-  gameLoopCallback = null;
-  idleFrameCount = 0;
-  unitVisionSnapshots.clear();
-  objectiveTracker?.offProgress(handleObjectiveProgress);
-  objectiveTracker?.dispose();
-  objectiveTracker = null;
-  lastStrongholdsDestroyed = 0;
-  resetGamePause();
-  if (endScreen) {
-    endScreen.destroy();
-    endScreen = null;
-  }
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
-  try {
-    state.save();
-  } catch (error) {
-    console.warn('Failed to persist game state during cleanup', error);
-  }
-
-  try {
-    saveUnits();
-  } catch (error) {
-    console.warn('Failed to persist Saunoja roster during cleanup', error);
-  }
-
-  if (unitFx) {
-    unitFx.dispose();
-    unitFx = null;
-  }
-  if (combatAnimations) {
-    combatAnimations.dispose();
-    combatAnimations = null;
-  }
-
-  eventBus.off(POLICY_EVENTS.APPLIED, onPolicyApplied);
-  eventBus.off(POLICY_EVENTS.REVOKED, onPolicyRevoked);
-  eventBus.off(POLICY_EVENTS.APPLIED, onPolicyLifecycleChanged);
-  eventBus.off(POLICY_EVENTS.REVOKED, onPolicyLifecycleChanged);
-  if (pauseListenerAttached) {
-    eventBus.off('game:pause-changed', onPauseChanged);
-    pauseListenerAttached = false;
-  }
-  eventBus.off('unitDied', onUnitDied);
-  eventBus.off('unitSpawned', onUnitSpawned);
-  eventBus.off('inventoryChanged', onInventoryChanged);
-  eventBus.off('modifierAdded', onModifierChanged);
-  eventBus.off('modifierRemoved', onModifierChanged);
-  eventBus.off('modifierExpired', onModifierChanged);
-  eventBus.off('unit:stats:changed', onUnitStatsChanged);
-  eventBus.off('saunaDamaged', onSaunaDamaged);
-  eventBus.off('saunaDestroyed', onSaunaDestroyed);
-  eventBus.off('buildingPlaced', invalidateTerrainCache);
-  eventBus.off('buildingRemoved', invalidateTerrainCache);
-  if (disposeRightPanel) {
-    disposeRightPanel();
-    disposeRightPanel = null;
-  }
-  if (inventoryHudController) {
-    inventoryHudController.destroy();
-    inventoryHudController = null;
-  }
-  if (saunaUiController) {
-    saunaUiController.dispose();
-    saunaUiController = null;
-  }
-  if (topbarControls) {
-    topbarControls.dispose();
-    topbarControls = null;
-  }
-  if (actionBarController) {
-    actionBarController.destroy();
-    actionBarController = null;
-  }
-  if (rosterHud) {
-    rosterHud.destroy();
-    rosterHud = null;
-  }
-  pendingRosterEntries = null;
-  pendingRosterSummary = null;
-  pendingRosterRenderer = null;
-  disposeTutorial();
+  getGameRuntime().cleanup();
 }
 
 export async function start(): Promise<void> {
-  if (running) {
-    return;
-  }
-  const assets = getAssets();
-  if (!assets) {
-    console.error('Cannot start game without loaded assets.');
-    return;
-  }
-  running = true;
-  if (!pauseListenerAttached) {
-    eventBus.on('game:pause-changed', onPauseChanged);
-    pauseListenerAttached = true;
-  }
-  idleFrameCount = 0;
-  updateRosterDisplay();
-  invalidateFrame();
-  draw();
-  let last = performance.now();
-  function gameLoop(now: number) {
-    animationFrameId = null;
-    if (!running) {
-      return;
-    }
-    const delta = now - last;
-    last = now;
-    const paused = isGamePaused();
-    let shouldContinue = true;
-    if (paused) {
-      updateTopbarHud(0);
-    } else {
-      idleFrameCount = 0;
-      clock.tick(delta);
-      updateSaunaHud();
-      updateTopbarHud(delta);
-      refreshRosterPanel();
-    }
-    if (frameDirty) {
-      idleFrameCount = 0;
-      draw();
-    } else if (paused) {
-      idleFrameCount += 1;
-      if (idleFrameCount >= IDLE_FRAME_LIMIT) {
-        shouldContinue = false;
-      }
-    } else {
-      idleFrameCount = 0;
-    }
-    if (!running) {
-      return;
-    }
-    if (shouldContinue) {
-      scheduleGameLoop();
-    }
-  }
-  gameLoopCallback = gameLoop;
-  scheduleGameLoop();
+  await getGameRuntime().start();
 }
 
 export { logEvent as log };
 
 export function __rebuildRightPanelForTest(): void {
-  disposeRightPanel?.();
+  const runtime = getGameRuntime();
+  runtime.getDisposeRightPanel()?.();
   const bridge = createRightPanelBridge(
     {
       state,
@@ -2534,8 +2179,8 @@ export function __rebuildRightPanelForTest(): void {
     },
     (renderer) => installRosterRenderer(renderer)
   );
-  addEvent = bridge.addEvent;
-  disposeRightPanel = bridge.dispose;
+  runtime.setAddEvent(bridge.addEvent);
+  runtime.setDisposeRightPanel(bridge.dispose);
   updateRosterDisplay();
 }
 
@@ -2764,9 +2409,11 @@ function buildRosterSummary(): RosterHudSummary {
 
 function refreshRosterPanel(entries?: RosterEntry[]): void {
   const view = entries ?? buildRosterEntries();
-  pendingRosterEntries = view;
+  const runtime = getGameRuntime();
+  runtime.setPendingRosterEntries(view);
   notifyRosterEntries(view);
   syncSelectionOverlay();
+  const rosterHud = runtime.getRosterHud();
   if (!rosterHud) {
     return;
   }
@@ -2776,32 +2423,40 @@ function refreshRosterPanel(entries?: RosterEntry[]): void {
 function updateRosterDisplay(): void {
   const summary = buildRosterSummary();
   notifyRosterSummary(summary);
+  const runtime = getGameRuntime();
+  const rosterHud = runtime.getRosterHud();
   if (rosterHud) {
     rosterHud.updateSummary(summary);
-    pendingRosterSummary = null;
+    runtime.setPendingRosterSummary(null);
   } else {
-    pendingRosterSummary = summary;
+    runtime.setPendingRosterSummary(summary);
   }
   refreshRosterPanel();
   syncSelectionOverlay();
 }
 
 export function getRosterSummarySnapshot(): RosterHudSummary {
-  if (lastRosterSummary) {
-    return lastRosterSummary;
+  const runtime = getGameRuntime();
+  const lastSummary = runtime.getLastRosterSummary();
+  if (lastSummary) {
+    return lastSummary;
   }
-  if (pendingRosterSummary) {
-    return pendingRosterSummary;
+  const pendingSummary = runtime.getPendingRosterSummary();
+  if (pendingSummary) {
+    return pendingSummary;
   }
   return buildRosterSummary();
 }
 
 export function getRosterEntriesSnapshot(): RosterEntry[] {
-  if (lastRosterEntries.length > 0) {
-    return lastRosterEntries;
+  const runtime = getGameRuntime();
+  const cachedEntries = runtime.getLastRosterEntries();
+  if (cachedEntries.length > 0) {
+    return cachedEntries;
   }
-  if (pendingRosterEntries && pendingRosterEntries.length > 0) {
-    return pendingRosterEntries;
+  const pendingEntries = runtime.getPendingRosterEntries();
+  if (pendingEntries && pendingEntries.length > 0) {
+    return pendingEntries;
   }
   return buildRosterEntries();
 }
@@ -2875,7 +2530,7 @@ export function getGameStateInstance(): GameState {
 }
 
 export function setExternalSaunaUiController(controller: SaunaUIController | null): void {
-  saunaUiController = controller;
+  getGameRuntime().setSaunaUiController(controller);
 }
 
 export function getSaunaInstance(): Sauna {
@@ -2903,6 +2558,103 @@ export function getRosterCapValue(): number {
 
 export function getRosterCapLimit(): number {
   return getActiveTierLimitRef();
+}
+
+function createGameRuntime(): GameRuntime {
+  const context: GameRuntimeContext = {
+    state,
+    units,
+    getSaunojas: () => saunojas,
+    getSauna: () => sauna,
+    map,
+    inventory,
+    mapRenderer,
+    getUnitById: (id) => unitsById.get(id),
+    resetHudElapsed: () => {
+      hudElapsedMs = 0;
+    },
+    notifyHudElapsed: () => notifyHudElapsed(),
+    notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
+    syncSelectionOverlay: () => syncSelectionOverlay(),
+    focusSaunoja: (target) => focusSaunoja(target),
+    focusSaunojaById: (unitId) => focusSaunojaById(unitId),
+    getSelectedUnitId: () => selectedUnitId,
+    setSelectedUnitId: (next) => {
+      selectedUnitId = next;
+    },
+    setSelectedCoord: (coord) => setSelectedCoord(coord),
+    deselectAllSaunojas: (except) => deselectAllSaunojas(except),
+    clearSaunojaSelection: () => clearSaunojaSelection(),
+    saveUnits: () => saveUnits(),
+    updateRosterDisplay: () => updateRosterDisplay(),
+    getSelectedInventoryContext: () => getSelectedInventoryContext(),
+    equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),
+    equipSlotFromStash: (unitId, slot) => equipSlotFromStash(unitId, slot),
+    unequipSlotToStash: (unitId, slot) => unequipSlotToStash(unitId, slot),
+    getTierContext: () => getTierContextRef(),
+    getActiveTierId: () => getActiveTierIdRef(),
+    setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
+    getActiveTierLimit: () => getActiveTierLimitRef(),
+    updateRosterCap: (value, options) => updateRosterCapRef(value, options),
+    syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
+    startTutorialIfNeeded: () => startTutorialIfNeeded(),
+    disposeTutorial: () => disposeTutorial(),
+    getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+    resetUnitVisionSnapshots: () => unitVisionSnapshots.clear(),
+    resetObjectiveTracker: () => {
+      objectiveTracker?.offProgress(handleObjectiveProgress);
+      objectiveTracker?.dispose();
+      objectiveTracker = null;
+    },
+    resetStrongholdCounter: () => {
+      lastStrongholdsDestroyed = 0;
+    },
+    destroyEndScreen: () => {
+      if (endScreen) {
+        endScreen.destroy();
+        endScreen = null;
+      }
+    },
+    persistState: () => {
+      try {
+        state.save();
+      } catch (error) {
+        console.warn('Failed to persist game state during cleanup', error);
+      }
+    },
+    persistUnits: () => {
+      try {
+        saveUnits();
+      } catch (error) {
+        console.warn('Failed to persist Saunoja roster during cleanup', error);
+      }
+    },
+    getPolicyHandlers: () => ({
+      onApplied: onPolicyApplied,
+      onRevoked: onPolicyRevoked,
+      onLifecycleChanged: onPolicyLifecycleChanged
+    }),
+    getUnitEventHandlers: () => ({
+      onUnitDied,
+      onUnitSpawned,
+      onInventoryChanged,
+      onModifierChanged,
+      onUnitStatsChanged,
+      onSaunaDamaged,
+      onSaunaDestroyed
+    }),
+    getTerrainInvalidator: () => invalidateTerrainCache,
+    getClock: () => clock,
+    isGamePaused: () => isGamePaused(),
+    onPauseChanged: () => onPauseChanged(),
+    updateTopbarHud: (deltaMs) => updateTopbarHud(deltaMs),
+    updateSaunaHud: () => updateSaunaHud(),
+    refreshRosterPanel: (entries) => refreshRosterPanel(entries),
+    draw: () => draw(),
+    getIdleFrameLimit: () => IDLE_FRAME_LIMIT
+  } satisfies GameRuntimeContext;
+
+  return new GameRuntime(context);
 }
 
 export function setRosterCapValue(
