@@ -57,7 +57,7 @@ export class Unit {
   private behavior: UnitBehavior;
   private appearanceId: string;
 
-  public readonly stats: UnitStats;
+  public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
 
