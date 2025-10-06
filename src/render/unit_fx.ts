@@ -8,6 +8,7 @@ import type {
 } from '../events/types.ts';
 import type { HexMapRenderer } from './HexMapRenderer.ts';
 import type { Unit } from '../units/Unit.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 import { createFloaterLayer, type FloaterLayer } from '../ui/fx/Floater.tsx';
 import { createUnitStatusLayer, type UnitStatusLayer } from '../ui/fx/UnitStatusLayer.ts';
 import { createSelectionMiniHud, type SelectionMiniHud } from '../ui/fx/SelectionMiniHud.ts';
@@ -23,6 +24,7 @@ export interface UnitFxOptions {
   mapRenderer: HexMapRenderer;
   getUnitById: (id: string) => Unit | undefined;
   requestDraw?: () => void;
+  onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
 }
 
 export interface UnitFxManager {
@@ -85,7 +87,7 @@ const coarsePointerQuery = typeof matchMedia === 'function'
   : null;
 
 export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
-  const { canvas, overlay, mapRenderer, getUnitById, requestDraw } = options;
+  const { canvas, overlay, mapRenderer, getUnitById, requestDraw, onBehaviorChange } = options;
   const floaterLayer: FloaterLayer = createFloaterLayer(overlay);
 
   type RectCache = { canvas: DOMRectReadOnly; overlay: DOMRectReadOnly } | null;
@@ -133,7 +135,8 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     root: overlay,
     project: projectWorld,
     getVerticalLift: () => -mapRenderer.hexSize * camera.zoom * 1.6,
-    getHexSize: () => mapRenderer.hexSize
+    getHexSize: () => mapRenderer.hexSize,
+    onBehaviorChange
   });
   const fades = new Map<string, FadeState>();
   const alphas = new Map<string, number>();
@@ -392,6 +395,10 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
       selectionHud.setSelection(null);
       return;
     }
+    const behaviorOptions = Array.isArray(selection.behaviorOptions)
+      ? selection.behaviorOptions.filter((value): value is UnitBehavior => typeof value === 'string')
+      : undefined;
+
     const sanitized: UnitSelectionPayload = {
       ...selection,
       coord: { q: selection.coord.q, r: selection.coord.r },
@@ -399,7 +406,9 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
       maxHp: Number.isFinite(selection.maxHp) ? Math.max(1, selection.maxHp) : 1,
       shield: Number.isFinite(selection.shield ?? 0) ? Math.max(0, selection.shield ?? 0) : 0,
       items: Array.isArray(selection.items) ? [...selection.items] : [],
-      statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : []
+      statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : [],
+      behavior: selection.behavior,
+      behaviorOptions: behaviorOptions ? [...behaviorOptions] : undefined
     } satisfies UnitSelectionPayload;
     currentSelection = sanitized;
     currentSelectionId = sanitized.id;
