@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Stop reassigning the Unit stat block readonly reference during construction by
+  dropping the immutability marker, keeping health normalization intact while
+  cloning stats so combatants initialize with polished, predictable values.
+
 - Normalize freshly spawned units so their health always matches the computed
   maximum, clone archetype stat blocks before adjustment, and cover the
   regression with focused unit and factory tests to keep reinforcements battle
