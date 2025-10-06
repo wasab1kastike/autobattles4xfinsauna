@@ -4,6 +4,7 @@ import type { Saunoja } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from '../../ui/rightPanel.tsx';
 import type { EquipmentSlotId } from '../../items/types.ts';
+import type { RosterService } from '../runtime/rosterService.ts';
 
 export interface RightPanelDependencies {
   state: GameState;
@@ -13,7 +14,7 @@ export interface RightPanelDependencies {
   focusSaunojaById: (unitId: string) => void;
   equipSlotFromStash: (unitId: string, slot: EquipmentSlotId) => boolean;
   unequipSlotToStash: (unitId: string, slot: EquipmentSlotId) => boolean;
-  saveUnits: () => void;
+  rosterService: RosterService;
   updateRosterDisplay: () => void;
   getActiveTierLimit: () => number;
   updateRosterCap: (value: number, options?: { persist?: boolean }) => number;
@@ -46,7 +47,7 @@ export function initializeRightPanel(
       attendant.behavior = nextBehavior;
       const attachedUnit = deps.getAttachedUnitFor(attendant);
       attachedUnit?.setBehavior(nextBehavior);
-      deps.saveUnits();
+      deps.rosterService.saveUnits();
       deps.updateRosterDisplay();
     },
     getRosterCap: () => Math.max(0, Math.floor(deps.sauna.maxRosterSize)),
