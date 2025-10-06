@@ -36,6 +36,30 @@ describe('Unit combat keywords', () => {
   });
 });
 
+describe('Unit health normalisation', () => {
+  it('clamps the initial health to the computed maximum', () => {
+    const lowHealth = new Unit('low-health', 'soldier', { ...BASE_COORD }, 'player', {
+      health: 0,
+      attackDamage: 3,
+      attackRange: 1,
+      movementRange: 1
+    });
+
+    expect(lowHealth.getMaxHealth()).toBe(1);
+    expect(lowHealth.stats.health).toBe(1);
+
+    const highHealth = new Unit('high-health', 'soldier', { ...BASE_COORD }, 'player', {
+      health: 42,
+      attackDamage: 3,
+      attackRange: 1,
+      movementRange: 1
+    });
+
+    expect(highHealth.getMaxHealth()).toBe(42);
+    expect(highHealth.stats.health).toBe(42);
+  });
+});
+
 describe('Unit behavior', () => {
   it('defaults to defend for player-controlled units', () => {
     const stats = { health: 12, attackDamage: 3, attackRange: 1, movementRange: 1 };
