@@ -4,7 +4,7 @@ import type { PixelCoord } from '../../hex/HexUtils.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { Saunoja, SaunojaItem } from '../../units/saunoja.ts';
 import type { Sauna } from '../../sim/sauna.ts';
-import type { EnemyRampSummary } from '../../ui/topbar.ts';
+import type { EnemyRampSummary, TopbarControls } from '../../ui/topbar.ts';
 import type { SaunaUIController } from '../../ui/sauna.tsx';
 import type { ActionBarAbilityHandlers, ActionBarController } from '../../ui/action-bar/index.tsx';
 import type { RosterHudController, RosterHudSummary } from '../../ui/rosterHUD.ts';
@@ -21,11 +21,7 @@ import type { HexMapRenderer } from '../../render/HexMapRenderer.ts';
 import { createUnitFxManager, type UnitFxManager } from '../../render/unit_fx.ts';
 import { createUnitCombatAnimator, type UnitCombatAnimator } from '../../render/combatAnimations.ts';
 import { initializeClassicHud } from '../setup/hud.ts';
-import { setupActionBar } from '../../ui/action-bar/index.tsx';
-import { setupTopbar } from '../../ui/topbar.ts';
-import { setupInventoryHud } from '../../ui/inventoryHud.ts';
 import { setupRosterHUD } from '../../ui/rosterHUD.ts';
-import { setupSaunaUI } from '../../ui/sauna.tsx';
 import { getArtocoinBalance, subscribeToSaunaShop as subscribeToSaunaShopState } from '../saunaShopState.ts';
 import { evaluateSaunaTier, getSaunaTier, listSaunaTiers } from '../../sauna/tiers.ts';
 import { purchaseSaunaTier } from '../../progression/saunaShop.ts';
@@ -38,8 +34,8 @@ import { eventBus } from '../../events';
 import { POLICY_EVENTS } from '../../data/policies.ts';
 import { getAssets } from '../../game/assets.ts';
 import { resetGamePause } from '../pause.ts';
-import { initializeRightPanel as createRightPanelBridge } from '../setup/rightPanel.ts';
 import type { RosterService } from './rosterService.ts';
+import { createUiAdapters, type InventoryHudController } from './uiAdapters.ts';
 
 export interface GameRuntimeContext {
   readonly state: GameState;
@@ -116,9 +112,9 @@ export class GameRuntime {
   private combatAnimations: UnitCombatAnimator | null = null;
   private rosterHud: RosterHudController | null = null;
   private saunaUiController: SaunaUIController | null = null;
-  private topbarControls: ReturnType<typeof setupTopbar> | null = null;
+  private topbarControls: TopbarControls | null = null;
   private actionBarController: ActionBarController | null = null;
-  private inventoryHudController: { destroy(): void } | null = null;
+  private inventoryHudController: InventoryHudController | null = null;
   private disposeRightPanel: (() => void) | null = null;
   private addEvent: (event: GameEvent) => void = () => {};
   private pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
@@ -163,7 +159,7 @@ export class GameRuntime {
     this.saunaUiController = controller;
   }
 
-  getTopbarControls(): ReturnType<typeof setupTopbar> | null {
+  getTopbarControls(): TopbarControls | null {
     return this.topbarControls;
   }
 
@@ -386,6 +382,49 @@ export class GameRuntime {
       } satisfies SaunaShopViewModel;
     };
 
+    const focusSaunojaById = (id: string): void => {
+      const changed = this.rosterService.focusSaunojaById(id);
+      this.ctx.syncSelectionOverlay();
+      if (!changed) {
+        return;
+      }
+      this.rosterService.saveUnits();
+      this.ctx.updateRosterDisplay();
+      this.invalidateFrame();
+    };
+
+    const uiAdapters = createUiAdapters({
+      state: this.ctx.state,
+      overlayElement: overlayEl,
+      icons: {
+        saunakunnia: uiIcons.resource,
+        sisu: uiIcons.sisu,
+        saunaBeer: uiIcons.saunaBeer,
+        artocoin: uiIcons.artocoin
+      },
+      inventory: this.ctx.inventory,
+      getSelectedUnitId: () =>
+        this.ctx.getSaunojas().find((unit) => unit.selected)?.id ?? null,
+      getComparisonContext: () => this.ctx.getSelectedInventoryContext(),
+      onEquipItem: (unitId, item) => this.ctx.equipItemToSaunoja(unitId, item),
+      getSaunaShopViewModel: () => buildSaunaShopViewModel(),
+      onPurchaseSaunaTier: (tierId) =>
+        purchaseSaunaTier(getSaunaTier(tierId), {
+          getCurrentBalance: () => getArtocoinBalance()
+        }),
+      subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
+      sauna: this.ctx.getSauna(),
+      getSaunojas: () => this.ctx.getSaunojas(),
+      getAttachedUnitFor: (attendant) => this.ctx.getAttachedUnitFor(attendant),
+      focusSaunojaById,
+      equipSlotFromStash: (unitId, slot) => this.ctx.equipSlotFromStash(unitId, slot),
+      unequipSlotToStash: (unitId, slot) => this.ctx.unequipSlotToStash(unitId, slot),
+      rosterService: this.rosterService,
+      updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
+      getActiveTierLimit: () => this.ctx.getActiveTierLimit(),
+      updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts)
+    });
+
     const hudResult = initializeClassicHud({
       resourceBarEl,
       rosterIcon: uiIcons.saunojaRoster,
@@ -395,58 +434,15 @@ export class GameRuntime {
       pendingRosterEntries: this.pendingRosterEntries,
       pendingRosterSummary: this.pendingRosterSummary,
       setupRosterHUD,
-      setupSaunaUi: (saunaInstance, options) => setupSaunaUI(saunaInstance, options),
+      setupSaunaUi: uiAdapters.createSaunaUiController,
       getActiveTierId: () => this.ctx.getActiveTierId(),
       setActiveTier: (tierId, options) => this.ctx.setActiveTier(tierId, options),
       getTierContext: () => this.ctx.getTierContext(),
-      setupTopbar: () =>
-        setupTopbar(this.ctx.state, {
-          saunakunnia: uiIcons.resource,
-          sisu: uiIcons.sisu,
-          saunaBeer: uiIcons.saunaBeer,
-          artocoin: uiIcons.artocoin
-        }),
-      setupActionBar: (abilities) => setupActionBar(this.ctx.state, overlayEl, abilities),
+      setupTopbar: uiAdapters.createTopbarControls,
+      setupActionBar: uiAdapters.createActionBarController,
       actionBarAbilities,
-      setupInventoryHud: () =>
-        setupInventoryHud(this.ctx.inventory, {
-          getSelectedUnitId: () =>
-            this.ctx.getSaunojas().find((unit) => unit.selected)?.id ?? null,
-          getComparisonContext: () => this.ctx.getSelectedInventoryContext(),
-          onEquip: (unitId, item, _source) => this.ctx.equipItemToSaunoja(unitId, item),
-          getSaunaShopViewModel: () => buildSaunaShopViewModel(),
-          onPurchaseSaunaTier: (tierId) =>
-            purchaseSaunaTier(getSaunaTier(tierId), {
-              getCurrentBalance: () => getArtocoinBalance()
-            }),
-          subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener)
-        }),
-      createRightPanel: (onRendererReady) =>
-        createRightPanelBridge(
-          {
-            state: this.ctx.state,
-            sauna: this.ctx.getSauna(),
-            getSaunojas: () => this.ctx.getSaunojas(),
-            getAttachedUnitFor: (attendant) => this.ctx.getAttachedUnitFor(attendant),
-            focusSaunojaById: (id) => {
-              const changed = this.rosterService.focusSaunojaById(id);
-              this.ctx.syncSelectionOverlay();
-              if (!changed) {
-                return;
-              }
-              this.rosterService.saveUnits();
-              this.ctx.updateRosterDisplay();
-              this.invalidateFrame();
-            },
-            equipSlotFromStash: (unitId, slot) => this.ctx.equipSlotFromStash(unitId, slot),
-            unequipSlotToStash: (unitId, slot) => this.ctx.unequipSlotToStash(unitId, slot),
-            rosterService: this.rosterService,
-            updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
-            getActiveTierLimit: () => this.ctx.getActiveTierLimit(),
-            updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts)
-          },
-          onRendererReady
-        ),
+      setupInventoryHud: uiAdapters.createInventoryHudController,
+      createRightPanel: uiAdapters.createRightPanelBridge,
       syncSaunojaRosterWithUnits: () => this.ctx.syncSaunojaRosterWithUnits(),
       updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
       startTutorialIfNeeded: () => this.ctx.startTutorialIfNeeded()
