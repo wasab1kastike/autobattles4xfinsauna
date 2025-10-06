@@ -33,6 +33,13 @@ function cloneCoord(coord: AxialCoord): AxialCoord {
   return { q: coord.q, r: coord.r };
 }
 
+function normalizeHealthStat(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+  return Math.max(1, value);
+}
+
 export class Unit {
   /** Whether the unit is still alive. */
   private alive = true;
@@ -50,6 +57,7 @@ export class Unit {
   private behavior: UnitBehavior;
   private appearanceId: string;
 
+  public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
   public combatKeywords: CombatKeywordRegistry | null = null;
 
@@ -61,14 +69,16 @@ export class Unit {
     public readonly type: string,
     coord: AxialCoord,
     public readonly faction: string,
-    public readonly stats: UnitStats,
+    stats: UnitStats,
     public readonly priorityFactions: string[] = [],
     behavior?: UnitBehavior,
     appearanceId?: string
   ) {
     this.coord = cloneCoord(coord);
     this.renderCoord = cloneCoord(coord);
-    this.maxHealth = stats.health;
+    this.stats = { ...stats };
+    this.maxHealth = normalizeHealthStat(this.stats.health);
+    this.stats.health = this.maxHealth;
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
     this.appearanceId = this.sanitizeAppearanceId(appearanceId);
   }
