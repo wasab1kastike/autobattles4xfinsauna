@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extract the game runtime bootstrap into `game/runtime/index.ts`, re-export the
+  lazy singleton API from `game.ts`, and add coverage to confirm the runtime is
+  configured on-demand through the new entry point.
+
 - Add polished behavior toggles to the battlefield selection mini HUD so you can swap unit directives directly from the popup and keep roster state in sync.
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`

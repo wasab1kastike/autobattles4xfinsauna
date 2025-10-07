@@ -37,7 +37,20 @@ import {
   type SaunaTierId
 } from './sauna/tiers.ts';
 import { resetAutoFrame } from './camera/autoFrame.ts';
-import { GameRuntime, type GameRuntimeContext } from './game/runtime/GameRuntime.ts';
+import {
+  configureGameRuntime,
+  getGameRuntime as getGameRuntimeImpl,
+  setExternalSaunaUiController as setExternalSaunaUiControllerImpl,
+  getGameStateInstance as getGameStateInstanceImpl,
+  getSaunaInstance as getSaunaInstanceImpl,
+  getActiveSaunaTierId as getActiveSaunaTierIdImpl,
+  setActiveSaunaTier as setActiveSaunaTierImpl,
+  getSaunaTierContextSnapshot as getSaunaTierContextSnapshotImpl,
+  getRosterCapValue as getRosterCapValueImpl,
+  getRosterCapLimit as getRosterCapLimitImpl,
+  setRosterCapValue as setRosterCapValueImpl
+} from './game/runtime/index.ts';
+import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import {
   createRosterService,
   type RosterPersonaBaseline,
@@ -196,6 +209,8 @@ const BASE_ELITE_ODDS = 0.1;
 const MIN_SPAWN_LIMIT = 3;
 const BASE_ENEMY_DIFFICULTY = 1;
 
+const getGameRuntime = getGameRuntimeImpl;
+
 let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
 let enemyRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
 let lootRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
@@ -256,15 +271,6 @@ let setActiveTierRef: (
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = () => false;
 let spawnTierQueue: PlayerSpawnTierHelpers;
-
-let runtimeInstance: GameRuntime | null = null;
-
-function getGameRuntime(): GameRuntime {
-  if (!runtimeInstance) {
-    runtimeInstance = createGameRuntime();
-  }
-  return runtimeInstance;
-}
 
 function notifyRosterSummary(summary: RosterHudSummary): void {
   getGameRuntime().setLastRosterSummary(summary);
@@ -1382,6 +1388,106 @@ syncActiveTierWithUnlocks = (options) => {
 
 syncLifecycleWithUnlocks({ persist: true });
 
+function buildGameRuntimeContext(): GameRuntimeContext {
+  return {
+    state,
+    units,
+    getSaunojas: () => saunojas,
+    getSauna: () => sauna,
+    map,
+    inventory,
+    mapRenderer,
+    getUnitById: (id) => unitsById.get(id),
+    resetHudElapsed: () => {
+      hudElapsedMs = 0;
+    },
+    notifyHudElapsed: () => notifyHudElapsed(),
+    notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
+    syncSelectionOverlay: () => syncSelectionOverlay(),
+    updateRosterDisplay: () => updateRosterDisplay(),
+    getSelectedInventoryContext: () => getSelectedInventoryContext(),
+    equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),
+    equipSlotFromStash: (unitId, slot) => equipSlotFromStash(unitId, slot),
+    unequipSlotToStash: (unitId, slot) => unequipSlotToStash(unitId, slot),
+    getTierContext: () => getTierContextRef(),
+    getActiveTierId: () => getActiveTierIdRef(),
+    setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
+    getActiveTierLimit: () => getActiveTierLimitRef(),
+    updateRosterCap: (value, options) => updateRosterCapRef(value, options),
+    syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
+    startTutorialIfNeeded: () => startTutorialIfNeeded(),
+    disposeTutorial: () => disposeTutorial(),
+    getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+    resetUnitVisionSnapshots: () => unitVisionSnapshots.clear(),
+    resetObjectiveTracker: () => {
+      objectiveTracker?.offProgress(handleObjectiveProgress);
+      objectiveTracker?.dispose();
+      objectiveTracker = null;
+    },
+    resetStrongholdCounter: () => {
+      lastStrongholdsDestroyed = 0;
+    },
+    destroyEndScreen: () => {
+      if (endScreen) {
+        endScreen.destroy();
+        endScreen = null;
+      }
+    },
+    persistState: () => {
+      try {
+        state.save();
+      } catch (error) {
+        console.warn('Failed to persist game state during cleanup', error);
+      }
+    },
+    persistUnits: () => {
+      try {
+        saveUnits();
+      } catch (error) {
+        console.warn('Failed to persist Saunoja roster during cleanup', error);
+      }
+    },
+    getPolicyHandlers: () => ({
+      onApplied: onPolicyApplied,
+      onRevoked: onPolicyRevoked,
+      onLifecycleChanged: onPolicyLifecycleChanged
+    }),
+    getUnitEventHandlers: () => ({
+      onUnitDied,
+      onUnitSpawned,
+      onInventoryChanged,
+      onModifierChanged,
+      onUnitStatsChanged,
+      onSaunaDamaged,
+      onSaunaDestroyed
+    }),
+    getTerrainInvalidator: () => invalidateTerrainCache,
+    getClock: () => clock,
+    isGamePaused: () => isGamePaused(),
+    onPauseChanged: () => onPauseChanged(),
+    updateTopbarHud: (deltaMs) => updateTopbarHud(deltaMs),
+    updateSaunaHud: () => updateSaunaHud(),
+    refreshRosterPanel: (entries) => refreshRosterPanel(entries),
+    draw: () => draw(),
+    getIdleFrameLimit: () => IDLE_FRAME_LIMIT
+  } satisfies GameRuntimeContext;
+}
+
+configureGameRuntime({
+  createContext: () => buildGameRuntimeContext(),
+  rosterService,
+  state,
+  map,
+  inventory,
+  getSauna: () => sauna,
+  getTierContext: () => getTierContextRef(),
+  getActiveTierId: () => getActiveTierIdRef(),
+  getActiveTierLimit: () => getActiveTierLimitRef(),
+  getRosterCap: () => sauna.maxRosterSize,
+  updateRosterCap: (value, options) => updateRosterCapRef(value, options),
+  setActiveTier: (tierId, options) => setActiveTierRef(tierId, options)
+});
+
 onSaunaShopChange((event: SaunaShopChangeEvent) => {
   if (event.type === 'purchase' && event.cost && event.spendResult?.success) {
     addArtocoinSpend(event.cost);
@@ -2486,131 +2592,16 @@ export function getEnemyRampSummarySnapshot(): EnemyRampSummary | null {
   return lastEnemyRampSummary;
 }
 
-export function getGameStateInstance(): GameState {
-  return state;
-}
+export {
+  getGameRuntimeImpl as getGameRuntime,
+  setExternalSaunaUiControllerImpl as setExternalSaunaUiController,
+  getGameStateInstanceImpl as getGameStateInstance,
+  getSaunaInstanceImpl as getSaunaInstance,
+  getActiveSaunaTierIdImpl as getActiveSaunaTierId,
+  setActiveSaunaTierImpl as setActiveSaunaTier,
+  getSaunaTierContextSnapshotImpl as getSaunaTierContextSnapshot,
+  getRosterCapValueImpl as getRosterCapValue,
+  getRosterCapLimitImpl as getRosterCapLimit,
+  setRosterCapValueImpl as setRosterCapValue
+};
 
-export function setExternalSaunaUiController(controller: SaunaUIController | null): void {
-  getGameRuntime().setSaunaUiController(controller);
-}
-
-export function getSaunaInstance(): Sauna {
-  return sauna;
-}
-
-export function getActiveSaunaTierId(): SaunaTierId {
-  return getActiveTierIdRef();
-}
-
-export function setActiveSaunaTier(
-  tierId: SaunaTierId,
-  options: { persist?: boolean } = {}
-): boolean {
-  return setActiveTierRef(tierId, options);
-}
-
-export function getSaunaTierContextSnapshot(): SaunaTierContext {
-  return getTierContextRef();
-}
-
-export function getRosterCapValue(): number {
-  return sauna.maxRosterSize;
-}
-
-export function getRosterCapLimit(): number {
-  return getActiveTierLimitRef();
-}
-
-function createGameRuntime(): GameRuntime {
-  const context: GameRuntimeContext = {
-    state,
-    units,
-    getSaunojas: () => saunojas,
-    getSauna: () => sauna,
-    map,
-    inventory,
-    mapRenderer,
-    getUnitById: (id) => unitsById.get(id),
-    resetHudElapsed: () => {
-      hudElapsedMs = 0;
-    },
-    notifyHudElapsed: () => notifyHudElapsed(),
-    notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
-    syncSelectionOverlay: () => syncSelectionOverlay(),
-    updateRosterDisplay: () => updateRosterDisplay(),
-    getSelectedInventoryContext: () => getSelectedInventoryContext(),
-    equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),
-    equipSlotFromStash: (unitId, slot) => equipSlotFromStash(unitId, slot),
-    unequipSlotToStash: (unitId, slot) => unequipSlotToStash(unitId, slot),
-    getTierContext: () => getTierContextRef(),
-    getActiveTierId: () => getActiveTierIdRef(),
-    setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
-    getActiveTierLimit: () => getActiveTierLimitRef(),
-    updateRosterCap: (value, options) => updateRosterCapRef(value, options),
-    syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
-    startTutorialIfNeeded: () => startTutorialIfNeeded(),
-    disposeTutorial: () => disposeTutorial(),
-    getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
-    resetUnitVisionSnapshots: () => unitVisionSnapshots.clear(),
-    resetObjectiveTracker: () => {
-      objectiveTracker?.offProgress(handleObjectiveProgress);
-      objectiveTracker?.dispose();
-      objectiveTracker = null;
-    },
-    resetStrongholdCounter: () => {
-      lastStrongholdsDestroyed = 0;
-    },
-    destroyEndScreen: () => {
-      if (endScreen) {
-        endScreen.destroy();
-        endScreen = null;
-      }
-    },
-    persistState: () => {
-      try {
-        state.save();
-      } catch (error) {
-        console.warn('Failed to persist game state during cleanup', error);
-      }
-    },
-    persistUnits: () => {
-      try {
-        saveUnits();
-      } catch (error) {
-        console.warn('Failed to persist Saunoja roster during cleanup', error);
-      }
-    },
-    getPolicyHandlers: () => ({
-      onApplied: onPolicyApplied,
-      onRevoked: onPolicyRevoked,
-      onLifecycleChanged: onPolicyLifecycleChanged
-    }),
-    getUnitEventHandlers: () => ({
-      onUnitDied,
-      onUnitSpawned,
-      onInventoryChanged,
-      onModifierChanged,
-      onUnitStatsChanged,
-      onSaunaDamaged,
-      onSaunaDestroyed
-    }),
-    getTerrainInvalidator: () => invalidateTerrainCache,
-    getClock: () => clock,
-    isGamePaused: () => isGamePaused(),
-    onPauseChanged: () => onPauseChanged(),
-    updateTopbarHud: (deltaMs) => updateTopbarHud(deltaMs),
-    updateSaunaHud: () => updateSaunaHud(),
-    refreshRosterPanel: (entries) => refreshRosterPanel(entries),
-    draw: () => draw(),
-    getIdleFrameLimit: () => IDLE_FRAME_LIMIT
-  } satisfies GameRuntimeContext;
-
-  return new GameRuntime(context, rosterService);
-}
-
-export function setRosterCapValue(
-  value: number,
-  options: { persist?: boolean } = {}
-): number {
-  return updateRosterCapRef(value, options);
-}
