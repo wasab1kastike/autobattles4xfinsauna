@@ -355,6 +355,10 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
   const maxHpValue = Number.isFinite(attendant.maxHp) ? Math.max(1, attendant.maxHp) : 1;
   const shieldValue = Number.isFinite(attendant.shield) ? Math.max(0, attendant.shield) : 0;
   const coordSource = attachedUnit?.coord ?? attendant.coord;
+  const resolvedBehavior =
+    typeof attachedUnit?.getBehavior === 'function'
+      ? attachedUnit.getBehavior()
+      : attendant.behavior;
 
   return {
     id: attachedUnit?.id ?? attendant.id,
@@ -364,6 +368,7 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
     hp: hpValue,
     maxHp: maxHpValue,
     shield: shieldValue,
+    behavior: resolvedBehavior,
     items,
     statuses
   } satisfies UnitSelectionPayload;
@@ -386,6 +391,7 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
     hp: hpValue,
     maxHp: maxHpValue,
     shield: shieldValue,
+    behavior: typeof unit.getBehavior === 'function' ? unit.getBehavior() : undefined,
     items: [],
     statuses: []
   } satisfies UnitSelectionPayload;

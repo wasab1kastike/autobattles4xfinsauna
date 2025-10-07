@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-
-
+- Add polished behavior toggles to the battlefield selection mini HUD so you can swap unit directives directly from the popup and keep roster state in sync.
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`
   composes action bar, top bar, sauna overlay, inventory HUD, and right panel
