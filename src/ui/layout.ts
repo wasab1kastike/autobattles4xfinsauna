@@ -170,13 +170,30 @@ function ensureCommandDockSection(
 }
 
 function applyVariantClasses(overlay: HTMLElement, regions: HudLayoutRegions): void {
-  overlay.classList.remove(...OVERLAY_GRID_CLASSES.base);
-  overlay.classList.remove(OVERLAY_GRID_CLASSES.collapsed);
+  const { base, collapsed } = OVERLAY_GRID_CLASSES;
+
+  const overlayVariantClasses = Array.from(overlay.classList).filter(
+    (className) => className.startsWith('hud-grid--') && className !== collapsed,
+  );
+  if (overlayVariantClasses.length > 0) {
+    overlay.classList.remove(...overlayVariantClasses);
+  }
+
+  overlay.classList.add(...base);
+  overlay.classList.remove(collapsed);
+
   for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
     keyof HudLayoutRegions,
     string[]
   ]>) {
-    regions[name].classList.remove(...classes);
+    const region = regions[name];
+    const regionVariantClasses = Array.from(region.classList).filter((className) =>
+      className.startsWith('hud-region--'),
+    );
+    if (regionVariantClasses.length > 0) {
+      region.classList.remove(...regionVariantClasses);
+    }
+    region.classList.add(...classes);
   }
 }
 

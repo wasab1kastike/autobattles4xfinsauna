@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restore the HUD overlay grid so the base and region classes persist across
+  variant switches, keeping roster and icon panels visible after toggling the
+  right-side collapse.
+
 - Extract the roster orchestrator into `game/orchestrators/roster.ts`, wire it
   through the runtime dependency hooks, update HUD and test imports, and cover
   roster entry sorting plus summary selection with focused Vitest cases.
