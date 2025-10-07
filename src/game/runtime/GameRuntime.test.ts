@@ -12,7 +12,10 @@ import type { GameClock } from '../../core/GameClock.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { RosterEntry } from '../../ui/rightPanel.tsx';
 
-const unitFxResults: Array<{ dispose: ReturnType<typeof vi.fn> }> = [];
+const unitFxResults: Array<{
+  dispose: ReturnType<typeof vi.fn>;
+  setBehaviorChangeHandler: ReturnType<typeof vi.fn>;
+}> = [];
 const hudResults: Array<ReturnType<typeof createHudResult>> = [];
 const uiAdapterCalls: Array<{ deps: any; result: any }> = [];
 
@@ -42,6 +45,7 @@ const createHudResult = () => {
   const disposeRightPanel = vi.fn();
   const addEvent = vi.fn();
   const postSetup = vi.fn();
+  const changeBehavior = vi.fn();
 
   return {
     rosterHud,
@@ -55,6 +59,7 @@ const createHudResult = () => {
     disposeRightPanel,
     addEvent,
     postSetup,
+    changeBehavior,
   };
 };
 
@@ -64,7 +69,7 @@ const createUiAdaptersMock = vi.fn((deps: unknown) => {
     createActionBarController: vi.fn(() => ({ destroy: vi.fn() })),
     createSaunaUiController: vi.fn(() => ({ dispose: vi.fn(), update: vi.fn() })),
     createInventoryHudController: vi.fn(() => ({ destroy: vi.fn() })),
-    createRightPanelBridge: vi.fn(() => ({ addEvent: vi.fn(), dispose: vi.fn() })),
+    createRightPanelBridge: vi.fn(() => ({ addEvent: vi.fn(), dispose: vi.fn(), changeBehavior: vi.fn() })),
   };
   uiAdapterCalls.push({ deps, result });
   return result;
@@ -72,10 +77,24 @@ const createUiAdaptersMock = vi.fn((deps: unknown) => {
 
 vi.mock('../../render/unit_fx.ts', () => ({
   createUnitFxManager: vi.fn(() => {
-    const instance = { dispose: vi.fn() };
-    unitFxResults.push(instance);
+    const instance = {
+      dispose: vi.fn(),
+      setBehaviorChangeHandler: vi.fn(),
+      step: vi.fn(),
+      getShakeOffset: vi.fn(() => ({ x: 0, y: 0 })),
+      getUnitAlpha: vi.fn(() => 1),
+      beginStatusFrame: vi.fn(),
+      pushUnitStatus: vi.fn(),
+      pushSaunaStatus: vi.fn(),
+      commitStatusFrame: vi.fn(),
+      setSelection: vi.fn()
+    };
+    unitFxResults.push({
+      dispose: instance.dispose,
+      setBehaviorChangeHandler: instance.setBehaviorChangeHandler
+    });
     return instance;
-  }),
+  })
 }));
 
 vi.mock('../../render/combatAnimations.ts', () => ({
@@ -310,6 +329,37 @@ describe('GameRuntime', () => {
     const firstUnitFx = unitFxResults[0];
     expect(firstUnitFx.dispose).toHaveBeenCalled();
     expect(unitFxResults[1]).toBeDefined();
+  });
+
+  it('bridges behavior changes from the mini HUD to the right panel', () => {
+    let runtime!: GameRuntime;
+    const context = createContext(() => runtime);
+    runtime = new GameRuntime(context, createRosterService());
+
+    const canvas = document.createElement('canvas');
+    const resourceBar = document.createElement('div');
+    const overlay = document.createElement('div');
+
+    runtime.setupGame(canvas, resourceBar, overlay);
+
+    const latestUnitFx = unitFxResults.at(-1);
+    expect(latestUnitFx?.setBehaviorChangeHandler).toHaveBeenCalled();
+    const behaviorHandlerCalls = latestUnitFx?.setBehaviorChangeHandler.mock.calls ?? [];
+    expect(behaviorHandlerCalls[0]?.[0]).toBeNull();
+    const behaviorFn = behaviorHandlerCalls[1]?.[0];
+    expect(typeof behaviorFn).toBe('function');
+
+    const latestHud = hudResults.at(-1);
+    context.syncSelectionOverlay.mockClear();
+    latestHud?.changeBehavior.mockClear();
+
+    behaviorFn?.('saunoja-1', 'attack');
+    expect(latestHud?.changeBehavior).toHaveBeenCalledWith('saunoja-1', 'attack');
+    expect(context.syncSelectionOverlay).toHaveBeenCalledTimes(1);
+
+    runtime.getDisposeRightPanel()?.();
+    const finalCall = latestUnitFx?.setBehaviorChangeHandler.mock.calls.at(-1);
+    expect(finalCall?.[0]).toBeNull();
   });
 
   it('attaches pause listeners once and cleans up event bus subscriptions on cleanup', async () => {

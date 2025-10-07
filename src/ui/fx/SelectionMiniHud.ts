@@ -6,12 +6,18 @@ import type {
   SelectionStatusChip,
   UnitSelectionPayload
 } from './types.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 
 interface SelectionMiniHudOptions {
   root: HTMLElement;
   project: (point: PixelCoord, offsetY?: number) => PixelCoord | null;
   getVerticalLift: () => number;
   getHexSize: () => number;
+  onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
+  behaviorMeta?: {
+    order: readonly UnitBehavior[];
+    labels: Record<UnitBehavior, string>;
+  };
 }
 
 interface SelectionMiniHudElements {
@@ -21,6 +27,9 @@ interface SelectionMiniHudElements {
   card: HTMLElement;
   name: HTMLElement;
   faction: HTMLElement;
+  behaviorRow: HTMLElement;
+  behaviorValue: HTMLElement;
+  behaviorOptions: HTMLElement;
   hpValue: HTMLElement;
   hpMeter: HTMLElement;
   hpFill: HTMLElement;
@@ -35,6 +44,8 @@ interface SelectionMiniHudState {
   hp: number;
   maxHp: number;
   shield: number;
+  behavior: UnitBehavior | null;
+  behaviorInteractive: boolean;
 }
 
 let styleElement: HTMLStyleElement | null = null;
@@ -159,6 +170,84 @@ function ensureStyles(): void {
       margin-bottom: 16px;
       display: grid;
       gap: 6px;
+    }
+
+    .ui-selection-mini-hud__behavior {
+      position: relative;
+      z-index: 1;
+      margin-bottom: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .ui-selection-mini-hud__behavior-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ui-selection-mini-hud__behavior-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(148, 163, 184, 0.85);
+      font-weight: 600;
+    }
+
+    .ui-selection-mini-hud__behavior-value {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: rgba(226, 232, 240, 0.92);
+      text-shadow: 0 6px 16px rgba(15, 23, 42, 0.6);
+    }
+
+    .ui-selection-mini-hud__behavior-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .ui-selection-mini-hud__behavior-options[aria-disabled='true'] {
+      opacity: 0.6;
+    }
+
+    .ui-selection-mini-hud__behavior-option {
+      position: relative;
+      z-index: 1;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: linear-gradient(135deg, rgba(30, 41, 59, 0.75), rgba(15, 23, 42, 0.78));
+      color: rgba(226, 232, 240, 0.9);
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      box-shadow: 0 12px 28px rgba(8, 25, 53, 0.32);
+    }
+
+    .ui-selection-mini-hud__behavior-option:is(:hover, :focus-visible) {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 32px rgba(14, 116, 144, 0.32);
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(15, 23, 42, 0.82));
+      outline: none;
+    }
+
+    .ui-selection-mini-hud__behavior-option.is-active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.35), rgba(14, 116, 144, 0.42));
+      border-color: rgba(125, 211, 252, 0.6);
+      color: rgba(226, 232, 240, 0.98);
+      box-shadow: 0 16px 36px rgba(14, 116, 144, 0.45);
+    }
+
+    .ui-selection-mini-hud__behavior-option:disabled {
+      cursor: default;
+      opacity: 0.5;
+      transform: none;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.28);
     }
 
     .ui-selection-mini-hud__hp-label {
@@ -387,6 +476,24 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
   faction.className = 'ui-selection-mini-hud__faction';
   header.appendChild(faction);
 
+  const behaviorRow = document.createElement('div');
+  behaviorRow.className = 'ui-selection-mini-hud__behavior';
+  behaviorRow.hidden = true;
+  const behaviorHeader = document.createElement('div');
+  behaviorHeader.className = 'ui-selection-mini-hud__behavior-header';
+  const behaviorLabel = document.createElement('span');
+  behaviorLabel.className = 'ui-selection-mini-hud__behavior-label';
+  behaviorLabel.textContent = 'Behavior';
+  const behaviorValue = document.createElement('span');
+  behaviorValue.className = 'ui-selection-mini-hud__behavior-value';
+  behaviorHeader.append(behaviorLabel, behaviorValue);
+  behaviorRow.appendChild(behaviorHeader);
+  const behaviorOptions = document.createElement('div');
+  behaviorOptions.className = 'ui-selection-mini-hud__behavior-options';
+  behaviorOptions.setAttribute('role', 'group');
+  behaviorRow.appendChild(behaviorOptions);
+  card.appendChild(behaviorRow);
+
   const hpBlock = document.createElement('div');
   hpBlock.className = 'ui-selection-mini-hud__hp';
   card.appendChild(hpBlock);
@@ -427,6 +534,9 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
     card,
     name,
     faction,
+    behaviorRow,
+    behaviorValue,
+    behaviorOptions,
     hpValue,
     hpMeter,
     hpFill,
@@ -550,6 +660,7 @@ export interface SelectionMiniHud {
   setSelection(payload: UnitSelectionPayload | null): void;
   updateStatus(world: PixelCoord | null, hp?: number, maxHp?: number, shield?: number): void;
   refreshPosition(): void;
+  setBehaviorInteractivity(enabled: boolean): void;
   destroy(): void;
 }
 
@@ -560,8 +671,11 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     status: null,
     hp: 0,
     maxHp: 1,
-    shield: 0
+    shield: 0,
+    behavior: null,
+    behaviorInteractive: Boolean(options.onBehaviorChange)
   } satisfies SelectionMiniHudState;
+  const behaviorButtons = new Map<UnitBehavior, HTMLButtonElement>();
 
   function updateHpDisplay(): void {
     const hp = clamp(state.hp, 0, Math.max(1, state.maxHp));
@@ -582,6 +696,71 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
       badge.className = 'ui-selection-mini-hud__shield-badge';
       badge.textContent = `+${numberFormatter.format(Math.round(shield))}`;
       elements.hpValue.appendChild(badge);
+    }
+  }
+
+  function updateBehaviorDisplay(): void {
+    const meta = options.behaviorMeta;
+    const payload = state.payload;
+    const behavior = state.behavior;
+
+    if (!meta || !payload || !behavior) {
+      elements.behaviorRow.hidden = true;
+      elements.behaviorOptions.setAttribute('aria-disabled', 'true');
+      for (const button of behaviorButtons.values()) {
+        button.classList.remove('is-active');
+        button.setAttribute('aria-pressed', 'false');
+        button.disabled = true;
+      }
+      return;
+    }
+
+    elements.behaviorRow.hidden = false;
+    const label = meta.labels[behavior] ?? behavior;
+    elements.behaviorValue.textContent = label;
+    elements.behaviorValue.title = `Behavior: ${label}`;
+    const hasHandler = state.behaviorInteractive;
+    elements.behaviorOptions.setAttribute('aria-disabled', hasHandler ? 'false' : 'true');
+    elements.behaviorOptions.setAttribute(
+      'aria-label',
+      `${payload.name?.trim() || 'Unit'} behavior`
+    );
+
+    for (const [value, button] of behaviorButtons.entries()) {
+      const buttonLabel = meta.labels[value] ?? value;
+      button.textContent = buttonLabel;
+      button.title = `Set behavior to ${buttonLabel}`;
+      button.setAttribute('aria-label', `Set behavior to ${buttonLabel}`);
+      const isActive = value === behavior;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.disabled = !hasHandler;
+    }
+  }
+
+  if (options.behaviorMeta) {
+    for (const behavior of options.behaviorMeta.order) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ui-selection-mini-hud__behavior-option';
+      button.dataset.behavior = behavior;
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (!state.payload || !options.behaviorMeta) {
+          return;
+        }
+        if (behavior === state.behavior) {
+          return;
+        }
+        if (!state.behaviorInteractive) {
+          return;
+        }
+        state.behavior = behavior;
+        updateBehaviorDisplay();
+        options.onBehaviorChange?.(state.payload.id, behavior);
+      });
+      behaviorButtons.set(behavior, button);
+      elements.behaviorOptions.appendChild(button);
     }
   }
 
@@ -630,8 +809,10 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
   function setSelection(payload: UnitSelectionPayload | null): void {
     state.payload = payload;
     state.status = null;
+    state.behavior = payload?.behavior ?? null;
     if (!payload) {
       hide();
+      updateBehaviorDisplay();
       return;
     }
 
@@ -646,6 +827,7 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     updateHpDisplay();
     renderItems(elements.items, payload.items ?? []);
     renderStatuses(elements.statuses, payload.statuses ?? []);
+    updateBehaviorDisplay();
 
     show();
     refreshPosition();
@@ -671,6 +853,14 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     refreshPosition();
   }
 
+  function setBehaviorInteractivity(enabled: boolean): void {
+    if (state.behaviorInteractive === enabled) {
+      return;
+    }
+    state.behaviorInteractive = enabled;
+    updateBehaviorDisplay();
+  }
+
   function destroy(): void {
     elements.host.remove();
   }
@@ -679,6 +869,7 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     setSelection,
     updateStatus,
     refreshPosition,
+    setBehaviorInteractivity,
     destroy
   } satisfies SelectionMiniHud;
 }

@@ -1,4 +1,5 @@
 import type { AxialCoord, PixelCoord } from '../../hex/HexUtils.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 
 export interface UnitStatusBuff {
   id: string;
@@ -85,6 +86,7 @@ export interface UnitSelectionPayload {
   hp: number;
   maxHp: number;
   shield?: number;
+  behavior?: UnitBehavior;
   items: readonly SelectionItemSlot[];
   statuses: readonly SelectionStatusChip[];
 }
