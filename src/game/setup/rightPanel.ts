@@ -5,6 +5,7 @@ import type { Unit } from '../../unit/index.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from '../../ui/rightPanel.tsx';
 import type { EquipmentSlotId } from '../../items/types.ts';
 import type { RosterService } from '../runtime/rosterService.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 
 export interface RightPanelDependencies {
   state: GameState;
@@ -22,7 +23,27 @@ export interface RightPanelDependencies {
 
 export interface RightPanelBridge {
   addEvent: (event: GameEvent) => void;
+  changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
   dispose: () => void;
+}
+
+function handleBehaviorChange(
+  deps: RightPanelDependencies,
+  unitId: string,
+  nextBehavior: UnitBehavior
+): void {
+  const attendant = deps.getSaunojas().find((unit) => unit.id === unitId);
+  if (!attendant) {
+    return;
+  }
+  if (attendant.behavior === nextBehavior) {
+    return;
+  }
+  attendant.behavior = nextBehavior;
+  const attachedUnit = deps.getAttachedUnitFor(attendant);
+  attachedUnit?.setBehavior(nextBehavior);
+  deps.rosterService.saveUnits();
+  deps.updateRosterDisplay();
 }
 
 export function initializeRightPanel(
@@ -37,18 +58,7 @@ export function initializeRightPanel(
     onRosterEquipSlot: deps.equipSlotFromStash,
     onRosterUnequipSlot: deps.unequipSlotToStash,
     onRosterBehaviorChange: (unitId, nextBehavior) => {
-      const attendant = deps.getSaunojas().find((unit) => unit.id === unitId);
-      if (!attendant) {
-        return;
-      }
-      if (attendant.behavior === nextBehavior) {
-        return;
-      }
-      attendant.behavior = nextBehavior;
-      const attachedUnit = deps.getAttachedUnitFor(attendant);
-      attachedUnit?.setBehavior(nextBehavior);
-      deps.rosterService.saveUnits();
-      deps.updateRosterDisplay();
+      handleBehaviorChange(deps, unitId, nextBehavior);
     },
     getRosterCap: () => Math.max(0, Math.floor(deps.sauna.maxRosterSize)),
     getRosterCapLimit: () => deps.getActiveTierLimit(),
@@ -65,6 +75,7 @@ export function initializeRightPanel(
 
   return {
     addEvent: rightPanel.addEvent,
+    changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
     dispose: rightPanel.dispose
   } satisfies RightPanelBridge;
 }
