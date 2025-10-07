@@ -17,6 +17,7 @@ import {
   panCameraByScreenDelta,
   resizeCanvasToDisplaySize,
 } from './camera/controls.ts';
+import type { PixelCoord } from './hex/HexUtils.ts';
 
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 
@@ -28,7 +29,14 @@ let loaderHandle: LoadingHandle | null = null;
 let resourceBarRef: HTMLElement | null = null;
 let overlayRef: HTMLElement | null = null;
 
-const gameOrchestrator = {
+export interface GameOrchestrator {
+  setup(canvas: HTMLCanvasElement, resourceBar: HTMLElement, overlay: HTMLElement): void;
+  start(): Promise<void>;
+  handleCanvasClick(world: PixelCoord): void;
+  cleanup(): void;
+}
+
+const gameOrchestrator: GameOrchestrator = {
   setup: setupGame,
   start,
   handleCanvasClick,
@@ -328,3 +336,7 @@ export {
   panCameraByScreenDelta,
   resizeCanvasToDisplaySize,
 };
+
+export function getGameOrchestrator(): GameOrchestrator {
+  return gameOrchestrator;
+}
