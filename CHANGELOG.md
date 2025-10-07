@@ -2,10 +2,15 @@
 
 ## Unreleased
 
+- Expand Vitest coverage for the extracted `GameRuntime` and HUD adapters,
+  exercising mocked services alongside orchestrator-driven integration flows so
+  event subscriptions, cleanup, and the polished classic HUD visuals stay
+  rock-solid.
+
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`
   composes action bar, top bar, sauna overlay, inventory HUD, and right panel
-  controllers from injected dependencies, keeping the 
+  controllers from injected dependencies, keeping the
 - Extract a dedicated roster runtime service that centralizes Saunoja loading,
   persistence, persona refresh, and selection state, inject the service into
   `GameRuntime`, and update the HUD plus right panel bridges to consume the new
