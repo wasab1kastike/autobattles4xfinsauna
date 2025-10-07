@@ -87,6 +87,7 @@ describe('SelectionMiniHud integration', () => {
       hp: 12,
       maxHp: 18,
       shield: 3,
+      behavior: 'defend',
       items: [
         { id: 'steam-saber', name: 'Steam Saber', icon: '/icons/saber.svg', rarity: 'epic', quantity: 1 },
         { id: 'glacial-ward', name: 'Glacial Ward', rarity: 'legendary', quantity: 1 },
@@ -122,6 +123,11 @@ describe('SelectionMiniHud integration', () => {
     expect(hpValue?.textContent).toContain('12 / 18');
     expect(hpValue?.textContent).toContain('+3');
 
+    const behaviorValue = card?.querySelector('.ui-selection-mini-hud__behavior-value');
+    expect(behaviorValue?.textContent).toBe('Defend');
+    const behaviorGroup = card?.querySelector('.ui-selection-mini-hud__behavior-options');
+    expect(behaviorGroup?.getAttribute('aria-disabled')).toBe('true');
+
     const items = card?.querySelectorAll('.ui-selection-mini-hud__item');
     expect(items?.length).toBe(3);
 
@@ -141,6 +147,7 @@ describe('SelectionMiniHud integration', () => {
       hp: 20,
       maxHp: 24,
       shield: 0,
+      behavior: 'attack',
       items: [],
       statuses: []
     } satisfies UnitSelectionPayload;
@@ -181,6 +188,7 @@ describe('SelectionMiniHud integration', () => {
       hp: 10,
       maxHp: 14,
       shield: 0,
+      behavior: 'explore',
       items: [],
       statuses: []
     } satisfies UnitSelectionPayload;
@@ -204,6 +212,56 @@ describe('SelectionMiniHud integration', () => {
 
     const entry = overlay.querySelector('.ui-selection-mini-hud') as HTMLElement | null;
     expect(entry?.dataset.visible).toBe('false');
+    const behaviorRow = overlay.querySelector('.ui-selection-mini-hud__behavior') as HTMLElement | null;
+    expect(behaviorRow?.hidden).toBe(true);
+  });
+
+  it('activates behavior toggles and emits change events', () => {
+    const payload: UnitSelectionPayload = {
+      id: 'attendant-3',
+      name: 'Glacier Herald',
+      faction: 'player',
+      coord: { q: 0, r: 0 },
+      hp: 16,
+      maxHp: 20,
+      shield: 0,
+      behavior: 'defend',
+      items: [],
+      statuses: []
+    } satisfies UnitSelectionPayload;
+
+    const behaviorCalls: Array<{ id: string; behavior: string }> = [];
+    manager.setBehaviorChangeHandler((unitId, behavior) => {
+      behaviorCalls.push({ id: unitId, behavior });
+    });
+
+    manager.setSelection(payload);
+    manager.beginStatusFrame();
+    manager.pushUnitStatus({
+      id: 'attendant-3',
+      world: { x: 140, y: 210 },
+      radius: 22,
+      hp: 16,
+      maxHp: 20,
+      shield: 0,
+      faction: 'player'
+    });
+    manager.commitStatusFrame();
+
+    const attackButton = overlay.querySelector<HTMLButtonElement>(
+      ".ui-selection-mini-hud__behavior-option[data-behavior='attack']"
+    );
+    expect(attackButton).toBeTruthy();
+    expect(attackButton?.disabled).toBe(false);
+
+    attackButton?.click();
+
+    expect(behaviorCalls).toEqual([{ id: 'attendant-3', behavior: 'attack' }]);
+    expect(attackButton?.classList.contains('is-active')).toBe(true);
+    const defendButton = overlay.querySelector<HTMLButtonElement>(
+      ".ui-selection-mini-hud__behavior-option[data-behavior='defend']"
+    );
+    expect(defendButton?.classList.contains('is-active')).toBe(false);
   });
 
   it('only renders unit status overlays from the active frame', () => {

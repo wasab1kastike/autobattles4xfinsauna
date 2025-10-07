@@ -16,6 +16,7 @@ import type {
   UnitSelectionPayload,
   UnitStatusPayload
 } from '../ui/fx/types.ts';
+import type { UnitBehavior } from '../unit/types.ts';
 
 export interface UnitFxOptions {
   canvas: HTMLCanvasElement;
@@ -23,6 +24,7 @@ export interface UnitFxOptions {
   mapRenderer: HexMapRenderer;
   getUnitById: (id: string) => Unit | undefined;
   requestDraw?: () => void;
+  onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
 }
 
 export interface UnitFxManager {
@@ -34,6 +36,9 @@ export interface UnitFxManager {
   pushSaunaStatus(status: SaunaStatusPayload | null): void;
   commitStatusFrame(): void;
   setSelection(selection: UnitSelectionPayload | null): void;
+  setBehaviorChangeHandler(
+    handler: ((unitId: string, behavior: UnitBehavior) => void) | null
+  ): void;
   dispose(): void;
 }
 
@@ -87,6 +92,17 @@ const coarsePointerQuery = typeof matchMedia === 'function'
 export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const { canvas, overlay, mapRenderer, getUnitById, requestDraw } = options;
   const floaterLayer: FloaterLayer = createFloaterLayer(overlay);
+  const behaviorMeta = {
+    order: ['defend', 'attack', 'explore'] as const,
+    labels: {
+      defend: 'Defend',
+      attack: 'Attack',
+      explore: 'Explore'
+    }
+  } satisfies {
+    order: readonly UnitBehavior[];
+    labels: Record<UnitBehavior, string>;
+  };
 
   type RectCache = { canvas: DOMRectReadOnly; overlay: DOMRectReadOnly } | null;
   let rectCache: RectCache = null;
@@ -129,12 +145,20 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     project: projectWorld,
     getZoom: () => camera.zoom
   });
+  let behaviorChangeHandler: ((unitId: string, behavior: UnitBehavior) => void) | null =
+    options.onBehaviorChange ?? null;
+
   const selectionHud: SelectionMiniHud = createSelectionMiniHud({
     root: overlay,
     project: projectWorld,
     getVerticalLift: () => -mapRenderer.hexSize * camera.zoom * 1.6,
-    getHexSize: () => mapRenderer.hexSize
+    getHexSize: () => mapRenderer.hexSize,
+    onBehaviorChange: (unitId, behavior) => {
+      behaviorChangeHandler?.(unitId, behavior);
+    },
+    behaviorMeta
   });
+  selectionHud.setBehaviorInteractivity(Boolean(behaviorChangeHandler));
   const fades = new Map<string, FadeState>();
   const alphas = new Map<string, number>();
   const shakes: ShakeState[] = [];
@@ -299,6 +323,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     statusLayer.destroy();
     selectionHud.setSelection(null);
     selectionHud.destroy();
+    behaviorChangeHandler = null;
   };
 
   let committedUnitStatuses = new Map<string, UnitStatusPayload>();
@@ -384,6 +409,8 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
 
   let currentSelection: UnitSelectionPayload | null = null;
   let currentSelectionId: string | null = null;
+  const isValidBehavior = (value: unknown): value is UnitBehavior =>
+    value === 'defend' || value === 'attack' || value === 'explore';
 
   const setSelection = (selection: UnitSelectionPayload | null) => {
     if (!selection) {
@@ -399,11 +426,19 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
       maxHp: Number.isFinite(selection.maxHp) ? Math.max(1, selection.maxHp) : 1,
       shield: Number.isFinite(selection.shield ?? 0) ? Math.max(0, selection.shield ?? 0) : 0,
       items: Array.isArray(selection.items) ? [...selection.items] : [],
-      statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : []
+      statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : [],
+      behavior: isValidBehavior(selection.behavior) ? selection.behavior : undefined
     } satisfies UnitSelectionPayload;
     currentSelection = sanitized;
     currentSelectionId = sanitized.id;
     selectionHud.setSelection(sanitized);
+  };
+
+  const setBehaviorChangeHandler = (
+    handler: ((unitId: string, behavior: UnitBehavior) => void) | null
+  ) => {
+    behaviorChangeHandler = handler;
+    selectionHud.setBehaviorInteractivity(Boolean(behaviorChangeHandler));
   };
 
   return {
@@ -415,6 +450,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     pushSaunaStatus,
     commitStatusFrame,
     setSelection,
+    setBehaviorChangeHandler,
     dispose
   } satisfies UnitFxManager;
 }

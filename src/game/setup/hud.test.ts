@@ -101,6 +101,10 @@ describe('initializeClassicHud', () => {
     expect(changeBehavior).toHaveBeenCalledWith('alpha', 'attack');
 
     changeBehavior.mockClear();
+    expect(typeof result.changeBehavior).toBe('function');
+    result.changeBehavior?.('alpha', 'attack');
+    expect(changeBehavior).toHaveBeenCalledWith('alpha', 'attack');
+    changeBehavior.mockClear();
     expect(result.disposeRightPanel).toBeTypeOf('function');
     result.disposeRightPanel?.();
     expect(disposeRightPanel).toHaveBeenCalledTimes(1);
