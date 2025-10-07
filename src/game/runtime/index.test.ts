@@ -6,6 +6,7 @@ import {
   getGameStateInstance,
   getRosterCapLimit,
   getRosterCapValue,
+  getRosterService,
   getSaunaInstance,
   getSaunaTierContextSnapshot,
   setActiveSaunaTier,
@@ -134,11 +135,12 @@ describe('runtime bootstrap', () => {
   let updateRosterCap: ReturnType<typeof vi.fn>;
   let setActiveTier: ReturnType<typeof vi.fn>;
   let createContext: ReturnType<typeof vi.fn>;
+  let rosterService: RosterService;
 
   beforeEach(() => {
     updateRosterCap = vi.fn((value: number) => value);
     setActiveTier = vi.fn(() => true);
-    const rosterService = createStubRosterService();
+    rosterService = createStubRosterService();
     const context = createStubContext({
       state,
       map,
@@ -179,6 +181,7 @@ describe('runtime bootstrap', () => {
     expect(getSaunaInstance()).toBe(sauna);
     expect(getActiveSaunaTierId()).toBe(activeTier);
     expect(getSaunaTierContextSnapshot()).toBe(tierContext);
+    expect(getRosterService()).toBe(rosterService);
     expect(getRosterCapValue()).toBe(7);
     expect(getRosterCapLimit()).toBe(4);
     expect(setRosterCapValue(9)).toBe(9);
