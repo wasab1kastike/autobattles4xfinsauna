@@ -101,3 +101,7 @@ export function setRosterCapValue(
 ): number {
   return requireBootstrap().updateRosterCap(value, options);
 }
+
+export function getRosterService(): RosterService {
+  return requireBootstrap().rosterService;
+}

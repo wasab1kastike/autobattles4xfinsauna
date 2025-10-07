@@ -56,6 +56,16 @@ import {
   type RosterPersonaBaseline,
   type RosterService
 } from './game/runtime/rosterService.ts';
+import {
+  configureRosterOrchestrator,
+  saunojas,
+  saunojaPolicyBaselines,
+  saunojaToUnit,
+  unitToSaunoja,
+  buildProgression,
+  refreshRosterPanel,
+  updateRosterDisplay
+} from './game/orchestrators/roster.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import {
   setupActionBar,
@@ -142,10 +152,8 @@ import {
   equip as equipLoadout,
   unequip as unequipLoadout,
   loadoutItems,
-  matchesSlot,
-  getSlotDefinition
+  matchesSlot
 } from './items/equip.ts';
-import { EQUIPMENT_SLOT_IDS } from './items/types.ts';
 import type { EquipmentSlotId, EquippedItem, EquipmentModifier } from './items/types.ts';
 import {
   getSaunojaStorage,
@@ -154,12 +162,7 @@ import {
   SAUNOJA_STORAGE_KEY
 } from './game/rosterStorage.ts';
 import { loadSaunaSettings, saveSaunaSettings } from './game/saunaSettings.ts';
-import {
-  setupRosterHUD,
-  type RosterCardViewModel,
-  type RosterHudController,
-  type RosterHudSummary
-} from './ui/rosterHUD.ts';
+import { setupRosterHUD, type RosterHudController } from './ui/rosterHUD.ts';
 import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 import { getLogHistory, logEvent, subscribeToLogs } from './ui/logging.ts';
@@ -211,6 +214,17 @@ const BASE_ENEMY_DIFFICULTY = 1;
 
 const getGameRuntime = getGameRuntimeImpl;
 
+function tryGetRuntimeInstance(): ReturnType<typeof getGameRuntime> | null {
+  try {
+    return getGameRuntime();
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not been configured')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
 let enemyRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
 let lootRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
@@ -227,13 +241,8 @@ function applyNgPlusState(next: NgPlusState): void {
 
 applyNgPlusState(currentNgPlusState);
 
-let saunojas: Saunoja[] = [];
-type SaunojaPolicyBaseline = RosterPersonaBaseline;
-const saunojaPolicyBaselines = new WeakMap<Saunoja, SaunojaPolicyBaseline>();
 let policyModifiers: PolicyModifierSummary = createPolicyModifierSummary();
 setActivePolicyModifiers(policyModifiers);
-const unitToSaunoja = new Map<string, Saunoja>();
-const saunojaToUnit = new Map<string, string>();
 const unitsById = new Map<string, Unit>();
 let playerSpawnSequence = 0;
 let rosterService: RosterService = createRosterService({
@@ -246,10 +255,15 @@ let rosterService: RosterService = createRosterService({
   generateTraits: () => generateTraits(),
   rollUpkeep: () => rollSaunojaUpkeep()
 });
+
+configureRosterOrchestrator({
+  getUnitById: (id) => unitsById.get(id),
+  getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+  getActiveRosterCount: () => getActiveRosterCount(),
+  syncSelectionOverlay: () => syncSelectionOverlay()
+});
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
-const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
-const rosterEntriesListeners = new Set<(entries: RosterEntry[]) => void>();
 let hudElapsedMs = 0;
 const hudTimeListeners = new Set<(elapsedMs: number) => void>();
 let lastEnemyRampSummary: EnemyRampSummary | null = null;
@@ -271,28 +285,6 @@ let setActiveTierRef: (
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = () => false;
 let spawnTierQueue: PlayerSpawnTierHelpers;
-
-function notifyRosterSummary(summary: RosterHudSummary): void {
-  getGameRuntime().setLastRosterSummary(summary);
-  for (const listener of rosterSummaryListeners) {
-    try {
-      listener(summary);
-    } catch (error) {
-      console.warn('Failed to notify roster summary listener', error);
-    }
-  }
-}
-
-function notifyRosterEntries(entries: RosterEntry[]): void {
-  getGameRuntime().setLastRosterEntries(entries);
-  for (const listener of rosterEntriesListeners) {
-    try {
-      listener(entries);
-    } catch (error) {
-      console.warn('Failed to notify roster entries listener', error);
-    }
-  }
-}
 
 function notifyHudElapsed(): void {
   for (const listener of hudTimeListeners) {
@@ -404,7 +396,11 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
 }
 
 function syncSelectionOverlay(): void {
-  const unitFx = getGameRuntime().getUnitFx();
+  const runtime = tryGetRuntimeInstance();
+  if (!runtime) {
+    return;
+  }
+  const unitFx = runtime.getUnitFx();
   if (!unitFx) {
     return;
   }
@@ -642,18 +638,6 @@ function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly Equipped
   const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
   applyEffectiveStats(attendant, effective);
   return effective;
-}
-
-function buildProgression(attendant: Saunoja): RosterEntry['progression'] {
-  const progress = getLevelProgress(attendant.xp);
-  return {
-    level: progress.level,
-    xp: Math.max(0, Math.floor(attendant.xp)),
-    xpIntoLevel: progress.xpIntoLevel,
-    xpForNext: progress.xpForNext,
-    progress: progress.progressToNext,
-    statBonuses: getTotalStatAwards(progress.level)
-  } satisfies RosterEntry['progression'];
 }
 
 type ExperienceSource = 'kill' | 'objective' | 'test';
@@ -999,7 +983,22 @@ function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void
 }
 
 export function loadUnits(): Saunoja[] {
-  return rosterService.loadUnits();
+  const roster = rosterService.loadUnits();
+  const attachedUnitIds = new Set<string>();
+  for (const attendant of roster) {
+    ensureSaunojaPolicyBaseline(attendant);
+    const attachedUnitId = saunojaToUnit.get(attendant.id);
+    if (attachedUnitId) {
+      unitToSaunoja.set(attachedUnitId, attendant);
+      attachedUnitIds.add(attachedUnitId);
+    }
+  }
+  for (const [unitId] of unitToSaunoja) {
+    if (!attachedUnitIds.has(unitId)) {
+      unitToSaunoja.delete(unitId);
+    }
+  }
+  return roster;
 }
 
 export function saveUnits(): void {
@@ -2226,6 +2225,12 @@ export async function start(): Promise<void> {
 }
 
 export { logEvent as log };
+export {
+  getRosterEntriesSnapshot,
+  getRosterSummarySnapshot,
+  subscribeRosterEntries,
+  subscribeRosterSummary
+} from './game/orchestrators/roster.ts';
 
 export function __rebuildRightPanelForTest(): void {
   const runtime = getGameRuntime();
@@ -2298,262 +2303,6 @@ function getActiveRosterCount(): number {
     }
   }
   return count;
-}
-
-function buildRosterEntries(): RosterEntry[] {
-  const statusRank: Record<RosterEntry['status'], number> = {
-    engaged: 0,
-    reserve: 1,
-    downed: 2
-  };
-
-  const entries = saunojas.map((attendant) => {
-    const attachedUnitId = saunojaToUnit.get(attendant.id);
-    const unit = attachedUnitId ? unitsById.get(attachedUnitId) : undefined;
-    const unitAlive = unit ? !unit.isDead() && unit.stats.health > 0 : false;
-
-    const effectiveStats = attendant.effectiveStats;
-    const baseStats = attendant.baseStats;
-    const currentHealth = unit
-      ? Math.round(Math.max(0, unit.stats.health))
-      : Math.round(Math.max(0, attendant.hp));
-    const maxHealth = unit
-      ? Math.round(Math.max(1, unit.getMaxHealth()))
-      : Math.round(Math.max(1, effectiveStats.health));
-    const attackDamage = unit
-      ? Math.round(Math.max(0, unit.stats.attackDamage))
-      : Math.round(Math.max(0, effectiveStats.attackDamage));
-    const attackRange = unit
-      ? Math.round(Math.max(0, unit.stats.attackRange))
-      : Math.round(Math.max(0, effectiveStats.attackRange));
-    const movementRange = unit
-      ? Math.round(Math.max(0, unit.stats.movementRange))
-      : Math.round(Math.max(0, effectiveStats.movementRange));
-    const defenseSource = unit?.stats.defense ?? effectiveStats.defense ?? 0;
-    const defense = Math.round(Math.max(0, defenseSource));
-    const shieldSource = unit ? unit.getShield() : effectiveStats.shield ?? attendant.shield;
-    const shield = Math.round(Math.max(0, shieldSource));
-    const upkeep = Math.max(0, Math.round(attendant.upkeep));
-    const status: RosterEntry['status'] =
-      currentHealth <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
-
-    const progression = buildProgression(attendant);
-
-    const items = attendant.items.map((item) => ({ ...item }));
-    const modifiers = attendant.modifiers.map((modifier) => ({ ...modifier }));
-
-    const equipmentSlots = EQUIPMENT_SLOT_IDS.map((slotId) => {
-      const slotDefinition = getSlotDefinition(slotId);
-      const equipped = attendant.equipment[slotId];
-      const rosterItem = equipped
-        ? {
-            id: equipped.id,
-            name: equipped.name,
-            description: equipped.description,
-            icon: equipped.icon,
-            rarity: equipped.rarity,
-            quantity: equipped.quantity,
-            slot: slotId
-          }
-        : null;
-      const aggregated = equipped ? scaleModifiers(equipped.modifiers, equipped.quantity) : null;
-      return {
-        id: slotId,
-        label: slotDefinition.label,
-        description: slotDefinition.description,
-        maxStacks: slotDefinition.maxStacks,
-        item: rosterItem,
-        modifiers: aggregated
-      };
-    });
-
-    const rosterBase: RosterStats = {
-      health: Math.round(Math.max(0, baseStats.health)),
-      maxHealth: Math.round(Math.max(1, baseStats.health)),
-      attackDamage: Math.round(Math.max(0, baseStats.attackDamage)),
-      attackRange: Math.round(Math.max(0, baseStats.attackRange)),
-      movementRange: Math.round(Math.max(0, baseStats.movementRange)),
-      defense:
-        typeof baseStats.defense === 'number' && baseStats.defense > 0
-          ? Math.round(baseStats.defense)
-          : undefined,
-      shield:
-        typeof baseStats.shield === 'number' && baseStats.shield > 0
-          ? Math.round(baseStats.shield)
-          : undefined
-    } satisfies RosterStats;
-
-    const behavior: UnitBehavior = attendant.behavior ?? 'defend';
-
-    return {
-      id: attendant.id,
-      name: attendant.name,
-      upkeep,
-      status,
-      selected: Boolean(attendant.selected),
-      behavior,
-      traits: [...attendant.traits],
-      stats: {
-        health: currentHealth,
-        maxHealth,
-        attackDamage,
-        attackRange,
-        movementRange,
-        defense: defense > 0 ? defense : undefined,
-        shield: shield > 0 ? shield : undefined
-      },
-      baseStats: rosterBase,
-      progression,
-      equipment: equipmentSlots,
-      items,
-      modifiers
-    } satisfies RosterEntry;
-  });
-
-  entries.sort((a, b) => {
-    const statusDelta = statusRank[a.status] - statusRank[b.status];
-    if (statusDelta !== 0) {
-      return statusDelta;
-    }
-    return a.name.localeCompare(b.name, 'en');
-  });
-
-  return entries;
-}
-
-function pickFeaturedSaunoja(): Saunoja | null {
-  if (saunojas.length === 0) {
-    return null;
-  }
-  return (
-    saunojas.find((unit) => unit.selected) ??
-    saunojas.find((unit) => unit.hp > 0) ??
-    saunojas[0]
-  );
-}
-
-function scaleModifiers(modifiers: EquipmentModifier, quantity: number): EquipmentModifier {
-  const stacks = Math.max(1, Math.round(quantity));
-  const scaled: EquipmentModifier = {};
-  if (typeof modifiers.health === 'number') {
-    scaled.health = modifiers.health * stacks;
-  }
-  if (typeof modifiers.attackDamage === 'number') {
-    scaled.attackDamage = modifiers.attackDamage * stacks;
-  }
-  if (typeof modifiers.attackRange === 'number') {
-    scaled.attackRange = modifiers.attackRange * stacks;
-  }
-  if (typeof modifiers.movementRange === 'number') {
-    scaled.movementRange = modifiers.movementRange * stacks;
-  }
-  if (typeof modifiers.defense === 'number') {
-    scaled.defense = modifiers.defense * stacks;
-  }
-  if (typeof modifiers.shield === 'number') {
-    scaled.shield = modifiers.shield * stacks;
-  }
-  return scaled;
-}
-
-function buildRosterSummary(): RosterHudSummary {
-  const total = getActiveRosterCount();
-  const featured = pickFeaturedSaunoja();
-  let card: RosterCardViewModel | null = null;
-  if (featured) {
-    const behavior: UnitBehavior = featured.behavior ?? 'defend';
-    card = {
-      id: featured.id,
-      name: featured.name || 'Saunoja',
-      traits: [...featured.traits],
-      upkeep: Math.max(0, Math.round(featured.upkeep)),
-      progression: buildProgression(featured),
-      behavior
-    } satisfies RosterCardViewModel;
-  }
-  return { count: total, card } satisfies RosterHudSummary;
-}
-
-function refreshRosterPanel(entries?: RosterEntry[]): void {
-  const view = entries ?? buildRosterEntries();
-  const runtime = getGameRuntime();
-  runtime.setPendingRosterEntries(view);
-  notifyRosterEntries(view);
-  syncSelectionOverlay();
-  const rosterHud = runtime.getRosterHud();
-  if (!rosterHud) {
-    return;
-  }
-  rosterHud.renderRoster(view);
-}
-
-function updateRosterDisplay(): void {
-  const summary = buildRosterSummary();
-  notifyRosterSummary(summary);
-  const runtime = getGameRuntime();
-  const rosterHud = runtime.getRosterHud();
-  if (rosterHud) {
-    rosterHud.updateSummary(summary);
-    runtime.setPendingRosterSummary(null);
-  } else {
-    runtime.setPendingRosterSummary(summary);
-  }
-  refreshRosterPanel();
-  syncSelectionOverlay();
-}
-
-export function getRosterSummarySnapshot(): RosterHudSummary {
-  const runtime = getGameRuntime();
-  const lastSummary = runtime.getLastRosterSummary();
-  if (lastSummary) {
-    return lastSummary;
-  }
-  const pendingSummary = runtime.getPendingRosterSummary();
-  if (pendingSummary) {
-    return pendingSummary;
-  }
-  return buildRosterSummary();
-}
-
-export function getRosterEntriesSnapshot(): RosterEntry[] {
-  const runtime = getGameRuntime();
-  const cachedEntries = runtime.getLastRosterEntries();
-  if (cachedEntries.length > 0) {
-    return cachedEntries;
-  }
-  const pendingEntries = runtime.getPendingRosterEntries();
-  if (pendingEntries && pendingEntries.length > 0) {
-    return pendingEntries;
-  }
-  return buildRosterEntries();
-}
-
-export function subscribeRosterSummary(
-  listener: (summary: RosterHudSummary) => void
-): () => void {
-  rosterSummaryListeners.add(listener);
-  try {
-    listener(getRosterSummarySnapshot());
-  } catch (error) {
-    console.warn('Failed to deliver roster summary snapshot', error);
-  }
-  return () => {
-    rosterSummaryListeners.delete(listener);
-  };
-}
-
-export function subscribeRosterEntries(
-  listener: (entries: RosterEntry[]) => void
-): () => void {
-  rosterEntriesListeners.add(listener);
-  try {
-    listener(getRosterEntriesSnapshot());
-  } catch (error) {
-    console.warn('Failed to deliver roster entries snapshot', error);
-  }
-  return () => {
-    rosterEntriesListeners.delete(listener);
-  };
 }
 
 export function subscribeHudTime(

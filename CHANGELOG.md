@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Extract the roster orchestrator into `game/orchestrators/roster.ts`, wire it
+  through the runtime dependency hooks, update HUD and test imports, and cover
+  roster entry sorting plus summary selection with focused Vitest cases.
+
+- Rehydrate Saunoja attachments after loading roster storage so experience,
+  coordinates, and baselines persist across saves, extend the affected Vitest
+  cases with longer async windows, and update the animation loop test to track
+  the runtime game loop callback directly.
+
 - Extract the game runtime bootstrap into `game/runtime/index.ts`, re-export the
   lazy singleton API from `game.ts`, and add coverage to confirm the runtime is
   configured on-demand through the new entry point.
