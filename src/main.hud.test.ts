@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('./events', async () => {
+  const actual = await vi.importActual<typeof import('./events')>('./events');
+  return {
+    ...actual,
+    eventBus: {
+      on: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
+    },
+  };
+});
+
 const renderShell = () => {
   document.body.innerHTML = `
     <div id="game-container">
@@ -36,7 +48,7 @@ const stubMatchMedia = () =>
     dispatchEvent: vi.fn()
   }));
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules();
   window.localStorage?.clear?.();
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -56,13 +68,19 @@ beforeEach(() => {
     window.clearTimeout(id);
   };
   renderShell();
+  const { setAssets } = await import('./game/assets.ts');
+  setAssets({ images: {}, sounds: {}, atlases: { units: null } });
 });
 
 describe('main HUD lifecycle', () => {
   it('rebuilds topbar, inventory badge, and right panel after destroy/init cycle', async () => {
-    const { init, destroy } = await import('./main.ts');
+    const { getGameOrchestrator } = await import('./main.ts');
+    const orchestrator = getGameOrchestrator();
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const resourceBar = document.getElementById('resource-bar') as HTMLElement;
+    const overlay = document.getElementById('ui-overlay') as HTMLElement;
 
-    init();
+    orchestrator.setup(canvas, resourceBar, overlay);
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
@@ -70,7 +88,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
 
-    destroy();
+    orchestrator.cleanup();
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(0);
@@ -78,7 +96,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
 
-    init();
+    orchestrator.setup(canvas, resourceBar, overlay);
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
@@ -96,23 +114,26 @@ describe('main HUD lifecycle', () => {
       JSON.stringify({ maxRosterSize: 6, activeTierId: DEFAULT_SAUNA_TIER_ID, useUiV2: true })
     );
 
-    const { init, destroy } = await import('./main.ts');
+    const { getGameOrchestrator } = await import('./main.ts');
+    const orchestrator = getGameOrchestrator();
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const resourceBar = document.getElementById('resource-bar') as HTMLElement;
+    const overlay = document.getElementById('ui-overlay') as HTMLElement;
 
-    init();
+    orchestrator.setup(canvas, resourceBar, overlay);
     await Promise.resolve();
 
-    const overlay = document.getElementById('ui-overlay');
-    expect(overlay?.dataset.hudVariant).toBe('classic');
+    expect(overlay.dataset.hudVariant).toBe('classic');
     const returnControl = document.querySelector('[data-testid="return-to-classic-hud"]');
     expect(returnControl).toBeNull();
-    expect(overlay?.dataset.hudVariant).toBe('classic');
+    expect(overlay.dataset.hudVariant).toBe('classic');
     expect(document.querySelector('[data-testid="return-to-classic-hud"]')).toBeNull();
     expect(document.querySelector('#topbar')).not.toBeNull();
     expect(document.querySelector('[data-ui="inventory-toggle"]')).not.toBeNull();
     expect(document.querySelector('#inventory-stash-panel')).not.toBeNull();
     expect(document.querySelector('#right-panel')).not.toBeNull();
 
-    destroy();
+    orchestrator.cleanup();
     await Promise.resolve();
   });
 });
