@@ -24,6 +24,7 @@ describe('initializeClassicHud', () => {
       toggleExpanded: vi.fn(),
       destroy: vi.fn()
     };
+    const setupRosterHUD = vi.fn(() => rosterHud);
 
     let capturedSaunaOptions: SaunaUIOptions | null = null;
     const saunaController = { update: vi.fn(), dispose: vi.fn() };
@@ -42,10 +43,12 @@ describe('initializeClassicHud', () => {
 
     const syncRoster = vi.fn();
     const panelRenderer = vi.fn();
+    const changeBehavior = vi.fn();
     const createRightPanel = vi.fn((onReady: (renderer: (entries: RosterEntry[]) => void) => void) => {
       onReady(panelRenderer);
       return {
         addEvent: addEventSpy,
+        changeBehavior,
         dispose: disposeRightPanel
       };
     });
@@ -58,7 +61,7 @@ describe('initializeClassicHud', () => {
       pendingRosterRenderer: null,
       pendingRosterEntries: rosterEntries,
       pendingRosterSummary: rosterSummary,
-      setupRosterHUD: vi.fn(() => rosterHud),
+      setupRosterHUD,
       setupSaunaUi: vi.fn((_sauna, options) => {
         capturedSaunaOptions = options;
         return saunaController;
@@ -88,11 +91,22 @@ describe('initializeClassicHud', () => {
     expect(result.topbarControls).toBe(topbarControls);
     expect(result.actionBarController).toBe(actionBarController);
     expect(result.inventoryHudController).toBe(inventoryController);
-    expect(result.disposeRightPanel).toBe(disposeRightPanel);
     expect(result.addEvent).toBe(addEventSpy);
 
     expect(result.pendingRosterRenderer).toBe(panelRenderer);
     expect(createRightPanel).toHaveBeenCalledTimes(1);
+    const hudOptions = setupRosterHUD.mock.calls[0]?.[1];
+    expect(typeof hudOptions?.onBehaviorChange).toBe('function');
+    hudOptions?.onBehaviorChange?.('alpha', 'attack');
+    expect(changeBehavior).toHaveBeenCalledWith('alpha', 'attack');
+
+    changeBehavior.mockClear();
+    expect(result.disposeRightPanel).toBeTypeOf('function');
+    result.disposeRightPanel?.();
+    expect(disposeRightPanel).toHaveBeenCalledTimes(1);
+    hudOptions?.onBehaviorChange?.('alpha', 'defend');
+    expect(changeBehavior).not.toHaveBeenCalled();
+
     expect(result.postSetup).toBeTypeOf('function');
     result.postSetup?.();
     expect(syncRoster).toHaveBeenCalledTimes(1);

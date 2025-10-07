@@ -2,10 +2,7 @@
 
 ## Unreleased
 
-- Expand Vitest coverage for the extracted `GameRuntime` and HUD adapters,
-  exercising mocked services alongside orchestrator-driven integration flows so
-  event subscriptions, cleanup, and the polished classic HUD visuals stay
-  rock-solid.
+
 
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`

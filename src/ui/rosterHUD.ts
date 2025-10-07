@@ -9,10 +9,12 @@ const behaviorLabels: Record<UnitBehavior, string> = {
   attack: 'Attack',
   explore: 'Explore'
 };
+const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
 
 type RosterHudOptions = {
   rosterIcon: string;
   summaryLabel?: string;
+  onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
 };
 
 export type RosterCardViewModel = {
@@ -188,9 +190,67 @@ export function setupRosterHUD(
   rosterCardXp.classList.add('saunoja-card__xp');
   rosterCardXp.textContent = '0 / 0 XP • 0%';
 
-  const rosterCardBehavior = document.createElement('p');
+  const rosterCardBehavior = document.createElement('div');
   rosterCardBehavior.classList.add('saunoja-card__behavior');
-  rosterCardBehavior.textContent = 'Behavior: Defend';
+
+  const rosterCardBehaviorHeader = document.createElement('div');
+  rosterCardBehaviorHeader.classList.add('saunoja-card__behavior-header');
+
+  const rosterCardBehaviorLabel = document.createElement('span');
+  rosterCardBehaviorLabel.classList.add('saunoja-card__behavior-label');
+  rosterCardBehaviorLabel.textContent = 'Behavior';
+
+  const rosterCardBehaviorValue = document.createElement('span');
+  rosterCardBehaviorValue.classList.add('saunoja-card__behavior-value');
+  rosterCardBehaviorValue.textContent = behaviorLabels.defend;
+
+  rosterCardBehaviorHeader.append(rosterCardBehaviorLabel, rosterCardBehaviorValue);
+
+  const rosterCardBehaviorOptions = document.createElement('div');
+  rosterCardBehaviorOptions.classList.add('saunoja-card__behavior-options');
+  rosterCardBehaviorOptions.setAttribute('role', 'group');
+  rosterCardBehaviorOptions.setAttribute('aria-label', 'Saunoja behavior');
+
+  const behaviorButtons = new Map<UnitBehavior, HTMLButtonElement>();
+  const behaviorClickHandlers = new Map<HTMLButtonElement, () => void>();
+
+  for (const behavior of behaviorOrder) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add('saunoja-card__behavior-option');
+    button.dataset.behavior = behavior;
+    const label = behaviorLabels[behavior] ?? behavior;
+    button.textContent = label;
+    const title = `Set behavior to ${label}`;
+    button.title = title;
+    button.setAttribute('aria-label', title);
+    button.setAttribute('aria-pressed', behavior === 'defend' ? 'true' : 'false');
+    button.classList.toggle('is-active', behavior === 'defend');
+    const handleClick = () => {
+      const handler = options.onBehaviorChange;
+      const unitId = rosterCard.dataset.unitId;
+      if (!handler || !unitId) {
+        return;
+      }
+      if (button.disabled || button.getAttribute('aria-pressed') === 'true') {
+        return;
+      }
+      handler(unitId, behavior);
+    };
+    button.addEventListener('click', handleClick);
+    behaviorButtons.set(behavior, button);
+    behaviorClickHandlers.set(button, handleClick);
+    rosterCardBehaviorOptions.appendChild(button);
+  }
+
+  if (!options.onBehaviorChange) {
+    rosterCardBehaviorOptions.setAttribute('aria-disabled', 'true');
+    for (const button of behaviorButtons.values()) {
+      button.disabled = true;
+    }
+  }
+
+  rosterCardBehavior.append(rosterCardBehaviorHeader, rosterCardBehaviorOptions);
 
   rosterCardIdentity.append(rosterCardName, rosterCardXp);
   rosterCardHeader.append(rosterCardLevel, rosterCardIdentity);
@@ -289,6 +349,7 @@ export function setupRosterHUD(
   function renderCard(card: RosterCardViewModel | null): void {
     hasFeaturedCard = Boolean(card);
     if (!card) {
+      delete rosterCard.dataset.unitId;
       setExpanded(false);
       return;
     }
@@ -321,9 +382,24 @@ export function setupRosterHUD(
     rosterCardStats.title = bonusLabel;
 
     const behaviorLabel = behaviorLabels[card.behavior] ?? card.behavior;
-    const behaviorCopy = `Behavior: ${behaviorLabel}`;
-    rosterCardBehavior.textContent = behaviorCopy;
-    rosterCardBehavior.title = behaviorCopy;
+    rosterCardBehaviorValue.textContent = behaviorLabel;
+    rosterCardBehaviorValue.title = `Behavior: ${behaviorLabel}`;
+    rosterCardBehaviorOptions.setAttribute(
+      'aria-label',
+      `${card.name || 'Saunoja'} behavior`
+    );
+    const hasBehaviorHandler = Boolean(options.onBehaviorChange);
+    if (hasBehaviorHandler) {
+      rosterCardBehaviorOptions.setAttribute('aria-disabled', 'false');
+    } else {
+      rosterCardBehaviorOptions.setAttribute('aria-disabled', 'true');
+    }
+    for (const [behavior, button] of behaviorButtons.entries()) {
+      const isActive = behavior === card.behavior;
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.classList.toggle('is-active', isActive);
+      button.disabled = !hasBehaviorHandler;
+    }
 
     const upkeepValue = Math.max(0, Math.round(card.upkeep));
     const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
@@ -432,6 +508,9 @@ export function setupRosterHUD(
       rosterRenderer = null;
       rosterSignature = null;
       toggle.removeEventListener('click', handleToggleClick);
+      for (const [button, handler] of behaviorClickHandlers.entries()) {
+        button.removeEventListener('click', handler);
+      }
       container.removeEventListener('sauna-roster:expand', handleExpandRequest);
       container.removeEventListener('sauna-roster:collapse', handleCollapseRequest);
       container.removeEventListener('sauna-roster:toggle', handleToggleRequest);
