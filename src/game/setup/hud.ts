@@ -8,6 +8,7 @@ import type {
   RosterHudController,
   RosterHudSummary
 } from '../../ui/rosterHUD.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 import type { SaunaUIController, SaunaUIOptions } from '../../ui/sauna.tsx';
 import type { TopbarControls } from '../../ui/topbar.ts';
 import type { Resource } from '../../core/GameState.ts';
@@ -18,6 +19,7 @@ type InventoryHudController = { destroy(): void };
 
 type RightPanelBridge = {
   addEvent: (event: GameEvent) => void;
+  changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
   dispose: () => void;
 };
 
@@ -41,7 +43,10 @@ type ClassicHudDependencies = {
   pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null;
   pendingRosterEntries: RosterEntry[] | null;
   pendingRosterSummary: RosterHudSummary | null;
-  setupRosterHUD: (resourceBar: HTMLElement, options: { rosterIcon: string }) => RosterHudController;
+  setupRosterHUD: (
+    resourceBar: HTMLElement,
+    options: { rosterIcon: string; onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void }
+  ) => RosterHudController;
   setupSaunaUi: SaunaUiFactory;
   getActiveTierId: () => SaunaTierId;
   setActiveTier: (tierId: SaunaTierId, options?: { persist?: boolean }) => boolean;
@@ -73,7 +78,14 @@ export type HudInitializationResult = {
 export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializationResult {
   deps.previousDisposeRightPanel?.();
 
-  const rosterHud = deps.setupRosterHUD(deps.resourceBarEl, { rosterIcon: deps.rosterIcon });
+  let rightPanelBehaviorHandler: ((unitId: string, behavior: UnitBehavior) => void) | null = null;
+
+  const rosterHud = deps.setupRosterHUD(deps.resourceBarEl, {
+    rosterIcon: deps.rosterIcon,
+    onBehaviorChange: (unitId, behavior) => {
+      rightPanelBehaviorHandler?.(unitId, behavior);
+    }
+  });
 
   let pendingRosterEntries = deps.pendingRosterEntries;
   let pendingRosterRenderer = deps.pendingRosterRenderer;
@@ -120,6 +132,7 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
   };
 
   const rightPanel = deps.createRightPanel(handleRosterRendererReady);
+  rightPanelBehaviorHandler = rightPanel.changeBehavior;
 
   const postSetup = (): void => {
     deps.syncSaunojaRosterWithUnits();
@@ -136,7 +149,10 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
     topbarControls,
     actionBarController,
     inventoryHudController,
-    disposeRightPanel: rightPanel.dispose,
+    disposeRightPanel: () => {
+      rightPanelBehaviorHandler = null;
+      rightPanel.dispose();
+    },
     addEvent: rightPanel.addEvent,
     postSetup
   };

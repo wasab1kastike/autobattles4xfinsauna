@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Extend the roster HUD with polished behavior toggles that mirror the right panel,
+  share a unified change handler across both surfaces, and cover the refreshed
+  interaction with updated tests and styling tweaks.
+
 
 - Split the classic HUD orchestration into runtime UI adapters so `GameRuntime`
   composes action bar, top bar, sauna overlay, inventory HUD, and right panel

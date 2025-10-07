@@ -78,9 +78,17 @@ describe('rosterHUD', () => {
       expect(callouts?.textContent).toContain('+7 Focus');
       expect(callouts?.textContent).toContain('+5 Resolve');
 
-      const behavior = root?.querySelector('.saunoja-card__behavior');
-      expect(behavior?.textContent).toBe('Behavior: Attack');
-      expect(behavior?.title).toBe('Behavior: Attack');
+      const behaviorValue = root?.querySelector('.saunoja-card__behavior-value');
+      expect(behaviorValue?.textContent).toBe('Attack');
+      expect(behaviorValue?.title).toBe('Behavior: Attack');
+
+      const behaviorGroup = root?.querySelector('.saunoja-card__behavior-options');
+      expect(behaviorGroup?.getAttribute('aria-disabled')).toBe('true');
+      const activeBehavior = behaviorGroup?.querySelector<HTMLButtonElement>(
+        '.saunoja-card__behavior-option.is-active'
+      );
+      expect(activeBehavior?.dataset.behavior).toBe('attack');
+      expect(activeBehavior?.disabled).toBe(true);
 
       const traits = root?.querySelector('.saunoja-card__traits');
       expect(traits?.textContent).toBe('Brave, Sage');
@@ -179,6 +187,53 @@ describe('rosterHUD', () => {
       hud.destroy();
     } finally {
       overlay.remove();
+    }
+  });
+
+  it('notifies behavior changes when the behavior buttons are clicked', () => {
+    const container = makeContainer();
+    const onBehaviorChange = vi.fn();
+
+    try {
+      const hud = setupRosterHUD(container, {
+        rosterIcon: '/icon.svg',
+        onBehaviorChange
+      });
+
+      hud.updateSummary({
+        count: 1,
+        card: {
+          id: 'saunoja-9',
+          name: 'Veikko',
+          traits: [],
+          upkeep: 12,
+          behavior: 'defend',
+          progression: {
+            level: 3,
+            xp: 300,
+            xpIntoLevel: 20,
+            xpForNext: 200,
+            progress: 20 / 200,
+            statBonuses: { vigor: 0, focus: 0, resolve: 0 }
+          }
+        }
+      });
+
+      const rosterRoot = container.querySelector('.sauna-roster');
+      const toggle = rosterRoot?.querySelector<HTMLButtonElement>('.sauna-roster__toggle');
+      toggle?.click();
+
+      const behaviorGroup = rosterRoot?.querySelector('.saunoja-card__behavior-options');
+      expect(behaviorGroup?.getAttribute('aria-disabled')).toBe('false');
+      const attackButton = behaviorGroup?.querySelector<HTMLButtonElement>(
+        ".saunoja-card__behavior-option[data-behavior='attack']"
+      );
+      expect(attackButton?.disabled).toBe(false);
+      attackButton?.click();
+
+      expect(onBehaviorChange).toHaveBeenCalledWith('saunoja-9', 'attack');
+    } finally {
+      destroyContainer(container);
     }
   });
 });
