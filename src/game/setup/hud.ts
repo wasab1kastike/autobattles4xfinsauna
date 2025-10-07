@@ -72,6 +72,7 @@ export type HudInitializationResult = {
   inventoryHudController: InventoryHudController | null;
   disposeRightPanel: (() => void) | null;
   addEvent: (event: GameEvent) => void;
+  changeBehavior: ((unitId: string, behavior: UnitBehavior) => void) | null;
   postSetup?: () => void;
 };
 
@@ -132,7 +133,10 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
   };
 
   const rightPanel = deps.createRightPanel(handleRosterRendererReady);
-  rightPanelBehaviorHandler = rightPanel.changeBehavior;
+  const changeBehavior = (unitId: string, behavior: UnitBehavior) => {
+    rightPanel.changeBehavior(unitId, behavior);
+  };
+  rightPanelBehaviorHandler = changeBehavior;
 
   const postSetup = (): void => {
     deps.syncSaunojaRosterWithUnits();
@@ -154,6 +158,7 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
       rightPanel.dispose();
     },
     addEvent: rightPanel.addEvent,
+    changeBehavior,
     postSetup
   };
 }

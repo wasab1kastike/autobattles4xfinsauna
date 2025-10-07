@@ -36,6 +36,7 @@ import { getAssets } from '../../game/assets.ts';
 import { resetGamePause } from '../pause.ts';
 import type { RosterService } from './rosterService.ts';
 import { createUiAdapters, type InventoryHudController } from './uiAdapters.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 
 export interface GameRuntimeContext {
   readonly state: GameState;
@@ -312,6 +313,7 @@ export class GameRuntime {
       getUnitById: (id) => this.ctx.getUnitById(id),
       requestDraw: () => this.invalidateFrame()
     });
+    this.unitFx.setBehaviorChangeHandler(null);
 
     this.combatAnimations = createUnitCombatAnimator({
       getUnitById: (id) => this.ctx.getUnitById(id),
@@ -456,7 +458,22 @@ export class GameRuntime {
     this.topbarControls = hudResult.topbarControls;
     this.actionBarController = hudResult.actionBarController;
     this.inventoryHudController = hudResult.inventoryHudController;
-    this.disposeRightPanel = hudResult.disposeRightPanel;
+    const changeBehaviorHandler = (
+      unitId: string,
+      behavior: UnitBehavior
+    ) => {
+      hudResult.changeBehavior?.(unitId, behavior);
+      this.ctx.syncSelectionOverlay();
+    };
+    this.unitFx?.setBehaviorChangeHandler(changeBehaviorHandler);
+
+    const disposeRightPanel = hudResult.disposeRightPanel;
+    this.disposeRightPanel = disposeRightPanel
+      ? () => {
+          this.unitFx?.setBehaviorChangeHandler(null);
+          disposeRightPanel();
+        }
+      : null;
     this.addEvent = hudResult.addEvent;
     hudResult.postSetup?.();
   }
