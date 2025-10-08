@@ -31,6 +31,7 @@ import {
   writeLogPreferences
 } from './logging.ts';
 import { createPolicyPanel } from './policies/PolicyPanel.ts';
+import type { HudNavigationView } from './hudNavigation.tsx';
 
 export type {
   RosterEntry,
@@ -55,6 +56,8 @@ type RightPanelOptions = {
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 };
 
+type RightPanelView = HudNavigationView;
+
 export function setupRightPanel(
   state: GameState,
   options: RightPanelOptions = {}
@@ -62,14 +65,24 @@ export function setupRightPanel(
   log: (event: LogEventPayload) => void;
   addEvent: (ev: GameEvent) => void;
   renderRoster: (entries: RosterEntry[]) => void;
+  showView: (view: RightPanelView) => void;
+  onViewChange: (listener: (view: RightPanelView) => void) => () => void;
   dispose: () => void;
 } {
   const overlay = document.getElementById('ui-overlay');
   if (!overlay) {
-    return { log: () => {}, addEvent: () => {}, renderRoster: () => {}, dispose: () => {} };
+    return {
+      log: () => {},
+      addEvent: () => {},
+      renderRoster: () => {},
+      showView: () => {},
+      onViewChange: () => () => {},
+      dispose: () => {}
+    };
   }
 
   const { regions, anchors, dock, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
+  const doc = overlay.ownerDocument ?? document;
   const rightRegion = regions.right;
   const commandDock = dock.actions;
   const rosterHudPanel = bottomTabs.panels.roster;
@@ -119,17 +132,6 @@ export function setupRightPanel(
 
   const smallViewportQuery = window.matchMedia('(max-width: 960px)');
   const disposers: Array<() => void> = [];
-
-  const applyRosterState = (tabId: HudBottomTabId): void => {
-    if (tabId === 'roster') {
-      dispatchRosterEvent('expand');
-    } else {
-      dispatchRosterEvent('collapse');
-    }
-  };
-
-  applyRosterState(bottomTabs.getActive());
-  disposers.push(bottomTabs.onChange(applyRosterState));
 
   const toggle = document.createElement('button');
   toggle.type = 'button';
@@ -419,111 +421,184 @@ export function setupRightPanel(
   });
   disposers.push(detachMobilePlacement);
 
-  const tabBar = document.createElement('div');
-  tabBar.classList.add('panel-tabs');
-  panel.appendChild(tabBar);
-
-  const content = document.createElement('div');
+  const content = doc.createElement('div');
   content.classList.add('panel-content');
   panel.appendChild(content);
 
-  const rosterTab = document.createElement('div');
-  rosterTab.id = 'right-panel-roster';
-  rosterTab.setAttribute('role', 'region');
-  rosterTab.setAttribute('aria-live', 'polite');
-  rosterTab.setAttribute('aria-label', 'Battalion roster');
-  const eventsTab = document.createElement('div');
-  eventsTab.id = 'right-panel-events';
-  const logSection = document.createElement('div');
+  const viewRoot = doc.createElement('div');
+  viewRoot.className = 'panel-views';
+  content.appendChild(viewRoot);
+
+  const rosterView = doc.createElement('section');
+  rosterView.id = 'right-panel-roster';
+  rosterView.classList.add('panel-view', 'panel-view--roster');
+  rosterView.setAttribute('role', 'region');
+  rosterView.setAttribute('aria-live', 'polite');
+  rosterView.setAttribute('aria-label', 'Battalion roster');
+
+  const rosterContainer = doc.createElement('div');
+  rosterContainer.className = 'panel-section panel-section--scroll';
+  rosterContainer.dataset.hudTabPanel = 'roster';
+  rosterView.appendChild(rosterContainer);
+
+  const policiesView = doc.createElement('section');
+  policiesView.id = 'right-panel-policies';
+  policiesView.classList.add('panel-view', 'panel-view--policies');
+  policiesView.setAttribute('role', 'region');
+  policiesView.setAttribute('aria-live', 'polite');
+  policiesView.setAttribute('aria-label', 'Sauna policies');
+
+  const policiesContainer = policyHudPanel ?? doc.createElement('div');
+  if (policiesContainer.parentElement) {
+    policiesContainer.parentElement.removeChild(policiesContainer);
+  }
+  policiesContainer.innerHTML = '';
+  policiesContainer.className = 'panel-section panel-section--scroll panel-section--policies';
+  policiesContainer.dataset.hudTabPanel = 'policies';
+  policiesView.appendChild(policiesContainer);
+  bottomTabs.panels.policies = policiesContainer;
+
+  const eventsView = doc.createElement('section');
+  eventsView.id = 'right-panel-events';
+  eventsView.classList.add('panel-view', 'panel-view--events');
+  eventsView.setAttribute('role', 'region');
+  eventsView.setAttribute('aria-live', 'polite');
+  eventsView.setAttribute('aria-label', 'Events feed');
+
+  const eventsContainer = doc.createElement('div');
+  eventsContainer.className = 'panel-section panel-section--scroll panel-section--events';
+  eventsContainer.dataset.hudTabPanel = 'events';
+  eventsView.appendChild(eventsContainer);
+
+  viewRoot.append(rosterView, policiesView, eventsView);
+
+  const logPreferences = readLogPreferences();
+
+  const logSection = doc.createElement('section');
   logSection.id = 'right-panel-log';
   logSection.setAttribute('role', 'region');
   logSection.setAttribute('aria-label', 'Combat log');
+  logSection.className = 'panel-log';
 
-  const logContainer = document.createElement('section');
-  logContainer.className = 'panel-log';
-
-  const logHeader = document.createElement('header');
+  const logHeader = doc.createElement('header');
   logHeader.className = 'panel-log__header';
 
-  const logTitle = document.createElement('h3');
+  const logHeadline = doc.createElement('div');
+  logHeadline.className = 'panel-log__headline';
+
+  const logTitle = doc.createElement('h3');
   logTitle.className = 'panel-log__title';
   logTitle.textContent = 'Combat Log';
 
-  const logTotal = document.createElement('span');
+  const logTotal = doc.createElement('span');
   logTotal.className = 'panel-log__total';
   logTotal.textContent = '0 entries';
-  logHeader.append(logTitle, logTotal);
+  logHeadline.append(logTitle, logTotal);
 
-  const logFilters = document.createElement('div');
+  const logToggle = doc.createElement('button');
+  logToggle.type = 'button';
+  logToggle.className = 'panel-log__toggle';
+  logToggle.setAttribute('aria-controls', 'panel-log-body');
+
+  const logToggleLabel = doc.createElement('span');
+  logToggleLabel.className = 'panel-log__toggle-label';
+  logToggleLabel.textContent = 'Collapse';
+
+  const logToggleIcon = doc.createElement('span');
+  logToggleIcon.className = 'panel-log__chevron';
+  logToggleIcon.setAttribute('aria-hidden', 'true');
+
+  logToggle.append(logToggleLabel, logToggleIcon);
+
+  logHeader.append(logHeadline, logToggle);
+
+  const logBody = doc.createElement('div');
+  logBody.className = 'panel-log__body';
+  logBody.id = 'panel-log-body';
+
+  const logFilters = doc.createElement('div');
   logFilters.className = 'panel-log__filters';
 
-  const logFeed = document.createElement('div');
+  const logFeed = doc.createElement('div');
   logFeed.id = 'event-log';
   logFeed.className = 'panel-log__feed';
   logFeed.setAttribute('role', 'log');
   logFeed.setAttribute('aria-live', 'polite');
 
-  logContainer.append(logHeader, logFilters, logFeed);
-  logSection.appendChild(logContainer);
+  logBody.append(logFilters, logFeed);
+  logSection.append(logHeader, logBody);
+  content.appendChild(logSection);
 
-  const tabs: Record<string, HTMLDivElement> = {
-    Roster: rosterTab,
-    Events: eventsTab,
-    Log: logSection
+  const viewContainers: Record<RightPanelView, HTMLElement> = {
+    roster: rosterView,
+    policies: policiesView,
+    events: eventsView
   };
 
-  const bottomTabTargets: Partial<Record<string, HudBottomTabId>> = {
-    Roster: 'roster',
-  };
+  const viewListeners = new Set<(view: RightPanelView) => void>();
+  let activeView: RightPanelView = 'roster';
+  let syncingBottomTabs = false;
 
-  const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
-  for (const [name, section] of Object.entries(tabs)) {
-    section.classList.add('panel-section', 'panel-section--scroll');
-    section.dataset.tab = name;
-    section.hidden = true;
-  }
-  logSection.classList.add('panel-section--log');
-
-  function show(tab: string): void {
-    for (const [name, el] of Object.entries(tabs)) {
-      el.hidden = name !== tab;
-    }
-    for (const btn of Array.from(tabBar.children)) {
-      const b = btn as HTMLButtonElement;
-      const isActive = b.textContent === tab;
-      b.disabled = isActive;
-      b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    }
-    const targetBottomTab = bottomTabTargets[tab];
-    if (targetBottomTab) {
-      if (bottomTabs.getActive() !== targetBottomTab) {
-        bottomTabs.setActive(targetBottomTab);
-      } else {
-        applyRosterState(targetBottomTab);
+  const syncRosterState = (view: RightPanelView) => {
+    if (view === 'roster') {
+      if (!syncingBottomTabs) {
+        syncingBottomTabs = true;
+        bottomTabs.setActive('roster');
+        syncingBottomTabs = false;
       }
+      dispatchRosterEvent('expand');
     } else {
       dispatchRosterEvent('collapse');
     }
-  }
+  };
 
-  for (const name of Object.keys(tabs)) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = name;
-    const section = tabs[name];
-    if (section?.id) {
-      btn.setAttribute('aria-controls', section.id);
+  const applyView = (view: RightPanelView) => {
+    const next = view ?? 'roster';
+    activeView = next;
+    panel.dataset.activeView = next;
+    viewRoot.dataset.activeView = next;
+    (Object.entries(viewContainers) as Array<[RightPanelView, HTMLElement]>).forEach(([key, element]) => {
+      const isActive = key === next;
+      element.hidden = !isActive;
+      element.dataset.active = isActive ? 'true' : 'false';
+    });
+    syncRosterState(next);
+  };
+
+  const showView = (view: RightPanelView) => {
+    if (activeView === view) {
+      syncRosterState(view);
+      return;
     }
-    btn.setAttribute('aria-pressed', 'false');
-    const handleClick = (): void => show(name);
-    btn.addEventListener('click', handleClick);
-    disposers.push(() => btn.removeEventListener('click', handleClick));
-    tabBar.appendChild(btn);
-    content.appendChild(tabs[name]);
-  }
+    applyView(view);
+    for (const listener of viewListeners) {
+      listener(view);
+    }
+  };
+
+  const onViewChange = (listener: (view: RightPanelView) => void): (() => void) => {
+    viewListeners.add(listener);
+    return () => {
+      viewListeners.delete(listener);
+    };
+  };
+
+  applyView(activeView);
+
+  const detachBottomTabListener = bottomTabs.onChange((tabId) => {
+    if (syncingBottomTabs) {
+      return;
+    }
+    if (tabId === 'roster') {
+      showView('roster');
+    }
+  });
+  disposers.push(detachBottomTabListener);
+
+  const { onRosterSelect, onRosterRendererReady, onRosterEquipSlot, onRosterUnequipSlot } = options;
 
   // --- Roster ---
-  const rosterPanel = createRosterPanel(rosterTab, {
+  const rosterPanel = createRosterPanel(rosterContainer, {
     onSelect: onRosterSelect,
     onEquipSlot: onRosterEquipSlot,
     onUnequipSlot: onRosterUnequipSlot,
@@ -544,7 +619,7 @@ export function setupRightPanel(
   }
 
   // --- Policies ---
-  const policyPanel = createPolicyPanel(policyHudPanel, state);
+  const policyPanel = createPolicyPanel(policiesContainer, state);
   disposers.push(() => policyPanel.destroy());
 
   // --- Events ---
@@ -584,7 +659,7 @@ export function setupRightPanel(
   }
 
   function renderEvents(activeEvents: ActiveSchedulerEvent[]): void {
-    eventsTab.innerHTML = '';
+    eventsContainer.innerHTML = '';
     if (activeEvents.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'event-card event-card--empty';
@@ -592,7 +667,7 @@ export function setupRightPanel(
       emptyCopy.className = 'event-card__empty';
       emptyCopy.textContent = 'All clear. Command will notify you when new briefings arrive.';
       empty.appendChild(emptyCopy);
-      eventsTab.appendChild(empty);
+      eventsContainer.appendChild(empty);
       return;
     }
 
@@ -670,7 +745,7 @@ export function setupRightPanel(
       fragment.appendChild(card);
     }
 
-    eventsTab.appendChild(fragment);
+    eventsContainer.appendChild(fragment);
   }
 
   const unsubscribeScheduler = eventScheduler.subscribe(renderEvents);
@@ -709,8 +784,30 @@ export function setupRightPanel(
   const entryStates = new Map<string, LogEntryNodeState>();
   const typeCounts = new Map<LogEventType, number>();
   const typeBadges = new Map<LogEventType, HTMLSpanElement>();
-  const mutedTypes = new Set(readLogPreferences().mutedTypes ?? []);
+  const mutedTypes = new Set(logPreferences.mutedTypes ?? []);
+  let logCollapsed = Boolean(logPreferences.isCollapsed);
   const activeTypes = new Set<LogEventType>();
+
+  const persistLogPreferences = (): void => {
+    writeLogPreferences({
+      mutedTypes: Array.from(mutedTypes),
+      isCollapsed: logCollapsed
+    });
+  };
+
+  const updateLogTogglePresentation = (): void => {
+    logSection.classList.toggle('panel-log--collapsed', logCollapsed);
+    logBody.hidden = logCollapsed;
+    logBody.setAttribute('aria-hidden', logCollapsed ? 'true' : 'false');
+    logFeed.setAttribute('aria-hidden', logCollapsed ? 'true' : 'false');
+    logToggle.setAttribute('aria-expanded', logCollapsed ? 'false' : 'true');
+    logToggleLabel.textContent = logCollapsed ? 'Expand' : 'Collapse';
+    const toggleTitle = logCollapsed ? 'Expand the combat log' : 'Collapse the combat log';
+    logToggle.setAttribute('aria-label', toggleTitle);
+    logToggle.title = toggleTitle;
+  };
+
+  updateLogTogglePresentation();
 
   for (const type of LOG_EVENT_ORDER) {
     if (!mutedTypes.has(type)) {
@@ -726,6 +823,27 @@ export function setupRightPanel(
     typeof requestAnimationFrame === 'function'
       ? requestAnimationFrame
       : (cb: FrameRequestCallback) => setTimeout(cb, 16);
+
+  const setLogCollapsed = (collapsed: boolean): void => {
+    if (logCollapsed === collapsed) {
+      return;
+    }
+    logCollapsed = collapsed;
+    if (logCollapsed) {
+      stickToBottom = true;
+    }
+    updateLogTogglePresentation();
+    persistLogPreferences();
+    if (!logCollapsed) {
+      scrollToBottom();
+    }
+  };
+
+  const handleLogToggleClick = (): void => {
+    setLogCollapsed(!logCollapsed);
+  };
+  logToggle.addEventListener('click', handleLogToggleClick);
+  disposers.push(() => logToggle.removeEventListener('click', handleLogToggleClick));
 
   const formatCount = (value: number): string => numberFormatter.format(Math.max(0, value));
 
@@ -754,11 +872,22 @@ export function setupRightPanel(
   };
 
   const isNearBottom = (): boolean => {
+    if (logCollapsed) {
+      return false;
+    }
     return logFeed.scrollHeight - (logFeed.scrollTop + logFeed.clientHeight) < 48;
   };
 
   const scrollToBottom = (): void => {
+    if (logCollapsed) {
+      stickToBottom = true;
+      return;
+    }
     scheduleFrame(() => {
+      if (logCollapsed) {
+        stickToBottom = true;
+        return;
+      }
       logFeed.scrollTop = logFeed.scrollHeight;
       stickToBottom = true;
     });
@@ -868,7 +997,7 @@ export function setupRightPanel(
   };
 
   const appendEntry = (entry: LogEntry, hydrate = false): void => {
-    const stick = hydrate ? true : isNearBottom() || stickToBottom;
+    const stick = logCollapsed ? false : hydrate ? true : isNearBottom() || stickToBottom;
     const state = renderLogEntry(entry);
     entryStates.set(entry.id, state);
     logFeed.appendChild(state.element);
@@ -955,7 +1084,7 @@ export function setupRightPanel(
       }
       button.classList.toggle('is-muted', !activeTypes.has(type));
       button.setAttribute('aria-pressed', activeTypes.has(type) ? 'true' : 'false');
-      writeLogPreferences({ mutedTypes: Array.from(mutedTypes) });
+      persistLogPreferences();
       refreshEntryVisibility();
     });
   }
@@ -963,6 +1092,9 @@ export function setupRightPanel(
   updateTotalBadge();
 
   const handleLogScroll = (): void => {
+    if (logCollapsed) {
+      return;
+    }
     stickToBottom = isNearBottom();
   };
   logFeed.addEventListener('scroll', handleLogScroll, { passive: true });
@@ -991,7 +1123,7 @@ export function setupRightPanel(
 
   refreshEntryVisibility();
 
-  show('Roster');
+  showView('roster');
   const dispose = (): void => {
     for (const cleanup of disposers.splice(0)) {
       try {
@@ -1007,6 +1139,7 @@ export function setupRightPanel(
     toggle.remove();
     panel.remove();
     overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
+    viewListeners.clear();
   };
 
   return {
@@ -1015,6 +1148,8 @@ export function setupRightPanel(
     },
     addEvent,
     renderRoster,
+    showView,
+    onViewChange,
     dispose
   };
 }

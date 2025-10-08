@@ -3,6 +3,7 @@ import type { Sauna } from '../../sim/sauna.ts';
 import type { Saunoja } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from '../../ui/rightPanel.tsx';
+import { setupHudNavigation, type HudNavigationView } from '../../ui/hudNavigation.tsx';
 import type { EquipmentSlotId } from '../../items/types.ts';
 import type { RosterService } from '../runtime/rosterService.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
@@ -71,11 +72,27 @@ export function initializeRightPanel(
     }
   });
 
+  const overlay = typeof document !== 'undefined' ? document.getElementById('ui-overlay') : null;
+  const navigation = setupHudNavigation(overlay, {
+    initialView: 'roster',
+    onNavigate: (view) => {
+      rightPanel.showView(view);
+    }
+  });
+  const detachViewSync = rightPanel.onViewChange((view: HudNavigationView) => {
+    navigation.setActive(view);
+  });
+
+  navigation.setActive('roster');
   onRosterRendererReady(rightPanel.renderRoster);
 
   return {
     addEvent: rightPanel.addEvent,
     changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
-    dispose: rightPanel.dispose
+    dispose: () => {
+      detachViewSync();
+      navigation.dispose();
+      rightPanel.dispose();
+    }
   } satisfies RightPanelBridge;
 }
