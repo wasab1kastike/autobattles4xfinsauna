@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Document the Codex automation limitation for binary art uploads and outline
+  the human-in-the-loop workflow in the contributing guide.
 - Restore the HUD overlay grid so the base and region classes persist across
   variant switches, keeping roster and icon panels visible after toggling the
   right-side collapse.
