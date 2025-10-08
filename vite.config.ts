@@ -27,11 +27,14 @@ if (!resolvedCommit) {
 
 const GIT_COMMIT = JSON.stringify(resolvedCommit ?? 'unknown');
 
+const repoBase = '/autobattles4xfinsauna/';
+const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.GITHUB_ACTIONS;
+
 // Vite configuration
 export default defineConfig({
   root: 'src',
   // Ensure assets resolve correctly when hosted on GitHub Pages.
-  base: '/',
+  base: isLocalDev ? '/' : repoBase,
   publicDir: '../public',
   plugins: [tailwindcss()],
   build: {
