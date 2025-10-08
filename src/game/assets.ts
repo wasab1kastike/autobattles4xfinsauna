@@ -9,11 +9,11 @@ import soundIcon from '../../assets/ui/sound.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
 
-const SAUNOJA_VANGUARD = '/assets/units/saunoja-01.png';
-const SAUNOJA_GUARDIAN = '/assets/units/saunoja-02.png';
-const SAUNOJA_SEER = '/assets/units/saunoja-03.png';
-const ENEMY_ORC_VANGUARD = '/assets/units/enemy-orc-1.png';
-const ENEMY_ORC_WARLOCK = '/assets/units/enemy-orc-2.png';
+const SAUNOJA_VANGUARD = new URL('../../assets/units/saunoja-01.png', import.meta.url).href;
+const SAUNOJA_GUARDIAN = new URL('../../assets/units/saunoja-02.png', import.meta.url).href;
+const SAUNOJA_SEER = new URL('../../assets/units/saunoja-03.png', import.meta.url).href;
+const ENEMY_ORC_VANGUARD = new URL('../../assets/units/enemy-orc-1.png', import.meta.url).href;
+const ENEMY_ORC_WARLOCK = new URL('../../assets/units/enemy-orc-2.png', import.meta.url).href;
 
 export const uiIcons = {
   saunaBeer: saunaBeerIcon,
