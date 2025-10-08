@@ -5,7 +5,7 @@ import type {
   InventoryItem,
   InventoryState
 } from '../inventory/state.ts';
-import { ensureHudLayout } from './layout.ts';
+import { ensureHudLayout, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
 import { zIndex } from './theme/tokens.ts';
 import {
   createDefaultFilterState,
@@ -547,10 +547,7 @@ export function setupInventoryHud(
     }
   });
 
-  const initialTab = tabs.getActive();
-  if (initialTab === 'roster') {
-    requestRosterExpand();
-  } else {
+  if (!overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)) {
     requestRosterCollapse();
   }
   setStashOpen(false, false);
