@@ -38,6 +38,7 @@ export type LogListener = (change: LogChange) => void;
 
 export interface LogPreferences {
   mutedTypes: LogEventType[];
+  isCollapsed: boolean;
 }
 
 interface StorageLike {
@@ -368,7 +369,7 @@ export const LOG_EVENT_ORDER: LogEventType[] = [
   'system'
 ];
 
-const defaultPreferences: LogPreferences = { mutedTypes: [] };
+const defaultPreferences: LogPreferences = { mutedTypes: [], isCollapsed: false };
 
 export const readLogPreferences = (storage: StorageLike | null = defaultStorage): LogPreferences => {
   if (!storage) {
@@ -388,27 +389,32 @@ export const readLogPreferences = (storage: StorageLike | null = defaultStorage)
           typeof value === 'string' && value in LOG_EVENT_META
         )
       : [];
-    return { mutedTypes: Array.from(new Set(muted)) };
+    const isCollapsed = typeof parsed.isCollapsed === 'boolean' ? parsed.isCollapsed : false;
+    return { mutedTypes: Array.from(new Set(muted)), isCollapsed };
   } catch {
     return { ...defaultPreferences };
   }
 };
 
 export const writeLogPreferences = (
-  preferences: LogPreferences,
+  preferences: Partial<LogPreferences>,
   storage: StorageLike | null = defaultStorage
 ): void => {
   if (!storage) {
     return;
   }
   try {
+    const existing = readLogPreferences(storage);
     const muted = Array.isArray(preferences.mutedTypes)
       ? preferences.mutedTypes.filter((value): value is LogEventType => value in LOG_EVENT_META)
-      : [];
-    storage.setItem(
-      LOG_PREFERENCES_STORAGE_KEY,
-      JSON.stringify({ mutedTypes: Array.from(new Set(muted)) })
-    );
+      : existing.mutedTypes;
+    const isCollapsed =
+      typeof preferences.isCollapsed === 'boolean' ? preferences.isCollapsed : existing.isCollapsed;
+    const next: LogPreferences = {
+      mutedTypes: Array.from(new Set(muted)),
+      isCollapsed
+    };
+    storage.setItem(LOG_PREFERENCES_STORAGE_KEY, JSON.stringify(next));
   } catch {
     // Ignore storage failures.
   }
