@@ -85,15 +85,18 @@ describe('main HUD lifecycle', () => {
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
+    expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
     orchestrator.cleanup();
     await Promise.resolve();
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(0);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(0);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(0);
@@ -103,6 +106,7 @@ describe('main HUD lifecycle', () => {
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);

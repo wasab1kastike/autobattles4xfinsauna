@@ -18,7 +18,11 @@ describe('rosterHUD', () => {
   it('updates the roster summary and card visuals', () => {
     const container = makeContainer();
     try {
-      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', summaryLabel: 'Sauna Guard' });
+      const hud = setupRosterHUD(container, {
+        rosterIcon: '/icon.svg',
+        toggleIcon: '/toggle.svg',
+        summaryLabel: 'Sauna Guard'
+      });
 
       hud.updateSummary({
         count: 5,
@@ -105,7 +109,7 @@ describe('rosterHUD', () => {
   it('hides the card when no featured Saunoja is provided', () => {
     const container = makeContainer();
     try {
-      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg' });
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', toggleIcon: '/toggle.svg' });
       hud.updateSummary({ count: 0, card: null });
       const card = container.querySelector<HTMLDivElement>('.saunoja-card');
       expect(card?.hidden).toBe(true);
@@ -122,7 +126,7 @@ describe('rosterHUD', () => {
   it('deduplicates roster renders based on signature changes', () => {
     const container = makeContainer();
     try {
-      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg' });
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', toggleIcon: '/toggle.svg' });
       const renderer = vi.fn();
       hud.installRenderer(renderer);
 
@@ -173,7 +177,10 @@ describe('rosterHUD', () => {
     try {
       const layout = ensureHudLayout(overlay);
       const rosterContainer = layout.tabs.panels.roster;
-      const hud = setupRosterHUD(rosterContainer, { rosterIcon: '/icon.svg' });
+      const hud = setupRosterHUD(rosterContainer, {
+        rosterIcon: '/icon.svg',
+        toggleIcon: '/toggle.svg'
+      });
 
       layout.tabs.setActive('policies');
       expect(layout.tabs.getActive()).toBe('policies');
@@ -190,6 +197,80 @@ describe('rosterHUD', () => {
     }
   });
 
+  it('keeps the roster overlay closed by default and toggles via the HUD control', () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    try {
+      const layout = ensureHudLayout(overlay);
+      const rosterContainer = layout.tabs.panels.roster;
+      const hud = setupRosterHUD(rosterContainer, {
+        rosterIcon: '/icon.svg',
+        toggleIcon: '/toggle.svg'
+      });
+
+      const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
+      expect(toggleButton).not.toBeNull();
+      expect(overlay.classList.contains('roster-hud-open')).toBe(false);
+      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
+      expect(rosterContainer.hidden).toBe(true);
+
+      toggleButton?.click();
+
+      expect(overlay.classList.contains('roster-hud-open')).toBe(true);
+      expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
+      expect(rosterContainer.hidden).toBe(false);
+
+      toggleButton?.click();
+
+      expect(overlay.classList.contains('roster-hud-open')).toBe(false);
+      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
+      expect(rosterContainer.hidden).toBe(true);
+
+      hud.destroy();
+    } finally {
+      overlay.remove();
+    }
+  });
+
+  it('opens and closes the roster overlay when programmatic events fire', () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    try {
+      const layout = ensureHudLayout(overlay);
+      const rosterContainer = layout.tabs.panels.roster;
+      const hud = setupRosterHUD(rosterContainer, {
+        rosterIcon: '/icon.svg',
+        toggleIcon: '/toggle.svg'
+      });
+
+      const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
+      expect(toggleButton).not.toBeNull();
+      expect(overlay.classList.contains('roster-hud-open')).toBe(false);
+
+      rosterContainer.dispatchEvent(
+        new CustomEvent('sauna-roster:expand', { bubbles: true })
+      );
+
+      expect(overlay.classList.contains('roster-hud-open')).toBe(true);
+      expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
+
+      rosterContainer.dispatchEvent(
+        new CustomEvent('sauna-roster:collapse', { bubbles: true })
+      );
+
+      expect(overlay.classList.contains('roster-hud-open')).toBe(false);
+      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
+
+      hud.destroy();
+    } finally {
+      overlay.remove();
+    }
+  });
+
   it('notifies behavior changes when the behavior buttons are clicked', () => {
     const container = makeContainer();
     const onBehaviorChange = vi.fn();
@@ -197,6 +278,7 @@ describe('rosterHUD', () => {
     try {
       const hud = setupRosterHUD(container, {
         rosterIcon: '/icon.svg',
+        toggleIcon: '/toggle.svg',
         onBehaviorChange
       });
 

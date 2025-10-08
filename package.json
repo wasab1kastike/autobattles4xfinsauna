@@ -11,9 +11,10 @@
     "preview": "vite preview",
     "audio:lint": "vite-node scripts/audio/loudness-check.ts",
     "export:sprites": "vite-node tools/export-sprites.ts",
-    "test": "npm run audio:lint && vitest run && node scripts/check-demo-link.js && npm run verify:docs",
+    "test": "npm run audio:lint && vitest run && node scripts/check-demo-link.js && npm run verify:docs && npm run verify:pages",
     "check:demo": "node scripts/check-demo-link.js",
     "verify:docs": "node scripts/check-docs-commit.js",
+    "verify:pages": "node scripts/check-pages-build.js",
     "simulate": "vite-node scripts/simulate.ts"
   },
   "devDependencies": {
