@@ -2,17 +2,18 @@ import farm from '../../assets/sprites/farm.svg';
 import barracks from '../../assets/sprites/barracks.svg';
 import city from '../../assets/sprites/city.svg';
 import mine from '../../assets/sprites/mine.svg';
-import saunojaVanguard from '../../assets/units/saunoja-01.png';
-import saunojaGuardian from '../../assets/units/saunoja-02.png';
-import saunojaSeer from '../../assets/units/saunoja-03.png';
-import enemyOrcVanguard from '../../assets/units/enemy-orc-1.png';
-import enemyOrcWarlock from '../../assets/units/enemy-orc-2.png';
 import saunaBeerIcon from '../../assets/ui/sauna-beer.svg';
 import saunaRosterIcon from '../../assets/ui/saunoja-roster.svg';
 import resourceIcon from '../../assets/ui/resource.svg';
 import soundIcon from '../../assets/ui/sound.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
 import type { AssetPaths, LoadedAssets } from '../loader.ts';
+
+const SAUNOJA_VANGUARD = '/assets/units/saunoja-01.png';
+const SAUNOJA_GUARDIAN = '/assets/units/saunoja-02.png';
+const SAUNOJA_SEER = '/assets/units/saunoja-03.png';
+const ENEMY_ORC_VANGUARD = '/assets/units/enemy-orc-1.png';
+const ENEMY_ORC_WARLOCK = '/assets/units/enemy-orc-2.png';
 
 export const uiIcons = {
   saunaBeer: saunaBeerIcon,
@@ -31,18 +32,18 @@ export const assetPaths: AssetPaths = {
     'building-barracks': barracks,
     'building-city': city,
     'building-mine': mine,
-    'unit-soldier': saunojaGuardian,
-    'unit-archer': saunojaSeer,
-    'unit-avanto-marauder': enemyOrcVanguard,
-    'unit-marauder': enemyOrcVanguard,
-    'unit-raider': enemyOrcVanguard,
-    'unit-raider-captain': enemyOrcWarlock,
-    'unit-raider-shaman': enemyOrcWarlock,
-    'unit-enemy-orc-1': enemyOrcVanguard,
-    'unit-enemy-orc-2': enemyOrcWarlock,
-    'unit-saunoja': saunojaVanguard,
-    'unit-saunoja-guardian': saunojaGuardian,
-    'unit-saunoja-seer': saunojaSeer,
+    'unit-soldier': SAUNOJA_GUARDIAN,
+    'unit-archer': SAUNOJA_SEER,
+    'unit-avanto-marauder': ENEMY_ORC_VANGUARD,
+    'unit-marauder': ENEMY_ORC_VANGUARD,
+    'unit-raider': ENEMY_ORC_VANGUARD,
+    'unit-raider-captain': ENEMY_ORC_WARLOCK,
+    'unit-raider-shaman': ENEMY_ORC_WARLOCK,
+    'unit-enemy-orc-1': ENEMY_ORC_VANGUARD,
+    'unit-enemy-orc-2': ENEMY_ORC_WARLOCK,
+    'unit-saunoja': SAUNOJA_VANGUARD,
+    'unit-saunoja-guardian': SAUNOJA_GUARDIAN,
+    'unit-saunoja-seer': SAUNOJA_SEER,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
     'icon-resource': uiIcons.resource,

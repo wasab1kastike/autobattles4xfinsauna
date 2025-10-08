@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Point the unit sprite loader at the published PNG filenames and align the
+  docs assets so the static site reliably loads every polished Saunoja and orc
+  portrait.
+
 - Detach the combat log from the events tab into a fixed console footer with a
   collapsible header, persist the collapse preference, and refresh styling plus
   HUD tests for the compact UX.
