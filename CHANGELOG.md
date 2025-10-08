@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Align the Vite base path with the GitHub Pages mount so portrait assets load
+  from `/autobattles4xfinsauna/` in production while keeping local development
+  rooted at `/`.
+
 - Resolve the unit portrait loader to Vite-managed URLs so hashed Saunoja and
   orc PNGs load without 404s in the runtime.
 
