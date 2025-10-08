@@ -6,6 +6,10 @@
   variant switches, keeping roster and icon panels visible after toggling the
   right-side collapse.
 
+- Replace the right-panel tab strip with a left-side HUD navigation card that
+  drives roster, policy, and event views, reparent the policy console into the
+  command sheet, and refresh styles plus tests for the streamlined layout.
+
 - Extract the roster orchestrator into `game/orchestrators/roster.ts`, wire it
   through the runtime dependency hooks, update HUD and test imports, and cover
   roster entry sorting plus summary selection with focused Vitest cases.
