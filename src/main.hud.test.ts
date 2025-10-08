@@ -87,6 +87,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
 
     orchestrator.cleanup();
     await Promise.resolve();
@@ -95,6 +96,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(0);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(0);
 
     orchestrator.setup(canvas, resourceBar, overlay);
     await Promise.resolve();
@@ -103,6 +105,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
+    expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
   });
 
   it('ignores the legacy HUD v2 flag and renders the classic HUD', async () => {
@@ -132,6 +135,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelector('[data-ui="inventory-toggle"]')).not.toBeNull();
     expect(document.querySelector('#inventory-stash-panel')).not.toBeNull();
     expect(document.querySelector('#right-panel')).not.toBeNull();
+    expect(document.querySelector('[data-hud-navigation]')).not.toBeNull();
 
     orchestrator.cleanup();
     await Promise.resolve();
