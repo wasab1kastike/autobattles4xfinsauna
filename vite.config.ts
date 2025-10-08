@@ -27,14 +27,33 @@ if (!resolvedCommit) {
 
 const GIT_COMMIT = JSON.stringify(resolvedCommit ?? 'unknown');
 
-const repoBase = '/autobattles4xfinsauna/';
 const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.GITHUB_ACTIONS;
+
+const rawBasePath =
+  process.env.PUBLIC_BASE_PATH ??
+  process.env.BASE_PATH ??
+  process.env.VITE_BASE_PATH ??
+  process.env.VITE_BASE ??
+  '';
+
+const normalizeBase = (value: string): string => {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return '/';
+  }
+
+  const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
+};
+
+const deploymentBase = normalizeBase(rawBasePath);
 
 // Vite configuration
 export default defineConfig({
   root: 'src',
-  // Ensure assets resolve correctly when hosted on GitHub Pages.
-  base: isLocalDev ? '/' : repoBase,
+  // Resolve the base path dynamically so root-domain deployments default to '/'.
+  base: isLocalDev ? '/' : deploymentBase,
   publicDir: '../public',
   plugins: [tailwindcss()],
   build: {
