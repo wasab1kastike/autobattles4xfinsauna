@@ -85,6 +85,13 @@ describe('right panel log filters', () => {
 
     await settle();
 
+    const logPanel = document.querySelector<HTMLElement>('#right-panel-log');
+    expect(logPanel).toBeTruthy();
+    expect(logPanel?.classList.contains('panel-log--collapsed')).toBe(false);
+
+    const collapseToggle = document.querySelector<HTMLButtonElement>('.panel-log__toggle');
+    expect(collapseToggle?.getAttribute('aria-expanded')).toBe('true');
+
     const combatEntry = document.querySelector<HTMLElement>(
       '#event-log .panel-log-entry[data-log-type="combat"]'
     );
@@ -96,6 +103,15 @@ describe('right panel log filters', () => {
     expect(lootEntry).toBeTruthy();
     expect(combatEntry?.hidden).toBe(false);
     expect(lootEntry?.hidden).toBe(false);
+
+    collapseToggle?.click();
+
+    await settle();
+
+    const logBody = document.querySelector<HTMLElement>('#panel-log-body');
+    expect(logPanel?.classList.contains('panel-log--collapsed')).toBe(true);
+    expect(logBody?.hidden).toBe(true);
+    expect(collapseToggle?.getAttribute('aria-expanded')).toBe('false');
 
     const combatFilter = document.querySelector<HTMLButtonElement>(
       '.log-chip[data-log-filter="combat"]'
@@ -110,12 +126,16 @@ describe('right panel log filters', () => {
 
     const prefs = readLogPreferences();
     expect(prefs.mutedTypes).toContain('combat');
+    expect(prefs.isCollapsed).toBe(true);
 
     controller.dispose();
 
     renderShell();
     const controllerAgain = setupRightPanel(state);
     await settle();
+
+    const restoredLogPanel = document.querySelector<HTMLElement>('#right-panel-log');
+    expect(restoredLogPanel?.classList.contains('panel-log--collapsed')).toBe(true);
 
     const combatFilterAgain = document.querySelector<HTMLButtonElement>(
       '.log-chip[data-log-filter="combat"]'

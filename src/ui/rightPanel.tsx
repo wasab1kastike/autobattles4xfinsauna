@@ -463,24 +463,28 @@ export function setupRightPanel(
   eventsView.classList.add('panel-view', 'panel-view--events');
   eventsView.setAttribute('role', 'region');
   eventsView.setAttribute('aria-live', 'polite');
-  eventsView.setAttribute('aria-label', 'Events and combat log');
+  eventsView.setAttribute('aria-label', 'Events feed');
 
   const eventsContainer = doc.createElement('div');
   eventsContainer.className = 'panel-section panel-section--scroll panel-section--events';
   eventsContainer.dataset.hudTabPanel = 'events';
   eventsView.appendChild(eventsContainer);
 
-  const logSection = doc.createElement('div');
+  viewRoot.append(rosterView, policiesView, eventsView);
+
+  const logPreferences = readLogPreferences();
+
+  const logSection = doc.createElement('section');
   logSection.id = 'right-panel-log';
   logSection.setAttribute('role', 'region');
   logSection.setAttribute('aria-label', 'Combat log');
-  logSection.classList.add('panel-view__log');
-
-  const logContainer = doc.createElement('section');
-  logContainer.className = 'panel-log';
+  logSection.className = 'panel-log';
 
   const logHeader = doc.createElement('header');
   logHeader.className = 'panel-log__header';
+
+  const logHeadline = doc.createElement('div');
+  logHeadline.className = 'panel-log__headline';
 
   const logTitle = doc.createElement('h3');
   logTitle.className = 'panel-log__title';
@@ -489,7 +493,28 @@ export function setupRightPanel(
   const logTotal = doc.createElement('span');
   logTotal.className = 'panel-log__total';
   logTotal.textContent = '0 entries';
-  logHeader.append(logTitle, logTotal);
+  logHeadline.append(logTitle, logTotal);
+
+  const logToggle = doc.createElement('button');
+  logToggle.type = 'button';
+  logToggle.className = 'panel-log__toggle';
+  logToggle.setAttribute('aria-controls', 'panel-log-body');
+
+  const logToggleLabel = doc.createElement('span');
+  logToggleLabel.className = 'panel-log__toggle-label';
+  logToggleLabel.textContent = 'Collapse';
+
+  const logToggleIcon = doc.createElement('span');
+  logToggleIcon.className = 'panel-log__chevron';
+  logToggleIcon.setAttribute('aria-hidden', 'true');
+
+  logToggle.append(logToggleLabel, logToggleIcon);
+
+  logHeader.append(logHeadline, logToggle);
+
+  const logBody = doc.createElement('div');
+  logBody.className = 'panel-log__body';
+  logBody.id = 'panel-log-body';
 
   const logFilters = doc.createElement('div');
   logFilters.className = 'panel-log__filters';
@@ -500,11 +525,9 @@ export function setupRightPanel(
   logFeed.setAttribute('role', 'log');
   logFeed.setAttribute('aria-live', 'polite');
 
-  logContainer.append(logHeader, logFilters, logFeed);
-  logSection.appendChild(logContainer);
-  eventsView.appendChild(logSection);
-
-  viewRoot.append(rosterView, policiesView, eventsView);
+  logBody.append(logFilters, logFeed);
+  logSection.append(logHeader, logBody);
+  content.appendChild(logSection);
 
   const viewContainers: Record<RightPanelView, HTMLElement> = {
     roster: rosterView,
@@ -761,8 +784,30 @@ export function setupRightPanel(
   const entryStates = new Map<string, LogEntryNodeState>();
   const typeCounts = new Map<LogEventType, number>();
   const typeBadges = new Map<LogEventType, HTMLSpanElement>();
-  const mutedTypes = new Set(readLogPreferences().mutedTypes ?? []);
+  const mutedTypes = new Set(logPreferences.mutedTypes ?? []);
+  let logCollapsed = Boolean(logPreferences.isCollapsed);
   const activeTypes = new Set<LogEventType>();
+
+  const persistLogPreferences = (): void => {
+    writeLogPreferences({
+      mutedTypes: Array.from(mutedTypes),
+      isCollapsed: logCollapsed
+    });
+  };
+
+  const updateLogTogglePresentation = (): void => {
+    logSection.classList.toggle('panel-log--collapsed', logCollapsed);
+    logBody.hidden = logCollapsed;
+    logBody.setAttribute('aria-hidden', logCollapsed ? 'true' : 'false');
+    logFeed.setAttribute('aria-hidden', logCollapsed ? 'true' : 'false');
+    logToggle.setAttribute('aria-expanded', logCollapsed ? 'false' : 'true');
+    logToggleLabel.textContent = logCollapsed ? 'Expand' : 'Collapse';
+    const toggleTitle = logCollapsed ? 'Expand the combat log' : 'Collapse the combat log';
+    logToggle.setAttribute('aria-label', toggleTitle);
+    logToggle.title = toggleTitle;
+  };
+
+  updateLogTogglePresentation();
 
   for (const type of LOG_EVENT_ORDER) {
     if (!mutedTypes.has(type)) {
@@ -778,6 +823,27 @@ export function setupRightPanel(
     typeof requestAnimationFrame === 'function'
       ? requestAnimationFrame
       : (cb: FrameRequestCallback) => setTimeout(cb, 16);
+
+  const setLogCollapsed = (collapsed: boolean): void => {
+    if (logCollapsed === collapsed) {
+      return;
+    }
+    logCollapsed = collapsed;
+    if (logCollapsed) {
+      stickToBottom = true;
+    }
+    updateLogTogglePresentation();
+    persistLogPreferences();
+    if (!logCollapsed) {
+      scrollToBottom();
+    }
+  };
+
+  const handleLogToggleClick = (): void => {
+    setLogCollapsed(!logCollapsed);
+  };
+  logToggle.addEventListener('click', handleLogToggleClick);
+  disposers.push(() => logToggle.removeEventListener('click', handleLogToggleClick));
 
   const formatCount = (value: number): string => numberFormatter.format(Math.max(0, value));
 
@@ -806,11 +872,22 @@ export function setupRightPanel(
   };
 
   const isNearBottom = (): boolean => {
+    if (logCollapsed) {
+      return false;
+    }
     return logFeed.scrollHeight - (logFeed.scrollTop + logFeed.clientHeight) < 48;
   };
 
   const scrollToBottom = (): void => {
+    if (logCollapsed) {
+      stickToBottom = true;
+      return;
+    }
     scheduleFrame(() => {
+      if (logCollapsed) {
+        stickToBottom = true;
+        return;
+      }
       logFeed.scrollTop = logFeed.scrollHeight;
       stickToBottom = true;
     });
@@ -920,7 +997,7 @@ export function setupRightPanel(
   };
 
   const appendEntry = (entry: LogEntry, hydrate = false): void => {
-    const stick = hydrate ? true : isNearBottom() || stickToBottom;
+    const stick = logCollapsed ? false : hydrate ? true : isNearBottom() || stickToBottom;
     const state = renderLogEntry(entry);
     entryStates.set(entry.id, state);
     logFeed.appendChild(state.element);
@@ -1007,7 +1084,7 @@ export function setupRightPanel(
       }
       button.classList.toggle('is-muted', !activeTypes.has(type));
       button.setAttribute('aria-pressed', activeTypes.has(type) ? 'true' : 'false');
-      writeLogPreferences({ mutedTypes: Array.from(mutedTypes) });
+      persistLogPreferences();
       refreshEntryVisibility();
     });
   }
@@ -1015,6 +1092,9 @@ export function setupRightPanel(
   updateTotalBadge();
 
   const handleLogScroll = (): void => {
+    if (logCollapsed) {
+      return;
+    }
     stickToBottom = isNearBottom();
   };
   logFeed.addEventListener('scroll', handleLogScroll, { passive: true });
