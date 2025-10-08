@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Resolve the Vite deployment base from environment configuration so root-hosted
+  builds default to `/` while GitHub Pages paths remain opt-in.
+
 - Align the Vite base path with the GitHub Pages mount so portrait assets load
   from `/autobattles4xfinsauna/` in production while keeping local development
   rooted at `/`.
