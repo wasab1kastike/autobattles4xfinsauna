@@ -538,15 +538,20 @@ export function setupRightPanel(
   const viewListeners = new Set<(view: RightPanelView) => void>();
   let activeView: RightPanelView = 'roster';
   let syncingBottomTabs = false;
+  let skipInitialRosterExpand = true;
 
   const syncRosterState = (view: RightPanelView) => {
+    const shouldSkipExpand = skipInitialRosterExpand;
+    skipInitialRosterExpand = false;
     if (view === 'roster') {
       if (!syncingBottomTabs) {
         syncingBottomTabs = true;
         bottomTabs.setActive('roster');
         syncingBottomTabs = false;
       }
-      dispatchRosterEvent('expand');
+      if (!shouldSkipExpand) {
+        dispatchRosterEvent('expand');
+      }
     } else {
       dispatchRosterEvent('collapse');
     }
@@ -1123,7 +1128,6 @@ export function setupRightPanel(
 
   refreshEntryVisibility();
 
-  showView('roster');
   const dispose = (): void => {
     for (const cleanup of disposers.splice(0)) {
       try {

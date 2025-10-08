@@ -1,4 +1,4 @@
-import { ensureHudLayout, type HudBottomTabId } from './layout.ts';
+import { ensureHudLayout, type HudBottomTabId, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 import type { UnitBehavior } from '../unit/types.ts';
 
@@ -13,6 +13,7 @@ const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
 
 type RosterHudOptions = {
   rosterIcon: string;
+  toggleIcon: string;
   summaryLabel?: string;
   onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
 };
@@ -75,14 +76,90 @@ export function setupRosterHUD(
   container: HTMLElement,
   options: RosterHudOptions
 ): RosterHudController {
-  const { rosterIcon, summaryLabel = 'Saunoja Roster' } = options;
+  const { rosterIcon, toggleIcon, summaryLabel = 'Saunoja Roster' } = options;
 
   const doc = container.ownerDocument ?? document;
   const overlay =
     container.closest<HTMLElement>('#ui-overlay') ?? doc.getElementById('ui-overlay');
   const layout = overlay ? ensureHudLayout(overlay) : null;
   const bottomTabs = layout?.tabs ?? null;
+  const topLeftCluster = layout?.anchors.topLeftCluster ?? null;
   let suppressTabSync = false;
+  let rosterToggleButton: HTMLButtonElement | null = null;
+  let rosterToggleState: HTMLSpanElement | null = null;
+  let rosterToggleClickHandler: (() => void) | null = null;
+  let isOverlayOpen = false;
+
+  if (overlay?.classList.contains(ROSTER_HUD_OPEN_CLASS)) {
+    overlay.classList.remove(ROSTER_HUD_OPEN_CLASS);
+  }
+
+  if (bottomTabs) {
+    const activeTab = bottomTabs.getActive();
+    bottomTabs.setActive(activeTab);
+  }
+
+  const rosterPanelId =
+    container.id && container.id.trim().length > 0 ? container.id : 'resource-bar';
+  if (!container.id || container.id.trim().length === 0) {
+    container.id = rosterPanelId;
+  }
+
+  if (overlay && topLeftCluster) {
+    rosterToggleButton = doc.createElement('button');
+    rosterToggleButton.type = 'button';
+    rosterToggleButton.className = 'hud-roster-toggle';
+    rosterToggleButton.dataset.ui = 'roster-toggle';
+    rosterToggleButton.setAttribute('aria-expanded', 'false');
+    rosterToggleButton.setAttribute('aria-controls', rosterPanelId);
+    rosterToggleButton.dataset.state = 'closed';
+
+    const iconWrap = doc.createElement('span');
+    iconWrap.className = 'hud-roster-toggle__icon';
+    iconWrap.setAttribute('aria-hidden', 'true');
+
+    const crest = doc.createElement('img');
+    crest.src = toggleIcon;
+    crest.alt = '';
+    crest.decoding = 'async';
+    crest.loading = 'lazy';
+    crest.draggable = false;
+    crest.className = 'hud-roster-toggle__icon-img';
+    iconWrap.appendChild(crest);
+
+    const textWrap = doc.createElement('span');
+    textWrap.className = 'hud-roster-toggle__text';
+
+    const title = doc.createElement('span');
+    title.className = 'hud-roster-toggle__title';
+    title.textContent = 'Roster';
+
+    rosterToggleState = doc.createElement('span');
+    rosterToggleState.className = 'hud-roster-toggle__state';
+    rosterToggleState.textContent = 'Closed';
+    rosterToggleState.dataset.state = 'closed';
+
+    textWrap.append(title, rosterToggleState);
+    rosterToggleButton.append(iconWrap, textWrap);
+
+    const firstChild = topLeftCluster.firstElementChild;
+    if (firstChild) {
+      topLeftCluster.insertBefore(rosterToggleButton, firstChild);
+    } else {
+      topLeftCluster.appendChild(rosterToggleButton);
+    }
+  }
+
+  if (rosterToggleButton) {
+    rosterToggleClickHandler = () => {
+      const type = isOverlayOpen ? 'collapse' : 'expand';
+      const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
+      container.dispatchEvent(event);
+    };
+    rosterToggleButton.addEventListener('click', rosterToggleClickHandler);
+  }
+
+  updateRosterToggleButton();
 
   const syncBottomTab = (id: HudBottomTabId): void => {
     if (!bottomTabs) {
@@ -148,11 +225,11 @@ export function setupRosterHUD(
   toggleLabel.classList.add('sauna-roster__toggle-label');
   toggleLabel.textContent = 'Show details';
 
-  const toggleIcon = document.createElement('span');
-  toggleIcon.classList.add('sauna-roster__toggle-icon');
-  toggleIcon.setAttribute('aria-hidden', 'true');
+  const detailToggleIcon = document.createElement('span');
+  detailToggleIcon.classList.add('sauna-roster__toggle-icon');
+  detailToggleIcon.setAttribute('aria-hidden', 'true');
 
-  toggle.append(toggleLabel, toggleIcon);
+  toggle.append(toggleLabel, detailToggleIcon);
 
   header.append(summary, toggle);
 
@@ -281,6 +358,21 @@ export function setupRosterHUD(
   let isExpanded = false;
   let hasFeaturedCard = false;
 
+  function updateRosterToggleButton(): void {
+    if (!rosterToggleButton) {
+      return;
+    }
+    const label = isOverlayOpen ? 'Close Saunoja roster' : 'Open Saunoja roster';
+    rosterToggleButton.setAttribute('aria-label', label);
+    rosterToggleButton.title = label;
+    rosterToggleButton.setAttribute('aria-expanded', isOverlayOpen ? 'true' : 'false');
+    rosterToggleButton.dataset.state = isOverlayOpen ? 'open' : 'closed';
+    if (rosterToggleState) {
+      rosterToggleState.textContent = isOverlayOpen ? 'Open' : 'Closed';
+      rosterToggleState.dataset.state = isOverlayOpen ? 'open' : 'closed';
+    }
+  }
+
   function applyDetailVisibility(): void {
     const allowDetails = hasFeaturedCard && isExpanded;
     root.dataset.expanded = allowDetails ? 'true' : 'false';
@@ -295,7 +387,7 @@ export function setupRosterHUD(
       toggle.setAttribute('aria-label', 'Roster details unavailable');
       toggle.title = 'Roster details unavailable';
       toggleLabel.textContent = 'Details unavailable';
-      toggleIcon.dataset.state = 'closed';
+      detailToggleIcon.dataset.state = 'closed';
       return;
     }
 
@@ -306,12 +398,33 @@ export function setupRosterHUD(
     toggle.setAttribute('aria-label', label);
     toggle.title = label;
     toggleLabel.textContent = `${verb} details`;
-    toggleIcon.dataset.state = allowDetails ? 'open' : 'closed';
+    detailToggleIcon.dataset.state = allowDetails ? 'open' : 'closed';
   }
 
   function setExpanded(next: boolean): void {
     isExpanded = next && hasFeaturedCard;
     applyDetailVisibility();
+  }
+
+  function setOverlayOpen(next: boolean, options: { suppressSync?: boolean } = {}): void {
+    const safeNext = Boolean(next);
+    isOverlayOpen = safeNext;
+    if (overlay) {
+      overlay.classList.toggle(ROSTER_HUD_OPEN_CLASS, safeNext);
+    }
+    updateRosterToggleButton();
+    if (bottomTabs) {
+      const activeTab = bottomTabs.getActive();
+      bottomTabs.setActive(activeTab);
+    }
+    if (safeNext) {
+      if (!options.suppressSync) {
+        syncBottomTab('roster');
+      }
+      setExpanded(true);
+    } else {
+      setExpanded(false);
+    }
   }
 
   const handleToggleClick = () => {
@@ -324,20 +437,13 @@ export function setupRosterHUD(
   toggle.addEventListener('click', handleToggleClick);
 
   const handleExpandRequest = () => {
-    if (!suppressTabSync) {
-      syncBottomTab('roster');
-    }
-    setExpanded(true);
+    setOverlayOpen(true);
   };
   const handleCollapseRequest = () => {
-    setExpanded(false);
+    setOverlayOpen(false);
   };
   const handleToggleRequest = () => {
-    const next = !isExpanded;
-    if (next && !suppressTabSync) {
-      syncBottomTab('roster');
-    }
-    setExpanded(next);
+    setOverlayOpen(!isOverlayOpen);
   };
 
   container.addEventListener('sauna-roster:expand', handleExpandRequest);
@@ -514,6 +620,17 @@ export function setupRosterHUD(
       container.removeEventListener('sauna-roster:expand', handleExpandRequest);
       container.removeEventListener('sauna-roster:collapse', handleCollapseRequest);
       container.removeEventListener('sauna-roster:toggle', handleToggleRequest);
+      if (rosterToggleButton && rosterToggleClickHandler) {
+        rosterToggleButton.removeEventListener('click', rosterToggleClickHandler);
+      }
+      rosterToggleButton?.remove();
+      rosterToggleButton = null;
+      rosterToggleState = null;
+      rosterToggleClickHandler = null;
+      if (overlay) {
+        overlay.classList.remove(ROSTER_HUD_OPEN_CLASS);
+      }
+      isOverlayOpen = false;
       container.replaceChildren();
     }
   } satisfies RosterHudController;
