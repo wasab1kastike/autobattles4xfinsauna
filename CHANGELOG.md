@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Detach the combat log from the events tab into a fixed console footer with a
+  collapsible header, persist the collapse preference, and refresh styling plus
+  HUD tests for the compact UX.
+
 - Restore the HUD overlay grid so the base and region classes persist across
   variant switches, keeping roster and icon panels visible after toggling the
   right-side collapse.
