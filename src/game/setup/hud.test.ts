@@ -56,6 +56,7 @@ describe('initializeClassicHud', () => {
     const result = initializeClassicHud({
       resourceBarEl,
       rosterIcon: 'roster.svg',
+      rosterToggleIcon: 'toggle.svg',
       sauna: {} as Sauna,
       previousDisposeRightPanel: previousDispose,
       pendingRosterRenderer: null,
@@ -96,6 +97,7 @@ describe('initializeClassicHud', () => {
     expect(result.pendingRosterRenderer).toBe(panelRenderer);
     expect(createRightPanel).toHaveBeenCalledTimes(1);
     const hudOptions = setupRosterHUD.mock.calls[0]?.[1];
+    expect(hudOptions?.toggleIcon).toBe('toggle.svg');
     expect(typeof hudOptions?.onBehaviorChange).toBe('function');
     hudOptions?.onBehaviorChange?.('alpha', 'attack');
     expect(changeBehavior).toHaveBeenCalledWith('alpha', 'attack');

@@ -59,6 +59,7 @@ const OVERLAY_GRID_CLASSES = {
 } as const;
 
 export const HUD_OVERLAY_COLLAPSED_CLASS = OVERLAY_GRID_CLASSES.collapsed;
+export const ROSTER_HUD_OPEN_CLASS = 'roster-hud-open';
 
 const REGION_GRID_CLASSES: Record<keyof HudLayoutRegions, string[]> = {
   top: ['col-span-3', 'row-span-1', 'row-start-1'],
@@ -362,9 +363,11 @@ function ensureBottomTabs(
         button.dataset.active = isActive ? 'true' : 'false';
       }
       if (panel) {
-        panel.hidden = !isActive;
-        panel.dataset.active = isActive ? 'true' : 'false';
-        panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        const rosterOpen = overlay.classList.contains(ROSTER_HUD_OPEN_CLASS);
+        const shouldShow = isActive && (tabId !== 'roster' || rosterOpen);
+        panel.hidden = !shouldShow;
+        panel.dataset.active = shouldShow ? 'true' : 'false';
+        panel.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
       }
     }
   };
