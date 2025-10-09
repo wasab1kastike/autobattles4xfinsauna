@@ -237,7 +237,32 @@ export function saveArtocoinBalance(
 
 export function resetArtocoinBalance(): void {
   const storage = storageOrNull();
-  storage?.removeItem(ARTOCOIN_STORAGE_KEY);
+  let previous = DEFAULT_ARTOCOIN_BALANCE;
+
+  if (storage) {
+    try {
+      const rawPrevious = storage.getItem(ARTOCOIN_STORAGE_KEY);
+      if (rawPrevious !== null) {
+        previous = sanitizeBalance(rawPrevious);
+      }
+    } catch (error) {
+      console.warn('Failed to read previous artocoin balance before reset', error);
+    }
+
+    try {
+      storage.removeItem(ARTOCOIN_STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear artocoin balance during reset', error);
+    }
+  } else {
+    previous = loadArtocoinBalance();
+  }
+
+  emitArtocoinChange({
+    balance: DEFAULT_ARTOCOIN_BALANCE,
+    delta: DEFAULT_ARTOCOIN_BALANCE - previous,
+    reason: 'set'
+  });
 }
 
 export interface SpendArtocoinResult {
