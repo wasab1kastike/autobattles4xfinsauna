@@ -7,6 +7,7 @@
   overlay state, and refreshing tests plus styling so the command dock stays
   trim until the roster is invoked.
 
+
 - Resolve the Vite deployment base from environment configuration so root-hosted
   builds default to `/` while GitHub Pages paths remain opt-in.
 
