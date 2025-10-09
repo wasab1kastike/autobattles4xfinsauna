@@ -3,6 +3,7 @@ import {
   ARTOCOIN_STORAGE_KEY,
   calculateArtocoinPayout,
   loadArtocoinBalance,
+  onArtocoinChange,
   resetArtocoinBalance,
   saveArtocoinBalance
 } from './artocoin.ts';
@@ -134,5 +135,21 @@ describe('artocoin progression helpers', () => {
     });
     expect(result.breakdown.difficultyMultiplier).toBeCloseTo(1.48, 2);
     expect(result.artocoins).toBeGreaterThan(100);
+  });
+
+  it('notifies artocoin listeners when the balance resets to zero', () => {
+    saveArtocoinBalance(37);
+
+    const listener = vi.fn();
+    const unsubscribe = onArtocoinChange(listener);
+
+    resetArtocoinBalance();
+    unsubscribe();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    const event = listener.mock.calls[0]?.[0];
+    expect(event?.balance).toBe(0);
+    expect(event?.delta).toBe(-37);
+    expect(event?.reason).toBe('set');
   });
 });

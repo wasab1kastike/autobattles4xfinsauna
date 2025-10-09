@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Capture the previous artocoin balance before clearing storage, emit the reset
+  notification so cached listeners update immediately, and cover the regression
+  with a focused progression test.
 - Normalize roster counts in the objective tracker so NaN values fall back to
   zero, keep progress metrics clamped to non-negative integers, and cover the
   roster wipe defeat flow when the roster feed misbehaves.
