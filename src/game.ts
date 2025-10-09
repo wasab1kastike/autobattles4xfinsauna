@@ -21,11 +21,9 @@ import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpaw
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
 import type {
-  SaunaStatusPayload,
   SelectionItemSlot,
   SelectionStatusChip,
-  UnitSelectionPayload,
-  UnitStatusPayload
+  UnitSelectionPayload
 } from './ui/fx/types.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
@@ -51,6 +49,7 @@ import {
   setRosterCapValue as setRosterCapValueImpl
 } from './game/runtime/index.ts';
 import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
+import { GameController } from './game/GameController.ts';
 import {
   createRosterService,
   type RosterPersonaBaseline,
@@ -77,7 +76,7 @@ import { playSafe } from './audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from './sisu/burst.ts';
 import type { GameEvent, RosterEntry } from './ui/rightPanel.tsx';
 import { createTutorialController, type TutorialController } from './ui/tutorial/Tutorial.tsx';
-import { draw as render, type VisionSource } from './render/renderer.ts';
+import { draw as render } from './render/renderer.ts';
 import { createUnitCombatAnimator, type UnitCombatAnimator } from './render/combatAnimations.ts';
 import { Animator } from './render/Animator.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
@@ -1019,33 +1018,42 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
-export function setupGame(
-  canvasEl: HTMLCanvasElement,
-  resourceBarEl: HTMLElement,
-  overlayEl: HTMLElement
-): void {
-  hudElapsedMs = 0;
-  notifyHudElapsed();
-  notifyEnemyRamp(null);
-  getGameRuntime().setupGame(canvasEl, resourceBarEl, overlayEl);
-}
-
-const map = new HexMap(10, 10, 32);
-const animator = new Animator(() => invalidateFrame());
-const battleManager = new BattleManager(map, animator);
-const mapRenderer = new HexMapRenderer(map);
-const invalidateTerrainCache = (): void => {
-  mapRenderer.invalidateCache();
-  invalidateFrame();
-};
-eventBus.on('buildingPlaced', invalidateTerrainCache);
-eventBus.on('buildingRemoved', invalidateTerrainCache);
-// Ensure all tiles start fogged
-map.forEachTile((t) => t.setFogged(true));
-resetAutoFrame();
-
 const units: Unit[] = [];
 const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
+
+const gameController = new GameController({
+  eventBus,
+  getGameRuntime: () => getGameRuntime(),
+  invalidateFrame: () => invalidateFrame(),
+  resetAutoFrame: () => resetAutoFrame(),
+  notifyHudElapsed: () => notifyHudElapsed(),
+  notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
+  setHudElapsedMs: (value) => {
+    hudElapsedMs = value;
+  },
+  friendlyVisionUnitScratch,
+  overlaySaunojasScratch,
+  units,
+  saunojas,
+  saunojaToUnit,
+  unitsById,
+  getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
+  getSauna: () => sauna ?? null,
+  rosterService,
+  render,
+  getAssets,
+  drawSaunojas,
+  createHexMap: () => new HexMap(10, 10, 32),
+  createAnimator: (invalidate) => new Animator(invalidate),
+  createBattleManager: (map, animator) => new BattleManager(map, animator),
+  createMapRenderer: (map) => new HexMapRenderer(map)
+});
+
+const map = gameController.map;
+const animator = gameController.animator;
+const battleManager = gameController.battleManager;
+const mapRenderer = gameController.mapRenderer;
+const invalidateTerrainCache = gameController.getTerrainInvalidator();
 
 function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
@@ -1875,8 +1883,16 @@ function focusSaunojaById(unitId: string): void {
   invalidateFrame();
 }
 
+export function setupGame(
+  canvasEl: HTMLCanvasElement,
+  resourceBarEl: HTMLElement,
+  overlayEl: HTMLElement
+): void {
+  gameController.setupGame(canvasEl, resourceBarEl, overlayEl);
+}
+
 export function handleCanvasClick(world: PixelCoord): void {
-  getGameRuntime().handleCanvasClick(world);
+  gameController.handleCanvasClick(world);
 }
 
 function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
@@ -1943,113 +1959,7 @@ function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
 }
 
 export function draw(): void {
-  const runtime = getGameRuntime();
-  runtime.markFrameClean();
-  runtime.resetIdleFrameCount();
-  const canvas = runtime.getCanvas();
-  if (!canvas) {
-    return;
-  }
-  const ctx = canvas.getContext('2d');
-  const assets = getAssets();
-  if (!ctx || !assets) {
-    runtime.markFrameDirty();
-    return;
-  }
-  const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
-  const combatAnimations = runtime.getCombatAnimations();
-  if (combatAnimations) {
-    combatAnimations.step(now);
-  }
-  const unitFx = runtime.getUnitFx();
-  if (unitFx) {
-    unitFx.step(now);
-  }
-  const shakeOffset = unitFx?.getShakeOffset() ?? { x: 0, y: 0 };
-  const fxOptions = unitFx
-    ? {
-        getUnitAlpha: (unit: Unit) => unitFx.getUnitAlpha(unit.id),
-        beginOverlayFrame: () => unitFx.beginStatusFrame(),
-        pushUnitStatus: (status: UnitStatusPayload) => unitFx.pushUnitStatus(status),
-        pushSaunaStatus: (status: SaunaStatusPayload | null) => unitFx.pushSaunaStatus(status),
-        commitOverlayFrame: () => unitFx.commitStatusFrame()
-      }
-    : undefined;
-  const friendlyVisionSources = friendlyVisionUnitScratch;
-  friendlyVisionSources.length = 0;
-  for (const unit of units) {
-    if (unit.faction === 'player' && !unit.isDead()) {
-      friendlyVisionSources.push(unit);
-    }
-  }
-
-  const overlaySaunojas = overlaySaunojasScratch;
-  overlaySaunojas.length = 0;
-  for (const attendant of saunojas) {
-    const attachedId = saunojaToUnit.get(attendant.id);
-    if (!attachedId) {
-      continue;
-    }
-    const attachedUnit = unitsById.get(attachedId) ?? null;
-    if (!attachedUnit || attachedUnit.isDead()) {
-      overlaySaunojas.push(attendant);
-    }
-  }
-  const saunaVision: VisionSource | null = sauna
-    ? {
-        coord: sauna.pos,
-        range: sauna.visionRange
-      }
-    : null;
-
-  ctx.save();
-  if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
-    ctx.translate(shakeOffset.x, shakeOffset.y);
-  }
-  const selected = rosterService.getSelectedCoord();
-  const saunojaLayer =
-    overlaySaunojas.length > 0
-      ? {
-          units: overlaySaunojas,
-          draw: drawSaunojas,
-          resolveRenderCoord: (attendant: Saunoja) => {
-            const unit = getAttachedUnitFor(attendant);
-            if (!unit) {
-              return null;
-            }
-            return unit.renderCoord ?? unit.coord;
-          },
-          resolveSpriteId: (attendant: Saunoja) => {
-            const unit = getAttachedUnitFor(attendant);
-            if (unit) {
-              return unit.getAppearanceId();
-            }
-            return typeof attendant.appearanceId === 'string'
-              ? attendant.appearanceId
-              : null;
-          },
-          fallbackSpriteId: 'saunoja-guardian'
-        }
-      : undefined;
-
-  render(
-    ctx,
-    mapRenderer,
-    { images: assets.images, atlas: assets.atlases.units },
-    units,
-    selected,
-    {
-      saunojas: saunojaLayer,
-      sauna,
-      saunaVision,
-      fx: fxOptions,
-      animations: combatAnimations,
-      friendlyVisionSources
-    }
-  );
-  friendlyVisionSources.length = 0;
-  overlaySaunojas.length = 0;
-  ctx.restore();
+  gameController.draw();
 }
 
 const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
@@ -2217,11 +2127,11 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
-  getGameRuntime().cleanup();
+  gameController.cleanup();
 }
 
 export async function start(): Promise<void> {
-  await getGameRuntime().start();
+  await gameController.start();
 }
 
 export { logEvent as log };
