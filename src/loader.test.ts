@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { loadAssets, AssetPaths, safeLoadJSON } from './loader.ts';
+import { loadAssets, AssetPaths, safeLoadJSON, resolveAssetUrl } from './loader.ts';
 
 describe('loadAssets', () => {
   const OriginalImage = globalThis.Image;
@@ -91,6 +91,37 @@ describe('loadAssets', () => {
     expect(result.assets.atlases.units).not.toBeNull();
     expect(result.assets.atlases.units?.slices['unit-soldier']).toBeDefined();
     errorSpy.mockRestore();
+  });
+});
+
+describe('resolveAssetUrl', () => {
+  it('returns absolute URLs unchanged', () => {
+    expect(resolveAssetUrl('https://example.com/image.png', '/app/')).toBe('https://example.com/image.png');
+  });
+
+  it('returns data URIs unchanged', () => {
+    const dataUri = 'data:image/png;base64,AAA=';
+    expect(resolveAssetUrl(dataUri, '/app/')).toBe(dataUri);
+  });
+
+  it('prefers the original path when base is root', () => {
+    expect(resolveAssetUrl('/assets/foo.png', '/')).toBe('/assets/foo.png');
+  });
+
+  it('prefixes the base path for nested deployments', () => {
+    expect(resolveAssetUrl('/assets/foo.png', '/autobattles4xfinsauna/')).toBe('/autobattles4xfinsauna/assets/foo.png');
+  });
+
+  it('handles bases without trailing slash', () => {
+    expect(resolveAssetUrl('/assets/foo.png', '/autobattles4xfinsauna')).toBe('/autobattles4xfinsauna/assets/foo.png');
+  });
+
+  it('normalizes relative base deployments', () => {
+    expect(resolveAssetUrl('/assets/foo.png', './')).toBe('./assets/foo.png');
+  });
+
+  it('ignores relative inputs that do not start with a slash', () => {
+    expect(resolveAssetUrl('assets/foo.png', '/autobattles4xfinsauna/')).toBe('assets/foo.png');
   });
 });
 
