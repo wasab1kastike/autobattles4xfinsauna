@@ -25,6 +25,7 @@ const createHudResult = () => {
     installRenderer: vi.fn(),
     renderRoster: vi.fn(),
     updateSummary: vi.fn(),
+    connectPanelBridge: vi.fn(),
   };
   const saunaUiController = {
     dispose: vi.fn(),
@@ -69,7 +70,14 @@ const createUiAdaptersMock = vi.fn((deps: unknown) => {
     createActionBarController: vi.fn(() => ({ destroy: vi.fn() })),
     createSaunaUiController: vi.fn(() => ({ dispose: vi.fn(), update: vi.fn() })),
     createInventoryHudController: vi.fn(() => ({ destroy: vi.fn() })),
-    createRightPanelBridge: vi.fn(() => ({ addEvent: vi.fn(), dispose: vi.fn(), changeBehavior: vi.fn() })),
+    createRightPanelBridge: vi.fn(() => ({
+      addEvent: vi.fn(),
+      dispose: vi.fn(),
+      changeBehavior: vi.fn(),
+      openRosterView: vi.fn(),
+      closeRosterView: vi.fn(),
+      onRosterVisibilityChange: vi.fn(() => () => {}),
+    })),
   };
   uiAdapterCalls.push({ deps, result });
   return result;

@@ -43,6 +43,8 @@ export interface InventoryHudOptions {
   readonly getSaunaShopViewModel?: () => SaunaShopViewModel | null;
   readonly onPurchaseSaunaTier?: (tierId: SaunaTierId) => PurchaseSaunaTierResult;
   readonly subscribeToSaunaShop?: (listener: () => void) => () => void;
+  readonly onRequestRosterExpand?: () => void;
+  readonly onRequestRosterCollapse?: () => void;
 }
 
 const PAGE_SIZE = 24;
@@ -263,20 +265,15 @@ export function setupInventoryHud(
   stashLayer.appendChild(stashScrim);
   overlay.appendChild(stashLayer);
 
-  const rosterHudPanel = tabs.panels.roster;
   let stashCount = 0;
   let isStashOpen = false;
 
-  const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle'): void => {
-    if (!rosterHudPanel) {
-      return;
-    }
-    const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
-    rosterHudPanel.dispatchEvent(event);
+  const requestRosterExpand = (): void => {
+    options.onRequestRosterExpand?.();
   };
-
-  const requestRosterExpand = (): void => dispatchRosterEvent('expand');
-  const requestRosterCollapse = (): void => dispatchRosterEvent('collapse');
+  const requestRosterCollapse = (): void => {
+    options.onRequestRosterCollapse?.();
+  };
 
   const updateInventoryButtonAccessibility = (): void => {
     const baseLabel = isStashOpen ? 'Close quartermaster stash' : 'Open quartermaster stash';

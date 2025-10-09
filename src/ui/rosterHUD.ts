@@ -38,6 +38,11 @@ export type RosterHudController = {
   renderRoster(entries: RosterEntry[]): void;
   setExpanded(expanded: boolean): void;
   toggleExpanded(): void;
+  connectPanelBridge(bridge: {
+    openRosterView: () => void;
+    closeRosterView: () => void;
+    onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
+  } | null): void;
   destroy(): void;
 };
 
@@ -89,6 +94,9 @@ export function setupRosterHUD(
   let rosterToggleState: HTMLSpanElement | null = null;
   let rosterToggleClickHandler: (() => void) | null = null;
   let isOverlayOpen = false;
+  let requestOpenRosterView: () => void = () => {};
+  let requestCloseRosterView: () => void = () => {};
+  let detachRosterVisibility: (() => void) | null = null;
 
   if (overlay?.classList.contains(ROSTER_HUD_OPEN_CLASS)) {
     overlay.classList.remove(ROSTER_HUD_OPEN_CLASS);
@@ -152,9 +160,11 @@ export function setupRosterHUD(
 
   if (rosterToggleButton) {
     rosterToggleClickHandler = () => {
-      const type = isOverlayOpen ? 'collapse' : 'expand';
-      const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
-      container.dispatchEvent(event);
+      if (isOverlayOpen) {
+        requestCloseRosterView();
+      } else {
+        requestOpenRosterView();
+      }
     };
     rosterToggleButton.addEventListener('click', rosterToggleClickHandler);
   }
@@ -427,6 +437,36 @@ export function setupRosterHUD(
     }
   }
 
+  function connectPanelBridge(
+    bridge:
+      | {
+          openRosterView: () => void;
+          closeRosterView: () => void;
+          onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
+        }
+      | null
+  ): void {
+    detachRosterVisibility?.();
+    detachRosterVisibility = null;
+
+    if (!bridge) {
+      requestOpenRosterView = () => setOverlayOpen(true);
+      requestCloseRosterView = () => setOverlayOpen(false);
+      return;
+    }
+
+    requestOpenRosterView = () => bridge.openRosterView();
+    requestCloseRosterView = () => bridge.closeRosterView();
+    detachRosterVisibility = bridge.onRosterVisibilityChange((open) => {
+      if (isOverlayOpen === open) {
+        return;
+      }
+      setOverlayOpen(open);
+    });
+  }
+
+  connectPanelBridge(null);
+
   const handleToggleClick = () => {
     const next = !isExpanded;
     if (next && !suppressTabSync) {
@@ -435,20 +475,6 @@ export function setupRosterHUD(
     setExpanded(next);
   };
   toggle.addEventListener('click', handleToggleClick);
-
-  const handleExpandRequest = () => {
-    setOverlayOpen(true);
-  };
-  const handleCollapseRequest = () => {
-    setOverlayOpen(false);
-  };
-  const handleToggleRequest = () => {
-    setOverlayOpen(!isOverlayOpen);
-  };
-
-  container.addEventListener('sauna-roster:expand', handleExpandRequest);
-  container.addEventListener('sauna-roster:collapse', handleCollapseRequest);
-  container.addEventListener('sauna-roster:toggle', handleToggleRequest);
 
   applyDetailVisibility();
 
@@ -610,6 +636,7 @@ export function setupRosterHUD(
     toggleExpanded() {
       setExpanded(!isExpanded);
     },
+    connectPanelBridge,
     destroy() {
       rosterRenderer = null;
       rosterSignature = null;
@@ -617,12 +644,13 @@ export function setupRosterHUD(
       for (const [button, handler] of behaviorClickHandlers.entries()) {
         button.removeEventListener('click', handler);
       }
-      container.removeEventListener('sauna-roster:expand', handleExpandRequest);
-      container.removeEventListener('sauna-roster:collapse', handleCollapseRequest);
-      container.removeEventListener('sauna-roster:toggle', handleToggleRequest);
       if (rosterToggleButton && rosterToggleClickHandler) {
         rosterToggleButton.removeEventListener('click', rosterToggleClickHandler);
       }
+      detachRosterVisibility?.();
+      detachRosterVisibility = null;
+      requestOpenRosterView = () => {};
+      requestCloseRosterView = () => {};
       rosterToggleButton?.remove();
       rosterToggleButton = null;
       rosterToggleState = null;

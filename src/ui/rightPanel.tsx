@@ -66,6 +66,9 @@ export function setupRightPanel(
   addEvent: (ev: GameEvent) => void;
   renderRoster: (entries: RosterEntry[]) => void;
   showView: (view: RightPanelView) => void;
+  openRosterView: () => void;
+  closeRosterView: () => void;
+  onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
   onViewChange: (listener: (view: RightPanelView) => void) => () => void;
   dispose: () => void;
 } {
@@ -76,6 +79,9 @@ export function setupRightPanel(
       addEvent: () => {},
       renderRoster: () => {},
       showView: () => {},
+      openRosterView: () => {},
+      closeRosterView: () => {},
+      onRosterVisibilityChange: () => () => {},
       onViewChange: () => () => {},
       dispose: () => {}
     };
@@ -85,16 +91,7 @@ export function setupRightPanel(
   const doc = overlay.ownerDocument ?? document;
   const rightRegion = regions.right;
   const commandDock = dock.actions;
-  const rosterHudPanel = bottomTabs.panels.roster;
   const policyHudPanel = bottomTabs.panels.policies;
-
-  const dispatchRosterEvent = (type: 'expand' | 'collapse' | 'toggle') => {
-    if (!rosterHudPanel) {
-      return;
-    }
-    const event = new CustomEvent(`sauna-roster:${type}`, { bubbles: true });
-    rosterHudPanel.dispatchEvent(event);
-  };
 
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
@@ -170,6 +167,34 @@ export function setupRightPanel(
   let isMobileViewport = false;
   let isMobilePanelOpen = false;
 
+  const viewListeners = new Set<(view: RightPanelView) => void>();
+  let activeView: RightPanelView = 'roster';
+  let syncingBottomTabs = false;
+  let skipInitialRosterExpand = true;
+
+  const rosterVisibilityListeners = new Set<(isOpen: boolean) => void>();
+
+  const isPanelOpen = (): boolean => {
+    if (isMobileViewport) {
+      return isMobilePanelOpen;
+    }
+    if (!smallViewportQuery.matches) {
+      return true;
+    }
+    return !isCollapsed;
+  };
+
+  const emitRosterVisibility = (): void => {
+    const visible = activeView === 'roster' && isPanelOpen();
+    for (const listener of rosterVisibilityListeners) {
+      try {
+        listener(visible);
+      } catch (error) {
+        console.warn('Failed to notify roster visibility listener', error);
+      }
+    }
+  };
+
   const scrollLockClass = 'is-mobile-panel-open';
 
   const updateToggleStateText = () => {
@@ -220,6 +245,7 @@ export function setupRightPanel(
     overlay.classList.toggle(HUD_OVERLAY_COLLAPSED_CLASS, shouldCollapse);
     panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
     refreshTogglePresentation();
+    emitRosterVisibility();
     if (wasCollapsed && !shouldCollapse && matches) {
       panel.focus({ preventScroll: true });
     }
@@ -264,6 +290,7 @@ export function setupRightPanel(
     requestAnimationFrame(() => {
       panel.focus({ preventScroll: true });
     });
+    emitRosterVisibility();
   };
 
   const closeMobilePanel = ({ skipFocus = false }: { skipFocus?: boolean } = {}) => {
@@ -277,6 +304,7 @@ export function setupRightPanel(
     slideOver.style.setProperty('--panel-drag-progress', '0');
     refreshTogglePresentation();
     unbindMobileKeydown();
+    emitRosterVisibility();
     if (wasOpen && !skipFocus) {
       toggle.focus({ preventScroll: true });
     }
@@ -535,11 +563,6 @@ export function setupRightPanel(
     events: eventsView
   };
 
-  const viewListeners = new Set<(view: RightPanelView) => void>();
-  let activeView: RightPanelView = 'roster';
-  let syncingBottomTabs = false;
-  let skipInitialRosterExpand = true;
-
   const syncRosterState = (view: RightPanelView) => {
     const shouldSkipExpand = skipInitialRosterExpand;
     skipInitialRosterExpand = false;
@@ -550,11 +573,14 @@ export function setupRightPanel(
         syncingBottomTabs = false;
       }
       if (!shouldSkipExpand) {
-        dispatchRosterEvent('expand');
+        if (isMobileViewport) {
+          openMobilePanel();
+        } else {
+          applyCollapsedState(false);
+        }
       }
-    } else {
-      dispatchRosterEvent('collapse');
     }
+    emitRosterVisibility();
   };
 
   const applyView = (view: RightPanelView) => {
@@ -1144,6 +1170,7 @@ export function setupRightPanel(
     panel.remove();
     overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
     viewListeners.clear();
+    rosterVisibilityListeners.clear();
   };
 
   return {
@@ -1153,6 +1180,32 @@ export function setupRightPanel(
     addEvent,
     renderRoster,
     showView,
+    openRosterView: () => {
+      if (isMobileViewport) {
+        openMobilePanel();
+      } else {
+        applyCollapsedState(false);
+      }
+      showView('roster');
+    },
+    closeRosterView: () => {
+      if (isMobileViewport) {
+        closeMobilePanel();
+      } else {
+        applyCollapsedState(true);
+      }
+    },
+    onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => {
+      rosterVisibilityListeners.add(listener);
+      try {
+        listener(false);
+      } catch (error) {
+        console.warn('Failed to notify roster visibility listener', error);
+      }
+      return () => {
+        rosterVisibilityListeners.delete(listener);
+      };
+    },
     onViewChange,
     dispose
   };
