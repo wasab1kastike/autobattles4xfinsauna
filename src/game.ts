@@ -190,6 +190,14 @@ import {
   initializeRightPanel as createRightPanelBridge,
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
+import {
+  disposeHudSignals,
+  getHudElapsedMs as getHudElapsedMsSnapshot,
+  incrementHudElapsedMs,
+  notifyEnemyRamp,
+  notifyHudElapsed,
+  setHudElapsedMs as setHudElapsedMsSnapshot
+} from './game/signals/hud.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
@@ -267,12 +275,6 @@ configureRosterOrchestrator({
 });
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
-let hudElapsedMs = 0;
-const hudTimeListeners = new Set<(elapsedMs: number) => void>();
-let lastEnemyRampSummary: EnemyRampSummary | null = null;
-const enemyRampListeners = new Set<(
-  summary: EnemyRampSummary | null
-) => void>();
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
 let getTierContextRef: () => SaunaTierContext = () => ({
@@ -288,27 +290,6 @@ let setActiveTierRef: (
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = () => false;
 let spawnTierQueue: PlayerSpawnTierHelpers;
-
-function notifyHudElapsed(): void {
-  for (const listener of hudTimeListeners) {
-    try {
-      listener(hudElapsedMs);
-    } catch (error) {
-      console.warn('Failed to notify HUD time listener', error);
-    }
-  }
-}
-
-function notifyEnemyRamp(summary: EnemyRampSummary | null): void {
-  lastEnemyRampSummary = summary;
-  for (const listener of enemyRampListeners) {
-    try {
-      listener(summary);
-    } catch (error) {
-      console.warn('Failed to notify enemy ramp listener', error);
-    }
-  }
-}
 
 const IDLE_FRAME_LIMIT = 10;
 
@@ -1011,11 +992,9 @@ const gameController = new GameController({
   getGameRuntime: () => getGameRuntime(),
   invalidateFrame: () => invalidateFrame(),
   resetAutoFrame: () => resetAutoFrame(),
-  notifyHudElapsed: () => notifyHudElapsed(),
+  notifyHudElapsed: () => notifyHudElapsed(getHudElapsedMsSnapshot()),
   notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
-  setHudElapsedMs: (value) => {
-    hudElapsedMs = value;
-  },
+  setHudElapsedMs: (value) => setHudElapsedMsSnapshot(value),
   friendlyVisionUnitScratch,
   overlaySaunojasScratch,
   units,
@@ -1283,9 +1262,9 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     mapRenderer,
     getUnitById: (id) => unitsById.get(id),
     resetHudElapsed: () => {
-      hudElapsedMs = 0;
+      setHudElapsedMsSnapshot(0);
     },
-    notifyHudElapsed: () => notifyHudElapsed(),
+    notifyHudElapsed: () => notifyHudElapsed(getHudElapsedMsSnapshot()),
     notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
     syncSelectionOverlay: () => syncSelectionOverlay(),
     updateRosterDisplay: () => updateRosterDisplay(),
@@ -1660,9 +1639,9 @@ function updateSaunaHud(): void {
 
 function updateTopbarHud(deltaMs: number): void {
   if (Number.isFinite(deltaMs) && deltaMs > 0) {
-    hudElapsedMs += deltaMs;
+    incrementHudElapsedMs(deltaMs);
   }
-  notifyHudElapsed();
+  notifyHudElapsed(getHudElapsedMsSnapshot());
   getGameRuntime().getTopbarControls()?.update(deltaMs);
 }
 
@@ -2005,6 +1984,7 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   gameController.cleanup();
+  disposeHudSignals();
 }
 
 export async function start(): Promise<void> {
@@ -2092,41 +2072,14 @@ function getActiveRosterCount(): number {
   return count;
 }
 
-export function subscribeHudTime(
-  listener: (elapsedMs: number) => void
-): () => void {
-  hudTimeListeners.add(listener);
-  try {
-    listener(hudElapsedMs);
-  } catch (error) {
-    console.warn('Failed to deliver HUD time snapshot', error);
-  }
-  return () => {
-    hudTimeListeners.delete(listener);
-  };
-}
-
-export function getHudElapsedMs(): number {
-  return hudElapsedMs;
-}
-
-export function subscribeEnemyRamp(
-  listener: (summary: EnemyRampSummary | null) => void
-): () => void {
-  enemyRampListeners.add(listener);
-  try {
-    listener(lastEnemyRampSummary);
-  } catch (error) {
-    console.warn('Failed to deliver enemy ramp snapshot', error);
-  }
-  return () => {
-    enemyRampListeners.delete(listener);
-  };
-}
-
-export function getEnemyRampSummarySnapshot(): EnemyRampSummary | null {
-  return lastEnemyRampSummary;
-}
+export {
+  subscribeHudTime,
+  unsubscribeHudTime,
+  getHudElapsedMs,
+  subscribeEnemyRamp,
+  unsubscribeEnemyRamp,
+  getEnemyRampSummarySnapshot
+} from './game/signals/hud.ts';
 
 export {
   getGameRuntimeImpl as getGameRuntime,

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Factor the HUD time and enemy ramp listeners into `game/signals/hud.ts`,
+  update `game.ts` cleanup to dispose the observable helpers, and add Vitest
+  coverage for subscription and disposal semantics.
 - Extract roster synchronization helpers into `game/roster/rosterSync.ts`, update
   `game.ts` to delegate to the service, and cover persona creation plus stat
   syncing with focused Vitest cases.
