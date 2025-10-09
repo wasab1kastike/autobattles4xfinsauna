@@ -73,6 +73,11 @@ export interface HudUiAdapters {
 }
 
 export function createUiAdapters(deps: UiAdapterDependencies): HudUiAdapters {
+  const rosterPanelControls: { open: () => void; close: () => void } = {
+    open: () => {},
+    close: () => {}
+  };
+
   const createTopbarControls = (): TopbarControls =>
     setupTopbar(deps.state, {
       saunakunnia: deps.icons.saunakunnia,
@@ -97,13 +102,15 @@ export function createUiAdapters(deps: UiAdapterDependencies): HudUiAdapters {
       onEquip: (unitId, item, _source) => deps.onEquipItem(unitId, item),
       getSaunaShopViewModel: deps.getSaunaShopViewModel,
       onPurchaseSaunaTier: deps.onPurchaseSaunaTier,
-      subscribeToSaunaShop: deps.subscribeToSaunaShop
+      subscribeToSaunaShop: deps.subscribeToSaunaShop,
+      onRequestRosterExpand: () => rosterPanelControls.open(),
+      onRequestRosterCollapse: () => rosterPanelControls.close()
     });
 
   const createRightPanelBridge = (
     onRosterRendererReady: (renderer: (entries: RosterEntry[]) => void) => void
-  ): RightPanelBridge =>
-    initializeRightPanel(
+  ): RightPanelBridge => {
+    const rightPanel = initializeRightPanel(
       {
         state: deps.state,
         sauna: deps.sauna,
@@ -119,6 +126,12 @@ export function createUiAdapters(deps: UiAdapterDependencies): HudUiAdapters {
       },
       onRosterRendererReady
     );
+
+    rosterPanelControls.open = () => rightPanel.openRosterView();
+    rosterPanelControls.close = () => rightPanel.closeRosterView();
+
+    return rightPanel;
+  };
 
   return {
     createTopbarControls,

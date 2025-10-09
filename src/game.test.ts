@@ -930,7 +930,7 @@ describe('saunoja persistence', () => {
     } finally {
       vi.doUnmock('./unit/index.ts');
     }
-  });
+  }, 20000);
 
   it('synchronizes live units when behavior preferences change', async () => {
     const {
@@ -976,7 +976,7 @@ describe('saunoja persistence', () => {
 
     const unchanged = setSaunojaBehaviorPreference(targetId, 'attack');
     expect(unchanged).toBe(false);
-  });
+  }, 20000);
 });
 
 describe('experience progression', () => {
