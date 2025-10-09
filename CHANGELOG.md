@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Introduce a `GameController` coordinator that wraps game setup, draw, canvas
+  input, start, and cleanup flows, move the map/battlefield initialization into
+  the controller with injectable dependencies for testing, update `game.ts` to
+  delegate through the new orchestrator, and add focused Vitest coverage for the
+  setup/start/cleanup lifecycle.
 
 - Bridge the roster HUD toggle, right panel, and inventory UI to a shared
   `openRosterView`/`closeRosterView` API so the roster button opens the command
