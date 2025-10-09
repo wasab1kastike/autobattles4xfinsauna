@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Extract roster synchronization helpers into `game/roster/rosterSync.ts`, update
+  `game.ts` to delegate to the service, and cover persona creation plus stat
+  syncing with focused Vitest cases.
+
 - Introduce a `GameController` coordinator that wraps game setup, draw, canvas
   input, start, and cleanup flows, move the map/battlefield initialization into
   the controller with injectable dependencies for testing, update `game.ts` to

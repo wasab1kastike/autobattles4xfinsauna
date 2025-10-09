@@ -56,6 +56,10 @@ import {
   type RosterService
 } from './game/runtime/rosterService.ts';
 import {
+  createRosterSyncService,
+  cloneStatBlock
+} from './game/roster/rosterSync.ts';
+import {
   configureRosterOrchestrator,
   saunojas,
   saunojaPolicyBaselines,
@@ -514,25 +518,6 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   }
 }
 
-function cloneStatBlock(stats: SaunojaStatBlock): SaunojaStatBlock {
-  const clone: SaunojaStatBlock = {
-    health: stats.health,
-    attackDamage: stats.attackDamage,
-    attackRange: stats.attackRange,
-    movementRange: stats.movementRange
-  } satisfies SaunojaStatBlock;
-  if (typeof stats.defense === 'number') {
-    clone.defense = stats.defense;
-  }
-  if (typeof stats.shield === 'number') {
-    clone.shield = stats.shield;
-  }
-  if (typeof stats.visionRange === 'number') {
-    clone.visionRange = stats.visionRange;
-  }
-  return clone;
-}
-
 function ensureSaunojaPolicyBaseline(attendant: Saunoja): SaunojaPolicyBaseline {
   let baseline = saunojaPolicyBaselines.get(attendant);
   if (!baseline) {
@@ -981,37 +966,33 @@ function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void
   }
 }
 
-export function loadUnits(): Saunoja[] {
-  const roster = rosterService.loadUnits();
-  const attachedUnitIds = new Set<string>();
-  for (const attendant of roster) {
-    ensureSaunojaPolicyBaseline(attendant);
-    const attachedUnitId = saunojaToUnit.get(attendant.id);
-    if (attachedUnitId) {
-      unitToSaunoja.set(attachedUnitId, attendant);
-      attachedUnitIds.add(attachedUnitId);
-    }
-  }
-  for (const [unitId] of unitToSaunoja) {
-    if (!attachedUnitIds.has(unitId)) {
-      unitToSaunoja.delete(unitId);
-    }
-  }
-  return roster;
-}
-
 export function saveUnits(): void {
   rosterService.saveUnits();
 }
 
-function isSaunojaPersonaMissing(saunoja: Saunoja): boolean {
-  return rosterService.isPersonaMissing(saunoja);
+const rosterSync = createRosterSyncService({
+  rosterService,
+  saunojas,
+  saunojaPolicyBaselines,
+  unitToSaunoja,
+  saunojaToUnit,
+  ensureSaunojaPolicyBaseline,
+  applySaunojaBehaviorPreference,
+  updateBaseStatsFromUnit,
+  onRosterChanged: () => {
+    saveUnits();
+    syncSelectionOverlay();
+  },
+  setSelectedCoord
+});
+
+export function loadUnits(): Saunoja[] {
+  return rosterSync.loadUnits();
 }
 
-function refreshSaunojaPersona(saunoja: Saunoja): void {
-  rosterService.refreshPersona(saunoja);
+function claimSaunoja(unit: Unit) {
+  return rosterSync.claimSaunoja(unit);
 }
-
 function hexDistance(a: AxialCoord, b: AxialCoord): number {
   const ay = -a.q - a.r;
   const by = -b.q - b.r;
@@ -1020,6 +1001,10 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
 
 const units: Unit[] = [];
 const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
+
+function syncSaunojaRosterWithUnits(): boolean {
+  return rosterSync.syncRosterWithUnits(units);
+}
 
 const gameController = new GameController({
   eventBus,
@@ -1114,114 +1099,6 @@ function detachSaunoja(unitId: string): void {
   if (saunojaToUnit.get(saunoja.id) === unitId) {
     saunojaToUnit.delete(saunoja.id);
   }
-}
-
-function claimSaunoja(
-  unit: Unit
-): { saunoja: Saunoja; created: boolean; attached: boolean } {
-  const existing = unitToSaunoja.get(unit.id);
-  if (existing) {
-    return { saunoja: existing, created: false, attached: false };
-  }
-
-  let match = saunojas.find((candidate) => candidate.id === unit.id);
-  if (!match) {
-    match = saunojas.find((candidate) => !saunojaToUnit.has(candidate.id));
-  }
-
-  let created = false;
-  if (!match) {
-    match = makeSaunoja({
-      id: `saunoja-${saunojas.length + 1}`,
-      coord: { q: unit.coord.q, r: unit.coord.r }
-    });
-    saunojas.push(match);
-    created = true;
-    saunojaPolicyBaselines.set(match, {
-      base: cloneStatBlock(match.baseStats),
-      upkeep: Number.isFinite(match.upkeep) ? Math.max(0, match.upkeep) : SAUNOJA_DEFAULT_UPKEEP
-    });
-  }
-
-  const previousUnitId = saunojaToUnit.get(match.id);
-  if (previousUnitId && previousUnitId !== unit.id) {
-    unitToSaunoja.delete(previousUnitId);
-  }
-
-  unitToSaunoja.set(unit.id, match);
-  saunojaToUnit.set(match.id, unit.id);
-
-  ensureSaunojaPolicyBaseline(match);
-  applySaunojaBehaviorPreference(match, match.behavior, unit);
-  updateBaseStatsFromUnit(match, unit);
-  unit.setExperience(match.xp);
-  if (typeof match.appearanceId === 'string' && match.appearanceId.trim().length > 0) {
-    unit.setAppearanceId(match.appearanceId);
-  }
-
-  const personaMissing = isSaunojaPersonaMissing(match);
-  if (created || personaMissing) {
-    refreshSaunojaPersona(match);
-  }
-
-  return { saunoja: match, created, attached: true };
-}
-
-function syncSaunojaRosterWithUnits(): boolean {
-  let changed = false;
-
-  for (const unit of units) {
-    if (unit.faction !== 'player' || unit.isDead()) {
-      continue;
-    }
-
-    const { saunoja, created, attached } = claimSaunoja(unit);
-    if (created || attached) {
-      changed = true;
-    }
-
-    const normalizedHp = Number.isFinite(unit.stats.health) ? Math.max(0, unit.stats.health) : 0;
-    if (saunoja.hp !== normalizedHp) {
-      saunoja.hp = normalizedHp;
-      changed = true;
-    }
-
-    const normalizedMaxHp = Number.isFinite(unit.getMaxHealth()) ? Math.max(1, unit.getMaxHealth()) : 1;
-    if (saunoja.maxHp !== normalizedMaxHp) {
-      saunoja.maxHp = normalizedMaxHp;
-      changed = true;
-    }
-
-    const shieldValue = unit.getShield();
-    const normalizedShield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
-    if (saunoja.shield !== normalizedShield) {
-      saunoja.shield = normalizedShield;
-      changed = true;
-    }
-
-    const unitWithLastHit = unit as unknown as { lastHitAt?: number };
-    const lastHitAt = unitWithLastHit?.lastHitAt;
-    if (Number.isFinite(lastHitAt) && saunoja.lastHitAt !== lastHitAt) {
-      saunoja.lastHitAt = lastHitAt as number;
-      changed = true;
-    }
-
-    const { q, r } = unit.coord;
-    if (saunoja.coord.q !== q || saunoja.coord.r !== r) {
-      saunoja.coord = { q, r };
-      changed = true;
-      if (saunoja.selected) {
-        setSelectedCoord(saunoja.coord);
-      }
-    }
-  }
-
-  if (changed) {
-    saveUnits();
-    syncSelectionOverlay();
-  }
-
-  return changed;
 }
 
 function describeUnit(unit: Unit, attachedSaunoja?: Saunoja | null): string {
@@ -1701,7 +1578,7 @@ if (saunojas.length === 0) {
     selected: true,
     upkeep: SAUNOJA_DEFAULT_UPKEEP
   });
-  refreshSaunojaPersona(seeded);
+  rosterService.refreshPersona(seeded);
   seeded.upkeep = SAUNOJA_DEFAULT_UPKEEP;
   saunojas.push(seeded);
   saunojaPolicyBaselines.set(seeded, {
