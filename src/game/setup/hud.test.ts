@@ -16,12 +16,14 @@ describe('initializeClassicHud', () => {
     const installRenderer = vi.fn();
     const renderRoster = vi.fn();
     const updateSummary = vi.fn();
+    const connectPanelBridge = vi.fn();
     const rosterHud = {
       installRenderer,
       renderRoster,
       updateSummary,
       setExpanded: vi.fn(),
       toggleExpanded: vi.fn(),
+      connectPanelBridge,
       destroy: vi.fn()
     };
     const setupRosterHUD = vi.fn(() => rosterHud);
@@ -49,6 +51,9 @@ describe('initializeClassicHud', () => {
       return {
         addEvent: addEventSpy,
         changeBehavior,
+        openRosterView: vi.fn(),
+        closeRosterView: vi.fn(),
+        onRosterVisibilityChange: vi.fn(() => () => {}),
         dispose: disposeRightPanel
       };
     });
@@ -118,6 +123,15 @@ describe('initializeClassicHud', () => {
     expect(syncRoster).toHaveBeenCalledTimes(1);
     expect(updateRosterDisplay).toHaveBeenCalledTimes(1);
     expect(startTutorialIfNeeded).toHaveBeenCalledTimes(1);
+
+    expect(connectPanelBridge).toHaveBeenCalledTimes(1);
+    const bridgeArg = connectPanelBridge.mock.calls[0]?.[0];
+    const createdPanel = createRightPanel.mock.results[0]?.value;
+    expect(bridgeArg).toBeTruthy();
+    bridgeArg?.openRosterView();
+    bridgeArg?.closeRosterView();
+    expect(createdPanel.openRosterView).toHaveBeenCalledTimes(1);
+    expect(createdPanel.closeRosterView).toHaveBeenCalledTimes(1);
 
     capturedSaunaOptions?.setActiveTierId?.('aurora-ward', { persist: true });
     expect(result.saunaUiController?.update).toHaveBeenCalled();

@@ -18,7 +18,14 @@ const {
   setupActionBarMock: vi.fn(() => ({ destroy: vi.fn() })),
   setupInventoryHudMock: vi.fn(() => ({ destroy: vi.fn() })),
   setupSaunaUIMock: vi.fn(() => ({ dispose: vi.fn(), update: vi.fn() })),
-  initializeRightPanelMock: vi.fn(() => ({ addEvent: vi.fn(), dispose: vi.fn() })),
+  initializeRightPanelMock: vi.fn(() => ({
+    addEvent: vi.fn(),
+    changeBehavior: vi.fn(),
+    openRosterView: vi.fn(),
+    closeRosterView: vi.fn(),
+    onRosterVisibilityChange: vi.fn(() => () => {}),
+    dispose: vi.fn()
+  })),
 }));
 
 vi.mock('../../ui/topbar.ts', () => ({
@@ -135,11 +142,18 @@ describe('createUiAdapters', () => {
     const item = { id: 'item-1' } as unknown as SaunojaItem;
     options.onEquip('unit-1', item, 'stash');
     expect(deps.onEquipItem).toHaveBeenCalledWith('unit-1', item);
+
+    expect(typeof options.onRequestRosterExpand).toBe('function');
+    expect(typeof options.onRequestRosterCollapse).toBe('function');
+    options.onRequestRosterExpand?.();
+    options.onRequestRosterCollapse?.();
   });
 
   it('bridges the right panel with roster updates and polished limits', () => {
     const deps = createDependencies();
     const adapters = createUiAdapters(deps);
+    adapters.createInventoryHudController();
+    const [, inventoryOptions] = setupInventoryHudMock.mock.calls[0];
     const onRendererReady = vi.fn();
 
     const bridge = adapters.createRightPanelBridge(onRendererReady);
@@ -152,5 +166,14 @@ describe('createUiAdapters', () => {
     expect(config.updateRosterCap(8)).toBe(6);
     expect(callback).toBe(onRendererReady);
     expect(bridge).toBe(initializeRightPanelMock.mock.results[0]?.value);
+
+    bridge.openRosterView.mockClear();
+    bridge.closeRosterView.mockClear();
+
+    inventoryOptions.onRequestRosterExpand?.();
+    expect(bridge.openRosterView).toHaveBeenCalledTimes(1);
+
+    inventoryOptions.onRequestRosterCollapse?.();
+    expect(bridge.closeRosterView).toHaveBeenCalledTimes(1);
   });
 });

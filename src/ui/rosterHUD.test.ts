@@ -182,12 +182,33 @@ describe('rosterHUD', () => {
         toggleIcon: '/toggle.svg'
       });
 
+      const listeners = new Set<(open: boolean) => void>();
+      const bridge = {
+        openRosterView: vi.fn(() => {
+          for (const listener of listeners) {
+            listener(true);
+          }
+        }),
+        closeRosterView: vi.fn(() => {
+          for (const listener of listeners) {
+            listener(false);
+          }
+        }),
+        onRosterVisibilityChange: vi.fn((listener: (open: boolean) => void) => {
+          listeners.add(listener);
+          listener(false);
+          return () => {
+            listeners.delete(listener);
+          };
+        })
+      };
+
+      hud.connectPanelBridge(bridge);
+
       layout.tabs.setActive('policies');
       expect(layout.tabs.getActive()).toBe('policies');
 
-      rosterContainer.dispatchEvent(
-        new CustomEvent('sauna-roster:expand', { bubbles: true })
-      );
+      bridge.openRosterView();
 
       expect(layout.tabs.getActive()).toBe('roster');
 
@@ -210,6 +231,29 @@ describe('rosterHUD', () => {
         toggleIcon: '/toggle.svg'
       });
 
+      const listeners = new Set<(open: boolean) => void>();
+      const bridge = {
+        openRosterView: vi.fn(() => {
+          for (const listener of listeners) {
+            listener(true);
+          }
+        }),
+        closeRosterView: vi.fn(() => {
+          for (const listener of listeners) {
+            listener(false);
+          }
+        }),
+        onRosterVisibilityChange: vi.fn((listener: (open: boolean) => void) => {
+          listeners.add(listener);
+          listener(false);
+          return () => {
+            listeners.delete(listener);
+          };
+        })
+      };
+
+      hud.connectPanelBridge(bridge);
+
       const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
       expect(toggleButton).not.toBeNull();
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
@@ -221,12 +265,14 @@ describe('rosterHUD', () => {
       expect(overlay.classList.contains('roster-hud-open')).toBe(true);
       expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
       expect(rosterContainer.hidden).toBe(false);
+      expect(bridge.openRosterView).toHaveBeenCalledTimes(1);
 
       toggleButton?.click();
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
       expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
       expect(rosterContainer.hidden).toBe(true);
+      expect(bridge.closeRosterView).toHaveBeenCalledTimes(1);
 
       hud.destroy();
     } finally {
@@ -247,20 +293,37 @@ describe('rosterHUD', () => {
         toggleIcon: '/toggle.svg'
       });
 
+      let rosterVisibility: ((open: boolean) => void) | null = null;
+      const bridge = {
+        openRosterView: vi.fn(() => {
+          rosterVisibility?.(true);
+        }),
+        closeRosterView: vi.fn(() => {
+          rosterVisibility?.(false);
+        }),
+        onRosterVisibilityChange: vi.fn((listener: (open: boolean) => void) => {
+          rosterVisibility = listener;
+          listener(false);
+          return () => {
+            if (rosterVisibility === listener) {
+              rosterVisibility = null;
+            }
+          };
+        })
+      };
+
+      hud.connectPanelBridge(bridge);
+
       const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
       expect(toggleButton).not.toBeNull();
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
-      rosterContainer.dispatchEvent(
-        new CustomEvent('sauna-roster:expand', { bubbles: true })
-      );
+      rosterVisibility?.(true);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(true);
       expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
 
-      rosterContainer.dispatchEvent(
-        new CustomEvent('sauna-roster:collapse', { bubbles: true })
-      );
+      rosterVisibility?.(false);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
       expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
