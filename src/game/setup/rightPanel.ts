@@ -25,6 +25,9 @@ export interface RightPanelDependencies {
 export interface RightPanelBridge {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
+  openRosterView: () => void;
+  closeRosterView: () => void;
+  onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
   dispose: () => void;
 }
 
@@ -89,6 +92,9 @@ export function initializeRightPanel(
   return {
     addEvent: rightPanel.addEvent,
     changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
+    openRosterView: () => rightPanel.openRosterView(),
+    closeRosterView: () => rightPanel.closeRosterView(),
+    onRosterVisibilityChange: (listener) => rightPanel.onRosterVisibilityChange(listener),
     dispose: () => {
       detachViewSync();
       navigation.dispose();

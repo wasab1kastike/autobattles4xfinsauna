@@ -20,6 +20,9 @@ type InventoryHudController = { destroy(): void };
 type RightPanelBridge = {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
+  openRosterView: () => void;
+  closeRosterView: () => void;
+  onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
   dispose: () => void;
 };
 
@@ -139,6 +142,12 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
     rightPanel.changeBehavior(unitId, behavior);
   };
   rightPanelBehaviorHandler = changeBehavior;
+
+  rosterHud?.connectPanelBridge({
+    openRosterView: () => rightPanel.openRosterView(),
+    closeRosterView: () => rightPanel.closeRosterView(),
+    onRosterVisibilityChange: (listener) => rightPanel.onRosterVisibilityChange(listener)
+  });
 
   const postSetup = (): void => {
     deps.syncSaunojaRosterWithUnits();

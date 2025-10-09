@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Bridge the roster HUD toggle, right panel, and inventory UI to a shared
+  `openRosterView`/`closeRosterView` API so the roster button opens the command
+  console, inventory toggles collapse it, and tests cover the polished
+  management flow.
 - Add a polished roster crest toggle to the HUD cluster, hiding the roster
   bottom tabs by default, wiring the `sauna-roster:*` events through the new
   overlay state, and refreshing tests plus styling so the command dock stays
