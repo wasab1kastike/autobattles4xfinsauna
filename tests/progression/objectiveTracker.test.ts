@@ -67,4 +67,29 @@ describe('ObjectiveTracker run counters', () => {
     expect(resolution.summary.enemyKills).toBe(2);
     expect(resolution.summary.exploration.revealedHexes).toBe(expectedExploration);
   });
+
+  it('normalizes NaN roster counts and still triggers roster wipe defeat', async () => {
+    rosterCount = Number.NaN;
+    const tracker = createObjectiveTracker({
+      state: new GameState(1000),
+      map: new HexMap(2, 2),
+      getRosterCount: () => rosterCount,
+      timeSource,
+      rosterWipeGraceMs: 0
+    });
+
+    const resolutionPromise = new Promise<ObjectiveResolution>((resolve) => {
+      tracker.onResolution(resolve);
+    });
+
+    eventBus.emit('unitDied', { unitId: 'hero-1', unitFaction: 'player' });
+
+    const progress = tracker.getProgress();
+    expect(progress.roster.active).toBe(0);
+
+    const resolution = await resolutionPromise;
+    expect(resolution.cause).toBe('rosterWipe');
+
+    tracker.dispose();
+  });
 });

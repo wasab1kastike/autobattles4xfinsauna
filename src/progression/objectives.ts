@@ -183,7 +183,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     this.startResources = captureResources(this.state);
 
     const initialBeer = this.state.getResource(Resource.SAUNA_BEER);
-    const rosterCount = Math.max(0, Math.round(this.getRosterCount())) || 0;
+    const rosterCount = this.sampleRosterCount();
 
     this.progress = {
       strongholds: { total: 0, destroyed: 0, remaining: 0 },
@@ -438,8 +438,14 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     this.progress.strongholds.destroyed = Math.max(0, total - alive);
   }
 
+  private sampleRosterCount(): number {
+    const raw = Number(this.getRosterCount());
+    const normalized = Number.isFinite(raw) ? raw : 0;
+    return Math.max(0, Math.round(normalized));
+  }
+
   private refreshRosterStatus(): void {
-    const count = Math.max(0, Math.round(this.getRosterCount()));
+    const count = this.sampleRosterCount();
     this.progress.roster.active = count;
     if (count <= 0) {
       if (this.wipeSince === null) {

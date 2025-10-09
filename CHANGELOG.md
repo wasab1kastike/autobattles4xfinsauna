@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Normalize roster counts in the objective tracker so NaN values fall back to
+  zero, keep progress metrics clamped to non-negative integers, and cover the
+  roster wipe defeat flow when the roster feed misbehaves.
 - Factor the HUD time and enemy ramp listeners into `game/signals/hud.ts`,
   update `game.ts` cleanup to dispose the observable helpers, and add Vitest
   coverage for subscription and disposal semantics.
