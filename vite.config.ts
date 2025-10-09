@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { extname, posix } from 'node:path';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
@@ -28,6 +29,8 @@ if (!resolvedCommit) {
 const GIT_COMMIT = JSON.stringify(resolvedCommit ?? 'unknown');
 
 const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.GITHUB_ACTIONS;
+
+const RASTER_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
 
 const rawBasePath =
   process.env.PUBLIC_BASE_PATH ??
@@ -59,6 +62,21 @@ export default defineConfig({
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          const extension = extname(assetInfo.name ?? '').toLowerCase();
+
+          if (RASTER_EXTENSIONS.has(extension)) {
+            const originalDir = assetInfo.name ? posix.dirname(assetInfo.name) : '';
+            const normalizedDir = originalDir && originalDir !== '.' ? `${originalDir}/` : '';
+            return `assets/${normalizedDir}[name][extname]`;
+          }
+
+          return 'assets/[name]-[hash][extname]';
+        },
+      },
+    },
   },
   define: {
     __COMMIT__: GIT_COMMIT,
