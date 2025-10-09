@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Preserve the original filenames for PNG and other raster assets in production
+  builds and refresh the docs bundle so runtime references point at
+  `/assets/units/<name>.png`, keeping publishing flows aligned with the new
+  asset pipeline.
 - Capture the previous artocoin balance before clearing storage, emit the reset
   notification so cached listeners update immediately, and cover the regression
   with a focused progression test.
