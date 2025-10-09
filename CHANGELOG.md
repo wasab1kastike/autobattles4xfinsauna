@@ -7,9 +7,6 @@
   overlay state, and refreshing tests plus styling so the command dock stays
   trim until the roster is invoked.
 
-- Add a GitHub Pages verification script that fetches the deployed bundle,
-  confirms the embedded commit matches `HEAD`, and wire it into `npm run test`
-  so releases catch stale deployments before shipping.
 
 - Resolve the Vite deployment base from environment configuration so root-hosted
   builds default to `/` while GitHub Pages paths remain opt-in.
