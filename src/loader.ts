@@ -1,5 +1,42 @@
 import { buildUnitSpriteAtlas, type UnitSpriteAtlas } from './render/units/spriteAtlas.ts';
 
+const DEFAULT_BASE_URL = import.meta.env.BASE_URL ?? '/';
+const ABSOLUTE_PROTOCOL_PATTERN = /^[a-zA-Z][a-zA-Z+\-.]*:/;
+
+export function resolveAssetUrl(src: string, base: string = DEFAULT_BASE_URL): string {
+  if (!src) {
+    return src;
+  }
+
+  if (ABSOLUTE_PROTOCOL_PATTERN.test(src) || src.startsWith('//') || src.startsWith('data:')) {
+    return src;
+  }
+
+  if (!src.startsWith('/')) {
+    if (base === './' && src.startsWith('./')) {
+      return src;
+    }
+
+    return src;
+  }
+
+  if (base === '/' || base === '') {
+    return src;
+  }
+
+  if (base === './') {
+    const normalized = src.slice(1);
+    return `./${normalized}`;
+  }
+
+  if (src.startsWith(base)) {
+    return src;
+  }
+
+  const trimmedBase = base.endsWith('/') ? base.slice(0, -1) : base;
+  return `${trimmedBase}${src}`;
+}
+
 export type AssetPaths = {
   images?: Record<string, string>;
   sounds?: Record<string, string>;
@@ -27,35 +64,37 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
 
   const imagePromises = Object.entries(paths.images ?? {}).map(([key, src]) => {
     return new Promise<void>((resolve) => {
+      const resolvedSrc = resolveAssetUrl(src);
       const img = new Image();
       img.onload = () => {
         images[key] = img;
         resolve();
       };
       img.onerror = () => {
-        const msg = `Failed to load image: ${src}`;
+        const msg = `Failed to load image: ${resolvedSrc}`;
         console.error(msg);
         failures.push(msg);
         resolve();
       };
-      img.src = src;
+      img.src = resolvedSrc;
     });
   });
 
   const soundPromises = Object.entries(paths.sounds ?? {}).map(([key, src]) => {
     return new Promise<void>((resolve) => {
+      const resolvedSrc = resolveAssetUrl(src);
       const audio = new Audio();
       audio.oncanplaythrough = () => {
         sounds[key] = audio;
         resolve();
       };
       audio.onerror = () => {
-        const msg = `Failed to load sound: ${src}`;
+        const msg = `Failed to load sound: ${resolvedSrc}`;
         console.error(msg);
         failures.push(msg);
         resolve();
       };
-      audio.src = src;
+      audio.src = resolvedSrc;
       audio.load();
     });
   });
