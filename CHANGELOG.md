@@ -18,6 +18,10 @@
 - Resolve the unit portrait loader to Vite-managed URLs so hashed Saunoja and
   orc PNGs load without 404s in the runtime.
 
+- Normalize asset loader URLs against the configured base path so hashed
+  portraits resolve on nested deployments, and cover the helper with targeted
+  tests.
+
 - Point the unit sprite loader at the published PNG filenames and align the
   docs assets so the static site reliably loads every polished Saunoja and orc
   portrait.
