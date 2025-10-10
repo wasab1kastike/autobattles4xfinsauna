@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Detect custom domain deployments during GitHub Pages builds and set
+  `PUBLIC_BASE_PATH=/` so published bundles use root-relative asset URLs while
+  preserving the repository-prefixed fallback for GitHub-hosted sites.
 - Preserve relative `PUBLIC_BASE_PATH` values, derive a GitHub Pages fallback
   from `GITHUB_REPOSITORY` when no base override is provided, document the
   environment requirements, and extend the asset loader tests to cover the
