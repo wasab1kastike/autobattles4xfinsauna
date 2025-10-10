@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GameState } from '../../src/core/GameState.ts';
 import { setupHudNavigation } from '../../src/ui/hudNavigation.tsx';
 import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
+import { HUD_OVERLAY_COLLAPSED_CLASS } from '../../src/ui/layout.ts';
 
 describe('HUD navigation', () => {
   let overlay: HTMLDivElement;
@@ -128,6 +129,46 @@ describe('HUD navigation', () => {
     expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
 
     detach();
+    nav.dispose();
+    controller.dispose();
+  });
+
+  it('keeps the right panel collapsed on narrow layouts until navigation expands it', () => {
+    const matchMediaMock = vi.fn((query: string) => {
+      const isNarrow = query.includes('960');
+      const isMobile = query.includes('820');
+      const mediaQuery: MediaQueryList = {
+        matches: isNarrow ? true : isMobile ? false : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      } as unknown as MediaQueryList;
+      return mediaQuery;
+    });
+    window.matchMedia = matchMediaMock as unknown as typeof window.matchMedia;
+
+    const state = new GameState(1000);
+    const controller = setupRightPanel(state);
+    const panel = overlay.querySelector<HTMLDivElement>('#right-panel');
+
+    expect(panel?.classList.contains('right-panel--collapsed')).toBe(true);
+    expect(panel?.getAttribute('aria-hidden')).toBe('true');
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(true);
+
+    const nav = setupHudNavigation(overlay, { onNavigate: controller.openView });
+    const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
+    expect(policiesButton).not.toBeNull();
+
+    policiesButton?.click();
+
+    expect(panel?.classList.contains('right-panel--collapsed')).toBe(false);
+    expect(panel?.getAttribute('aria-hidden')).toBe('false');
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);
+
     nav.dispose();
     controller.dispose();
   });

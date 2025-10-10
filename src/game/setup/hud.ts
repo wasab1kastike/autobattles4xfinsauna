@@ -20,6 +20,7 @@ type InventoryHudController = { destroy(): void };
 type RightPanelBridge = {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
+  openView: (view: 'roster' | 'policies' | 'events') => void;
   openRosterView: () => void;
   closeRosterView: () => void;
   onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
