@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Configure the GitHub Pages build to inject `PUBLIC_BASE_PATH` so Vite emits
+  repo-prefixed asset URLs and unit portraits load reliably from the published
+  GitHub Pages site.
 - Keep the command console toggle visible on desktop layouts, honor collapse
   requests across wide viewports, and add HUD lifecycle coverage for the toggle
   interactions.
