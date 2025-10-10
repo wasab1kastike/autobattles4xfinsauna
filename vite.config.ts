@@ -43,14 +43,40 @@ const normalizeBase = (value: string): string => {
   const trimmed = value.trim();
 
   if (!trimmed) {
-    return '/';
+    return trimmed;
+  }
+
+  if (trimmed === '.' || trimmed === './') {
+    return './';
+  }
+
+  if (trimmed.startsWith('./') || trimmed.startsWith('../')) {
+    return trimmed.endsWith('/') ? trimmed : `${trimmed}/`;
   }
 
   const withLeadingSlash = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return withLeadingSlash.endsWith('/') ? withLeadingSlash : `${withLeadingSlash}/`;
 };
 
-const deploymentBase = normalizeBase(rawBasePath);
+const resolveRepositoryBase = (): string => {
+  const repository = process.env.GITHUB_REPOSITORY?.trim();
+
+  if (!repository) {
+    return '';
+  }
+
+  const segments = repository.split('/').filter(Boolean);
+  const repoName = segments.at(-1);
+
+  if (!repoName) {
+    return '';
+  }
+
+  return normalizeBase(repoName);
+};
+
+const providedBase = rawBasePath.trim() ? normalizeBase(rawBasePath) : '';
+const deploymentBase = providedBase || resolveRepositoryBase() || '/';
 
 // Vite configuration
 export default defineConfig({
