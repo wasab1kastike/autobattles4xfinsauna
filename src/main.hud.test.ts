@@ -189,4 +189,90 @@ describe('main HUD lifecycle', () => {
     orchestrator.cleanup();
     await Promise.resolve();
   });
+
+  it('traps focus inside the mobile command console while the panel is open', async () => {
+    const mobileMatchMedia = vi.fn((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: mobileMatchMedia,
+    });
+
+    const { getGameOrchestrator } = await import('./main.ts');
+    const orchestrator = getGameOrchestrator();
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const resourceBar = document.getElementById('resource-bar') as HTMLElement;
+    const overlay = document.getElementById('ui-overlay') as HTMLElement;
+
+    orchestrator.setup(canvas, resourceBar, overlay);
+    await Promise.resolve();
+
+    const panel = document.getElementById('right-panel') as HTMLDivElement;
+    const toggle = document.getElementById('right-panel-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+
+    const primaryAction = document.createElement('button');
+    primaryAction.type = 'button';
+    primaryAction.textContent = 'Primary action';
+    const secondaryAction = document.createElement('button');
+    secondaryAction.type = 'button';
+    secondaryAction.textContent = 'Secondary action';
+    panel.append(primaryAction, secondaryAction);
+
+    toggle.focus();
+    toggle.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const hudRoot = document.querySelector<HTMLElement>('[data-hud-root]');
+    const slideSheet = document.querySelector<HTMLElement>('.right-panel-slide__sheet');
+    expect(hudRoot?.getAttribute('data-inert')).toBe('true');
+    expect(slideSheet).not.toBeNull();
+
+    secondaryAction.focus();
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(tabEvent);
+    expect(slideSheet?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(toggle);
+
+    const focusableSelector = [
+      'a[href]',
+      'area[href]',
+      'button:not([disabled])',
+      'input:not([disabled]):not([type="hidden"])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'summary',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(',');
+    const firstFocusable = slideSheet?.querySelector<HTMLElement>(focusableSelector);
+    firstFocusable?.focus();
+    const shiftTabEvent = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(shiftTabEvent);
+    expect(document.activeElement).toBe(secondaryAction);
+
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    document.dispatchEvent(escapeEvent);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(hudRoot?.hasAttribute('data-inert')).toBe(false);
+    expect(document.activeElement).toBe(toggle);
+
+    orchestrator.cleanup();
+    await Promise.resolve();
+  }, 15000);
 });
