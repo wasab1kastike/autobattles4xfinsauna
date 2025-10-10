@@ -66,6 +66,7 @@ export function setupRightPanel(
   addEvent: (ev: GameEvent) => void;
   renderRoster: (entries: RosterEntry[]) => void;
   showView: (view: RightPanelView) => void;
+  openView: (view: RightPanelView) => void;
   openRosterView: () => void;
   closeRosterView: () => void;
   onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
@@ -79,6 +80,7 @@ export function setupRightPanel(
       addEvent: () => {},
       renderRoster: () => {},
       showView: () => {},
+      openView: () => {},
       openRosterView: () => {},
       closeRosterView: () => {},
       onRosterVisibilityChange: () => () => {},
@@ -128,6 +130,7 @@ export function setupRightPanel(
   slideOver.append(slideBackdrop, slideSheet);
 
   const smallViewportQuery = window.matchMedia('(max-width: 960px)');
+  const initialNarrowLayoutCollapsed = smallViewportQuery.matches;
   const disposers: Array<() => void> = [];
 
   const toggle = document.createElement('button');
@@ -162,10 +165,16 @@ export function setupRightPanel(
     }
   };
 
-  let isCollapsed = false;
-  let narrowLayoutCollapsed = false;
+  let isCollapsed = initialNarrowLayoutCollapsed;
+  let narrowLayoutCollapsed = initialNarrowLayoutCollapsed;
   let isMobileViewport = false;
   let isMobilePanelOpen = false;
+
+  if (initialNarrowLayoutCollapsed) {
+    panel.classList.add('right-panel--collapsed');
+    overlay.classList.add(HUD_OVERLAY_COLLAPSED_CLASS);
+    panel.setAttribute('aria-hidden', 'true');
+  }
 
   const viewListeners = new Set<(view: RightPanelView) => void>();
   let activeView: RightPanelView = 'roster';
@@ -310,6 +319,22 @@ export function setupRightPanel(
     }
   };
 
+  const openPanelForViewport = () => {
+    if (isMobileViewport) {
+      openMobilePanel();
+    } else {
+      applyCollapsedState(false);
+    }
+  };
+
+  const closePanelForViewport = () => {
+    if (isMobileViewport) {
+      closeMobilePanel();
+    } else {
+      applyCollapsedState(true);
+    }
+  };
+
   const handleViewportChange = (event: MediaQueryListEvent): void => {
     if (isMobileViewport) {
       return;
@@ -442,8 +467,9 @@ export function setupRightPanel(
       insertToggle();
       toggle.classList.remove('hud-panel-toggle--mobile');
       toggle.hidden = !smallViewportQuery.matches;
-      panel.setAttribute('aria-hidden', 'false');
-      applyCollapsedState(narrowLayoutCollapsed, smallViewportQuery.matches);
+      const collapsed = smallViewportQuery.matches ? narrowLayoutCollapsed : false;
+      panel.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+      applyCollapsedState(collapsed, smallViewportQuery.matches);
     }
     refreshTogglePresentation();
   });
@@ -573,11 +599,7 @@ export function setupRightPanel(
         syncingBottomTabs = false;
       }
       if (!shouldSkipExpand) {
-        if (isMobileViewport) {
-          openMobilePanel();
-        } else {
-          applyCollapsedState(false);
-        }
+        openPanelForViewport();
       }
     }
     emitRosterVisibility();
@@ -1180,20 +1202,16 @@ export function setupRightPanel(
     addEvent,
     renderRoster,
     showView,
+    openView: (view: RightPanelView) => {
+      openPanelForViewport();
+      showView(view);
+    },
     openRosterView: () => {
-      if (isMobileViewport) {
-        openMobilePanel();
-      } else {
-        applyCollapsedState(false);
-      }
+      openPanelForViewport();
       showView('roster');
     },
     closeRosterView: () => {
-      if (isMobileViewport) {
-        closeMobilePanel();
-      } else {
-        applyCollapsedState(true);
-      }
+      closePanelForViewport();
     },
     onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => {
       rosterVisibilityListeners.add(listener);

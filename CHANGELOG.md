@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Default the command console to launch collapsed on narrow layouts, opening the
+  right panel only when HUD navigation interactions request a view, and extend
+  navigation coverage for the gated reveal.
 - Add roving tabindex and arrow-key semantics to the HUD navigation toolbar so
   keyboard users can cycle roster, policy, and event views with focus staying in
   sync with the active badge.
