@@ -35,19 +35,29 @@ describe('HUD navigation', () => {
     const navigate = vi.fn();
     const nav = setupHudNavigation(overlay, { initialView: 'policies', onNavigate: navigate });
 
-    const navCard = overlay.querySelector('[data-hud-navigation]');
-    expect(navCard).not.toBeNull();
+    const navToolbar = overlay.querySelector('[data-hud-navigation]');
+    expect(navToolbar).not.toBeNull();
+    expect(navToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
+    expect(navToolbar?.parentElement?.dataset.hudAnchor).toBe('top-left-cluster');
 
-    const buttons = overlay.querySelectorAll<HTMLButtonElement>('[data-hud-nav-item]');
+    const buttons = navToolbar?.querySelectorAll<HTMLButtonElement>('[data-hud-nav-item]');
     expect(buttons).toHaveLength(3);
+
+    const iconBadges = navToolbar?.querySelectorAll('.hud-nav-toolbar__badge img');
+    expect(iconBadges).toHaveLength(3);
+
+    const srLabels = navToolbar?.querySelectorAll('.sr-only');
+    expect(srLabels).toHaveLength(3);
 
     const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
     expect(policiesButton?.dataset.active).toBe('true');
+    expect(policiesButton?.getAttribute('aria-pressed')).toBe('true');
 
     const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
     eventsButton?.click();
 
     expect(navigate).toHaveBeenCalledWith('events');
+    expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
 
     nav.dispose();
   });
@@ -74,12 +84,14 @@ describe('HUD navigation', () => {
 
     expect(policiesView?.dataset.active).toBe('true');
     expect(rosterView?.dataset.active).toBe('false');
+    expect(policiesButton?.getAttribute('aria-pressed')).toBe('true');
 
     controller.showView('events');
 
     expect(eventsView?.dataset.active).toBe('true');
     const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
     expect(eventsButton?.dataset.active).toBe('true');
+    expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
 
     detach();
     nav.dispose();

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Replace the left-side HUD navigation card with a compact top-left toolbar,
+  wire in new roster/policy/event crest badges, refresh styling to match the
+  inventory treatment, and update HUD navigation tests for the icon toggles.
 - Capture the previous artocoin balance before clearing storage, emit the reset
   notification so cached listeners update immediately, and cover the regression
   with a focused progression test.
