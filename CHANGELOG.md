@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Remove the deprecated `saunoja.svg` unit art from app, public, and docs
+  bundles so art contributors know the vector variant is retired.
 - Remove the redundant artocoin badge assets from app, public, and docs
   bundles so the build no longer ships the unused SVG variant.
 - Default the command console to launch collapsed on narrow layouts, opening the
