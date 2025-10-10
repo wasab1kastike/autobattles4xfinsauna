@@ -116,6 +116,12 @@ describe('resolveAssetUrl', () => {
     expect(resolveAssetUrl('/assets/foo.png', '/autobattles4xfinsauna')).toBe('/autobattles4xfinsauna/assets/foo.png');
   });
 
+  it('prepends the repository base for GitHub Pages deployments', () => {
+    expect(resolveAssetUrl('/assets/logo.png', '/autobattles4xfinsauna/')).toBe(
+      '/autobattles4xfinsauna/assets/logo.png'
+    );
+  });
+
   it('normalizes relative base deployments', () => {
     expect(resolveAssetUrl('/assets/foo.png', './')).toBe('./assets/foo.png');
   });

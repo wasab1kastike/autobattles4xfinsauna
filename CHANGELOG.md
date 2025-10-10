@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Preserve relative `PUBLIC_BASE_PATH` values, derive a GitHub Pages fallback
+  from `GITHUB_REPOSITORY` when no base override is provided, document the
+  environment requirements, and extend the asset loader tests to cover the
+  repo-prefixed paths.
 - Configure the GitHub Pages build to inject `PUBLIC_BASE_PATH` so Vite emits
   repo-prefixed asset URLs and unit portraits load reliably from the published
   GitHub Pages site.

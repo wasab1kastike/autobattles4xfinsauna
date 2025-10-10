@@ -107,6 +107,23 @@ Running `npm run build` produces the Vite output in `dist/`. The custom domain
 is preserved automatically because `public/CNAME` is copied into the build
 output alongside the SPA-friendly `404.html` fallback.
 
+### Base Path Configuration
+
+The production bundle derives its base URL from the first populated environment
+variable in this list: `PUBLIC_BASE_PATH`, `BASE_PATH`, `VITE_BASE_PATH`, or
+`VITE_BASE`. When no override is provided, GitHub Actions automatically
+supplies `GITHUB_REPOSITORY`, allowing the build to fall back to a repo-prefixed
+base such as `/autobattles4xfinsauna/`. Local builds that need to mimic a GitHub
+Pages deployment can export the repository slug before running `npm run build`:
+
+```bash
+export GITHUB_REPOSITORY=artohcodes/autobattles4xfinsauna
+npm run build
+```
+
+Providing `PUBLIC_BASE_PATH=./` preserves fully relative output for static host
+previews while keeping hashed assets reachable.
+
 ## Deployment
 
 Pushing to `main` runs a GitHub Actions workflow that builds the app and
