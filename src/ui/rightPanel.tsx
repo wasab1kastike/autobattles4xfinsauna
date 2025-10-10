@@ -89,7 +89,8 @@ export function setupRightPanel(
     };
   }
 
-  const { regions, anchors, dock, mobileBar, tabs: bottomTabs } = ensureHudLayout(overlay);
+  const { root: hudRoot, regions, anchors, dock, mobileBar, tabs: bottomTabs } =
+    ensureHudLayout(overlay);
   const doc = overlay.ownerDocument ?? document;
   const rightRegion = regions.right;
   const commandDock = dock.actions;
@@ -204,6 +205,71 @@ export function setupRightPanel(
 
   const scrollLockClass = 'is-mobile-panel-open';
 
+  const setElementInert = (element: HTMLElement | null, value: boolean) => {
+    if (!element) {
+      return;
+    }
+    if ('inert' in element) {
+      element.inert = value;
+    }
+    if (value) {
+      if (!element.hasAttribute('data-inert-original-aria-hidden')) {
+        const existing = element.getAttribute('aria-hidden');
+        if (existing !== null) {
+          element.setAttribute('data-inert-original-aria-hidden', existing);
+        }
+      }
+      element.setAttribute('aria-hidden', 'true');
+      element.setAttribute('data-inert', 'true');
+    } else {
+      element.removeAttribute('data-inert');
+      const original = element.getAttribute('data-inert-original-aria-hidden');
+      if (original !== null) {
+        element.setAttribute('aria-hidden', original);
+        element.removeAttribute('data-inert-original-aria-hidden');
+      } else {
+        element.removeAttribute('aria-hidden');
+      }
+    }
+  };
+
+  const focusableSelectors = [
+    'a[href]',
+    'area[href]',
+    'button:not([disabled])',
+    'input:not([disabled]):not([type="hidden"])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    'summary',
+    '[tabindex]:not([tabindex="-1"])',
+  ] as const;
+  const focusableSelector = focusableSelectors.join(',');
+
+  const isFocusable = (element: Element | null): element is HTMLElement =>
+    !!element && element instanceof HTMLElement;
+
+  const getFocusableElements = (): HTMLElement[] => {
+    const elements = Array.from(slideSheet.querySelectorAll<HTMLElement>(focusableSelector));
+    return elements.filter((element) => {
+      if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') {
+        return false;
+      }
+      if (element instanceof HTMLInputElement && element.type === 'hidden') {
+        return false;
+      }
+      if (element.tabIndex < 0 && !element.hasAttribute('contenteditable')) {
+        return false;
+      }
+      if (!element.offsetParent && element !== doc.activeElement) {
+        const style = element.ownerDocument?.defaultView?.getComputedStyle(element);
+        return !!style && style.visibility !== 'hidden' && style.display !== 'none';
+      }
+      return true;
+    });
+  };
+
+  let lastFocusedElement: HTMLElement | null = null;
+
   const updateToggleStateText = () => {
     if (isMobileViewport) {
       toggleState.textContent = isMobilePanelOpen ? 'Close' : 'Menu';
@@ -266,6 +332,29 @@ export function setupRightPanel(
     if (event.key === 'Escape') {
       event.preventDefault();
       closeMobilePanel();
+      return;
+    }
+    if (event.key === 'Tab') {
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        panel.focus({ preventScroll: true });
+        return;
+      }
+      const current = isFocusable(doc.activeElement) ? doc.activeElement : null;
+      let currentIndex = focusableElements.findIndex((element) => element === current);
+      if (currentIndex === -1) {
+        currentIndex = event.shiftKey ? focusableElements.length - 1 : 0;
+      } else {
+        currentIndex = event.shiftKey ? currentIndex - 1 : currentIndex + 1;
+      }
+      if (currentIndex >= focusableElements.length) {
+        currentIndex = 0;
+      } else if (currentIndex < 0) {
+        currentIndex = focusableElements.length - 1;
+      }
+      event.preventDefault();
+      focusableElements[currentIndex].focus({ preventScroll: true });
     }
   };
 
@@ -287,16 +376,21 @@ export function setupRightPanel(
     if (!isMobileViewport || isMobilePanelOpen) {
       return;
     }
+    const activeElement = isFocusable(doc.activeElement) ? doc.activeElement : null;
+    lastFocusedElement = activeElement && activeElement !== doc.body ? activeElement : toggle;
     isMobilePanelOpen = true;
     slideOver.classList.add('right-panel-slide--open');
     slideOver.setAttribute('aria-hidden', 'false');
     panel.setAttribute('aria-hidden', 'false');
     document.body.classList.add(scrollLockClass);
     slideOver.style.setProperty('--panel-drag-progress', '1');
+    setElementInert(hudRoot, true);
     refreshTogglePresentation();
     bindMobileKeydown();
     requestAnimationFrame(() => {
-      panel.focus({ preventScroll: true });
+      const focusTargets = getFocusableElements();
+      const firstTarget = focusTargets[0] ?? panel;
+      firstTarget.focus({ preventScroll: true });
     });
     emitRosterVisibility();
   };
@@ -310,11 +404,16 @@ export function setupRightPanel(
     panel.setAttribute('aria-hidden', 'true');
     document.body.classList.remove(scrollLockClass);
     slideOver.style.setProperty('--panel-drag-progress', '0');
+    setElementInert(hudRoot, false);
     refreshTogglePresentation();
     unbindMobileKeydown();
     emitRosterVisibility();
     if (wasOpen && !skipFocus) {
-      toggle.focus({ preventScroll: true });
+      const target = lastFocusedElement && lastFocusedElement.isConnected ? lastFocusedElement : toggle;
+      target.focus({ preventScroll: true });
+    }
+    if (!isMobilePanelOpen) {
+      lastFocusedElement = null;
     }
   };
 
@@ -1186,6 +1285,8 @@ export function setupRightPanel(
     unbindMobileKeydown();
     resetDrag();
     document.body.classList.remove(scrollLockClass);
+    setElementInert(hudRoot, false);
+    lastFocusedElement = null;
     slideOver.remove();
     toggle.remove();
     panel.remove();
