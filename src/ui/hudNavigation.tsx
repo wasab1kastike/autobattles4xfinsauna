@@ -1,3 +1,6 @@
+import rosterIconUrl from '../../assets/ui/hud-roster.svg';
+import policiesIconUrl from '../../assets/ui/hud-policies.svg';
+import eventsIconUrl from '../../assets/ui/hud-events.svg';
 import { ensureHudLayout } from './layout.ts';
 
 export type HudNavigationView = 'roster' | 'policies' | 'events';
@@ -16,21 +19,25 @@ const NAVIGATION_ITEMS: Array<{
   id: HudNavigationView;
   label: string;
   description: string;
+  icon: string;
 }> = [
   {
     id: 'roster',
     label: 'Roster',
-    description: 'Command your attendants'
+    description: 'Command your attendants',
+    icon: rosterIconUrl
   },
   {
     id: 'policies',
     label: 'Policies',
-    description: 'Shape sauna doctrine'
+    description: 'Shape sauna doctrine',
+    icon: policiesIconUrl
   },
   {
     id: 'events',
     label: 'Events',
-    description: 'Review incoming briefings'
+    description: 'Review incoming briefings',
+    icon: eventsIconUrl
   }
 ];
 
@@ -43,20 +50,20 @@ export function setupHudNavigation(
   }
 
   const layout = ensureHudLayout(overlay);
-  const { left } = layout.regions;
+  const { topLeftCluster } = layout.anchors;
   const doc = overlay.ownerDocument ?? document;
 
   const existingNav = overlay.querySelector<HTMLElement>('[data-hud-navigation]');
   existingNav?.remove();
 
-  const navCard = doc.createElement('nav');
-  navCard.dataset.hudNavigation = 'true';
-  navCard.className = 'hud-card hud-nav';
-  navCard.setAttribute('aria-label', 'Command console views');
+  const toolbar = doc.createElement('nav');
+  toolbar.dataset.hudNavigation = 'true';
+  toolbar.className = 'hud-nav-toolbar';
+  toolbar.setAttribute('aria-label', 'Command console views');
 
-  const stack = doc.createElement('div');
-  stack.className = 'hud-nav__stack';
-  navCard.appendChild(stack);
+  const items = doc.createElement('div');
+  items.className = 'hud-nav-toolbar__items';
+  toolbar.appendChild(items);
 
   const buttons = new Map<HudNavigationView, HTMLButtonElement>();
 
@@ -67,7 +74,7 @@ export function setupHudNavigation(
   const applyActive = (next: HudNavigationView, { emit } = { emit: false }) => {
     const changed = activeView !== next;
     activeView = next;
-    navCard.dataset.activeView = next;
+    toolbar.dataset.activeView = next;
     for (const [view, button] of buttons.entries()) {
       const isActive = view === next;
       button.dataset.active = isActive ? 'true' : 'false';
@@ -81,18 +88,30 @@ export function setupHudNavigation(
   for (const item of NAVIGATION_ITEMS) {
     const button = doc.createElement('button');
     button.type = 'button';
-    button.className = 'hud-nav__button';
+    button.className = 'hud-nav-toolbar__button';
     button.dataset.hudNavItem = item.id;
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('aria-label', `${item.label} – ${item.description}`);
+    button.title = `${item.label} view`;
+
+    const badge = doc.createElement('span');
+    badge.className = 'hud-nav-toolbar__badge';
+    badge.setAttribute('aria-hidden', 'true');
+
+    const icon = doc.createElement('img');
+    icon.src = item.icon;
+    icon.alt = '';
+    icon.decoding = 'async';
+    icon.loading = 'lazy';
+    icon.draggable = false;
+    icon.className = 'hud-nav-toolbar__icon';
+    badge.appendChild(icon);
 
     const label = doc.createElement('span');
-    label.className = 'hud-nav__label';
-    label.textContent = item.label;
+    label.className = 'sr-only';
+    label.textContent = `${item.label} – ${item.description}`;
 
-    const copy = doc.createElement('span');
-    copy.className = 'hud-nav__description';
-    copy.textContent = item.description;
-
-    button.append(label, copy);
+    button.append(badge, label);
 
     const handleClick = () => {
       applyActive(item.id, { emit: true });
@@ -101,10 +120,10 @@ export function setupHudNavigation(
     listeners.push(() => button.removeEventListener('click', handleClick));
 
     buttons.set(item.id, button);
-    stack.appendChild(button);
+    items.appendChild(button);
   }
 
-  left.appendChild(navCard);
+  topLeftCluster.appendChild(toolbar);
 
   applyActive(activeView);
 
@@ -119,7 +138,7 @@ export function setupHudNavigation(
       for (const cleanup of listeners) {
         cleanup();
       }
-      navCard.remove();
+      toolbar.remove();
       buttons.clear();
     }
   } satisfies HudNavigationController;
