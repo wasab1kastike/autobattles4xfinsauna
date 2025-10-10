@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Keep the command console toggle visible on desktop layouts, honor collapse
+  requests across wide viewports, and add HUD lifecycle coverage for the toggle
+  interactions.
 - Remove the deprecated `saunoja.svg` unit art from app, public, and docs
   bundles so art contributors know the vector variant is retired.
 - Remove the redundant artocoin badge assets from app, public, and docs

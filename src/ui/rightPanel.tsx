@@ -167,6 +167,7 @@ export function setupRightPanel(
 
   let isCollapsed = initialNarrowLayoutCollapsed;
   let narrowLayoutCollapsed = initialNarrowLayoutCollapsed;
+  let desktopCollapsed = false;
   let isMobileViewport = false;
   let isMobilePanelOpen = false;
 
@@ -186,9 +187,6 @@ export function setupRightPanel(
   const isPanelOpen = (): boolean => {
     if (isMobileViewport) {
       return isMobilePanelOpen;
-    }
-    if (!smallViewportQuery.matches) {
-      return true;
     }
     return !isCollapsed;
   };
@@ -245,17 +243,18 @@ export function setupRightPanel(
       return;
     }
     const wasCollapsed = isCollapsed;
+    isCollapsed = collapsed;
     if (matches) {
       narrowLayoutCollapsed = collapsed;
+    } else {
+      desktopCollapsed = collapsed;
     }
-    const shouldCollapse = collapsed && matches;
-    isCollapsed = shouldCollapse;
-    panel.classList.toggle('right-panel--collapsed', shouldCollapse);
-    overlay.classList.toggle(HUD_OVERLAY_COLLAPSED_CLASS, shouldCollapse);
-    panel.setAttribute('aria-hidden', shouldCollapse ? 'true' : 'false');
+    panel.classList.toggle('right-panel--collapsed', collapsed);
+    overlay.classList.toggle(HUD_OVERLAY_COLLAPSED_CLASS, collapsed);
+    panel.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
     refreshTogglePresentation();
     emitRosterVisibility();
-    if (wasCollapsed && !shouldCollapse && matches) {
+    if (wasCollapsed && !collapsed && matches) {
       panel.focus({ preventScroll: true });
     }
   };
@@ -340,8 +339,8 @@ export function setupRightPanel(
       return;
     }
     const matches = event.matches;
-    toggle.hidden = !matches;
-    const collapsed = matches ? narrowLayoutCollapsed : false;
+    toggle.hidden = false;
+    const collapsed = matches ? narrowLayoutCollapsed : desktopCollapsed;
     applyCollapsedState(collapsed, matches);
   };
 
@@ -466,10 +465,10 @@ export function setupRightPanel(
       rightRegion.appendChild(panel);
       insertToggle();
       toggle.classList.remove('hud-panel-toggle--mobile');
-      toggle.hidden = !smallViewportQuery.matches;
-      const collapsed = smallViewportQuery.matches ? narrowLayoutCollapsed : false;
-      panel.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
-      applyCollapsedState(collapsed, smallViewportQuery.matches);
+      toggle.hidden = false;
+      const matches = smallViewportQuery.matches;
+      const collapsed = matches ? narrowLayoutCollapsed : desktopCollapsed;
+      applyCollapsedState(collapsed, matches);
     }
     refreshTogglePresentation();
   });
