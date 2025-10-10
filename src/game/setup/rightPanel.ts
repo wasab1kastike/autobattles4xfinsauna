@@ -25,6 +25,7 @@ export interface RightPanelDependencies {
 export interface RightPanelBridge {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
+  openView: (view: HudNavigationView) => void;
   openRosterView: () => void;
   closeRosterView: () => void;
   onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
@@ -79,7 +80,7 @@ export function initializeRightPanel(
   const navigation = setupHudNavigation(overlay, {
     initialView: 'roster',
     onNavigate: (view) => {
-      rightPanel.showView(view);
+      rightPanel.openView(view);
     }
   });
   const detachViewSync = rightPanel.onViewChange((view: HudNavigationView) => {
@@ -92,6 +93,7 @@ export function initializeRightPanel(
   return {
     addEvent: rightPanel.addEvent,
     changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
+    openView: (view) => rightPanel.openView(view),
     openRosterView: () => rightPanel.openRosterView(),
     closeRosterView: () => rightPanel.closeRosterView(),
     onRosterVisibilityChange: (listener) => rightPanel.onRosterVisibilityChange(listener),

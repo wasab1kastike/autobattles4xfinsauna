@@ -21,6 +21,7 @@ const {
   initializeRightPanelMock: vi.fn(() => ({
     addEvent: vi.fn(),
     changeBehavior: vi.fn(),
+    openView: vi.fn(),
     openRosterView: vi.fn(),
     closeRosterView: vi.fn(),
     onRosterVisibilityChange: vi.fn(() => () => {}),
