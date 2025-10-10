@@ -23,6 +23,18 @@ important for keeping the live experience in sync with the repository.
 - Record notable changes in [CHANGELOG.md](CHANGELOG.md) and add any UI-facing
   updates to the README feature summary.
 
+### Handling art assets when collaborating with AI agents
+
+- Treat PNG and SVG portraits as first-class source files. Commit them directly
+  under `assets/` just like the existing unit art so Vite can apply hashed URLs
+  during the build.
+- If you're working with an AI pair (including the Codex-based automation
+  behind this project), keep in mind that the agent cannot create new binary
+  blobs in Git. You or another human maintainer must add, optimize, and commit
+  refreshed artwork. The agent can still update the TypeScript import lists or
+  documentation references to keep the pipeline polished, but final asset
+  commits need to come from a human checkout.
+
 ## Validation checklist
 
 Run the full workflow locally before pushing:
