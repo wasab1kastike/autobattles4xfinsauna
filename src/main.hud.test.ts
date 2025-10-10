@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { HUD_OVERLAY_COLLAPSED_CLASS } from './ui/layout.ts';
 
 vi.mock('./events', async () => {
   const actual = await vi.importActual<typeof import('./events')>('./events');
@@ -148,6 +149,42 @@ describe('main HUD lifecycle', () => {
     const nav = document.querySelector('[data-hud-navigation]');
     expect(nav).not.toBeNull();
     expect(nav?.classList.contains('hud-nav-toolbar')).toBe(true);
+
+    orchestrator.cleanup();
+    await Promise.resolve();
+  });
+
+  it('supports collapsing and expanding the command console on desktop viewports', async () => {
+    const { getGameOrchestrator } = await import('./main.ts');
+    const orchestrator = getGameOrchestrator();
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const resourceBar = document.getElementById('resource-bar') as HTMLElement;
+    const overlay = document.getElementById('ui-overlay') as HTMLElement;
+
+    orchestrator.setup(canvas, resourceBar, overlay);
+    await Promise.resolve();
+
+    const panel = document.getElementById('right-panel');
+    const toggle = document.getElementById('right-panel-toggle');
+    expect(toggle).not.toBeNull();
+    expect(toggle?.hidden).toBe(false);
+    expect(panel?.classList.contains('right-panel--collapsed')).toBe(false);
+    expect(panel?.getAttribute('aria-hidden')).toBe('false');
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);
+
+    toggle?.click();
+    await Promise.resolve();
+
+    expect(panel?.classList.contains('right-panel--collapsed')).toBe(true);
+    expect(panel?.getAttribute('aria-hidden')).toBe('true');
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(true);
+
+    toggle?.click();
+    await Promise.resolve();
+
+    expect(panel?.classList.contains('right-panel--collapsed')).toBe(false);
+    expect(panel?.getAttribute('aria-hidden')).toBe('false');
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);
 
     orchestrator.cleanup();
     await Promise.resolve();
