@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Add roving tabindex and arrow-key semantics to the HUD navigation toolbar so
+  keyboard users can cycle roster, policy, and event views with focus staying in
+  sync with the active badge.
 - Replace the left-side HUD navigation card with a compact top-left toolbar,
   wire in new roster/policy/event crest badges, refresh styling to match the
   inventory treatment, and update HUD navigation tests for the icon toggles.

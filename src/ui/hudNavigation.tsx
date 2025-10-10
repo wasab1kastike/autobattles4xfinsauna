@@ -60,12 +60,14 @@ export function setupHudNavigation(
   toolbar.dataset.hudNavigation = 'true';
   toolbar.className = 'hud-nav-toolbar';
   toolbar.setAttribute('aria-label', 'Command console views');
+  toolbar.setAttribute('role', 'toolbar');
 
   const items = doc.createElement('div');
   items.className = 'hud-nav-toolbar__items';
   toolbar.appendChild(items);
 
   const buttons = new Map<HudNavigationView, HTMLButtonElement>();
+  const order = NAVIGATION_ITEMS.map((item) => item.id);
 
   const listeners: Array<() => void> = [];
 
@@ -79,9 +81,17 @@ export function setupHudNavigation(
       const isActive = view === next;
       button.dataset.active = isActive ? 'true' : 'false';
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      button.tabIndex = isActive ? 0 : -1;
     }
     if (emit && changed) {
       options.onNavigate?.(next);
+    }
+  };
+
+  const focusView = (view: HudNavigationView) => {
+    const button = buttons.get(view);
+    if (button) {
+      button.focus({ preventScroll: true });
     }
   };
 
@@ -93,6 +103,7 @@ export function setupHudNavigation(
     button.setAttribute('aria-pressed', 'false');
     button.setAttribute('aria-label', `${item.label} – ${item.description}`);
     button.title = `${item.label} view`;
+    button.tabIndex = -1;
 
     const badge = doc.createElement('span');
     badge.className = 'hud-nav-toolbar__badge';
@@ -122,6 +133,56 @@ export function setupHudNavigation(
     buttons.set(item.id, button);
     items.appendChild(button);
   }
+
+  const handleKeyDown = (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null;
+    if (!target || !target.hasAttribute('data-hud-nav-item')) {
+      return;
+    }
+
+    const view = target.getAttribute('data-hud-nav-item') as HudNavigationView | null;
+    if (!view) {
+      return;
+    }
+
+    const currentIndex = order.indexOf(view);
+    if (currentIndex === -1) {
+      return;
+    }
+
+    let nextIndex: number | null = null;
+    switch (event.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+        nextIndex = (currentIndex + 1) % order.length;
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        nextIndex = (currentIndex - 1 + order.length) % order.length;
+        break;
+      case 'Home':
+        nextIndex = 0;
+        break;
+      case 'End':
+        nextIndex = order.length - 1;
+        break;
+      default:
+        break;
+    }
+
+    if (nextIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const nextView = order[nextIndex];
+    applyActive(nextView, { emit: true });
+    focusView(nextView);
+  };
+
+  toolbar.addEventListener('keydown', handleKeyDown);
+  listeners.push(() => toolbar.removeEventListener('keydown', handleKeyDown));
 
   topLeftCluster.appendChild(toolbar);
 
