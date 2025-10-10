@@ -62,6 +62,40 @@ describe('HUD navigation', () => {
     nav.dispose();
   });
 
+  it('supports arrow-key focus management with roving activation', () => {
+    const navigate = vi.fn();
+    const nav = setupHudNavigation(overlay, { onNavigate: navigate });
+
+    const rosterButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="roster"]');
+    const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
+    const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
+
+    expect(rosterButton?.tabIndex).toBe(0);
+    expect(policiesButton?.tabIndex).toBe(-1);
+    expect(eventsButton?.tabIndex).toBe(-1);
+
+    rosterButton?.focus();
+    expect(document.activeElement).toBe(rosterButton);
+
+    rosterButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(navigate).toHaveBeenCalledWith('policies');
+    expect(document.activeElement).toBe(policiesButton);
+    expect(policiesButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(policiesButton?.tabIndex).toBe(0);
+    expect(rosterButton?.tabIndex).toBe(-1);
+
+    policiesButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(navigate).toHaveBeenLastCalledWith('events');
+    expect(document.activeElement).toBe(eventsButton);
+    expect(eventsButton?.tabIndex).toBe(0);
+
+    eventsButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(navigate).toHaveBeenLastCalledWith('policies');
+    expect(document.activeElement).toBe(policiesButton);
+
+    nav.dispose();
+  });
+
   it('coordinates with the right panel view controller', () => {
     const state = new GameState(1000);
     const controller = setupRightPanel(state);
