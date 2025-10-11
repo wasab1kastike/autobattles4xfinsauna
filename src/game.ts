@@ -198,6 +198,7 @@ import {
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
 import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
+import { pickStrongholdSpawnCoord } from './world/spawn/strongholdSpawn.ts';
 import {
   disposeHudSignals,
   getHudElapsedMs as getHudElapsedMsSnapshot,
@@ -1043,7 +1044,7 @@ function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
 }
 
-function pickRandomEdgeFreeTile(): AxialCoord | undefined {
+function pickEdgeFallback(): AxialCoord | undefined {
   const occupied = new Set<string>();
   for (const unit of units) {
     if (!unit.isDead()) {
@@ -1083,6 +1084,18 @@ function pickRandomEdgeFreeTile(): AxialCoord | undefined {
 
   const index = Math.floor(Math.random() * candidates.length);
   return candidates[index];
+}
+
+function pickStrongholdSpawnTile(): AxialCoord | undefined {
+  const strongholdCoord = pickStrongholdSpawnCoord({
+    map,
+    units,
+    random: Math.random
+  });
+  if (strongholdCoord) {
+    return strongholdCoord;
+  }
+  return pickEdgeFallback();
 }
 
 type UnitSpawnedPayload = { unit: Unit };
@@ -1435,7 +1448,7 @@ const clock = new GameClock(1000, (deltaMs) => {
     strengthMultiplier: rampModifiers.strength,
     calmSecondsRemaining: rampModifiers.calmSecondsRemaining
   };
-  enemySpawner.update(dtSeconds, units, registerUnit, pickRandomEdgeFreeTile, runtimeModifiers);
+  enemySpawner.update(dtSeconds, units, registerUnit, pickStrongholdSpawnTile, runtimeModifiers);
   state.advanceEnemyCalm(dtSeconds);
   const scalingSnapshot = enemySpawner.getSnapshot();
   const calmSecondsRemaining = Math.max(
