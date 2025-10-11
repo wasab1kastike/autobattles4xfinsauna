@@ -148,7 +148,22 @@ async function ensureLatestDeployment(): Promise<void> {
       return;
     }
 
-    const bundleUrl = new URL(scriptMatch[1], origin);
+    const htmlBaseUrl = response.url ? new URL(response.url) : htmlUrl;
+    const htmlDirUrl = new URL('.', htmlBaseUrl);
+    let scriptSrc = scriptMatch[1];
+
+    if (
+      scriptSrc.startsWith('/') &&
+      htmlDirUrl.pathname !== '/' &&
+      !scriptSrc.startsWith(htmlDirUrl.pathname)
+    ) {
+      const normalizedDir = htmlDirUrl.pathname.endsWith('/')
+        ? htmlDirUrl.pathname.slice(0, -1)
+        : htmlDirUrl.pathname;
+      scriptSrc = `${normalizedDir}${scriptSrc}`;
+    }
+
+    const bundleUrl = new URL(scriptSrc, htmlDirUrl);
     bundleUrl.searchParams.set('cb', Date.now().toString());
     const bundleResponse = await fetch(bundleUrl, requestOptions);
     if (!bundleResponse.ok) {
