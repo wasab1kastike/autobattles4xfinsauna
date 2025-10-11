@@ -3,8 +3,9 @@ import { resolveCombat } from './resolve.ts';
 import type { CombatParticipant } from './resolve.ts';
 import { makeKeyword } from '../keywords/index.ts';
 import * as runtime from '../mods/runtime.ts';
-import { createPolicyModifierSummary } from '../policies/modifiers.ts';
+import { applyPolicyUnitModifiers, createPolicyModifierSummary } from '../policies/modifiers.ts';
 import { setActivePolicyModifiers } from '../policies/runtime.ts';
+import { getPolicyDefinition } from '../data/policies.ts';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -230,6 +231,51 @@ describe('resolveCombat', () => {
     expect(onKill).toHaveBeenCalledTimes(1);
     expect(result.hit).toBe(true);
     expect(onKill.mock.calls[0][0].lethal).toBe(true);
+  });
+
+  it("respects Saunojas' Rage modifiers for damage and hit reliability", () => {
+    const rage = getPolicyDefinition('saunojas-rage');
+    expect(rage).toBeTruthy();
+
+    const summary = createPolicyModifierSummary();
+    applyPolicyUnitModifiers(summary, rage?.unitModifiers);
+    setActivePolicyModifiers(summary);
+
+    const attacker: CombatParticipant = {
+      id: 'berserker',
+      faction: 'player',
+      attack: 10,
+      health: 12,
+      maxHealth: 12,
+      shield: 0
+    };
+
+    const defenderBase: CombatParticipant = {
+      id: 'target',
+      faction: 'enemy',
+      defense: 2,
+      health: 30,
+      maxHealth: 30,
+      shield: 0
+    };
+
+    const guaranteedHit = resolveCombat({
+      attacker,
+      defender: { ...defenderBase },
+      random: () => 0.49
+    });
+
+    expect(guaranteedHit.hit).toBe(true);
+    expect(guaranteedHit.damage).toBe(18);
+
+    const forcedMiss = resolveCombat({
+      attacker,
+      defender: { ...defenderBase },
+      random: () => 0.51
+    });
+
+    expect(forcedMiss.hit).toBe(false);
+    expect(forcedMiss.damage).toBe(0);
   });
 
   it('burn consumes shields before chipping health each tick', () => {
