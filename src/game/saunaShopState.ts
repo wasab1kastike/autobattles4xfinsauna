@@ -1,4 +1,8 @@
 import { loadArtocoinBalance } from '../progression/artocoin.ts';
+import {
+  getPurchasedLootUpgrades,
+  type LootUpgradeId
+} from '../progression/lootUpgrades.ts';
 import { getPurchasedSaunaTiers } from '../progression/saunaShop.ts';
 import type { SaunaTierId } from '../sauna/tiers.ts';
 
@@ -7,11 +11,13 @@ export type SaunaShopListener = () => void;
 let artocoinBalance = loadArtocoinBalance();
 let artocoinsSpentThisRun = 0;
 let purchasedTierIds = new Set<SaunaTierId>(getPurchasedSaunaTiers());
+let purchasedLootUpgrades = new Set<LootUpgradeId>(getPurchasedLootUpgrades());
 const listeners = new Set<SaunaShopListener>();
 
 export function reloadSaunaShopState(): void {
   artocoinBalance = loadArtocoinBalance();
   purchasedTierIds = new Set(getPurchasedSaunaTiers());
+  purchasedLootUpgrades = new Set(getPurchasedLootUpgrades());
   artocoinsSpentThisRun = 0;
 }
 
@@ -29,6 +35,14 @@ export function getPurchasedTierIds(): ReadonlySet<SaunaTierId> {
 
 export function setPurchasedTierIds(tiers: Iterable<SaunaTierId>): void {
   purchasedTierIds = new Set(tiers);
+}
+
+export function getPurchasedLootUpgradeIds(): ReadonlySet<LootUpgradeId> {
+  return purchasedLootUpgrades;
+}
+
+export function setPurchasedLootUpgradeIds(upgrades: Iterable<LootUpgradeId>): void {
+  purchasedLootUpgrades = new Set(upgrades);
 }
 
 export function resetArtocoinSpend(): void {
