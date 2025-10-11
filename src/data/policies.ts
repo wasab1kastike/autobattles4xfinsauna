@@ -24,6 +24,7 @@ export type PolicyId =
   | 'steam-debt-protocol'
   | 'battle-rhythm'
   | 'saunojas-rage'
+  | 'glacial-gambit'
   | 'shieldwall-doctrine'
   | 'sauna-skin';
 
@@ -312,6 +313,43 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       upkeepMultiplier: 1.4
     },
     spotlight: 'Commanders brandish ember-lit gongs to unleash unstoppable but reckless sauna berserkers.',
+    toggleable: true
+  },
+  {
+    id: 'glacial-gambit',
+    name: 'Glacial Gambit Targeting Program',
+    description:
+      'Deploy aurora-traced targeting crystals that extend volley range and sharpen accuracy while leaving exposed marksmen brittle to counter-fire.',
+    cost: 70,
+    resource: Resource.SAUNAKUNNIA,
+    prerequisites: [
+      {
+        description: 'Drill squads through the Battle Rhythm Doctrine for synchronized firing windows.',
+        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
+      },
+      {
+        description: 'Broker the Steam Diplomats Accord to finance the frost-glass optics.',
+        isSatisfied: (state) => state.hasPolicy('steam-diplomats')
+      }
+    ],
+    visuals: {
+      icon: saunaRosterIcon,
+      gradient: 'linear-gradient(164deg, rgba(59, 130, 246, 0.95), rgba(191, 219, 254, 0.92), rgba(30, 64, 175, 0.88))',
+      accentColor: '#38bdf8',
+      badges: ['Precision', 'Ranged'],
+      flair: 'Frost bloom projectors bathe the firing line in refracted aurora light as icicle-laced arrows arc overhead.'
+    },
+    effects: [],
+    unitModifiers: {
+      statMultipliers: {
+        attackRange: 1.35,
+        defense: 0.8
+      },
+      hitChanceBonus: 0.3,
+      damageTakenMultiplier: 1.5,
+      upkeepMultiplier: 1.15
+    },
+    spotlight: 'Elite glacial marksmen trade armor for crystalline focus, threading volleys across the snowfield with chilling precision.',
     toggleable: true
   },
   {

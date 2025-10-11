@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce the Glacial Gambit precision doctrine with extended range, stacked
+  hit bonuses, brittle defensive penalties, fresh combat regression coverage,
+  and updated policy briefings for the frost-marksmanship branch.
+
 - Introduced the Steam Debt Protocol economic edict, a toggleable bond surge that
   layers luxe passive Sauna Beer production while spiking enemy aggression and
   cadence with reversible scaling hooks and a heavier upkeep multiplier.
