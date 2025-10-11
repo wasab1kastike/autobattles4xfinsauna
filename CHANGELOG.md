@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Cloak newly seeded enemy strongholds in fog unless prior saves revealed them,
+  keeping fresh campaigns mysterious and covering the regression with
+  progression tests.
+
 
 - Add a crest-inspired close control to the command console roster view, polish
   the HUD styling for the new button across breakpoints, and cover the
