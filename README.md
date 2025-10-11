@@ -26,6 +26,9 @@ with cinematic UI flourishes.
   aria labels.
 - **Steamforge Atelier shop** lives beside the stash badge so you can commission
   new sauna tiers mid-run with artocoins earned on the frontline.
+- **Scripted enemy strongholds** seed the 10×10 campaign map via
+  `src/world/strongholds.ts`, pairing guard tiers with bespoke loot caches so
+  conquest objectives have handcrafted stakes from the first tick.
 - **Artocoin ledger end screen** tallies liberated strongholds, roster attrition,
   resources, and artocoin earnings/spend so the next commission is always within reach.
 - **NG+ scaling** now seeds each run, escalates upkeep and enemy aggression with
@@ -108,7 +111,10 @@ npm install
 
 Running `npm run build` produces the Vite output in `dist/`. The custom domain
 is preserved automatically because `public/CNAME` is copied into the build
-output alongside the SPA-friendly `404.html` fallback.
+output alongside the SPA-friendly `404.html` fallback. After every rebuild
+(especially when updating stronghold layouts or other map-driven assets), sync
+the generated bundle back into `docs/` so the GitHub Pages mirror reflects the
+latest commit.
 
 ### Base Path Configuration
 
