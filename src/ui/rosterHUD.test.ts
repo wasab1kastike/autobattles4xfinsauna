@@ -20,7 +20,6 @@ describe('rosterHUD', () => {
     try {
       const hud = setupRosterHUD(container, {
         rosterIcon: '/icon.svg',
-        toggleIcon: '/toggle.svg',
         summaryLabel: 'Sauna Guard'
       });
 
@@ -109,7 +108,7 @@ describe('rosterHUD', () => {
   it('hides the card when no featured Saunoja is provided', () => {
     const container = makeContainer();
     try {
-      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', toggleIcon: '/toggle.svg' });
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg' });
       hud.updateSummary({ count: 0, card: null });
       const card = container.querySelector<HTMLDivElement>('.saunoja-card');
       expect(card?.hidden).toBe(true);
@@ -126,7 +125,7 @@ describe('rosterHUD', () => {
   it('deduplicates roster renders based on signature changes', () => {
     const container = makeContainer();
     try {
-      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', toggleIcon: '/toggle.svg' });
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg' });
       const renderer = vi.fn();
       hud.installRenderer(renderer);
 
@@ -178,8 +177,7 @@ describe('rosterHUD', () => {
       const layout = ensureHudLayout(overlay);
       const rosterContainer = layout.tabs.panels.roster;
       const hud = setupRosterHUD(rosterContainer, {
-        rosterIcon: '/icon.svg',
-        toggleIcon: '/toggle.svg'
+        rosterIcon: '/icon.svg'
       });
 
       const listeners = new Set<(open: boolean) => void>();
@@ -218,7 +216,7 @@ describe('rosterHUD', () => {
     }
   });
 
-  it('keeps the roster overlay closed by default and toggles via the HUD control', () => {
+  it('keeps the roster overlay closed by default and follows bridge visibility changes', () => {
     const overlay = document.createElement('div');
     overlay.id = 'ui-overlay';
     document.body.appendChild(overlay);
@@ -227,52 +225,36 @@ describe('rosterHUD', () => {
       const layout = ensureHudLayout(overlay);
       const rosterContainer = layout.tabs.panels.roster;
       const hud = setupRosterHUD(rosterContainer, {
-        rosterIcon: '/icon.svg',
-        toggleIcon: '/toggle.svg'
+        rosterIcon: '/icon.svg'
       });
 
-      const listeners = new Set<(open: boolean) => void>();
+      let rosterListener: ((open: boolean) => void) | null = null;
+      const detach = vi.fn();
       const bridge = {
-        openRosterView: vi.fn(() => {
-          for (const listener of listeners) {
-            listener(true);
-          }
-        }),
-        closeRosterView: vi.fn(() => {
-          for (const listener of listeners) {
-            listener(false);
-          }
-        }),
+        openRosterView: vi.fn(),
+        closeRosterView: vi.fn(),
         onRosterVisibilityChange: vi.fn((listener: (open: boolean) => void) => {
-          listeners.add(listener);
+          rosterListener = listener;
           listener(false);
-          return () => {
-            listeners.delete(listener);
-          };
+          return detach;
         })
       };
 
       hud.connectPanelBridge(bridge);
 
-      const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
-      expect(toggleButton).not.toBeNull();
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
-      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
       expect(rosterContainer.hidden).toBe(true);
 
-      toggleButton?.click();
+      rosterListener?.(true);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(true);
-      expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
       expect(rosterContainer.hidden).toBe(false);
-      expect(bridge.openRosterView).toHaveBeenCalledTimes(1);
 
-      toggleButton?.click();
+      rosterListener?.(false);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
-      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
       expect(rosterContainer.hidden).toBe(true);
-      expect(bridge.closeRosterView).toHaveBeenCalledTimes(1);
+      expect(detach).not.toHaveBeenCalled();
 
       hud.destroy();
     } finally {
@@ -289,8 +271,7 @@ describe('rosterHUD', () => {
       const layout = ensureHudLayout(overlay);
       const rosterContainer = layout.tabs.panels.roster;
       const hud = setupRosterHUD(rosterContainer, {
-        rosterIcon: '/icon.svg',
-        toggleIcon: '/toggle.svg'
+        rosterIcon: '/icon.svg'
       });
 
       let rosterVisibility: ((open: boolean) => void) | null = null;
@@ -314,19 +295,15 @@ describe('rosterHUD', () => {
 
       hud.connectPanelBridge(bridge);
 
-      const toggleButton = overlay.querySelector<HTMLButtonElement>('[data-ui="roster-toggle"]');
-      expect(toggleButton).not.toBeNull();
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
       rosterVisibility?.(true);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(true);
-      expect(toggleButton?.getAttribute('aria-expanded')).toBe('true');
 
       rosterVisibility?.(false);
 
       expect(overlay.classList.contains('roster-hud-open')).toBe(false);
-      expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
 
       hud.destroy();
     } finally {
@@ -341,7 +318,6 @@ describe('rosterHUD', () => {
     try {
       const hud = setupRosterHUD(container, {
         rosterIcon: '/icon.svg',
-        toggleIcon: '/toggle.svg',
         onBehaviorChange
       });
 
