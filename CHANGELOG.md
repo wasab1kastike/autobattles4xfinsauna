@@ -1,9 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Expand the Steamforge Atelier with loot-tier permits and drop-rate augments,
-  ensure purchases spend artocoins, propagate the broader shop state to the HUD,
-  and cover the new upgrade flows with focused DOM tests.
+
 - Track unlocked loot rarity tiers in progression storage, filter loot rolls to
   respect the unlocked list, cover the regression with Vitest, and refresh the
   Steamforge Atelier copy to call out rarer cache unlocks.
