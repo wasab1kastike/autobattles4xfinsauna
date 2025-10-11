@@ -22,6 +22,7 @@ export type PolicyId =
   | 'temperance'
   | 'steam-diplomats'
   | 'battle-rhythm'
+  | 'saunojas-rage'
   | 'shieldwall-doctrine'
   | 'sauna-skin';
 
@@ -219,6 +220,35 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       upkeepMultiplier: 1.1
     },
     spotlight: 'Drumbeats roll across the training grounds, pushing every strike to land true.',
+    toggleable: true
+  },
+  {
+    id: 'saunojas-rage',
+    name: "Saunojas' Rage Protocol",
+    description:
+      'Ignite berserker war chants that double striking power at the expense of precision and lavish ration surcharges.',
+    cost: 60,
+    resource: Resource.SAUNAKUNNIA,
+    prerequisites: [
+      {
+        description: 'Drill squads through the Battle Rhythm Doctrine until the cadence lives in their bones.',
+        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
+      }
+    ],
+    visuals: {
+      icon: saunaBeerIcon,
+      gradient: 'linear-gradient(162deg, rgba(254, 226, 226, 0.96), rgba(248, 113, 113, 0.92), rgba(79, 70, 229, 0.88))',
+      accentColor: '#ef4444',
+      badges: ['Combat', 'Berserk'],
+      flair: 'Sparks leap from rune drums as scarlet steam halos every roaring Saunojas charge.'
+    },
+    effects: [],
+    unitModifiers: {
+      damageDealtMultiplier: 2,
+      hitChanceBonus: -0.5,
+      upkeepMultiplier: 1.4
+    },
+    spotlight: 'Commanders brandish ember-lit gongs to unleash unstoppable but reckless sauna berserkers.',
     toggleable: true
   },
   {

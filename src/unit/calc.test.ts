@@ -77,19 +77,22 @@ describe('computeUnitStats', () => {
 
   it('combines combat policy modifiers for downstream stat scaling', () => {
     const battle = getPolicyDefinition('battle-rhythm');
+    const rage = getPolicyDefinition('saunojas-rage');
     const shieldwall = getPolicyDefinition('shieldwall-doctrine');
     const saunaSkin = getPolicyDefinition('sauna-skin');
     expect(battle).toBeTruthy();
+    expect(rage).toBeTruthy();
     expect(shieldwall).toBeTruthy();
     expect(saunaSkin).toBeTruthy();
 
-    const summary = combinePolicyModifiers([battle!, shieldwall!, saunaSkin!]);
+    const summary = combinePolicyModifiers([battle!, rage!, shieldwall!, saunaSkin!]);
     expect(summary.statMultipliers.attackDamage).toBeCloseTo(1.15, 5);
     expect(summary.statMultipliers.movementRange).toBeCloseTo(1.05, 5);
     expect(summary.statMultipliers.defense).toBeCloseTo(1.3, 5);
-    expect(summary.hitChanceBonus).toBeCloseTo(0.05, 5);
+    expect(summary.hitChanceBonus).toBeCloseTo(-0.45, 5);
     expect(summary.damageTakenMultiplier).toBeCloseTo(0.425, 5);
-    expect(summary.upkeepMultiplier).toBeCloseTo(3.3, 5);
+    expect(summary.damageDealtMultiplier).toBeCloseTo(2.2, 5);
+    expect(summary.upkeepMultiplier).toBeCloseTo(4.62, 5);
     expect(summary.upkeepDelta).toBeCloseTo(1.5, 5);
   });
 });

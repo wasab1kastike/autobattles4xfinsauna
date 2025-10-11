@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce the Saunojas' Rage berserker doctrine with double damage, a tuned 50%
+  hit cap, upkeep surcharges, fresh Vitest regression coverage, and refreshed
+  policy docs describing the full combat doctrine ladder.
+
 - Rally enemy reinforcements from surviving strongholds, spawning squads on or
   adjacent to active bastions before falling back to edge entries, and cover the
   new routing with integration tests.
