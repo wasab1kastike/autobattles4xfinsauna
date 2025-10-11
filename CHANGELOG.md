@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Preserve the HUD overlay's collapsed grid variant when reinitializing the
+  layout, keep command dock anchors wired for inventory and action bar mounts,
+  and cover the regression with a DOM-focused Vitest suite.
+
 - Add a crest-inspired close control to the command console roster view, polish
   the HUD styling for the new button across breakpoints, and cover the
   interaction with integration tests that verify the roster overlay collapses
