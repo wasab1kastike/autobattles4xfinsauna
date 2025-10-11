@@ -22,7 +22,8 @@ export type PolicyId =
   | 'temperance'
   | 'steam-diplomats'
   | 'battle-rhythm'
-  | 'shieldwall-doctrine';
+  | 'shieldwall-doctrine'
+  | 'sauna-skin';
 
 export interface PolicyAppliedEvent {
   readonly policy: PolicyDefinition;
@@ -249,6 +250,34 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       upkeepDelta: 1.5
     },
     spotlight: 'The sauna guard braces as one, steam-wreathed shields catching the brunt of the assault.',
+    toggleable: true
+  },
+  {
+    id: 'sauna-skin',
+    name: 'Sauna Skin Plating',
+    description:
+      'Wrap elite defenders in shimmering sauna bark plating that halves incoming damage while tripling upkeep.',
+    cost: 85,
+    resource: Resource.SAUNAKUNNIA,
+    prerequisites: [
+      {
+        description: 'Fortify the Shieldwall Doctrine to insulate the front line.',
+        isSatisfied: (state) => state.hasPolicy('shieldwall-doctrine')
+      }
+    ],
+    visuals: {
+      icon: saunaBeerIcon,
+      gradient: 'linear-gradient(178deg, rgba(253, 186, 116, 0.96), rgba(14, 165, 233, 0.9))',
+      accentColor: '#f97316',
+      badges: ['Defense', 'Risk'],
+      flair: 'Gilded bark plates gleam like molten copper, refracting steamlight across the shield wall.'
+    },
+    effects: [],
+    unitModifiers: {
+      damageTakenMultiplier: 0.5,
+      upkeepMultiplier: 3
+    },
+    spotlight: 'Only the bravest sauna wardens don the scalding plates that turn aside even siege-lanced barrages.',
     toggleable: true
   }
 ];
