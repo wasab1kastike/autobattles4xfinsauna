@@ -16,12 +16,14 @@ export interface StrongholdConfig {
 
 export interface StrongholdPersistenceEntry {
   readonly captured?: boolean;
+  readonly seen?: boolean;
 }
 
 export type StrongholdPersistence = Record<string, StrongholdPersistenceEntry>;
 
 export interface StrongholdMetadata extends StrongholdDefinition {
   captured: boolean;
+  seen: boolean;
 }
 
 const registry = new Map<string, StrongholdMetadata>();
@@ -65,10 +67,16 @@ function trackTileCapture(metadata: StrongholdMetadata, map: HexMap): void {
     return;
   }
   tile.addMutationListener((mutation: TileMutation) => {
-    if (mutation !== 'building') {
+    if (mutation === 'building') {
+      metadata.captured = tile.building !== 'city';
+      if (metadata.captured) {
+        metadata.seen = true;
+      }
       return;
     }
-    metadata.captured = tile.building !== 'city';
+    if (mutation === 'fog' && !tile.isFogged) {
+      metadata.seen = true;
+    }
   });
 }
 
@@ -86,14 +94,21 @@ export function seedEnemyStrongholds(
     const tile = map.ensureTile(spec.coord.q, spec.coord.r);
     const persistedEntry = persisted?.[spec.id];
     const captured = Boolean(persistedEntry?.captured);
+    const previouslySeen = Boolean(persistedEntry?.seen);
     if (captured) {
       tile.placeBuilding(null);
     } else {
       tile.placeBuilding('city');
+      if (previouslySeen) {
+        tile.setFogged(false);
+      } else {
+        tile.setFogged(true);
+      }
     }
     const metadata: StrongholdMetadata = {
       ...spec,
-      captured
+      captured,
+      seen: captured || previouslySeen || !tile.isFogged
     };
     registry.set(spec.id, metadata);
     trackTileCapture(metadata, map);
@@ -111,10 +126,19 @@ export function mergeStrongholdPersistence(
   for (const metadata of registry.values()) {
     const persistedEntry = snapshot[metadata.id];
     const captured = Boolean(persistedEntry?.captured);
+    const previouslySeen = Boolean(persistedEntry?.seen);
     metadata.captured = captured;
+    metadata.seen = metadata.seen || captured || previouslySeen;
     if (map) {
       const tile = map.ensureTile(metadata.coord.q, metadata.coord.r);
       tile.placeBuilding(captured ? null : 'city');
+      if (!captured) {
+        if (previouslySeen) {
+          tile.setFogged(false);
+        } else {
+          tile.setFogged(true);
+        }
+      }
     }
   }
 }
@@ -126,7 +150,7 @@ export function listStrongholds(): readonly StrongholdMetadata[] {
 export function getStrongholdSnapshot(): StrongholdPersistence {
   const snapshot: StrongholdPersistence = {};
   for (const metadata of registry.values()) {
-    snapshot[metadata.id] = { captured: metadata.captured };
+    snapshot[metadata.id] = { captured: metadata.captured, seen: metadata.seen };
   }
   return snapshot;
 }
