@@ -2,10 +2,7 @@
 
 ## Unreleased
 
-- Seed scripted enemy strongholds via `src/world/strongholds.ts`, persist their
-  capture state through saves, extend objective tracking tests for the new
-  layer, and remind contributors to refresh the `docs/` mirror after rebuilding
-  so GitHub Pages stays aligned with the published bundle.
+
 - Add a crest-inspired close control to the command console roster view, polish
   the HUD styling for the new button across breakpoints, and cover the
   interaction with integration tests that verify the roster overlay collapses
