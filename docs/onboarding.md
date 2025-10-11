@@ -16,6 +16,19 @@ The onboarding flow introduces the polished HUD rhythms for new leaders through 
 
 Each tooltip card is fully keyboard navigable (`←`, `→`, `Esc`, or the on-screen controls) and can be dismissed at any time.
 
+## Economic edict callouts
+
+- **Evergreen Eco Mandate** highlights how the passive brewery feed stacks during
+  the upkeep tutorial beat.
+- **Aurora Temperance Treaty** showcases the night-shift buff once the eco
+  policy is active so leaders connect the combo.
+- **Steam Diplomats Accord** reinforces the premium trade lanes that unlock the
+  late-run treasury tutorial tooltips.
+- **Steam Debt Protocol** now caps the sequence with a luxe toggle card,
+  explaining the reversible +3 passive Sauna Beer surge, the elevated upkeep
+  multiplier, and the aggression/cadence spike leaders must weather when they
+  engage it.
+
 With the combat anchor restored on the action tray, the **Command the Fight** spotlight now locks to the tray chrome instead of floating, immersing leaders in the premium rally controls during that beat of the tour.
 
 The refreshed sauna HUD now anchors the opening step with the Sauna Integrity meter and animated progress bar introduced in `src/ui/sauna.tsx`. The Premium Tiers grid showcased later in the tutorial reinforces how leaders unlock expanded roster capacity, while updated SISU and combat cues echo their in-game meters and rally buttons.

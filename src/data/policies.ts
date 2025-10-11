@@ -21,6 +21,7 @@ export type PolicyId =
   | 'eco'
   | 'temperance'
   | 'steam-diplomats'
+  | 'steam-debt-protocol'
   | 'battle-rhythm'
   | 'saunojas-rage'
   | 'shieldwall-doctrine'
@@ -188,6 +189,68 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       }
     ],
     spotlight: 'Trade envoys pipe artisanal steam through every new supply line.'
+  },
+  {
+    id: 'steam-debt-protocol',
+    name: 'Steam Debt Protocol',
+    description:
+      'Float luxury bonds that bankroll lavish sauna beer runs while daring enemy commanders to press the tempo.',
+    cost: 55,
+    resource: Resource.SAUNAKUNNIA,
+    prerequisites: [
+      {
+        description: 'Formalise the Steam Diplomats Accord to tap the sovereign vaults.',
+        isSatisfied: (state) => state.hasPolicy('steam-diplomats')
+      },
+      {
+        description: 'Maintain a collateral reserve of at least 90 Sauna Beer bottles.',
+        isSatisfied: (state) => state.getResource(Resource.SAUNA_BEER) >= 90
+      }
+    ],
+    visuals: {
+      icon: resourceIcon,
+      gradient:
+        'linear-gradient(158deg, rgba(255, 255, 255, 0.94), rgba(250, 204, 21, 0.9), rgba(244, 114, 182, 0.88))',
+      accentColor: '#facc15',
+      badges: ['Economy', 'High Society'],
+      flair: 'Opalescent ledgers hover above the treasury while auric steam sigils coil around the council dais.'
+    },
+    effects: [
+      {
+        event: POLICY_EVENTS.APPLIED,
+        once: false,
+        invoke: ({ state }) => {
+          const passiveBonus = 3;
+          const aggressionFactor = 1.25;
+          const cadenceFactor = 1.15;
+          state.modifyPassiveGeneration(Resource.SAUNA_BEER, passiveBonus);
+          state.applyEnemyScalingModifiers({
+            aggression: aggressionFactor,
+            cadence: cadenceFactor
+          });
+        }
+      },
+      {
+        event: POLICY_EVENTS.REVOKED,
+        once: false,
+        invoke: ({ state }) => {
+          const passiveBonus = 3;
+          const aggressionFactor = 1 / 1.25;
+          const cadenceFactor = 1 / 1.15;
+          state.modifyPassiveGeneration(Resource.SAUNA_BEER, -passiveBonus);
+          state.applyEnemyScalingModifiers({
+            aggression: aggressionFactor,
+            cadence: cadenceFactor
+          });
+        }
+      }
+    ],
+    unitModifiers: {
+      upkeepMultiplier: 1.12
+    },
+    spotlight:
+      'Treasury clerks unfurl velvet-banded scrolls as bond-backed tankards arrive in synchronized, perfumed waves.',
+    toggleable: true
   },
   {
     id: 'battle-rhythm',
