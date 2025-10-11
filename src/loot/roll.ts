@@ -19,7 +19,7 @@ export interface RolledLootItem {
 export interface LootRollOptions {
   readonly factionId: string;
   readonly elite?: boolean;
-  readonly rolls?: number;
+  readonly rolls: number;
   readonly random?: RandomSource;
   /**
    * Optional explicit table override. When provided the {@link factionId}
@@ -37,11 +37,11 @@ export interface LootRollResult {
   readonly rolls: readonly RolledLootItem[];
 }
 
-function clampRollCount(requested: number | undefined): number {
+function clampRollCount(requested: number): number {
   if (!Number.isFinite(requested)) {
-    return 1;
+    return 0;
   }
-  const rounded = Math.floor(requested as number);
+  const rounded = Math.floor(requested);
   if (rounded <= 0) {
     return 0;
   }

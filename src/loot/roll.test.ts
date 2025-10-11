@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { rollLoot } from './roll.ts';
 import type { LootTable } from './tables.ts';
 
@@ -17,6 +17,22 @@ describe('rollLoot', () => {
     expect(result.tableId).toBe('general-salvage');
     expect(result.rolls.length).toBe(1);
     expect(result.rolls[0].item.name).toBeDefined();
+  });
+
+  it('returns an empty result when roll count is zero', () => {
+    const table: LootTable = {
+      id: 'test-zero',
+      label: 'Zero Table',
+      entries: [
+        { id: 'any', name: 'Any Item', rarity: 'common', quantity: 1, weight: 1 }
+      ]
+    };
+
+    const random = vi.fn(() => 0.5);
+    const result = rollLoot({ factionId: 'enemy', table, random, rolls: 0 });
+
+    expect(result.rolls).toHaveLength(0);
+    expect(random).not.toHaveBeenCalled();
   });
 
   it('weights entries by rarity before rolling', () => {

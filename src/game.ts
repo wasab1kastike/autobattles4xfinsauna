@@ -116,6 +116,7 @@ import type {
 } from './inventory/state.ts';
 import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
+import { getEffectiveLootRolls, shouldDropLoot } from './progression/lootUpgrades.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats, applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
@@ -248,6 +249,14 @@ function applyNgPlusState(next: NgPlusState): void {
   enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
   lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
   syncActiveTierWithUnlocks?.({ persist: true });
+}
+
+function determineLootRollCount(randomSource: () => number): number {
+  if (!shouldDropLoot(randomSource)) {
+    return 0;
+  }
+  const rolls = Math.floor(getEffectiveLootRolls());
+  return Math.max(1, rolls);
 }
 
 applyNgPlusState(currentNgPlusState);
@@ -1915,37 +1924,45 @@ const onUnitDied = ({
   }
   if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
     const treatAsElite = isEliteUnit(fallen ?? null) || lootRandom() < BASE_ELITE_ODDS;
-    const lootResult = rollLoot({ factionId: unitFaction, elite: treatAsElite });
-    if (lootResult.rolls.length > 0) {
-      const selectedAttendant = saunojas.find((unit) => unit.selected) ?? null;
-      for (const drop of lootResult.rolls) {
-        const receipt = inventory.addLoot(drop, {
-          unitId: selectedAttendant?.id,
-          sourceTableId: lootResult.tableId,
-          equip: equipItemToSaunoja
-        });
-        if (receipt.equipped) {
-          const ownerName = selectedAttendant?.name ?? 'our champion';
-          logEvent({
-            type: 'loot',
-            message: `Quartermaster fastens ${drop.item.name} to ${ownerName}.`,
-            metadata: {
-              item: drop.item.name,
-              equipped: true,
-              owner: ownerName,
-              source: label
-            }
+    const lootRollCount = determineLootRollCount(lootRandom);
+    if (lootRollCount > 0) {
+      const lootResult = rollLoot({
+        factionId: unitFaction,
+        elite: treatAsElite,
+        rolls: lootRollCount,
+        random: lootRandom
+      });
+      if (lootResult.rolls.length > 0) {
+        const selectedAttendant = saunojas.find((unit) => unit.selected) ?? null;
+        for (const drop of lootResult.rolls) {
+          const receipt = inventory.addLoot(drop, {
+            unitId: selectedAttendant?.id,
+            sourceTableId: lootResult.tableId,
+            equip: equipItemToSaunoja
           });
-        } else {
-          logEvent({
-            type: 'loot',
-            message: `Quartermaster stores ${drop.item.name} recovered from ${label}.`,
-            metadata: {
-              item: drop.item.name,
-              equipped: false,
-              source: label
-            }
-          });
+          if (receipt.equipped) {
+            const ownerName = selectedAttendant?.name ?? 'our champion';
+            logEvent({
+              type: 'loot',
+              message: `Quartermaster fastens ${drop.item.name} to ${ownerName}.`,
+              metadata: {
+                item: drop.item.name,
+                equipped: true,
+                owner: ownerName,
+                source: label
+              }
+            });
+          } else {
+            logEvent({
+              type: 'loot',
+              message: `Quartermaster stores ${drop.item.name} recovered from ${label}.`,
+              metadata: {
+                item: drop.item.name,
+                equipped: false,
+                source: label
+              }
+            });
+          }
         }
       }
     }
