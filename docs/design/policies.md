@@ -10,6 +10,11 @@
 - **Effect:** Doubles damage dealt, applies a -50% hit reliability penalty, and layers on a 40% upkeep surcharge for every deployed unit.
 - **Tactics:** Toggle when you need a berserker crescendo—pair with accuracy buffs or shielded initiators so the reckless swings still convert into kills.
 
+## Glacial Gambit Targeting Program
+- **Prerequisite:** Battle Rhythm Doctrine & Steam Diplomats Accord
+- **Effect:** Adds 35% attack range, pumps a +30% accuracy bonus into the roster, trims defense by 20%, multiplies incoming damage by 1.5×, and increases upkeep by 15%.
+- **Tactics:** Ideal for glass-cannon volley teams—layer with command auras or shield specialists so the frosted marksmen delete threats before retaliatory strikes land.
+
 ## Shieldwall Doctrine
 - **Prerequisite:** Battle Rhythm Doctrine
 - **Effect:** Adds 30% defense, reduces incoming damage by 15%, and charges a flat +1.5 upkeep per unit to keep the barrier menders funded.
