@@ -26,6 +26,10 @@ import {
 } from './shop/SaunaShopPanel.tsx';
 import type { SaunaTierId } from '../sauna/tiers.ts';
 import type { PurchaseSaunaTierResult } from '../progression/saunaShop.ts';
+import type {
+  LootUpgradeId,
+  PurchaseLootUpgradeResult
+} from '../progression/lootUpgrades.ts';
 
 const INVENTORY_BUCKET_ICON_URL = new URL(
   '../../assets/ui/inventory-saunabucket-01.png',
@@ -42,6 +46,9 @@ export interface InventoryHudOptions {
   ) => EquipAttemptResult;
   readonly getSaunaShopViewModel?: () => SaunaShopViewModel | null;
   readonly onPurchaseSaunaTier?: (tierId: SaunaTierId) => PurchaseSaunaTierResult;
+  readonly onPurchaseLootUpgrade?: (
+    upgradeId: LootUpgradeId
+  ) => PurchaseLootUpgradeResult;
   readonly subscribeToSaunaShop?: (listener: () => void) => () => void;
   readonly onRequestRosterExpand?: () => void;
   readonly onRequestRosterCollapse?: () => void;
@@ -315,8 +322,25 @@ export function setupInventoryHud(
     );
     shopButton.dataset.balance = balanceLabel;
     shopButton.title = `Artocoins ${balanceLabel}`;
-    const ready = view.tiers.some((entry) => !entry.status.owned && entry.status.affordable);
-    const locked = view.tiers.some((entry) => !entry.status.owned && !entry.status.affordable);
+    const tierReady = view.tiers.some(
+      (entry) => !entry.status.owned && entry.status.affordable
+    );
+    const tierLocked = view.tiers.some(
+      (entry) => !entry.status.owned && !entry.status.affordable
+    );
+    const upgradeEntries = (view.lootCategories ?? []).flatMap((category) =>
+      category.upgrades ?? []
+    );
+    const upgradeReady = upgradeEntries.some(
+      (entry) =>
+        !entry.status.owned && entry.status.prerequisitesMet && entry.status.affordable
+    );
+    const upgradeLocked = upgradeEntries.some(
+      (entry) =>
+        !entry.status.owned && (!entry.status.prerequisitesMet || !entry.status.affordable)
+    );
+    const ready = tierReady || upgradeReady;
+    const locked = tierLocked || upgradeLocked;
     shopButton.dataset.state = ready ? 'ready' : locked ? 'locked' : 'complete';
   };
 
@@ -328,7 +352,11 @@ export function setupInventoryHud(
 
   if (typeof options.getSaunaShopViewModel === 'function') {
     const resolveView = (): SaunaShopViewModel =>
-      options.getSaunaShopViewModel?.() ?? { balance: 0, tiers: [] };
+      options.getSaunaShopViewModel?.() ?? {
+        balance: 0,
+        tiers: [],
+        lootCategories: []
+      };
     shopButton = createShopButton();
     shopButton.dataset.state = 'locked';
     topLeftCluster.insertBefore(shopButton, inventoryButton);
@@ -352,11 +380,29 @@ export function setupInventoryHud(
       return handler(tierId);
     };
 
+    const handleUpgradePurchase = (
+      upgradeId: LootUpgradeId
+    ): PurchaseLootUpgradeResult => {
+      const handler = options.onPurchaseLootUpgrade;
+      if (!handler) {
+        const fallback = resolveView();
+        return {
+          success: false,
+          balance: fallback.balance,
+          purchased: new Set<LootUpgradeId>(),
+          unlockedRarities: new Set(),
+          reason: 'unsupported'
+        } as PurchaseLootUpgradeResult;
+      }
+      return handler(upgradeId);
+    };
+
     shopPanel = createSaunaShopPanel({
       getViewModel: resolveView,
       callbacks: {
         onClose: () => setShopOpen(false),
         onPurchaseTier: handlePurchase,
+        onPurchaseLootUpgrade: handleUpgradePurchase,
         emitToast: emitShopToast
       }
     });

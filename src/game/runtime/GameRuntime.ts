@@ -11,7 +11,11 @@ import type { RosterHudController, RosterHudSummary } from '../../ui/rosterHUD.t
 import type { GameEvent, RosterEntry } from '../../ui/rightPanel.tsx';
 import type { InventoryState, EquipAttemptResult, InventoryComparisonContext } from '../../inventory/state.ts';
 import type { EquipmentSlotId } from '../../items/types.ts';
-import type { SaunaShopViewModel } from '../../ui/shop/SaunaShopPanel.tsx';
+import type {
+  SaunaShopLootUpgradeCategoryView,
+  SaunaShopLootUpgradeView,
+  SaunaShopViewModel
+} from '../../ui/shop/SaunaShopPanel.tsx';
 import type { SaunaTierContext, SaunaTierId, SaunaTierChangeContext } from '../../sauna/tiers.ts';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../../events/types.ts';
 import type { PolicyAppliedEvent, PolicyRevokedEvent } from '../../data/policies.ts';
@@ -22,9 +26,18 @@ import { createUnitFxManager, type UnitFxManager } from '../../render/unit_fx.ts
 import { createUnitCombatAnimator, type UnitCombatAnimator } from '../../render/combatAnimations.ts';
 import { initializeClassicHud } from '../setup/hud.ts';
 import { setupRosterHUD } from '../../ui/rosterHUD.ts';
-import { getArtocoinBalance, subscribeToSaunaShop as subscribeToSaunaShopState } from '../saunaShopState.ts';
+import {
+  getArtocoinBalance,
+  getPurchasedLootUpgradeIds,
+  subscribeToSaunaShop as subscribeToSaunaShopState
+} from '../saunaShopState.ts';
 import { evaluateSaunaTier, getSaunaTier, listSaunaTiers } from '../../sauna/tiers.ts';
 import { purchaseSaunaTier } from '../../progression/saunaShop.ts';
+import {
+  getLootUpgradeDefinitions,
+  purchaseLootUpgrade,
+  type PurchaseLootUpgradeResult
+} from '../../progression/lootUpgrades.ts';
 import { playSafe } from '../../audio/sfx.ts';
 import { useSisuBurst, torille, SISU_BURST_COST, TORILLE_COST } from '../../sisu/burst.ts';
 import { logEvent } from '../../ui/logging.ts';
@@ -375,12 +388,124 @@ export class GameRuntime {
 
     const buildSaunaShopViewModel = (): SaunaShopViewModel => {
       const context = this.ctx.getTierContext();
+      const balance = getArtocoinBalance();
+      const purchasedUpgrades = getPurchasedLootUpgradeIds();
+      const definitions = getLootUpgradeDefinitions();
+      const definitionMap = new Map(
+        definitions.map((definition) => [definition.id, definition])
+      );
+      const numberFormatter = new Intl.NumberFormat('en-US');
+      const listFormatter = new Intl.ListFormat('en', {
+        style: 'long',
+        type: 'conjunction'
+      });
+
+      type LootCategoryAccumulator = {
+        id: string;
+        title: string;
+        description: string;
+        upgrades: SaunaShopLootUpgradeView[];
+      };
+
+      const CATEGORY_METADATA = {
+        rarity: {
+          id: 'rarity',
+          title: 'Rarity permits',
+          description:
+            'Commission seals that unlock higher-tier salvage allotments for the quartermaster.'
+        },
+        'drop-rate': {
+          id: 'drop-rate',
+          title: 'Drop-rate augmentations',
+          description:
+            'Invest in atelier rituals and machinery that elevate battlefield recovery odds.'
+        }
+      } as const;
+
+      const categoriesAccumulator = new Map<string, LootCategoryAccumulator>();
+
+      for (const definition of definitions) {
+        const metadata = CATEGORY_METADATA[definition.category];
+        if (!metadata) {
+          continue;
+        }
+        let categoryEntry = categoriesAccumulator.get(definition.category);
+        if (!categoryEntry) {
+          categoryEntry = {
+            id: metadata.id,
+            title: metadata.title,
+            description: metadata.description,
+            upgrades: []
+          } satisfies LootCategoryAccumulator;
+          categoriesAccumulator.set(definition.category, categoryEntry);
+        }
+        const owned = purchasedUpgrades.has(definition.id);
+        const prerequisites = Array.isArray(definition.requires)
+          ? definition.requires
+          : [];
+        const missing = prerequisites.filter((req) => !purchasedUpgrades.has(req));
+        const prerequisitesMet = missing.length === 0;
+        const cost = Math.max(0, Math.floor(definition.cost));
+        const affordable =
+          !owned && prerequisitesMet && (cost === 0 || balance >= cost);
+        const missingTitles = missing
+          .map((req) => definitionMap.get(req)?.title ?? 'prior upgrade')
+          .filter((title) => Boolean(title));
+        const missingLabel =
+          missingTitles.length > 0 ? listFormatter.format(missingTitles) : '';
+        const requirementLabel = owned
+          ? `${definition.title} activated`
+          : !prerequisitesMet
+            ? `Requires ${missingLabel}`
+            : cost > 0
+              ? `Costs ${numberFormatter.format(cost)} artocoins`
+              : 'Included with atelier charter';
+        const lockedReason = !prerequisitesMet
+          ? `Requires ${missingLabel}`
+          : undefined;
+
+        const upgradeView: SaunaShopLootUpgradeView = {
+          id: definition.id,
+          title: definition.title,
+          tagline: definition.tagline,
+          description: definition.description,
+          effectSummary: definition.effectSummary,
+          successBlurb: definition.successBlurb,
+          badgeLabel: definition.badgeLabel,
+          badgeGradient: definition.badgeGradient,
+          accent: definition.category,
+          status: {
+            owned,
+            affordable,
+            prerequisitesMet,
+            cost,
+            requirementLabel,
+            lockedReason
+          }
+        } satisfies SaunaShopLootUpgradeView;
+        categoryEntry.upgrades.push(upgradeView);
+      }
+
+      const lootCategories: SaunaShopLootUpgradeCategoryView[] = [];
+      for (const key of ['rarity', 'drop-rate'] as const) {
+        const entry = categoriesAccumulator.get(key);
+        if (entry && entry.upgrades.length > 0) {
+          lootCategories.push({
+            id: entry.id,
+            title: entry.title,
+            description: entry.description,
+            upgrades: entry.upgrades
+          });
+        }
+      }
+
       return {
-        balance: getArtocoinBalance(),
+        balance,
         tiers: listSaunaTiers().map((tier) => ({
           tier,
           status: evaluateSaunaTier(tier, context)
-        }))
+        })),
+        lootCategories
       } satisfies SaunaShopViewModel;
     };
 
@@ -412,6 +537,10 @@ export class GameRuntime {
       getSaunaShopViewModel: () => buildSaunaShopViewModel(),
       onPurchaseSaunaTier: (tierId) =>
         purchaseSaunaTier(getSaunaTier(tierId), {
+          getCurrentBalance: () => getArtocoinBalance()
+        }),
+      onPurchaseLootUpgrade: (upgradeId) =>
+        purchaseLootUpgrade(upgradeId, {
           getCurrentBalance: () => getArtocoinBalance()
         }),
       subscribeToSaunaShop: (listener) => subscribeToSaunaShopState(listener),
