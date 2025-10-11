@@ -3,6 +3,7 @@ import { GameState, Resource } from './GameState';
 import { eventBus } from '../events/EventBus';
 import {
   POLICY_EVENTS,
+  listPolicies,
   type PolicyAppliedEvent,
   type PolicyRejectedEvent,
   type PolicyRevokedEvent
@@ -10,6 +11,7 @@ import {
 import { HexMap } from '../hexmap.ts';
 import { Farm } from '../buildings/index.ts';
 import '../events';
+import { combinePolicyModifiers } from '../policies/modifiers.ts';
 
 function ensureRevealed(map: HexMap, coord: { q: number; r: number }): void {
   const tile = map.ensureTile(coord.q, coord.r);
@@ -273,6 +275,54 @@ describe('GameState', () => {
     expect(appliedTemperance).toBe(true);
     expect(appliedPolicies).toContain('temperance');
     expect(state.nightWorkSpeedMultiplier).toBeGreaterThan(1);
+  });
+
+  it('amplifies and restores steam debt protocol modifiers when toggled', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 200);
+    state.addResource(Resource.SAUNA_BEER, 120);
+
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('temperance', true)).toBe(true);
+    expect(state.setPolicyEnabled('steam-diplomats', true)).toBe(true);
+
+    const passiveBefore = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const snapshotBefore = state.getEnemyScalingSnapshot();
+
+    expect(state.setPolicyEnabled('steam-debt-protocol', true)).toBe(true);
+
+    const passiveAfterApply = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const snapshotAfterApply = state.getEnemyScalingSnapshot();
+
+    expect(passiveAfterApply).toBeCloseTo(passiveBefore + 3);
+    expect(snapshotAfterApply.aggression).toBeCloseTo(snapshotBefore.aggression * 1.25, 5);
+    expect(snapshotAfterApply.cadence).toBeCloseTo(snapshotBefore.cadence * 1.15, 5);
+
+    expect(state.setPolicyEnabled('steam-debt-protocol', false)).toBe(true);
+
+    const passiveAfterRevoke = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const snapshotAfterRevoke = state.getEnemyScalingSnapshot();
+
+    expect(passiveAfterRevoke).toBeCloseTo(passiveBefore, 5);
+    expect(snapshotAfterRevoke.aggression).toBeCloseTo(snapshotBefore.aggression, 5);
+    expect(snapshotAfterRevoke.cadence).toBeCloseTo(snapshotBefore.cadence, 5);
+  });
+
+  it('smoke tests policy modifier recalculation with steam debt protocol', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNAKUNNIA, 200);
+    state.addResource(Resource.SAUNA_BEER, 120);
+
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('temperance', true)).toBe(true);
+    expect(state.setPolicyEnabled('steam-diplomats', true)).toBe(true);
+    expect(state.setPolicyEnabled('steam-debt-protocol', true)).toBe(true);
+
+    const activePolicies = listPolicies().filter((definition) => state.hasPolicy(definition.id));
+    const summary = combinePolicyModifiers(activePolicies);
+
+    expect(summary.upkeepMultiplier).toBeCloseTo(1.12, 5);
+    expect(summary.upkeepDelta).toBe(0);
   });
 
   it('rejects disabling policies that are not toggleable', () => {
