@@ -189,7 +189,7 @@ body > #game-container {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: clamp(16px, 3vw, 28px);
+  gap: clamp(18px, 2.5vw, 30px);
 }
 
 #ui-overlay.hud-grid {
@@ -204,17 +204,17 @@ body > #game-container {
   grid-template-rows: auto 1fr auto;
 }
 
-.grid-cols-\[minmax\(clamp\(200px\,22vw\,280px\)\,1fr\)_minmax\(420px\,1\.6fr\)_minmax\(clamp\(200px\,24vw\,340px\)\,1fr\)\] {
+.grid-cols-\[minmax\(clamp\(210px\,23vw\,320px\)\,1fr\)_minmax\(432px\,1\.65fr\)_minmax\(clamp\(210px\,23vw\,320px\)\,1fr\)\] {
   grid-template-columns:
-    minmax(clamp(200px, 22vw, 280px), 1fr)
-    minmax(420px, 1.6fr)
-    minmax(clamp(200px, 24vw, 340px), 1fr);
+    minmax(clamp(210px, 23vw, 320px), 1fr)
+    minmax(432px, 1.65fr)
+    minmax(clamp(210px, 23vw, 320px), 1fr);
 }
 
 #ui-overlay.hud-grid.hud-grid--right-collapsed {
   grid-template-columns:
-    minmax(clamp(200px, 22vw, 280px), 1fr)
-    minmax(420px, 1.6fr)
+    minmax(clamp(210px, 23vw, 320px), 1fr)
+    minmax(432px, 1.65fr)
     minmax(0, 0);
 }
 
@@ -222,8 +222,8 @@ body > #game-container {
   visibility: hidden;
 }
 
-.gap-\[clamp\(16px\,3vw\,28px\)\] {
-  gap: clamp(16px, 3vw, 28px);
+.gap-\[clamp\(18px\,2\.5vw\,30px\)\] {
+  gap: clamp(18px, 2.5vw, 30px);
 }
 
 .col-span-3 {

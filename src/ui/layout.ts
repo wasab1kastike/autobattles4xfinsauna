@@ -52,8 +52,8 @@ const OVERLAY_GRID_CLASSES = {
     'hud-grid',
     'grid',
     'grid-rows-[auto_1fr_auto]',
-    'grid-cols-[minmax(clamp(200px,22vw,280px),1fr)_minmax(420px,1.6fr)_minmax(clamp(200px,24vw,340px),1fr)]',
-    'gap-[clamp(16px,3vw,28px)]',
+    'grid-cols-[minmax(clamp(210px,23vw,320px),1fr)_minmax(432px,1.65fr)_minmax(clamp(210px,23vw,320px),1fr)]',
+    'gap-[clamp(18px,2.5vw,30px)]',
   ],
   collapsed: 'hud-grid--right-collapsed',
 } as const;
