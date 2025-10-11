@@ -212,11 +212,16 @@ export class BattleManager {
         }
 
         if (!handledIdle) {
-          if (sauna && !sauna.destroyed) {
+          const canFallbackToSauna =
+            behavior !== 'explore' && sauna && !sauna.destroyed;
+          if (canFallbackToSauna) {
             goal = sauna.pos;
           }
-          if (!goal) {
-            goal = this.findExplorationGoal(unit, occupied);
+          if (!goal || behavior === 'explore') {
+            const explorationGoal = this.findExplorationGoal(unit, occupied);
+            if (explorationGoal) {
+              goal = explorationGoal;
+            }
           }
         }
 
