@@ -181,7 +181,9 @@ function applyVariantClasses(overlay: HTMLElement, regions: HudLayoutRegions): v
   }
 
   overlay.classList.add(...base);
-  overlay.classList.remove(collapsed);
+  if (overlay.classList.contains(collapsed)) {
+    overlay.classList.add(collapsed);
+  }
 
   for (const [name, classes] of Object.entries(REGION_GRID_CLASSES) as Array<[
     keyof HudLayoutRegions,
