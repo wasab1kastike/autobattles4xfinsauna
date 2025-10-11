@@ -192,7 +192,6 @@ vi.mock('../../game/assets.ts', () => ({
     saunaBeer: 'beer-icon',
     artocoin: 'coin-icon',
     saunojaRoster: 'roster-icon',
-    rosterToggle: 'roster-toggle-icon',
   },
 }));
 

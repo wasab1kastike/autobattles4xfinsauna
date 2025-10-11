@@ -4,7 +4,6 @@ import city from '../../assets/sprites/city.svg';
 import mine from '../../assets/sprites/mine.svg';
 import saunaBeerIcon from '../../assets/ui/sauna-beer.svg';
 import saunaRosterIcon from '../../assets/ui/saunoja-roster.svg';
-import rosterToggleIcon from '../../assets/ui/hud-roster-toggle.svg';
 import resourceIcon from '../../assets/ui/resource.svg';
 import soundIcon from '../../assets/ui/sound.svg';
 import { ARTOCOIN_CREST_PNG_DATA_URL } from '../media/artocoinCrest.ts';
@@ -19,7 +18,6 @@ const ENEMY_ORC_WARLOCK = new URL('../../assets/units/enemy-orc-2.png', import.m
 export const uiIcons = {
   saunaBeer: saunaBeerIcon,
   saunojaRoster: saunaRosterIcon,
-  rosterToggle: rosterToggleIcon,
   resource: resourceIcon,
   sisu: resourceIcon,
   sound: soundIcon,
@@ -48,7 +46,6 @@ export const assetPaths: AssetPaths = {
     'unit-saunoja-seer': SAUNOJA_SEER,
     'icon-sauna-beer': uiIcons.saunaBeer,
     'icon-saunoja-roster': uiIcons.saunojaRoster,
-    'icon-roster-toggle': uiIcons.rosterToggle,
     'icon-resource': uiIcons.resource,
     'icon-sound': uiIcons.sound,
     'icon-artocoin': uiIcons.artocoin

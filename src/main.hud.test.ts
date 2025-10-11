@@ -86,13 +86,13 @@ describe('main HUD lifecycle', () => {
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.sauna-roster')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
     const navToolbar = document.querySelector('[data-hud-navigation]');
     expect(navToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
-    expect(navToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
+    expect(navToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(4);
     expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
     orchestrator.cleanup();
@@ -100,7 +100,7 @@ describe('main HUD lifecycle', () => {
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(0);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(0);
-    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(0);
+    expect(document.querySelectorAll('.sauna-roster')).toHaveLength(0);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(0);
@@ -110,13 +110,13 @@ describe('main HUD lifecycle', () => {
 
     expect(document.querySelectorAll('#topbar')).toHaveLength(1);
     expect(document.querySelectorAll('[data-ui="inventory-toggle"]')).toHaveLength(1);
-    expect(document.querySelectorAll('[data-ui="roster-toggle"]')).toHaveLength(1);
+    expect(document.querySelectorAll('.sauna-roster')).toHaveLength(1);
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(1);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(1);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
     const rebuiltToolbar = document.querySelector('[data-hud-navigation]');
     expect(rebuiltToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
-    expect(rebuiltToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
+    expect(rebuiltToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(4);
   });
 
   it('ignores the legacy HUD v2 flag and renders the classic HUD', async () => {

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retire the HUD roster toggle button in favor of direct command console wiring,
+  removing the unused asset and styles while updating tests and docs to reflect
+  the streamlined roster flow.
 - Detect stale GitHub Pages caches at runtime, fetch the live bundle commit, and
   trigger a one-time cache-busting reload so the published site always boots the
   newest build without manual hard refreshes.
