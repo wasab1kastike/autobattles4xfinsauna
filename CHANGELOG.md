@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Persist loot-drop upgrades with additive modifiers, gate loot rolls behind the
+  progression-driven drop chance, update the loot roller to accept explicit
+  roll counts, and cover the new progression module plus RNG gating with
+  focused Vitest cases.
 - Surface an enemy scaling telemetry console with a glassmorphic panel, lazy-loaded summaries, HUD navigation badge, and Vitest
   coverage for empty and malformed storage scenarios.
 - Detect custom domain deployments during GitHub Pages builds and set
