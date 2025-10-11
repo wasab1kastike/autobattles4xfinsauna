@@ -20,7 +20,7 @@ With the combat anchor restored on the action tray, the **Command the Fight** sp
 
 The refreshed sauna HUD now anchors the opening step with the Sauna Integrity meter and animated progress bar introduced in `src/ui/sauna.tsx`. The Premium Tiers grid showcased later in the tutorial reinforces how leaders unlock expanded roster capacity, while updated SISU and combat cues echo their in-game meters and rally buttons.
 
-Roster access now routes through the command console navigation instead of the retired top-left toggle button, keeping the tutorial steps aligned with the streamlined control surface leaders use in live runs.
+Roster access now routes through the command console navigation instead of the retired top-left toggle button, keeping the tutorial steps aligned with the streamlined control surface leaders use in live runs. A dedicated close button now lives inside the roster view so desktop and mobile leaders can collapse the console without hunting for the dock toggle.
 
 ## Skip and reset
 
