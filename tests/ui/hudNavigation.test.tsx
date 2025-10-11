@@ -42,13 +42,13 @@ describe('HUD navigation', () => {
     expect(navToolbar?.parentElement?.dataset.hudAnchor).toBe('top-left-cluster');
 
     const buttons = navToolbar?.querySelectorAll<HTMLButtonElement>('[data-hud-nav-item]');
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(4);
 
     const iconBadges = navToolbar?.querySelectorAll('.hud-nav-toolbar__badge img');
-    expect(iconBadges).toHaveLength(3);
+    expect(iconBadges).toHaveLength(4);
 
     const srLabels = navToolbar?.querySelectorAll('.sr-only');
-    expect(srLabels).toHaveLength(3);
+    expect(srLabels).toHaveLength(4);
 
     const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
     expect(policiesButton?.dataset.active).toBe('true');
@@ -60,6 +60,9 @@ describe('HUD navigation', () => {
     expect(navigate).toHaveBeenCalledWith('events');
     expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
 
+    const scalingButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="enemy-scaling"]');
+    expect(scalingButton).not.toBeNull();
+
     nav.dispose();
   });
 
@@ -70,10 +73,12 @@ describe('HUD navigation', () => {
     const rosterButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="roster"]');
     const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
     const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
+    const scalingButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="enemy-scaling"]');
 
     expect(rosterButton?.tabIndex).toBe(0);
     expect(policiesButton?.tabIndex).toBe(-1);
     expect(eventsButton?.tabIndex).toBe(-1);
+    expect(scalingButton?.tabIndex).toBe(-1);
 
     rosterButton?.focus();
     expect(document.activeElement).toBe(rosterButton);
@@ -86,6 +91,11 @@ describe('HUD navigation', () => {
     expect(rosterButton?.tabIndex).toBe(-1);
 
     policiesButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(navigate).toHaveBeenLastCalledWith('enemy-scaling');
+    expect(document.activeElement).toBe(scalingButton);
+    expect(scalingButton?.tabIndex).toBe(0);
+
+    scalingButton?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     expect(navigate).toHaveBeenLastCalledWith('events');
     expect(document.activeElement).toBe(eventsButton);
     expect(eventsButton?.tabIndex).toBe(0);
@@ -109,10 +119,12 @@ describe('HUD navigation', () => {
     const rosterView = overlay.querySelector<HTMLElement>('#right-panel-roster');
     const policiesView = overlay.querySelector<HTMLElement>('#right-panel-policies');
     const eventsView = overlay.querySelector<HTMLElement>('#right-panel-events');
+    const scalingView = overlay.querySelector<HTMLElement>('#right-panel-enemy-scaling');
 
     expect(rosterView?.dataset.active).toBe('true');
     expect(policiesView?.dataset.active).toBe('false');
     expect(eventsView?.dataset.active).toBe('false');
+    expect(scalingView?.dataset.active).toBe('false');
 
     const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
     policiesButton?.click();
@@ -127,6 +139,13 @@ describe('HUD navigation', () => {
     const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
     expect(eventsButton?.dataset.active).toBe('true');
     expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
+
+    controller.showView('enemy-scaling');
+
+    expect(scalingView?.dataset.active).toBe('true');
+    const scalingButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="enemy-scaling"]');
+    expect(scalingButton?.dataset.active).toBe('true');
+    expect(scalingButton?.getAttribute('aria-pressed')).toBe('true');
 
     detach();
     nav.dispose();
