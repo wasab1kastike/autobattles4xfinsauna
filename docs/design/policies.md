@@ -21,3 +21,12 @@
 - **Tactics:** A high-risk, premium defensive toggle for emergency turtling or elite vanguard deployments. Pair with Shieldwall Doctrine to reach extreme damage mitigation but ensure your economy can sustain the upkeep surge.
 
 The policy console updates in real time through `recalculatePolicyModifiers`, keeping roster stats and upkeep drains synchronized whenever you toggle these doctrines.
+
+## Steam Debt Protocol
+- **Prerequisite:** Steam Diplomats Accord
+- **Effect:** Adds +3 passive Sauna Beer production, dials enemy aggression up 25%,
+  and increases cadence by 15% while layering a 12% upkeep multiplier. Revoking
+  the toggle restores the previous values immediately.
+- **Tactics:** Deploy when you need luxe resource injections to cover rush
+  spending—just brace the roster for fiercer pressure and higher upkeep until you
+  settle the bonds.

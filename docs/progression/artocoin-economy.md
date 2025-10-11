@@ -5,6 +5,19 @@ artocoin target. The formula below turns run duration, enemy eliminations,
 exploration, and difficulty into a payout that feels generous on a clean win
 while keeping unlock pacing near one to one-and-a-half runs per sauna tier.
 
+## Economic Edicts
+
+- **Evergreen Eco Mandate** – Baseline brewing cadence climbs by a bottle every
+  tick, establishing the passive flow that bankrolls future luxuries.
+- **Aurora Temperance Treaty** – Once the eco initiative sings, night crews earn
+  a precision buff that keeps late-shift production from stalling.
+- **Steam Diplomats Accord** – Diplomats open premium trade lanes, importing two
+  more bottles per cycle and teeing up the treasury for high-end maneuvers.
+- **Steam Debt Protocol** – Newly introduced. Toggle this gilded bond program to
+  infuse +3 passive Sauna Beer while the council gambles on accelerated enemy
+  aggression and cadence. The reversible surge elevates upkeep costs slightly,
+  so only engage when you can leverage the tempo swing.
+
 ## Baseline Win Expectations
 
 | Active Sauna Tier | Next Unlock Target | Unlock Cost (Artocoins) | Baseline Run Duration (min) | Baseline Enemy Kills | Baseline Tiles Explored | Baseline Roster Losses | Baseline Payout (Artocoins) | Runs to Unlock (Avg) |
