@@ -297,7 +297,7 @@
 
 - Rebalance the HUD overlay grid to prioritize the combat viewport on
   medium-width screens, swap the column template for minmax/fractional tracks,
-  and keep the roster plus dock panels legible through the 820–1024px range.
+  and keep the roster plus dock panels legible through the 960–1200px range.
 
 - Rework the HUD overlay grid rows to auto-size the top bar and command dock,
   expose the new utility class in `src/style.css`, and verify both UI variants
