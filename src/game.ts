@@ -197,6 +197,7 @@ import {
   initializeRightPanel as createRightPanelBridge,
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
+import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
 import {
   disposeHudSignals,
   getHudElapsedMs as getHudElapsedMsSnapshot,
@@ -1034,6 +1035,10 @@ const battleManager = gameController.battleManager;
 const mapRenderer = gameController.mapRenderer;
 const invalidateTerrainCache = gameController.getTerrainInvalidator();
 
+const state = new GameState(1000);
+const persistedStrongholds = state.peekPersistedStrongholds();
+seedEnemyStrongholds(map, STRONGHOLD_CONFIG, persistedStrongholds);
+
 function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
 }
@@ -1193,8 +1198,6 @@ function resolveUnitUpkeep(unit: Unit): number {
   const upkeep = Number.isFinite(attendant.upkeep) ? attendant.upkeep : 0;
   return Math.max(0, Math.round(upkeep));
 }
-
-const state = new GameState(1000);
 
 function recalculatePolicyModifiers(): void {
   const activePolicies = listPolicies().filter((definition) => state.hasPolicy(definition.id));
