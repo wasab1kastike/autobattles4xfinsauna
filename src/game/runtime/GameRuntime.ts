@@ -559,7 +559,6 @@ export class GameRuntime {
     const hudResult = initializeClassicHud({
       resourceBarEl,
       rosterIcon: uiIcons.saunojaRoster,
-      rosterToggleIcon: uiIcons.rosterToggle,
       sauna: this.ctx.getSauna(),
       previousDisposeRightPanel: this.disposeRightPanel,
       pendingRosterRenderer: this.pendingRosterRenderer,

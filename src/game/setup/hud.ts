@@ -42,7 +42,6 @@ type RightPanelFactory = (
 type ClassicHudDependencies = {
   resourceBarEl: HTMLElement;
   rosterIcon: string;
-  rosterToggleIcon: string;
   sauna: Sauna;
   previousDisposeRightPanel: (() => void) | null;
   pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null;
@@ -88,7 +87,6 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
 
   const rosterHud = deps.setupRosterHUD(deps.resourceBarEl, {
     rosterIcon: deps.rosterIcon,
-    toggleIcon: deps.rosterToggleIcon,
     onBehaviorChange: (unitId, behavior) => {
       rightPanelBehaviorHandler?.(unitId, behavior);
     }
