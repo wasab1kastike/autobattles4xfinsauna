@@ -1,8 +1,3 @@
-# Policy Arsenal
-
-## Sauna Skin Plating
-- **Prerequisite:** Shieldwall Doctrine
-- **Effect:** Halves damage taken for roster units while tripling upkeep costs via the shared policy modifier pipeline.
-- **Tactics:** A high-risk, premium defensive toggle for emergency turtling or elite vanguard deployments. Pair with Shieldwall Doctrine to reach extreme damage mitigation but ensure your economy can sustain the upkeep surge.
-
-The policy console updates in real time through `recalculatePolicyModifiers`, keeping roster stats and upkeep drains synchronized whenever you toggle these doctrines.
+version https://git-lfs.github.com/spec/v1
+oid sha256:6c966ce359464e242228ae99453e3e7afea46c231d3388f74203c0f10b92cc5b
+size 1643
