@@ -11,9 +11,10 @@
 - Retire the HUD roster toggle button in favor of direct command console wiring,
   removing the unused asset and styles while updating tests and docs to reflect
   the streamlined roster flow.
-- Detect stale GitHub Pages caches at runtime, fetch the live bundle commit, and
+- Detect stale GitHub Pages caches at runtime, fetch the live bundle commit,
   trigger a one-time cache-busting reload so the published site always boots the
-  newest build without manual hard refreshes.
+  newest build without manual hard refreshes, and resolve the runtime bundle
+  probe against the GitHub Pages base path so repo-scoped assets stay reachable.
 - Track unlocked loot rarity tiers in progression storage, filter loot rolls to
   respect the unlocked list, cover the regression with Vitest, and refresh the
   Steamforge Atelier copy to call out rarer cache unlocks.
