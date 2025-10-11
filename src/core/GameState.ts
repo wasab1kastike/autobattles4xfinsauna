@@ -146,7 +146,7 @@ export class GameState {
   private ngPlus: NgPlusState = createNgPlusState();
 
   /** Snapshot of stronghold capture state for persistence fallbacks. */
-  private strongholdStatuses = new Map<string, { captured: boolean }>();
+  private strongholdStatuses = new Map<string, { captured: boolean; seen: boolean }>();
 
   constructor(
     private readonly tickInterval: number,
@@ -180,12 +180,15 @@ export class GameState {
     const strongholdSnapshot = getStrongholdSnapshot();
     if (Object.keys(strongholdSnapshot).length === 0 && this.strongholdStatuses.size > 0) {
       this.strongholdStatuses.forEach((status, id) => {
-        strongholdSnapshot[id] = { captured: status.captured };
+        strongholdSnapshot[id] = { captured: status.captured, seen: status.seen };
       });
     }
     this.strongholdStatuses.clear();
     Object.entries(strongholdSnapshot).forEach(([id, entry]) => {
-      this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+      this.strongholdStatuses.set(id, {
+        captured: Boolean(entry?.captured),
+        seen: Boolean(entry?.seen)
+      });
     });
 
     const serialized: SerializedState = {
@@ -258,7 +261,10 @@ export class GameState {
 
     const persistedStrongholds: StrongholdPersistence = {};
     Object.entries(data.strongholds ?? {}).forEach(([id, entry]) => {
-      persistedStrongholds[id] = { captured: Boolean(entry?.captured) };
+      persistedStrongholds[id] = {
+        captured: Boolean(entry?.captured),
+        seen: Boolean(entry?.seen)
+      };
     });
 
     mergeStrongholdPersistence(map ?? null, persistedStrongholds);
@@ -267,11 +273,17 @@ export class GameState {
     this.strongholdStatuses.clear();
     if (Object.keys(mergedSnapshot).length > 0) {
       Object.entries(mergedSnapshot).forEach(([id, entry]) => {
-        this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+        this.strongholdStatuses.set(id, {
+          captured: Boolean(entry?.captured),
+          seen: Boolean(entry?.seen)
+        });
       });
     } else if (Object.keys(persistedStrongholds).length > 0) {
       Object.entries(persistedStrongholds).forEach(([id, entry]) => {
-        this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+        this.strongholdStatuses.set(id, {
+          captured: Boolean(entry?.captured),
+          seen: Boolean(entry?.seen)
+        });
       });
     }
 
@@ -348,7 +360,7 @@ export class GameState {
     }
     const snapshot: StrongholdPersistence = {};
     Object.entries(data.strongholds).forEach(([id, entry]) => {
-      snapshot[id] = { captured: Boolean(entry?.captured) };
+      snapshot[id] = { captured: Boolean(entry?.captured), seen: Boolean(entry?.seen) };
     });
     return snapshot;
   }
