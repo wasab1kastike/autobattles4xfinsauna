@@ -116,7 +116,12 @@ import type {
 } from './inventory/state.ts';
 import { setupInventoryHud } from './ui/inventoryHud.ts';
 import { rollLoot } from './loot/roll.ts';
-import { getEffectiveLootRolls, shouldDropLoot } from './progression/lootUpgrades.ts';
+import {
+  getEffectiveLootRolls,
+  onLootUpgradeShopChange,
+  shouldDropLoot,
+  type LootUpgradeChangeEvent
+} from './progression/lootUpgrades.ts';
 import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { computeUnitStats, applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
@@ -175,6 +180,7 @@ import {
   getArtocoinBalance,
   getArtocoinsSpentThisRun,
   getPurchasedTierIds,
+  setPurchasedLootUpgradeIds,
   notifySaunaShopSubscribers,
   reloadSaunaShopState,
   setArtocoinBalance,
@@ -1367,6 +1373,14 @@ onSaunaShopChange((event: SaunaShopChangeEvent) => {
   setPurchasedTierIds(event.purchased);
   notifySaunaShopSubscribers();
   syncLifecycleWithUnlocks({ persist: true });
+});
+
+onLootUpgradeShopChange((event: LootUpgradeChangeEvent) => {
+  if (event.type === 'purchase' && event.cost && event.spendResult?.success) {
+    addArtocoinSpend(event.cost);
+  }
+  setPurchasedLootUpgradeIds(event.purchased);
+  notifySaunaShopSubscribers();
 });
 
 onArtocoinChange((change: ArtocoinChangeEvent) => {
