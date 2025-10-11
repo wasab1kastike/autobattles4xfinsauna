@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Detect stale GitHub Pages caches at runtime, fetch the live bundle commit, and
+  trigger a one-time cache-busting reload so the published site always boots the
+  newest build without manual hard refreshes.
 - Track unlocked loot rarity tiers in progression storage, filter loot rolls to
   respect the unlocked list, cover the regression with Vitest, and refresh the
   Steamforge Atelier copy to call out rarer cache unlocks.

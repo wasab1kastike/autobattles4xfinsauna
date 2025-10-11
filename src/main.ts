@@ -75,6 +75,119 @@ function applyBuildIdentity(): void {
 
 applyBuildIdentity();
 
+const BUILD_RELOAD_STORAGE_KEY = 'sauna:build-reload';
+const BUILD_CACHE_PARAM = 'build';
+
+function getSessionStorage(): Storage | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window.sessionStorage;
+  } catch (error) {
+    console.warn('Session storage is unavailable:', error);
+    return null;
+  }
+}
+
+function removeCacheBusterParam(): void {
+  if (typeof window === 'undefined' || typeof window.history === 'undefined') {
+    return;
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(BUILD_CACHE_PARAM)) {
+      return;
+    }
+
+    url.searchParams.delete(BUILD_CACHE_PARAM);
+    const nextSearch = url.searchParams.toString();
+    const nextUrl = `${url.pathname}${nextSearch ? `?${nextSearch}` : ''}${url.hash}`;
+    window.history.replaceState(null, document.title, nextUrl);
+  } catch (error) {
+    console.warn('Unable to clear build cache bust parameter:', error);
+  }
+}
+
+async function ensureLatestDeployment(): Promise<void> {
+  if (import.meta.env.DEV || typeof window === 'undefined') {
+    return;
+  }
+
+  const rawCommit = typeof __COMMIT__ === 'string' ? __COMMIT__.trim().toLowerCase() : '';
+  if (!rawCommit || rawCommit === 'unknown') {
+    return;
+  }
+
+  const storage = getSessionStorage();
+  const origin = window.location.origin;
+  const htmlUrl = new URL(window.location.pathname, origin);
+  htmlUrl.searchParams.set('cb', Date.now().toString());
+
+  const requestOptions: RequestInit = {
+    cache: 'no-store',
+    headers: {
+      'cache-control': 'no-cache',
+      pragma: 'no-cache',
+    },
+  };
+
+  try {
+    const response = await fetch(htmlUrl, requestOptions);
+    if (!response.ok) {
+      console.warn(`Unable to verify live deployment: received HTTP ${response.status}`);
+      return;
+    }
+
+    const html = await response.text();
+    const scriptMatch = html.match(/<script[^>]+src="([^"]*index-[^"]+\.js)"/i);
+    if (!scriptMatch) {
+      console.warn('Unable to locate the published bundle reference while checking for stale builds.');
+      return;
+    }
+
+    const bundleUrl = new URL(scriptMatch[1], origin);
+    bundleUrl.searchParams.set('cb', Date.now().toString());
+    const bundleResponse = await fetch(bundleUrl, requestOptions);
+    if (!bundleResponse.ok) {
+      console.warn(`Unable to fetch published bundle while checking for stale builds: HTTP ${bundleResponse.status}`);
+      return;
+    }
+
+    const bundleSource = await bundleResponse.text();
+    const commitMatch = bundleSource.match(/"([0-9a-f]{7})"\.trim\(\)/i);
+    if (!commitMatch) {
+      console.warn('Unable to resolve the published commit hash while checking for stale builds.');
+      return;
+    }
+
+    const liveCommit = commitMatch[1].toLowerCase();
+    if (liveCommit === rawCommit) {
+      storage?.removeItem(BUILD_RELOAD_STORAGE_KEY);
+      removeCacheBusterParam();
+      return;
+    }
+
+    const priorReload = storage?.getItem(BUILD_RELOAD_STORAGE_KEY);
+    if (priorReload === liveCommit) {
+      console.warn('Skipping repeated stale build reload attempt for commit', liveCommit);
+      return;
+    }
+
+    storage?.setItem(BUILD_RELOAD_STORAGE_KEY, liveCommit);
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set(BUILD_CACHE_PARAM, liveCommit);
+    window.location.replace(nextUrl.toString());
+  } catch (error) {
+    console.warn('Unable to verify the deployed build while checking for stale caches:', error);
+  }
+}
+
+void ensureLatestDeployment();
+
 function addCleanup(fn: () => void): void {
   cleanupHandlers.push(fn);
 }

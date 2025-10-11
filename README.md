@@ -11,6 +11,9 @@ with cinematic UI flourishes.
 - The GitHub Pages workflow publishes to the custom domain at
   [https://artobest.com/](https://artobest.com/), so any documentation or
   tooling should reference that URL.
+- The shipped client double-checks the deployed commit on load and issues a
+  cache-busting reload if a fresher bundle is live, keeping the experience
+  locked to the newest release without manual hard refreshes.
 
 ## Feature Highlights
 
