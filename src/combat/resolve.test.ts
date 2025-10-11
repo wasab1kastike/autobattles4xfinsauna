@@ -518,4 +518,40 @@ describe('resolveCombat', () => {
     expect(result.remainingHealth).toBe(9);
     expect(result.lethal).toBe(false);
   });
+
+  it('converts borderline misses into hits when precision policies boost accuracy', () => {
+    const attacker: CombatParticipant = {
+      id: 'precision-marksman',
+      faction: 'player',
+      attack: 9,
+      health: 8,
+      maxHealth: 8,
+      shield: 0,
+      hitChanceBonus: -0.35
+    };
+
+    const defender: CombatParticipant = {
+      id: 'precision-target',
+      faction: 'enemy',
+      defense: 2,
+      health: 12,
+      maxHealth: 12,
+      shield: 0
+    };
+
+    const nearMiss = resolveCombat({ attacker, defender, random: () => 0.7 });
+    expect(nearMiss.hit).toBe(false);
+    expect(nearMiss.hpDamage).toBe(0);
+
+    const glacial = getPolicyDefinition('glacial-gambit');
+    expect(glacial).toBeTruthy();
+
+    const summary = applyPolicyUnitModifiers(createPolicyModifierSummary(), glacial!.unitModifiers);
+    setActivePolicyModifiers(summary);
+
+    const converted = resolveCombat({ attacker, defender, random: () => 0.7 });
+    expect(converted.hit).toBe(true);
+    expect(converted.hpDamage).toBeGreaterThan(0);
+    expect(converted.damage).toBeGreaterThan(0);
+  });
 });
