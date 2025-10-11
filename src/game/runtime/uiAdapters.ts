@@ -6,6 +6,10 @@ import type {
   InventoryComparisonContext
 } from '../../inventory/state.ts';
 import type { PurchaseSaunaTierResult } from '../../progression/saunaShop.ts';
+import type {
+  LootUpgradeId,
+  PurchaseLootUpgradeResult
+} from '../../progression/lootUpgrades.ts';
 import type { Sauna } from '../../sim/sauna.ts';
 import type { SaunaShopListener } from '../saunaShopState.ts';
 import type { SaunaShopViewModel } from '../../ui/shop/SaunaShopPanel.tsx';
@@ -44,6 +48,7 @@ export interface UiAdapterDependencies {
   readonly onEquipItem: (unitId: string, item: SaunojaItem) => EquipAttemptResult;
   readonly getSaunaShopViewModel: () => SaunaShopViewModel;
   readonly onPurchaseSaunaTier: (tierId: SaunaTierId) => PurchaseSaunaTierResult;
+  readonly onPurchaseLootUpgrade: (upgradeId: LootUpgradeId) => PurchaseLootUpgradeResult;
   readonly subscribeToSaunaShop: (listener: SaunaShopListener) => () => void;
   readonly sauna: Sauna;
   readonly getSaunojas: () => Saunoja[];
@@ -102,6 +107,7 @@ export function createUiAdapters(deps: UiAdapterDependencies): HudUiAdapters {
       onEquip: (unitId, item, _source) => deps.onEquipItem(unitId, item),
       getSaunaShopViewModel: deps.getSaunaShopViewModel,
       onPurchaseSaunaTier: deps.onPurchaseSaunaTier,
+      onPurchaseLootUpgrade: deps.onPurchaseLootUpgrade,
       subscribeToSaunaShop: deps.subscribeToSaunaShop,
       onRequestRosterExpand: () => rosterPanelControls.open(),
       onRequestRosterCollapse: () => rosterPanelControls.close()

@@ -1,5 +1,9 @@
 import { ARTOCOIN_CREST_PNG_DATA_URL as artocoinIconUrl } from '../../media/artocoinCrest.ts';
 import type { PurchaseSaunaTierResult } from '../../progression/saunaShop.ts';
+import type {
+  LootUpgradeId,
+  PurchaseLootUpgradeResult
+} from '../../progression/lootUpgrades.ts';
 import type { SaunaTier, SaunaTierId, SaunaTierStatus } from '../../sauna/tiers.ts';
 
 export interface SaunaShopTierView {
@@ -7,9 +11,39 @@ export interface SaunaShopTierView {
   readonly status: SaunaTierStatus;
 }
 
+export interface SaunaShopUpgradeStatus {
+  readonly owned: boolean;
+  readonly affordable: boolean;
+  readonly prerequisitesMet: boolean;
+  readonly cost: number;
+  readonly requirementLabel: string;
+  readonly lockedReason?: string;
+}
+
+export interface SaunaShopLootUpgradeView {
+  readonly id: LootUpgradeId;
+  readonly title: string;
+  readonly tagline: string;
+  readonly description: string;
+  readonly effectSummary: string;
+  readonly successBlurb: string;
+  readonly badgeLabel: string;
+  readonly badgeGradient: string;
+  readonly accent: 'rarity' | 'drop-rate';
+  readonly status: SaunaShopUpgradeStatus;
+}
+
+export interface SaunaShopLootUpgradeCategoryView {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly upgrades: readonly SaunaShopLootUpgradeView[];
+}
+
 export interface SaunaShopViewModel {
   readonly balance: number;
   readonly tiers: readonly SaunaShopTierView[];
+  readonly lootCategories: readonly SaunaShopLootUpgradeCategoryView[];
 }
 
 export type SaunaShopToastVariant = 'success' | 'info' | 'warn';
@@ -17,6 +51,9 @@ export type SaunaShopToastVariant = 'success' | 'info' | 'warn';
 export interface SaunaShopPanelCallbacks {
   readonly onClose?: () => void;
   readonly onPurchaseTier?: (tierId: SaunaTierId) => PurchaseSaunaTierResult | void;
+  readonly onPurchaseLootUpgrade?: (
+    upgradeId: LootUpgradeId
+  ) => PurchaseLootUpgradeResult | void;
   readonly emitToast?: (message: string, variant: SaunaShopToastVariant) => void;
 }
 
@@ -41,6 +78,28 @@ interface TierEntry {
   readonly actionButton: HTMLButtonElement;
   readonly costLabel: HTMLSpanElement;
   status: SaunaTierStatus;
+}
+
+interface UpgradeEntry {
+  readonly root: HTMLDivElement;
+  readonly statusChip: HTMLSpanElement;
+  readonly badge: HTMLDivElement;
+  readonly title: HTMLHeadingElement;
+  readonly tagline: HTMLSpanElement;
+  readonly effect: HTMLParagraphElement;
+  readonly description: HTMLParagraphElement;
+  readonly lockNote: HTMLParagraphElement;
+  readonly costLabel: HTMLSpanElement;
+  readonly actionButton: HTMLButtonElement;
+  status: SaunaShopUpgradeStatus;
+}
+
+interface UpgradeCategoryEntry {
+  readonly root: HTMLDivElement;
+  readonly title: HTMLHeadingElement;
+  readonly description: HTMLParagraphElement;
+  readonly list: HTMLDivElement;
+  readonly entries: Map<LootUpgradeId, UpgradeEntry>;
 }
 
 const numberFormatter = new Intl.NumberFormat('en-US');
@@ -128,7 +187,50 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
   tierList.className = 'flex flex-col gap-4';
   element.appendChild(tierList);
 
+  const upgradeSection = document.createElement('section');
+  upgradeSection.className = 'flex flex-col gap-4';
+  upgradeSection.setAttribute('aria-label', 'Loot atelier enhancements');
+  upgradeSection.hidden = true;
+
+  const upgradeHeading = document.createElement('div');
+  upgradeHeading.className = 'flex flex-col gap-1';
+
+  const upgradeTitle = document.createElement('h3');
+  upgradeTitle.className = 'text-sm font-semibold uppercase tracking-[0.22em] text-slate-200/80';
+  upgradeTitle.textContent = 'Loot atelier upgrades';
+  upgradeHeading.appendChild(upgradeTitle);
+
+  const upgradeSubtitle = document.createElement('p');
+  upgradeSubtitle.className = 'text-xs text-slate-300/85';
+  upgradeSubtitle.textContent =
+    'Authorize new rarity permits and coax richer battlefield drops with atelier refinements.';
+  upgradeHeading.appendChild(upgradeSubtitle);
+
+  const upgradeCatalog = document.createElement('div');
+  upgradeCatalog.className = 'flex flex-col gap-4';
+
+  upgradeSection.append(upgradeHeading, upgradeCatalog);
+  element.appendChild(upgradeSection);
+
   const tierEntries = new Map<SaunaTierId, TierEntry>();
+  const upgradeCategories = new Map<string, UpgradeCategoryEntry>();
+
+  function findUpgradeViewById(
+    id: LootUpgradeId
+  ): SaunaShopLootUpgradeView | null {
+    try {
+      const viewModel = options.getViewModel();
+      for (const category of viewModel.lootCategories ?? []) {
+        const match = category.upgrades.find((upgrade) => upgrade.id === id);
+        if (match) {
+          return match;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to resolve loot upgrade view model', error);
+    }
+    return null;
+  }
 
   function buildTierCard(view: SaunaShopTierView): TierEntry {
     const { tier } = view;
@@ -286,6 +388,255 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
     }
   }
 
+  function ensureUpgradeCategory(
+    view: SaunaShopLootUpgradeCategoryView
+  ): UpgradeCategoryEntry {
+    const existing = upgradeCategories.get(view.id);
+    if (existing) {
+      existing.title.textContent = view.title;
+      existing.description.textContent = view.description;
+      upgradeCatalog.appendChild(existing.root);
+      return existing;
+    }
+    const container = document.createElement('div');
+    container.className = 'flex flex-col gap-3';
+    container.dataset.categoryId = view.id;
+
+    const header = document.createElement('div');
+    header.className = 'flex flex-col gap-1';
+
+    const title = document.createElement('h4');
+    title.className = 'text-sm font-semibold uppercase tracking-[0.2em] text-slate-200/85';
+    title.textContent = view.title;
+    header.appendChild(title);
+
+    const description = document.createElement('p');
+    description.className = 'text-xs text-slate-300/85';
+    description.textContent = view.description;
+    header.appendChild(description);
+
+    const list = document.createElement('div');
+    list.className = 'flex flex-col gap-3';
+
+    container.append(header, list);
+    upgradeCatalog.appendChild(container);
+
+    const entry: UpgradeCategoryEntry = {
+      root: container,
+      title,
+      description,
+      list,
+      entries: new Map<LootUpgradeId, UpgradeEntry>()
+    };
+    upgradeCategories.set(view.id, entry);
+    return entry;
+  }
+
+  function buildUpgradeCard(view: SaunaShopLootUpgradeView): UpgradeEntry {
+    const card = document.createElement('article');
+    card.className =
+      'relative overflow-hidden rounded-hud-lg border border-white/12 bg-[linear-gradient(140deg,rgba(20,26,42,0.9),rgba(12,16,30,0.94))] p-4 shadow-[0_18px_36px_rgba(6,10,22,0.55)] transition-transform duration-200 ease-out hover:-translate-y-1';
+    card.dataset.upgradeId = view.id;
+    card.dataset.accent = view.accent;
+
+    const glow = document.createElement('div');
+    glow.className = 'pointer-events-none absolute inset-0 opacity-35 mix-blend-screen';
+    glow.style.background = view.badgeGradient;
+    card.appendChild(glow);
+
+    const content = document.createElement('div');
+    content.className = 'relative flex flex-col gap-3';
+    card.appendChild(content);
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'flex items-start justify-between gap-3';
+    content.appendChild(headerRow);
+
+    const titleBlock = document.createElement('div');
+    titleBlock.className = 'flex items-center gap-3';
+    headerRow.appendChild(titleBlock);
+
+    const badge = document.createElement('div');
+    badge.className =
+      'relative flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/35 shadow-[0_12px_24px_rgba(10,16,32,0.5)] backdrop-blur-[6px]';
+    badge.style.background = view.badgeGradient;
+
+    const badgeLabel = document.createElement('span');
+    badgeLabel.className = 'text-xs font-semibold uppercase tracking-[0.22em] text-slate-950/90 drop-shadow-[0_1px_6px_rgba(255,255,255,0.45)]';
+    badgeLabel.textContent = view.badgeLabel;
+    badge.appendChild(badgeLabel);
+    titleBlock.appendChild(badge);
+
+    const textCol = document.createElement('div');
+    textCol.className = 'flex flex-col gap-1';
+    titleBlock.appendChild(textCol);
+
+    const upgradeTitleEl = document.createElement('h3');
+    upgradeTitleEl.className = 'text-base font-semibold text-slate-50';
+    upgradeTitleEl.textContent = view.title;
+    textCol.appendChild(upgradeTitleEl);
+
+    const tagline = document.createElement('span');
+    tagline.className = 'text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-slate-300/85';
+    tagline.textContent = view.tagline;
+    textCol.appendChild(tagline);
+
+    const statusChip = document.createElement('span');
+    statusChip.className =
+      'rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.2em] text-slate-200 shadow-[0_4px_10px_rgba(12,17,32,0.45)]';
+    statusChip.textContent = 'Locked';
+    headerRow.appendChild(statusChip);
+
+    const effect = document.createElement('p');
+    effect.className = 'text-sm font-semibold text-amber-100 drop-shadow-[0_0_16px_rgba(255,210,140,0.28)]';
+    effect.textContent = view.effectSummary;
+    content.appendChild(effect);
+
+    const description = document.createElement('p');
+    description.className = 'text-sm leading-relaxed text-slate-200/85';
+    description.textContent = view.description;
+    content.appendChild(description);
+
+    const lockNote = document.createElement('p');
+    lockNote.className = 'text-xs font-semibold uppercase tracking-[0.2em] text-rose-200/85';
+    lockNote.hidden = true;
+    content.appendChild(lockNote);
+
+    const actionRow = document.createElement('div');
+    actionRow.className = 'flex items-center justify-between gap-3';
+    content.appendChild(actionRow);
+
+    const costLabel = document.createElement('span');
+    costLabel.className = 'text-sm font-semibold text-amber-200/90';
+    costLabel.textContent = '—';
+    actionRow.appendChild(costLabel);
+
+    const actionButton = document.createElement('button');
+    actionButton.type = 'button';
+    actionButton.className =
+      'group relative inline-flex items-center justify-center gap-2 rounded-full border border-amber-200/55 bg-[linear-gradient(135deg,rgba(255,198,120,0.92),rgba(255,163,70,0.94))] px-4 py-2 text-sm font-semibold uppercase tracking-[0.12em] text-slate-900 shadow-[0_12px_20px_rgba(255,176,84,0.38)] transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(255,176,84,0.42)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200';
+    actionButton.textContent = 'Activate';
+    actionRow.appendChild(actionButton);
+
+    actionButton.addEventListener('click', () => {
+      if (!callbacks.onPurchaseLootUpgrade) {
+        return;
+      }
+      const result = callbacks.onPurchaseLootUpgrade(view.id);
+      if (!result) {
+        return;
+      }
+      const latest = findUpgradeViewById(view.id) ?? view;
+      if (result.success) {
+        const cost = Math.max(0, Math.floor(result.cost ?? latest.status.cost ?? 0));
+        const costMessage = cost > 0 ? ` for ${formatCost(cost)} artocoins` : '';
+        callbacks.emitToast?.(
+          `${latest.title} activated${costMessage} — ${latest.successBlurb}`,
+          'success'
+        );
+      } else if (result.reason === 'insufficient-funds') {
+        const shortfall = Math.max(0, Math.floor(result.shortfall ?? 0));
+        callbacks.emitToast?.(
+          `Need ${formatCost(shortfall)} more artocoins to commission ${latest.title}.`,
+          'warn'
+        );
+      } else if (result.reason === 'already-owned') {
+        callbacks.emitToast?.(`${latest.title} is already active.`, 'info');
+      } else if (result.reason === 'prerequisite-missing') {
+        const requirement = latest.status.lockedReason ?? 'a prior upgrade';
+        callbacks.emitToast?.(
+          `${latest.title} requires ${requirement.toLowerCase()}.`,
+          'info'
+        );
+      } else {
+        callbacks.emitToast?.(
+          `${latest.title} cannot be commissioned right now.`,
+          'warn'
+        );
+      }
+      updatePanel();
+    });
+
+    return {
+      root: card,
+      statusChip,
+      badge,
+      title: upgradeTitleEl,
+      tagline,
+      effect,
+      description,
+      lockNote,
+      costLabel,
+      actionButton,
+      status: view.status
+    } satisfies UpgradeEntry;
+  }
+
+  function updateUpgradeCard(
+    entry: UpgradeEntry,
+    view: SaunaShopLootUpgradeView
+  ): void {
+    const { status } = view;
+    entry.status = status;
+    entry.title.textContent = view.title;
+    entry.tagline.textContent = view.tagline;
+    entry.effect.textContent = view.effectSummary;
+    entry.description.textContent = view.description;
+    entry.badge.style.background = view.badgeGradient;
+    entry.root.dataset.accent = view.accent;
+    entry.root.setAttribute('aria-label', `${view.title} — ${status.requirementLabel}`);
+    entry.actionButton.title = status.requirementLabel;
+    entry.actionButton.setAttribute(
+      'aria-label',
+      status.owned ? `${view.title} activated` : status.requirementLabel
+    );
+
+    entry.lockNote.hidden = true;
+    entry.lockNote.textContent = '';
+
+    if (status.owned) {
+      entry.statusChip.textContent = 'Activated';
+      entry.statusChip.classList.add('bg-emerald-300/15', 'text-emerald-200');
+      entry.statusChip.classList.remove('text-slate-200');
+      entry.actionButton.disabled = true;
+      entry.actionButton.textContent = 'Activated';
+      entry.actionButton.classList.add('cursor-not-allowed', 'opacity-60');
+      entry.costLabel.textContent = 'Owned';
+      entry.costLabel.dataset.state = 'owned';
+      entry.root.dataset.state = 'owned';
+    } else {
+      const ready = status.prerequisitesMet && status.affordable;
+      const requires = !status.prerequisitesMet;
+      entry.root.dataset.state = ready
+        ? 'ready'
+        : requires
+          ? 'requires'
+          : 'locked';
+      entry.statusChip.textContent = ready
+        ? 'Ready'
+        : requires
+          ? 'Requires'
+          : 'Locked';
+      entry.statusChip.classList.remove('bg-emerald-300/15', 'text-emerald-200');
+      entry.statusChip.classList.add('text-slate-200');
+      entry.actionButton.disabled = !ready;
+      entry.actionButton.textContent = ready
+        ? 'Activate'
+        : requires
+          ? 'Requires upgrade'
+          : 'Insufficient';
+      entry.actionButton.classList.toggle('opacity-60', !ready);
+      entry.actionButton.classList.toggle('cursor-not-allowed', !ready);
+      if (!status.prerequisitesMet && status.lockedReason) {
+        entry.lockNote.hidden = false;
+        entry.lockNote.textContent = status.lockedReason;
+      }
+      const costLabel = status.cost > 0 ? `${formatCost(status.cost)} artocoins` : 'Included';
+      entry.costLabel.textContent = costLabel;
+      entry.costLabel.dataset.state = ready ? 'ready' : requires ? 'requires' : 'locked';
+    }
+  }
+
   function updatePanel(next?: SaunaShopViewModel): void {
     const viewModel = next ?? options.getViewModel();
     balanceValue.textContent = formatBalance(viewModel.balance);
@@ -300,6 +651,38 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
       tierEntries.set(view.tier.id, entry);
       updateTierCard(entry, view);
     });
+
+    const visibleCategories = new Set<string>();
+    for (const category of viewModel.lootCategories ?? []) {
+      const entry = ensureUpgradeCategory(category);
+      visibleCategories.add(category.id);
+      const seenUpgrades = new Set<LootUpgradeId>();
+      for (const upgrade of category.upgrades) {
+        let upgradeEntry = entry.entries.get(upgrade.id);
+        if (!upgradeEntry) {
+          upgradeEntry = buildUpgradeCard(upgrade);
+          entry.entries.set(upgrade.id, upgradeEntry);
+          entry.list.appendChild(upgradeEntry.root);
+        }
+        updateUpgradeCard(upgradeEntry, upgrade);
+        seenUpgrades.add(upgrade.id);
+      }
+      for (const [upgradeId, upgradeEntry] of Array.from(entry.entries)) {
+        if (!seenUpgrades.has(upgradeId)) {
+          upgradeEntry.root.remove();
+          entry.entries.delete(upgradeId);
+        }
+      }
+    }
+
+    for (const [categoryId, categoryEntry] of Array.from(upgradeCategories)) {
+      if (!visibleCategories.has(categoryId)) {
+        categoryEntry.root.remove();
+        upgradeCategories.delete(categoryId);
+      }
+    }
+
+    upgradeSection.hidden = (viewModel.lootCategories?.length ?? 0) === 0;
   }
 
   function setOpen(open: boolean): void {
@@ -321,6 +704,11 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
   function destroy(): void {
     element.remove();
     tierEntries.clear();
+    for (const entry of upgradeCategories.values()) {
+      entry.root.remove();
+      entry.entries.clear();
+    }
+    upgradeCategories.clear();
   }
 
   updatePanel();
