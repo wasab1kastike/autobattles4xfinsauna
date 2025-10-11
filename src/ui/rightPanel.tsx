@@ -30,8 +30,10 @@ import {
   type LogEventType,
   writeLogPreferences
 } from './logging.ts';
+import { selectEnemyScalingSummaries } from '../state/telemetry/enemyScaling.ts';
 import { createPolicyPanel } from './policies/PolicyPanel.ts';
 import type { HudNavigationView } from './hudNavigation.tsx';
+import { createEnemyScalingPanel } from './panels/EnemyScalingPanel.tsx';
 
 export type {
   RosterEntry,
@@ -622,7 +624,19 @@ export function setupRightPanel(
   eventsContainer.dataset.hudTabPanel = 'events';
   eventsView.appendChild(eventsContainer);
 
-  viewRoot.append(rosterView, policiesView, eventsView);
+  const enemyScalingView = doc.createElement('section');
+  enemyScalingView.id = 'right-panel-enemy-scaling';
+  enemyScalingView.classList.add('panel-view', 'panel-view--enemy-scaling');
+  enemyScalingView.setAttribute('role', 'region');
+  enemyScalingView.setAttribute('aria-live', 'polite');
+  enemyScalingView.setAttribute('aria-label', 'Enemy scaling telemetry');
+
+  const enemyScalingContainer = doc.createElement('div');
+  enemyScalingContainer.className = 'panel-section panel-section--scroll panel-section--enemy-scaling';
+  enemyScalingContainer.dataset.hudTabPanel = 'enemy-scaling';
+  enemyScalingView.appendChild(enemyScalingContainer);
+
+  viewRoot.append(rosterView, policiesView, eventsView, enemyScalingView);
 
   const logPreferences = readLogPreferences();
 
@@ -684,7 +698,8 @@ export function setupRightPanel(
   const viewContainers: Record<RightPanelView, HTMLElement> = {
     roster: rosterView,
     policies: policiesView,
-    events: eventsView
+    events: eventsView,
+    'enemy-scaling': enemyScalingView
   };
 
   const syncRosterState = (view: RightPanelView) => {
@@ -714,11 +729,13 @@ export function setupRightPanel(
       element.dataset.active = isActive ? 'true' : 'false';
     });
     syncRosterState(next);
+    syncEnemyScalingState(next);
   };
 
   const showView = (view: RightPanelView) => {
     if (activeView === view) {
       syncRosterState(view);
+      syncEnemyScalingState(view);
       return;
     }
     applyView(view);
@@ -772,6 +789,67 @@ export function setupRightPanel(
   // --- Policies ---
   const policyPanel = createPolicyPanel(policiesContainer, state);
   disposers.push(() => policyPanel.destroy());
+
+  // --- Enemy scaling ---
+  let enemyScalingLoaded = false;
+  let enemyScalingLoading = false;
+  let enemyScalingLoadPromise: Promise<void> | null = null;
+
+  const enemyScalingPanel = createEnemyScalingPanel(enemyScalingContainer, {
+    onRequestRefresh: () => scheduleEnemyScalingLoad({ force: true })
+  });
+  enemyScalingPanel.render([]);
+  disposers.push(() => enemyScalingPanel.destroy());
+
+  function scheduleEnemyScalingLoad({ force = false }: { force?: boolean } = {}): Promise<void> {
+    if (enemyScalingLoading) {
+      return enemyScalingLoadPromise ?? Promise.resolve();
+    }
+    if (enemyScalingLoaded && !force) {
+      return Promise.resolve();
+    }
+
+    enemyScalingPanel.setLoading(true);
+    enemyScalingLoading = true;
+    enemyScalingLoadPromise = new Promise<void>((resolve) => {
+      const run = () => {
+        try {
+          const summaries = selectEnemyScalingSummaries();
+          enemyScalingPanel.render(summaries);
+          enemyScalingLoaded = true;
+        } catch (error) {
+          console.warn('Failed to load enemy scaling telemetry', error);
+          enemyScalingPanel.render([]);
+        } finally {
+          enemyScalingPanel.setLoading(false);
+          enemyScalingLoading = false;
+          enemyScalingLoadPromise = null;
+          resolve();
+        }
+      };
+
+      if (
+        typeof window !== 'undefined' &&
+        typeof (window as Window & {
+          requestIdleCallback?: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        }).requestIdleCallback === 'function'
+      ) {
+        (window as Window & {
+          requestIdleCallback: (cb: IdleRequestCallback, options?: IdleRequestOptions) => number;
+        }).requestIdleCallback(() => run(), { timeout: 240 });
+      } else {
+        setTimeout(run, 32);
+      }
+    });
+
+    return enemyScalingLoadPromise;
+  }
+
+  function syncEnemyScalingState(view: RightPanelView): void {
+    if (view === 'enemy-scaling') {
+      void scheduleEnemyScalingLoad();
+    }
+  }
 
   // --- Events ---
   function createChoiceButton(event: ActiveSchedulerEvent, choice: SchedulerEventContent['choices'][number]): HTMLButtonElement {
