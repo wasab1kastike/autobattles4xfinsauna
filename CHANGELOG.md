@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add a crest-inspired close control to the command console roster view, polish
+  the HUD styling for the new button across breakpoints, and cover the
+  interaction with integration tests that verify the roster overlay collapses
+  through the bridge wiring.
+
 - Retire the HUD roster toggle button in favor of direct command console wiring,
   removing the unused asset and styles while updating tests and docs to reflect
   the streamlined roster flow.

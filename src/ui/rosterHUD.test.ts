@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ensureHudLayout } from './layout.ts';
+import { GameState } from '../core/GameState.ts';
+import { ensureHudLayout, HUD_OVERLAY_COLLAPSED_CLASS, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
 import type { RosterEntry } from './rightPanel.tsx';
+import { setupRightPanel } from './rightPanel.tsx';
 import { setupRosterHUD } from './rosterHUD.ts';
 
 describe('rosterHUD', () => {
@@ -307,6 +309,68 @@ describe('rosterHUD', () => {
 
       hud.destroy();
     } finally {
+      overlay.remove();
+    }
+  });
+
+  it('collapses the roster overlay when the right panel close control is clicked', () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+
+    let hud: ReturnType<typeof setupRosterHUD> | null = null;
+    let controller: ReturnType<typeof setupRightPanel> | null = null;
+
+    try {
+      const layout = ensureHudLayout(overlay);
+      const rosterHudContainer = document.createElement('div');
+      rosterHudContainer.id = 'roster-hud-spec';
+      layout.anchors.topLeftCluster.appendChild(rosterHudContainer);
+
+      hud = setupRosterHUD(rosterHudContainer, { rosterIcon: '/icon.svg' });
+      const state = new GameState(1000);
+      controller = setupRightPanel(state);
+
+      hud.connectPanelBridge(controller);
+      controller.openRosterView();
+
+      const closeButton = overlay.querySelector<HTMLButtonElement>('[data-panel-action="close-roster"]');
+      expect(closeButton).not.toBeNull();
+      expect(closeButton?.getAttribute('aria-label')).toBe('Close roster command console');
+      expect(closeButton?.dataset.panelOpen).toBe('true');
+
+      expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(true);
+      expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);
+
+      closeButton?.click();
+
+      expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(false);
+      expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(true);
+
+    } finally {
+      controller?.dispose();
+      hud?.destroy();
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
       overlay.remove();
     }
   });
