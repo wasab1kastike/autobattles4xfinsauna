@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduced the Steam Debt Protocol economic edict, a toggleable bond surge that
+  layers luxe passive Sauna Beer production while spiking enemy aggression and
+  cadence with reversible scaling hooks and a heavier upkeep multiplier.
+
 - Introduce the Saunojas' Rage berserker doctrine with double damage, a tuned 50%
   hit cap, upkeep surcharges, fresh Vitest regression coverage, and refreshed
   policy docs describing the full combat doctrine ladder.
