@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Introduce the Sauna Skin Plating policy, a premium defensive toggle that halves
+  damage taken at the cost of tripled upkeep, complete with doctrine gating,
+  recalculation coverage, and updated docs for the high-risk option.
 - Track unlocked loot rarity tiers in progression storage, filter loot rolls to
   respect the unlocked list, cover the regression with Vitest, and refresh the
   Steamforge Atelier copy to call out rarer cache unlocks.

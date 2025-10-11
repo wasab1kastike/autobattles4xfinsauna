@@ -6,8 +6,9 @@ import { createPlayerSpawnTierQueue } from '../world/spawn/tier_helpers.ts';
 import type { Unit } from '../units/Unit.ts';
 import { Unit as UnitClass } from '../units/Unit.ts';
 import { getSoldierStats } from '../units/Soldier.ts';
-import { createPolicyModifierSummary } from '../policies/modifiers.ts';
+import { combinePolicyModifiers, createPolicyModifierSummary } from '../policies/modifiers.ts';
 import { getActivePolicyModifiers, setActivePolicyModifiers } from '../policies/runtime.ts';
+import { getPolicyDefinition } from '../data/policies.ts';
 
 function makeUnit(id: string, faction: string): Unit {
   const stats = getSoldierStats();
@@ -91,13 +92,25 @@ describe('runEconomyTick', () => {
     const baseline = runDrain();
     expect(baseline.upkeepDrain).toBe(4);
 
-    const summary = createPolicyModifierSummary();
-    summary.upkeepDelta = -1;
-    summary.upkeepMultiplier = 0.5;
+    const shieldwall = getPolicyDefinition('shieldwall-doctrine');
+    const saunaSkin = getPolicyDefinition('sauna-skin');
+    expect(shieldwall).toBeTruthy();
+    expect(saunaSkin).toBeTruthy();
+
+    const summary = combinePolicyModifiers([shieldwall!, saunaSkin!]);
+    expect(summary.upkeepMultiplier).toBeCloseTo(3, 5);
+    expect(summary.upkeepDelta).toBeCloseTo(1.5, 5);
+
     setActivePolicyModifiers(summary);
 
+    const active = getActivePolicyModifiers();
+    expect(active.upkeepMultiplier).toBeCloseTo(3, 5);
+    expect(active.upkeepDelta).toBeCloseTo(1.5, 5);
+
     const modified = runDrain();
-    expect(modified.upkeepDrain).toBe(2);
+    const expectedDrain = evaluateUpkeep();
+    expect(expectedDrain).toBe(modified.upkeepDrain);
+    expect(expectedDrain).toBe(17);
   });
 
   it('drains upkeep from active player units on the five-second cadence', () => {
