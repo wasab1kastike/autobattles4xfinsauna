@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setUnlockedItemRarities } from '../progression/lootUpgrades.ts';
 import { rollLoot } from './roll.ts';
 import type { LootTable } from './tables.ts';
 
@@ -12,6 +13,14 @@ function sequenceRandom(values: number[]): () => number {
 }
 
 describe('rollLoot', () => {
+  beforeEach(() => {
+    setUnlockedItemRarities(['common']);
+  });
+
+  afterEach(() => {
+    setUnlockedItemRarities(['common']);
+  });
+
   it('falls back to base loot table when faction is unknown', () => {
     const result = rollLoot({ factionId: 'unknown-faction', rolls: 1, random: () => 0.01 });
     expect(result.tableId).toBe('general-salvage');
@@ -36,6 +45,7 @@ describe('rollLoot', () => {
   });
 
   it('weights entries by rarity before rolling', () => {
+    setUnlockedItemRarities(['common', 'legendary']);
     const table: LootTable = {
       id: 'test-table',
       label: 'Test Table',
@@ -66,6 +76,7 @@ describe('rollLoot', () => {
   });
 
   it('respects quantity ranges when producing loot', () => {
+    setUnlockedItemRarities(['common', 'uncommon']);
     const table: LootTable = {
       id: 'quantity-table',
       label: 'Quantity Table',
@@ -84,5 +95,49 @@ describe('rollLoot', () => {
     expect(roll.rolls).toHaveLength(2);
     expect(roll.rolls[0].quantity).toBeGreaterThanOrEqual(2);
     expect(roll.rolls[0].quantity).toBeLessThanOrEqual(4);
+  });
+
+  it('excludes rarities that are still locked', () => {
+    setUnlockedItemRarities(['common']);
+    const table: LootTable = {
+      id: 'locked-rarity',
+      label: 'Locked Rarity Table',
+      entries: [
+        { id: 'common', name: 'Common Trinket', rarity: 'common', quantity: 1, weight: 1 },
+        { id: 'rare', name: 'Rare Relic', rarity: 'rare', quantity: 1, weight: 1 }
+      ]
+    };
+
+    const result = rollLoot({
+      factionId: 'enemy',
+      table,
+      random: sequenceRandom([0.75]),
+      rolls: 1
+    });
+
+    expect(result.rolls).toHaveLength(1);
+    expect(result.rolls[0]?.rarity).toBe('common');
+  });
+
+  it('restores the original weighting when a rarity unlocks', () => {
+    setUnlockedItemRarities(['common', 'rare']);
+    const table: LootTable = {
+      id: 'unlocked-rarity',
+      label: 'Unlocked Rarity Table',
+      entries: [
+        { id: 'common', name: 'Common Trinket', rarity: 'common', quantity: 1, weight: 1 },
+        { id: 'rare', name: 'Rare Relic', rarity: 'rare', quantity: 1, weight: 1 }
+      ]
+    };
+
+    const result = rollLoot({
+      factionId: 'enemy',
+      table,
+      random: sequenceRandom([0.75]),
+      rolls: 1
+    });
+
+    expect(result.rolls).toHaveLength(1);
+    expect(result.rolls[0]?.entryId).toBe('rare');
   });
 });

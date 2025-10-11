@@ -1,3 +1,4 @@
+import type { SaunojaItemRarity } from '../units/saunoja.ts';
 import type { RandomSource } from '../loot/roll.ts';
 
 const LOOT_UPGRADES_STORAGE_KEY = 'progression:loot-upgrades';
@@ -23,16 +24,39 @@ export const BASE_LOOT_DROP_CHANCE = 0.2;
 const BASE_LOOT_ROLLS = 1;
 const MAX_LOOT_ROLL_BONUS = 9;
 
-interface LootUpgradeRecord {
-  readonly version: 1;
+const ALL_RARITIES: readonly SaunojaItemRarity[] = Object.freeze([
+  'common',
+  'uncommon',
+  'rare',
+  'epic',
+  'legendary',
+  'mythic'
+] satisfies readonly SaunojaItemRarity[]);
+
+const DEFAULT_UNLOCKED_RARITIES: ReadonlySet<SaunojaItemRarity> = Object.freeze(new Set([
+  'common'
+] satisfies readonly SaunojaItemRarity[]));
+
+interface LootUpgradeRecordV2 {
+  readonly version: 2;
   readonly upgrades: LootUpgradeId[];
+  readonly unlockedRarities: SaunojaItemRarity[];
 }
 
-interface LooseLootUpgradeRecord {
+interface LootUpgradeRecordV1 {
+  readonly version?: 1;
   readonly upgrades?: LootUpgradeId[];
+  readonly unlockedRarities?: SaunojaItemRarity[];
 }
 
-type LootUpgradeStorage = LootUpgradeRecord | LooseLootUpgradeRecord | null;
+type LootUpgradeRecord = LootUpgradeRecordV2;
+
+type LootUpgradeStorage = LootUpgradeRecordV2 | LootUpgradeRecordV1 | null;
+
+interface LootUpgradeState {
+  readonly upgrades: Set<LootUpgradeId>;
+  readonly unlockedRarities: Set<SaunojaItemRarity>;
+}
 
 function getStorage(): Storage | null {
   try {
@@ -55,33 +79,78 @@ function sanitizeUpgradeId(id: unknown): LootUpgradeId | null {
     : null);
 }
 
+const ALL_RARITIES_SET = new Set(ALL_RARITIES);
+
+function sanitizeRarity(value: unknown): SaunojaItemRarity | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  return ALL_RARITIES_SET.has(value as SaunojaItemRarity)
+    ? (value as SaunojaItemRarity)
+    : null;
+}
+
+function sanitizeRarityList(values: readonly unknown[] | undefined): SaunojaItemRarity[] {
+  const sanitized = Array.isArray(values)
+    ? values
+        .map((value) => sanitizeRarity(value))
+        .filter((value): value is SaunojaItemRarity => Boolean(value))
+    : [];
+  const merged = new Set<SaunojaItemRarity>(DEFAULT_UNLOCKED_RARITIES);
+  for (const rarity of sanitized) {
+    merged.add(rarity);
+  }
+  return Array.from(merged);
+}
+
 function sanitizeRecord(raw: LootUpgradeStorage): LootUpgradeRecord {
   if (!raw || typeof raw !== 'object') {
-    return { version: 1, upgrades: [] } satisfies LootUpgradeRecord;
+    return {
+      version: 2,
+      upgrades: [],
+      unlockedRarities: Array.from(DEFAULT_UNLOCKED_RARITIES)
+    } satisfies LootUpgradeRecord;
   }
   const rawUpgrades = Array.isArray(raw.upgrades) ? raw.upgrades : [];
-  const sanitized = rawUpgrades
+  const sanitizedUpgrades = rawUpgrades
     .map((value) => sanitizeUpgradeId(value))
     .filter((value): value is LootUpgradeId => Boolean(value));
-  const unique = Array.from(new Set(sanitized));
-  return { version: 1, upgrades: unique } satisfies LootUpgradeRecord;
+  const uniqueUpgrades = Array.from(new Set(sanitizedUpgrades));
+  const sanitizedRarities = sanitizeRarityList((raw as LootUpgradeRecordV1).unlockedRarities);
+  return {
+    version: 2,
+    upgrades: uniqueUpgrades,
+    unlockedRarities: sanitizedRarities
+  } satisfies LootUpgradeRecord;
 }
 
 function loadRecord(): LootUpgradeRecord {
   const storage = getStorage();
   if (!storage) {
-    return { version: 1, upgrades: [] } satisfies LootUpgradeRecord;
+    return {
+      version: 2,
+      upgrades: [],
+      unlockedRarities: Array.from(DEFAULT_UNLOCKED_RARITIES)
+    } satisfies LootUpgradeRecord;
   }
   try {
     const raw = storage.getItem(LOOT_UPGRADES_STORAGE_KEY);
     if (!raw) {
-      return { version: 1, upgrades: [] } satisfies LootUpgradeRecord;
+      return {
+        version: 2,
+        upgrades: [],
+        unlockedRarities: Array.from(DEFAULT_UNLOCKED_RARITIES)
+      } satisfies LootUpgradeRecord;
     }
     const parsed = JSON.parse(raw) as LootUpgradeStorage;
     return sanitizeRecord(parsed);
   } catch (error) {
     console.warn('Failed to parse loot upgrade state', error);
-    return { version: 1, upgrades: [] } satisfies LootUpgradeRecord;
+    return {
+      version: 2,
+      upgrades: [],
+      unlockedRarities: Array.from(DEFAULT_UNLOCKED_RARITIES)
+    } satisfies LootUpgradeRecord;
   }
 }
 
@@ -97,7 +166,13 @@ function persistRecord(record: LootUpgradeRecord): void {
   }
 }
 
-let purchasedUpgrades = new Set<LootUpgradeId>(loadRecord().upgrades);
+let lootUpgradeState: LootUpgradeState = (() => {
+  const record = loadRecord();
+  return {
+    upgrades: new Set(record.upgrades),
+    unlockedRarities: new Set(record.unlockedRarities)
+  } satisfies LootUpgradeState;
+})();
 
 function getDefinition(id: LootUpgradeId): LootUpgradeDefinition | undefined {
   return LOOT_UPGRADE_DEFINITIONS_BY_ID.get(id);
@@ -132,22 +207,33 @@ export function getLootUpgradeDefinitions(): readonly LootUpgradeDefinition[] {
 }
 
 export function getPurchasedLootUpgrades(): ReadonlySet<LootUpgradeId> {
-  return new Set(purchasedUpgrades);
+  return new Set(lootUpgradeState.upgrades);
+}
+
+function persistState(state: LootUpgradeState): void {
+  persistRecord({
+    version: 2,
+    upgrades: Array.from(state.upgrades),
+    unlockedRarities: Array.from(state.unlockedRarities)
+  });
 }
 
 function updatePurchased(next: Iterable<LootUpgradeId>): void {
-  purchasedUpgrades = new Set(next);
-  persistRecord({ version: 1, upgrades: Array.from(purchasedUpgrades) });
+  lootUpgradeState = {
+    upgrades: new Set(next),
+    unlockedRarities: new Set(lootUpgradeState.unlockedRarities)
+  } satisfies LootUpgradeState;
+  persistState(lootUpgradeState);
 }
 
 export function grantLootUpgrade(id: LootUpgradeId): void {
   if (!getDefinition(id)) {
     return;
   }
-  if (purchasedUpgrades.has(id)) {
+  if (lootUpgradeState.upgrades.has(id)) {
     return;
   }
-  const next = new Set(purchasedUpgrades);
+  const next = new Set(lootUpgradeState.upgrades);
   next.add(id);
   updatePurchased(next);
 }
@@ -162,9 +248,47 @@ export function setPurchasedLootUpgrades(ids: Iterable<LootUpgradeId>): void {
   updatePurchased(sanitized);
 }
 
+export function getUnlockedItemRarities(): ReadonlySet<SaunojaItemRarity> {
+  return new Set(lootUpgradeState.unlockedRarities);
+}
+
+export function isItemRarityUnlocked(rarity: SaunojaItemRarity): boolean {
+  return lootUpgradeState.unlockedRarities.has(rarity);
+}
+
+function updateUnlockedRarities(next: Iterable<SaunojaItemRarity>): void {
+  const sanitized = new Set<SaunojaItemRarity>(DEFAULT_UNLOCKED_RARITIES);
+  for (const rarity of next) {
+    if (ALL_RARITIES_SET.has(rarity)) {
+      sanitized.add(rarity);
+    }
+  }
+  lootUpgradeState = {
+    upgrades: new Set(lootUpgradeState.upgrades),
+    unlockedRarities: sanitized
+  } satisfies LootUpgradeState;
+  persistState(lootUpgradeState);
+}
+
+export function unlockItemRarity(rarity: SaunojaItemRarity): void {
+  if (!ALL_RARITIES_SET.has(rarity)) {
+    return;
+  }
+  if (lootUpgradeState.unlockedRarities.has(rarity)) {
+    return;
+  }
+  const next = new Set(lootUpgradeState.unlockedRarities);
+  next.add(rarity);
+  updateUnlockedRarities(next);
+}
+
+export function setUnlockedItemRarities(rarities: Iterable<SaunojaItemRarity>): void {
+  updateUnlockedRarities(rarities);
+}
+
 export function getLootRollBonus(): number {
   let bonus = 0;
-  for (const id of purchasedUpgrades) {
+  for (const id of lootUpgradeState.upgrades) {
     const definition = getDefinition(id);
     if (!definition || !Number.isFinite(definition.additionalRolls)) {
       continue;
@@ -176,7 +300,7 @@ export function getLootRollBonus(): number {
 
 export function getLootDropChance(): number {
   let bonus = 0;
-  for (const id of purchasedUpgrades) {
+  for (const id of lootUpgradeState.upgrades) {
     const definition = getDefinition(id);
     if (!definition || !Number.isFinite(definition.dropChanceBonus)) {
       continue;
