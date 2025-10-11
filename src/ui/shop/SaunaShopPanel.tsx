@@ -79,7 +79,8 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
 
   const subtitle = document.createElement('p');
   subtitle.className = 'text-sm text-slate-300/85';
-  subtitle.textContent = 'Commission tier upgrades with artocoins earned in the field.';
+  subtitle.textContent =
+    'Commission tier upgrades with artocoins earned in the field and unlock rarer loot caches as the atelier expands.';
   headingGroup.appendChild(subtitle);
 
   const closeButton = document.createElement('button');

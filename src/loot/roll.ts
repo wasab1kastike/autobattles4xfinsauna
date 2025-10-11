@@ -1,3 +1,4 @@
+import { getUnlockedItemRarities } from '../progression/lootUpgrades.ts';
 import type { SaunojaItem, SaunojaItemRarity } from '../units/saunoja.ts';
 import {
   getLootTableForFaction,
@@ -113,8 +114,10 @@ export function rollLoot(options: LootRollOptions): LootRollResult {
   const table = options.table ?? getLootTableForFaction(options.factionId, elite);
   const rollCount = clampRollCount(options.rolls);
   const rolls: RolledLootItem[] = [];
+  const unlockedRarities = getUnlockedItemRarities();
+  const eligibleEntries = table.entries.filter((entry) => unlockedRarities.has(entry.rarity));
 
-  if (rollCount <= 0 || table.entries.length === 0) {
+  if (rollCount <= 0 || eligibleEntries.length === 0) {
     return {
       factionId: options.factionId,
       elite,
@@ -125,7 +128,7 @@ export function rollLoot(options: LootRollOptions): LootRollResult {
   }
 
   for (let index = 0; index < rollCount; index += 1) {
-    const entry = selectEntry(table.entries, random);
+    const entry = selectEntry(eligibleEntries, random);
     if (!entry) {
       break;
     }

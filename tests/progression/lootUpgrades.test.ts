@@ -59,6 +59,27 @@ describe('lootUpgrades progression', () => {
     expect(module.getEffectiveLootRolls()).toBe(2);
   });
 
+  it('persists unlocked rarities across reloads', async () => {
+    const module = await import('../../src/progression/lootUpgrades.ts');
+    module.setUnlockedItemRarities(['common', 'rare']);
+
+    expect(module.isItemRarityUnlocked('rare')).toBe(true);
+
+    vi.resetModules();
+    const reloaded = await import('../../src/progression/lootUpgrades.ts');
+    expect(reloaded.isItemRarityUnlocked('rare')).toBe(true);
+    expect(reloaded.isItemRarityUnlocked('common')).toBe(true);
+  });
+
+  it('always keeps common rarity unlocked after sanitizing input', async () => {
+    const module = await import('../../src/progression/lootUpgrades.ts');
+    module.setUnlockedItemRarities([]);
+
+    const unlocked = module.getUnlockedItemRarities();
+    expect(unlocked.has('common')).toBe(true);
+    expect(unlocked.has('rare')).toBe(false);
+  });
+
   it('gates loot drops using the configured RNG source', async () => {
     const module = await import('../../src/progression/lootUpgrades.ts');
     module.setPurchasedLootUpgrades([]);

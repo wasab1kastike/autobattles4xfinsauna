@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Track unlocked loot rarity tiers in progression storage, filter loot rolls to
+  respect the unlocked list, cover the regression with Vitest, and refresh the
+  Steamforge Atelier copy to call out rarer cache unlocks.
 - Persist loot-drop upgrades with additive modifiers, gate loot rolls behind the
   progression-driven drop chance, update the loot roller to accept explicit
   roll counts, and cover the new progression module plus RNG gating with
