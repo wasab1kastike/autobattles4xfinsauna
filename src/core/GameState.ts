@@ -22,6 +22,11 @@ import {
   ensureNgPlusRunState,
   type NgPlusState
 } from '../progression/ngplus.ts';
+import {
+  getStrongholdSnapshot,
+  mergeStrongholdPersistence,
+  type StrongholdPersistence
+} from '../world/strongholds.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -44,6 +49,8 @@ type SerializedPolicyStatus = {
 type SerializedPolicies = Record<string, SerializedPolicyStatus> | string[];
 
 // Shape of the serialized game state stored in localStorage.
+type SerializedStrongholds = StrongholdPersistence;
+
 type SerializedState = {
   resources: Record<Resource, number>;
   lastSaved: number;
@@ -54,6 +61,7 @@ type SerializedState = {
   nightWorkSpeedMultiplier: number;
   enemyScaling?: EnemyScalingMultipliers;
   ngPlus?: NgPlusState;
+  strongholds?: SerializedStrongholds;
 };
 
 export interface EnemyScalingMultipliers {
@@ -137,6 +145,9 @@ export class GameState {
   /** Prestige modifiers for the current run. */
   private ngPlus: NgPlusState = createNgPlusState();
 
+  /** Snapshot of stronghold capture state for persistence fallbacks. */
+  private strongholdStatuses = new Map<string, { captured: boolean }>();
+
   constructor(
     private readonly tickInterval: number,
     private readonly storageKey = 'gameState'
@@ -166,6 +177,17 @@ export class GameState {
       } satisfies SerializedPolicyStatus;
     });
 
+    const strongholdSnapshot = getStrongholdSnapshot();
+    if (Object.keys(strongholdSnapshot).length === 0 && this.strongholdStatuses.size > 0) {
+      this.strongholdStatuses.forEach((status, id) => {
+        strongholdSnapshot[id] = { captured: status.captured };
+      });
+    }
+    this.strongholdStatuses.clear();
+    Object.entries(strongholdSnapshot).forEach(([id, entry]) => {
+      this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+    });
+
     const serialized: SerializedState = {
       resources: this.resources,
       lastSaved: this.lastSaved,
@@ -175,7 +197,8 @@ export class GameState {
       passiveGeneration: { ...this.passiveGeneration },
       nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
       enemyScaling: { ...this.enemyScaling },
-      ngPlus: this.ngPlus
+      ngPlus: this.ngPlus,
+      strongholds: strongholdSnapshot
     };
     const storage =
       typeof localStorage !== 'undefined' && localStorage ? localStorage : undefined;
@@ -232,6 +255,25 @@ export class GameState {
 
     const savedNgPlus = data.ngPlus ? createNgPlusState(data.ngPlus) : this.ngPlus;
     this.ngPlus = ensureNgPlusRunState(savedNgPlus);
+
+    const persistedStrongholds: StrongholdPersistence = {};
+    Object.entries(data.strongholds ?? {}).forEach(([id, entry]) => {
+      persistedStrongholds[id] = { captured: Boolean(entry?.captured) };
+    });
+
+    mergeStrongholdPersistence(map ?? null, persistedStrongholds);
+
+    const mergedSnapshot = getStrongholdSnapshot();
+    this.strongholdStatuses.clear();
+    if (Object.keys(mergedSnapshot).length > 0) {
+      Object.entries(mergedSnapshot).forEach(([id, entry]) => {
+        this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+      });
+    } else if (Object.keys(persistedStrongholds).length > 0) {
+      Object.entries(persistedStrongholds).forEach(([id, entry]) => {
+        this.strongholdStatuses.set(id, { captured: Boolean(entry?.captured) });
+      });
+    }
 
     // Reset derived policy state and repopulate applied policies from the save.
     this.policies = new Map();
@@ -297,6 +339,18 @@ export class GameState {
       this.resources[res] += offlineTicks * this.passiveGeneration[res];
     });
     return true;
+  }
+
+  peekPersistedStrongholds(): StrongholdPersistence | null {
+    const data = safeLoadJSON<Partial<SerializedState>>(this.storageKey);
+    if (!data?.strongholds) {
+      return null;
+    }
+    const snapshot: StrongholdPersistence = {};
+    Object.entries(data.strongholds).forEach(([id, entry]) => {
+      snapshot[id] = { captured: Boolean(entry?.captured) };
+    });
+    return snapshot;
   }
 
   /** Current amount of a resource. */
