@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GameState } from '../../src/core/GameState.ts';
 import { setupHudNavigation } from '../../src/ui/hudNavigation.tsx';
 import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
+import { useIsMobile } from '../../src/ui/hooks/useIsMobile.ts';
 import { HUD_OVERLAY_COLLAPSED_CLASS } from '../../src/ui/layout.ts';
 
 describe('HUD navigation', () => {
@@ -155,7 +156,7 @@ describe('HUD navigation', () => {
   it('keeps the right panel collapsed on narrow layouts until navigation expands it', () => {
     const matchMediaMock = vi.fn((query: string) => {
       const isNarrow = query.includes('960');
-      const isMobile = query.includes('820');
+      const isMobile = query.includes('959');
       const mediaQuery: MediaQueryList = {
         matches: isNarrow ? true : isMobile ? false : false,
         media: query,
@@ -190,6 +191,55 @@ describe('HUD navigation', () => {
 
     nav.dispose();
     controller.dispose();
+  });
+
+  it('opens the console in mobile mode for mid-width viewports without overflowing the overlay', () => {
+    const matchMediaMock = vi.fn((query: string) => {
+      const normalized = query.replace(/\s+/g, '');
+      const matchesMidViewport =
+        normalized.includes('(max-width:959px)') || normalized.includes('(max-width:960px)');
+      const mediaQuery: MediaQueryList = {
+        matches: matchesMidViewport,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(() => false)
+      } as unknown as MediaQueryList;
+      return mediaQuery;
+    });
+    window.matchMedia = matchMediaMock as unknown as typeof window.matchMedia;
+
+    const resetHandle = useIsMobile({ immediate: true });
+    resetHandle.dispose();
+    const mobileHandle = useIsMobile({ immediate: true });
+
+    const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    });
+
+    const state = new GameState(1000);
+    const controller = setupRightPanel(state);
+    setupHudNavigation(overlay, { onNavigate: controller.openView });
+
+    controller.openRosterView();
+
+    expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);
+
+    const slide = overlay.querySelector<HTMLDivElement>('.right-panel-slide');
+    expect(slide).not.toBeNull();
+    expect(slide?.classList.contains('right-panel-slide--open')).toBe(true);
+    expect(slide?.getAttribute('aria-hidden')).toBe('false');
+    const panel = overlay.querySelector<HTMLDivElement>('#right-panel');
+    expect(panel && slide?.contains(panel)).toBe(true);
+    expect(document.body.classList.contains('is-mobile-panel-open')).toBe(true);
+
+    raf.mockRestore();
+    controller.dispose();
+    mobileHandle.dispose();
   });
 });
 

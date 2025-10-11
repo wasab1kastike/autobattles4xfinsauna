@@ -29,3 +29,5 @@ Selecting **Skip tutorial** or finishing the final step marks the `tutorial_done
 ## Visual polish
 
 The tooltip overlay uses blurred glass cards, accent lighting around anchors, and responsive positioning to maintain a premium presentation on both desktop and handheld layouts. Those cards mirror the sauna HUD styling, complete with badge-forward Premium Tier options, realtime progress labels, and the destruction FX woven into the Sauna Integrity meter.
+
+The onboarding overlay now mirrors the in-game HUD breakpoint at 959px, switching to the mobile console slide-over when viewports dip below that width so the roster and command dock stay fully visible during the tour.

@@ -1,4 +1,4 @@
-const MOBILE_QUERY = '(max-width: 820px)';
+const MOBILE_QUERY = '(max-width: 959px)';
 const MOBILE_CLASS = 'is-mobile';
 const DESKTOP_CLASS = 'is-desktop';
 
