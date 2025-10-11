@@ -170,6 +170,31 @@ describe('BattleManager', () => {
     expect((unit as any).cachedPath).toBeUndefined();
   });
 
+  it('keeps explorers advancing toward fog even with an active sauna', () => {
+    const map = new HexMap(5, 5);
+    const origin = map.ensureTile(0, 0);
+    origin.reveal();
+    origin.terrain = TerrainId.Plains;
+    const east = map.ensureTile(1, 0);
+    east.setFogged(true);
+    east.terrain = TerrainId.Plains;
+
+    const sauna = createSauna({ q: 0, r: 0 });
+
+    const unit = createUnit('sauna-scout', { q: 0, r: 0 }, 'player', {
+      health: 10,
+      attackDamage: 0,
+      attackRange: 0,
+      movementRange: 1
+    }, [], 'explore');
+
+    const manager = new BattleManager(map);
+    manager.tick([unit], 5, sauna);
+
+    expect(unit.coord).toEqual({ q: 1, r: 0 });
+    expect((unit as any).cachedPath).toBeUndefined();
+  });
+
   it('keeps explorers scouting when distant enemies are out of sight', () => {
     const map = new HexMap(8, 3);
     const explored = map.ensureTile(0, 0);
