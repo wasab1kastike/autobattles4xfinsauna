@@ -1,9 +1,15 @@
-# Release log
+# Changelog
 
-## 1.0.0 · 2025-10-12
+## Unreleased
 
-- Recovered the playable build following the LFS clean-up and restored a complete Vite + React toolchain.
-- Added deterministic combat simulation with autoplay controls, telemetry, and live combat logging.
-- Injected semantic version and commit metadata into the UI so QA can confirm the running build at a glance.
-- Refreshed the visual design using a neon-glass aesthetic aligned with the brand art direction.
-- Documented the GitHub Pages publishing workflow.
+- Launch the Steam Debt Protocol economic edict, blending deluxe passive Sauna
+  Beer bonds with reversible enemy aggression and cadence spikes plus a mild
+  upkeep surge while the toggle is active.
+
+- Rally enemy reinforcements from surviving strongholds, spawning squads on or
+  adjacent to active bastions before falling back to edge entries, and cover the
+  new routing with integration tests.
+
+- Cloak newly seeded enemy strongholds in fog unless prior saves revealed them,
+  keeping fresh campaigns mysterious and covering the regression with
+  progression tests.

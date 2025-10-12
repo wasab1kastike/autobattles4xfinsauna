@@ -1,12 +1,18 @@
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
+import { getShortCommitHash } from './build-info';
+
+const gitCommit = getShortCommitHash();
 
 export default defineConfig({
-  plugins: [react()],
+  define: {
+    __COMMIT__: JSON.stringify(gitCommit),
+  },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./vitest.setup.ts'],
     globals: true,
-    css: true
-  }
+    include: [
+      'src/**/*.{test,spec}.{js,ts,jsx,tsx}',
+      'tests/**/*.{test,spec}.{js,ts,jsx,tsx}',
+    ],
+  },
 });
