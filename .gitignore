@@ -12,10 +12,8 @@ node_modules
 
 dist/
 
-# Vite build artifacts copied into docs/
-assets/index-*.js
-assets/index-*.css
-assets/UnitFactory-*.js
+# Vite build artifacts in local dist output
+dist/assets/
 
 # Editor directories and files
 .vscode/*
