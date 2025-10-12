@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Resolve the blank GitHub Pages splash by deriving the Vite base path from
+  deployment environment overrides and mirroring the docs bundle with
+  relative asset URLs so repo-hosted builds load their hashed scripts.
+
 - Inject the active git commit into production Vite builds so GitHub Pages and
   runtime freshness checks report the correct `#7c8ab05`-style build marker.
 
