@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Scoped asset ignore patterns to the local `dist/` output so GitHub Pages bundles remain tracked.
+- Ensured supporter cards open securely by adding `noopener` to external links.
 
 ## [1.0.0] - 2025-10-12
 
