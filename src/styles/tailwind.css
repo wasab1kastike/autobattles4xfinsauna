@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply font-body bg-slate-950 text-slate-100 min-h-screen;
+}
+
+.gradient-bg {
+  background: radial-gradient(circle at top left, rgba(248, 203, 46, 0.12), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.18), transparent 45%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.92));
+}
