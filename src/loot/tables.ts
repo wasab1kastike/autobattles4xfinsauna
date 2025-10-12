@@ -228,3 +228,22 @@ export function getLootEntries(factionId: string, elite = false): readonly LootB
 export function isEliteTableAvailable(factionId: string): boolean {
   return Boolean(getFactionLootTables(factionId).elite);
 }
+
+export function getLootTableById(tableId: string): LootTable | null {
+  const normalized = tableId?.trim();
+  if (!normalized) {
+    return null;
+  }
+  if (DEFAULT_LOOT_TABLE.id === normalized) {
+    return DEFAULT_LOOT_TABLE;
+  }
+  for (const tables of Object.values(FACTION_TABLES)) {
+    if (tables.base.id === normalized) {
+      return tables.base;
+    }
+    if (tables.elite?.id === normalized) {
+      return tables.elite;
+    }
+  }
+  return null;
+}

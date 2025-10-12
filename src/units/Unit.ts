@@ -72,7 +72,8 @@ export class Unit {
     stats: UnitStats,
     public readonly priorityFactions: string[] = [],
     behavior?: UnitBehavior,
-    appearanceId?: string
+    appearanceId?: string,
+    public readonly isBoss = false
   ) {
     this.coord = cloneCoord(coord);
     this.renderCoord = cloneCoord(coord);
