@@ -4,6 +4,10 @@
 
 
 
+- Prevent stale build reload loops in privacy-restricted browsers by falling
+  back to URL-based guards when session storage writes fail, document the
+  behavior, and add regression coverage to ensure only one reload attempt.
+
 - Launch the Hypersteam Levy Ultimatum, a prestige-gated double-edged economy
   boost that drenches breweries in bonus Sauna Beer while enemy aggression,
   cadence, and strength ratchet upward for commanders bold enough to toggle it.
