@@ -13,11 +13,11 @@ The development server runs on [http://localhost:5173](http://localhost:5173) by
 
 ## Building & Deploying to GitHub Pages
 
-The project uses the standard Vite static output. The `npm run build` script performs three steps:
+The project uses the standard Vite static output. The `npm run build` script now performs a multi-target export so both the marketing site and the playable demo stay in sync:
 
 1. Generates production assets in `dist/`.
-2. Clears any existing `docs/` directory.
-3. Copies the fresh build into `docs/` so GitHub Pages can serve it directly.
+2. Rebuilds the root `docs/` directory from scratch so the landing experience stays fresh.
+3. Publishes the compiled game into `docs/play/`, giving GitHub Pages a dedicated path for the hands-on demo while keeping the custom domain mapping in `docs/CNAME`.
 
 Always run the build before pushing to `main` to avoid stale assets:
 
@@ -25,7 +25,7 @@ Always run the build before pushing to `main` to avoid stale assets:
 npm run build
 ```
 
-Commit both the `dist/` (ignored) and `docs/` (tracked) outputs appropriately. Only `docs/` is committed—`dist/` remains transient. After pushing to `main`, GitHub Pages will update within a few minutes without any LFS placeholders.
+Commit both the `dist/` (ignored) and `docs/` (tracked) outputs appropriately. Only `docs/` is committed—`dist/` remains transient. After pushing to `main`, GitHub Pages will update within a few minutes without any LFS placeholders. Remember to spot-check both `docs/index.html` and `docs/play/index.html` locally to validate the marketing page and the dedicated game build.
 
 ### Custom Domain: artobest.com
 
