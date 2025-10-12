@@ -1,6 +1,23 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { TileMutation } from '../hex/HexTile.ts';
+import type { UnitArchetypeId } from '../unit/types.ts';
+import {
+  getStrongholdEncounterSnapshot,
+  mergeStrongholdEncounterPersistence,
+  resetStrongholdEncounters,
+  seedStrongholdEncounter,
+  type StrongholdEncounterHooks
+} from './strongholdEncounters.ts';
+
+export interface StrongholdBossDefinition {
+  readonly unit: UnitArchetypeId;
+  readonly level: number;
+  readonly faction: string;
+  readonly appearanceId?: string;
+  readonly lootRolls?: number;
+  readonly eliteLoot?: boolean;
+}
 
 export interface StrongholdDefinition {
   readonly id: string;
@@ -8,15 +25,22 @@ export interface StrongholdDefinition {
   readonly coord: AxialCoord;
   readonly guardTier: string;
   readonly lootTableId: string;
+  readonly boss: StrongholdBossDefinition;
 }
 
 export interface StrongholdConfig {
   readonly strongholds: readonly StrongholdDefinition[];
 }
 
+export interface StrongholdBossPersistence {
+  readonly defeated?: boolean;
+  readonly loot?: readonly string[];
+}
+
 export interface StrongholdPersistenceEntry {
   readonly captured?: boolean;
   readonly seen?: boolean;
+  readonly boss?: StrongholdBossPersistence;
 }
 
 export type StrongholdPersistence = Record<string, StrongholdPersistenceEntry>;
@@ -24,6 +48,10 @@ export type StrongholdPersistence = Record<string, StrongholdPersistenceEntry>;
 export interface StrongholdMetadata extends StrongholdDefinition {
   captured: boolean;
   seen: boolean;
+}
+
+export interface StrongholdSeedOptions {
+  readonly encounters?: StrongholdEncounterHooks;
 }
 
 const registry = new Map<string, StrongholdMetadata>();
@@ -35,28 +63,54 @@ export const STRONGHOLD_CONFIG: StrongholdConfig = Object.freeze({
       label: 'Aurora Watch',
       coord: Object.freeze({ q: 2, r: 2 }),
       guardTier: 'raider-scouts',
-      lootTableId: 'enemy-raiders'
+      lootTableId: 'enemy-raiders',
+      boss: Object.freeze({
+        unit: 'aurora-warden',
+        level: 6,
+        faction: 'enemy',
+        lootRolls: 3
+      })
     }),
     Object.freeze({
       id: 'glacier-bastion',
       label: 'Glacier Bastion',
       coord: Object.freeze({ q: 7, r: 3 }),
       guardTier: 'icebreaker-vanguard',
-      lootTableId: 'enemy-champions'
+      lootTableId: 'enemy-champions',
+      boss: Object.freeze({
+        unit: 'glacier-sentinel',
+        level: 7,
+        faction: 'enemy',
+        lootRolls: 4,
+        eliteLoot: true
+      })
     }),
     Object.freeze({
       id: 'spirit-thicket',
       label: 'Spirit Thicket',
       coord: Object.freeze({ q: 4, r: 7 }),
       guardTier: 'deepwood-wardens',
-      lootTableId: 'deepwood-offerings'
+      lootTableId: 'deepwood-offerings',
+      boss: Object.freeze({
+        unit: 'spirit-keeper',
+        level: 7,
+        faction: 'enemy',
+        lootRolls: 3,
+        eliteLoot: true
+      })
     }),
     Object.freeze({
       id: 'ember-sanctum',
       label: 'Ember Sanctum',
       coord: Object.freeze({ q: 8, r: 6 }),
       guardTier: 'forgeborn-legion',
-      lootTableId: 'enemy-raiders'
+      lootTableId: 'enemy-raiders',
+      boss: Object.freeze({
+        unit: 'ember-highlord',
+        level: 8,
+        faction: 'enemy',
+        lootRolls: 4
+      })
     })
   ])
 });
@@ -82,14 +136,17 @@ function trackTileCapture(metadata: StrongholdMetadata, map: HexMap): void {
 
 export function resetStrongholdRegistry(): void {
   registry.clear();
+  resetStrongholdEncounters();
 }
 
 export function seedEnemyStrongholds(
   map: HexMap,
   config: StrongholdConfig,
-  persisted?: StrongholdPersistence | null
+  persisted?: StrongholdPersistence | null,
+  options?: StrongholdSeedOptions
 ): void {
   registry.clear();
+  resetStrongholdEncounters();
   for (const spec of config.strongholds) {
     const tile = map.ensureTile(spec.coord.q, spec.coord.r);
     const persistedEntry = persisted?.[spec.id];
@@ -112,6 +169,7 @@ export function seedEnemyStrongholds(
     };
     registry.set(spec.id, metadata);
     trackTileCapture(metadata, map);
+    seedStrongholdEncounter(map, metadata, options?.encounters, persistedEntry ?? null);
   }
 }
 
@@ -141,6 +199,7 @@ export function mergeStrongholdPersistence(
       }
     }
   }
+  mergeStrongholdEncounterPersistence(snapshot);
 }
 
 export function listStrongholds(): readonly StrongholdMetadata[] {
@@ -149,8 +208,14 @@ export function listStrongholds(): readonly StrongholdMetadata[] {
 
 export function getStrongholdSnapshot(): StrongholdPersistence {
   const snapshot: StrongholdPersistence = {};
+  const encounterSnapshot = getStrongholdEncounterSnapshot();
   for (const metadata of registry.values()) {
-    snapshot[metadata.id] = { captured: metadata.captured, seen: metadata.seen };
+    const encounter = encounterSnapshot[metadata.id];
+    snapshot[metadata.id] = {
+      captured: metadata.captured,
+      seen: metadata.seen,
+      ...(encounter ? { boss: encounter } : {})
+    };
   }
   return snapshot;
 }

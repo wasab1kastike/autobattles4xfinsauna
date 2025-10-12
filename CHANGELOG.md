@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Stage persistent stronghold boss encounters with dedicated archetypes, map
+  clearing on defeat, encounter persistence, and Vitest coverage for XP rewards
+  plus the new boss flag plumbing.
+
 - Launch the Hypersteam Levy Ultimatum, a prestige-gated double-edged economy
   boost that drenches breweries in bonus Sauna Beer while enemy aggression,
   cadence, and strength ratchet upward for commanders bold enough to toggle it.

@@ -84,13 +84,73 @@ const raiderShamanDefinition: UnitArchetypeDefinition = Object.freeze({
   }
 } satisfies UnitArchetypeDefinition);
 
+const auroraWardenDefinition: UnitArchetypeDefinition = Object.freeze({
+  id: 'aurora-warden',
+  displayName: 'Aurora Warden',
+  cost: 0,
+  tags: ['enemy', 'boss', 'caster'],
+  stats: {
+    health: { base: 55, growth: 8, curve: 'linear', round: 'round' },
+    attackDamage: { base: 8, growth: 1.2, curve: 'accelerating', round: 'ceil' },
+    attackRange: { base: 3, growth: 0.35, curve: 'diminishing', round: 'ceil', max: 5 },
+    movementRange: { base: 1, growth: 0.2, curve: 'linear', round: 'round', max: 2 },
+    visionRange: { base: 5, growth: 0.25, curve: 'linear', round: 'round', max: 7 }
+  }
+} satisfies UnitArchetypeDefinition);
+
+const glacierSentinelDefinition: UnitArchetypeDefinition = Object.freeze({
+  id: 'glacier-sentinel',
+  displayName: 'Glacier Sentinel',
+  cost: 0,
+  tags: ['enemy', 'boss', 'melee'],
+  stats: {
+    health: { base: 70, growth: 10, curve: 'linear', round: 'round' },
+    attackDamage: { base: 9, growth: 1.5, curve: 'accelerating', round: 'ceil' },
+    attackRange: { base: 1, growth: 0, round: 'round' },
+    movementRange: { base: 1, growth: 0.2, curve: 'linear', round: 'round', max: 2 },
+    visionRange: { base: 4, growth: 0.2, curve: 'linear', round: 'round', max: 6 }
+  }
+} satisfies UnitArchetypeDefinition);
+
+const spiritKeeperDefinition: UnitArchetypeDefinition = Object.freeze({
+  id: 'spirit-keeper',
+  displayName: 'Spirit Keeper',
+  cost: 0,
+  tags: ['enemy', 'boss', 'support'],
+  stats: {
+    health: { base: 60, growth: 9, curve: 'linear', round: 'round' },
+    attackDamage: { base: 7, growth: 1.1, curve: 'accelerating', round: 'ceil' },
+    attackRange: { base: 2, growth: 0.4, curve: 'diminishing', round: 'ceil', max: 4 },
+    movementRange: { base: 1, growth: 0.25, curve: 'linear', round: 'round', max: 2 },
+    visionRange: { base: 5, growth: 0.3, curve: 'linear', round: 'round', max: 7 }
+  }
+} satisfies UnitArchetypeDefinition);
+
+const emberHighlordDefinition: UnitArchetypeDefinition = Object.freeze({
+  id: 'ember-highlord',
+  displayName: 'Ember Highlord',
+  cost: 0,
+  tags: ['enemy', 'boss', 'melee'],
+  stats: {
+    health: { base: 65, growth: 9, curve: 'linear', round: 'round' },
+    attackDamage: { base: 10, growth: 1.6, curve: 'accelerating', round: 'ceil' },
+    attackRange: { base: 1, growth: 0, round: 'round' },
+    movementRange: { base: 1, growth: 0.3, curve: 'linear', round: 'round', max: 3 },
+    visionRange: { base: 4, growth: 0.2, curve: 'linear', round: 'round', max: 6 }
+  }
+} satisfies UnitArchetypeDefinition);
+
 const UNIT_ARCHETYPES: Record<UnitArchetypeId, UnitArchetypeDefinition> = Object.freeze({
   soldier: soldierDefinition,
   archer: archerDefinition,
   'avanto-marauder': marauderDefinition,
   raider: raiderDefinition,
   'raider-captain': raiderCaptainDefinition,
-  'raider-shaman': raiderShamanDefinition
+  'raider-shaman': raiderShamanDefinition,
+  'aurora-warden': auroraWardenDefinition,
+  'glacier-sentinel': glacierSentinelDefinition,
+  'spirit-keeper': spiritKeeperDefinition,
+  'ember-highlord': emberHighlordDefinition
 });
 
 export function getUnitArchetype(id: UnitArchetypeId): UnitArchetypeDefinition {
@@ -116,3 +176,7 @@ export { marauderDefinition as AVANTO_MARAUDER_ARCHETYPE };
 export { raiderDefinition as RAIDER_ARCHETYPE };
 export { raiderCaptainDefinition as RAIDER_CAPTAIN_ARCHETYPE };
 export { raiderShamanDefinition as RAIDER_SHAMAN_ARCHETYPE };
+export { auroraWardenDefinition as AURORA_WARDEN_ARCHETYPE };
+export { glacierSentinelDefinition as GLACIER_SENTINEL_ARCHETYPE };
+export { spiritKeeperDefinition as SPIRIT_KEEPER_ARCHETYPE };
+export { emberHighlordDefinition as EMBER_HIGHLORD_ARCHETYPE };
