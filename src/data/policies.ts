@@ -22,6 +22,7 @@ export type PolicyId =
   | 'temperance'
   | 'steam-diplomats'
   | 'steam-debt-protocol'
+  | 'hypersteam-levy'
   | 'battle-rhythm'
   | 'saunojas-rage'
   | 'glacial-gambit'
@@ -251,6 +252,74 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
     },
     spotlight:
       'Treasury clerks unfurl velvet-banded scrolls as bond-backed tankards arrive in synchronized, perfumed waves.',
+    toggleable: true
+  },
+  {
+    id: 'hypersteam-levy',
+    name: 'Hypersteam Levy Ultimatum',
+    description:
+      'Stack prestige-backed levies that flood the breweries while baiting enemy warbands into a relentless counter-surge.',
+    cost: 90,
+    resource: Resource.SAUNAKUNNIA,
+    prerequisites: [
+      {
+        description: 'Maintain the Steam Debt Protocol to collateralise the levy bonds.',
+        isSatisfied: (state) => state.hasPolicy('steam-debt-protocol')
+      },
+      {
+        description: 'Project at least 200 Saunakunnia to impress the imperial auditors.',
+        isSatisfied: (state) => state.getResource(Resource.SAUNAKUNNIA) >= 200
+      },
+      {
+        description: 'Stockpile 180 Sauna Beer bottles for the levy launch gala.',
+        isSatisfied: (state) => state.getResource(Resource.SAUNA_BEER) >= 180
+      }
+    ],
+    visuals: {
+      icon: saunaBeerIcon,
+      gradient:
+        'linear-gradient(176deg, rgba(17, 24, 39, 0.96) 0%, rgba(180, 83, 9, 0.92) 48%, rgba(252, 211, 77, 0.9) 100%)',
+      accentColor: '#fbbf24',
+      badges: ['Prestige', 'Economy', 'High Risk'],
+      flair:
+        'Gilded steam sigils spiral through obsidian bond vaults as levy inspectors bathe the brewhouse in molten amber light.'
+    },
+    effects: [
+      {
+        event: POLICY_EVENTS.APPLIED,
+        once: false,
+        invoke: ({ state }) => {
+          const levyBrewBonus = 5;
+          const aggressionMultiplier = 1.4;
+          const cadenceMultiplier = 1.2;
+          const strengthMultiplier = 1.1;
+          state.modifyPassiveGeneration(Resource.SAUNA_BEER, levyBrewBonus);
+          state.applyEnemyScalingModifiers({
+            aggression: aggressionMultiplier,
+            cadence: cadenceMultiplier,
+            strength: strengthMultiplier
+          });
+        }
+      },
+      {
+        event: POLICY_EVENTS.REVOKED,
+        once: false,
+        invoke: ({ state }) => {
+          const levyBrewBonus = 5;
+          const aggressionMultiplier = 1.4;
+          const cadenceMultiplier = 1.2;
+          const strengthMultiplier = 1.1;
+          state.modifyPassiveGeneration(Resource.SAUNA_BEER, -levyBrewBonus);
+          state.applyEnemyScalingModifiers({
+            aggression: 1 / aggressionMultiplier,
+            cadence: 1 / cadenceMultiplier,
+            strength: 1 / strengthMultiplier
+          });
+        }
+      }
+    ],
+    spotlight:
+      'Warning: the levy’s gilded pipelines gush Sauna Beer while enemy scouts rally with terrifying cadence—only prestige-drunk commanders should pull this double-edged lever.',
     toggleable: true
   },
   {

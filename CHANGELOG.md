@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Launch the Hypersteam Levy Ultimatum, a prestige-gated double-edged economy
+  boost that drenches breweries in bonus Sauna Beer while enemy aggression,
+  cadence, and strength ratchet upward for commanders bold enough to toggle it.
+
 - Introduce the Glacial Gambit precision doctrine with extended range, stacked
   hit bonuses, brittle defensive penalties, fresh combat regression coverage,
   and updated policy briefings for the frost-marksmanship branch.
