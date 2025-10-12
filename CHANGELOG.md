@@ -3,6 +3,11 @@
 ## Unreleased
 
 
+- Gate the sauna battle bootstrap behind a deployment verification pass so stale
+  bundles reload before initialization and players always enter the current
+  release.
+
+
 
 - Prevent stale build reload loops in privacy-restricted browsers by falling
   back to URL-based guards when session storage writes fail, document the

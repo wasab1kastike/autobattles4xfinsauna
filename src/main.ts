@@ -76,9 +76,6 @@ function applyBuildIdentity(): void {
 
 applyBuildIdentity();
 
-
-void ensureLatestDeployment();
-
 function addCleanup(fn: () => void): void {
   cleanupHandlers.push(fn);
 }
@@ -326,9 +323,21 @@ function initWhenDomReady(): void {
   startInit();
 }
 
-if (!import.meta.vitest) {
+async function verifyBuildBeforeInit(): Promise<void> {
+  if (import.meta.vitest) {
+    return;
+  }
+
+  try {
+    await ensureLatestDeployment();
+  } catch (error) {
+    console.warn('Unable to verify build consistency before launching:', error);
+  }
+
   initWhenDomReady();
 }
+
+void verifyBuildBeforeInit();
 
 export {
   camera,

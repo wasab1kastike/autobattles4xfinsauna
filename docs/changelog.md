@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Gate the sauna battle bootstrap behind the deployment verification pass so
+  stale bundles reload before initialization and commanders always land on the
+  live build.
+
 - Launch the Steam Debt Protocol economic edict, blending deluxe passive Sauna
   Beer bonds with reversible enemy aggression and cadence spikes plus a mild
   upkeep surge while the toggle is active.
