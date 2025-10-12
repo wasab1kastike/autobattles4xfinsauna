@@ -15,7 +15,6 @@
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.PNG filter=lfs diff=lfs merge=lfs -text
 /LICENSE filter=lfs diff=lfs merge=lfs -text
-/package-lock.json filter=lfs diff=lfs merge=lfs -text
 /public/vite.svg filter=lfs diff=lfs merge=lfs -text
 /src/style.css filter=lfs diff=lfs merge=lfs -text
 /src/typescript.svg filter=lfs diff=lfs merge=lfs -text
@@ -40,7 +39,6 @@
 /src/hexmap.test.ts filter=lfs diff=lfs merge=lfs -text
 /src/buildings/effects.test.ts filter=lfs diff=lfs merge=lfs -text
 /src/buildings/effects.ts filter=lfs diff=lfs merge=lfs -text
-/README.md filter=lfs diff=lfs merge=lfs -text
 /src/battle/BattleManager.ts filter=lfs diff=lfs merge=lfs -text
 /src/sim/sauna.ts filter=lfs diff=lfs merge=lfs -text
 /src/ui/sauna.tsx filter=lfs diff=lfs merge=lfs -text
@@ -63,8 +61,6 @@
 /scripts/check-asset-paths.js filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-B7_F4ZxM.js filter=lfs diff=lfs merge=lfs -text
 /.github/workflows/ci.yml filter=lfs diff=lfs merge=lfs -text
-/CHANGELOG.md filter=lfs diff=lfs merge=lfs -text
-/docs/assets/index-BrShhiro.css filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-CHAdsxBG.js filter=lfs diff=lfs merge=lfs -text
 /src/events/types.ts filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-BHwhvyDl.js filter=lfs diff=lfs merge=lfs -text
@@ -115,7 +111,6 @@
 /assets/ui/gold.svg filter=lfs diff=lfs merge=lfs -text
 /assets/ui/resource.svg filter=lfs diff=lfs merge=lfs -text
 /assets/ui/sound.svg filter=lfs diff=lfs merge=lfs -text
-/index.html filter=lfs diff=lfs merge=lfs -text
 /style.css filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-B8L5oSxU.css filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-BM0XTptg.js filter=lfs diff=lfs merge=lfs -text
@@ -353,7 +348,6 @@
 /docs/assets/index-DGrCy7wS.js filter=lfs diff=lfs merge=lfs -text
 /src/ui/action-bar/ActionBar.tsx filter=lfs diff=lfs merge=lfs -text
 /src/ui/action-bar/index.tsx filter=lfs diff=lfs merge=lfs -text
-/tailwind.config.ts filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-BiWAUQvi.css filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-Cb7goFLJ.js filter=lfs diff=lfs merge=lfs -text
 /src/ui/logging.ts filter=lfs diff=lfs merge=lfs -text
@@ -414,7 +408,6 @@
 /docs/assets/index-DG-jaz1I.js filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-CgNZ2994.js filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-DmVYyZDZ.js filter=lfs diff=lfs merge=lfs -text
-/package.json filter=lfs diff=lfs merge=lfs -text
 /src/uiV2/UiV2App.tsx filter=lfs diff=lfs merge=lfs -text
 /src/uiV2/bootstrap.tsx filter=lfs diff=lfs merge=lfs -text
 /tests/uiV2/bootstrap.test.tsx filter=lfs diff=lfs merge=lfs -text
@@ -532,7 +525,6 @@
 /docs/assets/index-BdjZ5rYF.css filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-Dc4tcYPO.js filter=lfs diff=lfs merge=lfs -text
 /docs/assets/index-Ra4lyuyF.js filter=lfs diff=lfs merge=lfs -text
-/vite.config.ts filter=lfs diff=lfs merge=lfs -text
 /src/policies/modifiers.ts filter=lfs diff=lfs merge=lfs -text
 /tests/game/hudSwitching.test.ts filter=lfs diff=lfs merge=lfs -text
 /src/game/hud.ts filter=lfs diff=lfs merge=lfs -text

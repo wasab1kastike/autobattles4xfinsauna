@@ -13,6 +13,7 @@ Welcome to the refreshed launch dashboard. This GitHub Pages entrypoint mirrors 
 ## Keeping this page current
 
 After running `npm run build`, publish the contents of the generated `dist` directory into `docs/`. The Vite build is
-self-contained and ready for GitHub Pages hosting.
+self-contained and ready for GitHub Pages hosting. Double-check that no Git LFS pointer stubs are committed—`package.json`,
+`package-lock.json`, `index.html`, and `vite.config.ts` must contain real source so Pages can hydrate the SPA.
 
 For additional release notes see [docs/changelog.md](./changelog.md).
