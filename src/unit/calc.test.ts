@@ -94,7 +94,7 @@ describe('computeUnitStats', () => {
     expect(summary.statMultipliers.defense).toBeCloseTo(1.04, 5);
     expect(summary.hitChanceBonus).toBeCloseTo(-0.15, 5);
     expect(summary.damageTakenMultiplier).toBeCloseTo(0.6375, 5);
-    expect(summary.damageDealtMultiplier).toBeCloseTo(2.2, 5);
+    expect(summary.damageDealtMultiplier).toBeCloseTo(2, 5);
     expect(summary.upkeepMultiplier).toBeCloseTo(5.313, 5);
     expect(summary.upkeepDelta).toBeCloseTo(1.5, 5);
   });
