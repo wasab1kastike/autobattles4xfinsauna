@@ -122,8 +122,7 @@ import {
   shouldDropLoot,
   type LootUpgradeChangeEvent
 } from './progression/lootUpgrades.ts';
-import { tryGetUnitArchetype } from './unit/archetypes.ts';
-import { computeUnitStats, applyEquipment } from './unit/calc.ts';
+import { applyEquipment } from './unit/calc.ts';
 import { getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
@@ -207,14 +206,18 @@ import {
   notifyHudElapsed,
   setHudElapsedMs as setHudElapsedMsSnapshot
 } from './game/signals/hud.ts';
+import {
+  calculateKillExperience,
+  isEliteUnit,
+  XP_BOSS_KILL,
+  XP_ELITE_KILL,
+  XP_STANDARD_KILL
+} from './game/experience.ts';
 
 const INITIAL_SAUNA_BEER = 200;
 const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
-const XP_STANDARD_KILL = 6;
-const XP_ELITE_KILL = 40;
-const XP_BOSS_KILL = 250;
 const XP_OBJECTIVE_COMPLETION = 200;
 const MAX_LEVEL = getLevelForExperience(Number.MAX_SAFE_INTEGER);
 
@@ -779,26 +782,6 @@ function grantExperienceToRoster(amount: number, context: ExperienceContext): bo
   return updated;
 }
 
-function calculateKillExperience(target: Unit | null): {
-  xp: number;
-  elite: boolean;
-  boss: boolean;
-} {
-  if (!target) {
-    return { xp: XP_STANDARD_KILL, elite: false, boss: false };
-  }
-  const typeLabel = target.type?.toLowerCase?.() ?? '';
-  const boss = typeLabel.includes('boss');
-  if (boss) {
-    return { xp: XP_BOSS_KILL, elite: true, boss: true };
-  }
-  const elite = isEliteUnit(target);
-  if (elite) {
-    return { xp: XP_ELITE_KILL, elite: true, boss: false };
-  }
-  return { xp: XP_STANDARD_KILL, elite: false, boss: false };
-}
-
 const handleObjectiveProgress = (progress: ObjectiveProgress): void => {
   if (!progress) {
     return;
@@ -1038,7 +1021,12 @@ const invalidateTerrainCache = gameController.getTerrainInvalidator();
 
 const state = new GameState(1000);
 const persistedStrongholds = state.peekPersistedStrongholds();
-seedEnemyStrongholds(map, STRONGHOLD_CONFIG, persistedStrongholds);
+seedEnemyStrongholds(map, STRONGHOLD_CONFIG, persistedStrongholds, {
+  encounters: {
+    registerUnit,
+    random: Math.random
+  }
+});
 
 function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
@@ -1739,24 +1727,6 @@ function clearSaunojaSelection(): boolean {
   const changed = rosterService.clearSaunojaSelection();
   syncSelectionOverlay();
   return changed;
-}
-
-function isEliteUnit(unit: Unit | null): boolean {
-  if (!unit) {
-    return false;
-  }
-  const archetype = tryGetUnitArchetype(unit.type);
-  if (!archetype) {
-    return false;
-  }
-  const baseline = computeUnitStats(archetype, 1);
-  const stats = unit.stats;
-  return (
-    stats.health > baseline.health ||
-    stats.attackDamage > baseline.attackDamage ||
-    stats.attackRange > baseline.attackRange ||
-    stats.movementRange > baseline.movementRange
-  );
 }
 
 function focusSaunoja(target: Saunoja): boolean {

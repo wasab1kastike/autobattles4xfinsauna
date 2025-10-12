@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GameState } from '../../src/core/GameState.ts';
 import { HexMap } from '../../src/hexmap.ts';
 import { createObjectiveTracker } from '../../src/progression/objectives.ts';
+import { calculateKillExperience, XP_BOSS_KILL } from '../../src/game/experience.ts';
+import { createUnit } from '../../src/units/UnitFactory.ts';
 import {
+  getStrongholdSnapshot,
   listStrongholds,
   resetStrongholdRegistry,
   seedEnemyStrongholds,
@@ -73,5 +76,50 @@ describe('enemy strongholds integration', () => {
     expect(progress.strongholds.destroyed).toBe(1);
 
     tracker.dispose();
+  });
+
+  it('clears stronghold tiles and awards boss XP when the leader falls', () => {
+    const map = new HexMap(10, 10);
+    const spawned: ReturnType<typeof createUnit>[] = [];
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
+      encounters: {
+        registerUnit: (unit) => spawned.push(unit),
+        random: () => 0.41
+      }
+    });
+
+    const [firstStronghold] = listStrongholds();
+    expect(firstStronghold).toBeDefined();
+    const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
+    expect(tile?.building).toBe('city');
+
+    const boss = spawned.find(
+      (unit) =>
+        unit?.isBoss &&
+        unit.coord.q === firstStronghold.coord.q &&
+        unit.coord.r === firstStronghold.coord.r
+    );
+    expect(boss).toBeDefined();
+
+    const attacker = createUnit(
+      'soldier',
+      'test-attacker',
+      { q: firstStronghold.coord.q + 1, r: firstStronghold.coord.r },
+      'player'
+    );
+    expect(attacker).toBeTruthy();
+
+    boss!.takeDamage(boss!.stats.health + 50, attacker ?? undefined);
+
+    expect(tile?.building).toBeNull();
+    expect(tile?.isFogged).toBe(false);
+
+    const snapshot = getStrongholdSnapshot();
+    expect(snapshot[firstStronghold.id]?.captured).toBe(true);
+    expect(snapshot[firstStronghold.id]?.boss?.defeated).toBe(true);
+
+    const xpSummary = calculateKillExperience(boss!);
+    expect(xpSummary.boss).toBe(true);
+    expect(xpSummary.xp).toBe(XP_BOSS_KILL);
   });
 });

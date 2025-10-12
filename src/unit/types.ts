@@ -42,7 +42,11 @@ export type UnitArchetypeId =
   | 'avanto-marauder'
   | 'raider'
   | 'raider-captain'
-  | 'raider-shaman';
+  | 'raider-shaman'
+  | 'aurora-warden'
+  | 'glacier-sentinel'
+  | 'spirit-keeper'
+  | 'ember-highlord';
 
 export interface UnitArchetypeDefinition {
   id: UnitArchetypeId;

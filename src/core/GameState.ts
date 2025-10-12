@@ -25,11 +25,32 @@ import {
 import {
   getStrongholdSnapshot,
   mergeStrongholdPersistence,
-  type StrongholdPersistence
+  type StrongholdPersistence,
+  type StrongholdPersistenceEntry
 } from '../world/strongholds.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
+}
+
+function cloneStrongholdEntry(
+  entry?: StrongholdPersistenceEntry | null
+): StrongholdPersistenceEntry {
+  if (!entry) {
+    return {};
+  }
+  const snapshot: StrongholdPersistenceEntry = {
+    captured: Boolean(entry.captured),
+    seen: Boolean(entry.seen)
+  };
+  if (entry.boss) {
+    const loot = Array.isArray(entry.boss.loot) ? [...entry.boss.loot] : undefined;
+    snapshot.boss = {
+      defeated: Boolean(entry.boss.defeated),
+      ...(loot ? { loot } : {})
+    } satisfies StrongholdPersistenceEntry['boss'];
+  }
+  return snapshot;
 }
 
 const BUILDING_FACTORIES: Record<string, () => Building> = {
@@ -146,7 +167,7 @@ export class GameState {
   private ngPlus: NgPlusState = createNgPlusState();
 
   /** Snapshot of stronghold capture state for persistence fallbacks. */
-  private strongholdStatuses = new Map<string, { captured: boolean; seen: boolean }>();
+  private strongholdStatuses = new Map<string, StrongholdPersistenceEntry>();
 
   constructor(
     private readonly tickInterval: number,
@@ -180,15 +201,12 @@ export class GameState {
     const strongholdSnapshot = getStrongholdSnapshot();
     if (Object.keys(strongholdSnapshot).length === 0 && this.strongholdStatuses.size > 0) {
       this.strongholdStatuses.forEach((status, id) => {
-        strongholdSnapshot[id] = { captured: status.captured, seen: status.seen };
+        strongholdSnapshot[id] = cloneStrongholdEntry(status);
       });
     }
     this.strongholdStatuses.clear();
     Object.entries(strongholdSnapshot).forEach(([id, entry]) => {
-      this.strongholdStatuses.set(id, {
-        captured: Boolean(entry?.captured),
-        seen: Boolean(entry?.seen)
-      });
+      this.strongholdStatuses.set(id, cloneStrongholdEntry(entry));
     });
 
     const serialized: SerializedState = {
@@ -261,10 +279,7 @@ export class GameState {
 
     const persistedStrongholds: StrongholdPersistence = {};
     Object.entries(data.strongholds ?? {}).forEach(([id, entry]) => {
-      persistedStrongholds[id] = {
-        captured: Boolean(entry?.captured),
-        seen: Boolean(entry?.seen)
-      };
+      persistedStrongholds[id] = cloneStrongholdEntry(entry as StrongholdPersistenceEntry);
     });
 
     mergeStrongholdPersistence(map ?? null, persistedStrongholds);
@@ -273,17 +288,11 @@ export class GameState {
     this.strongholdStatuses.clear();
     if (Object.keys(mergedSnapshot).length > 0) {
       Object.entries(mergedSnapshot).forEach(([id, entry]) => {
-        this.strongholdStatuses.set(id, {
-          captured: Boolean(entry?.captured),
-          seen: Boolean(entry?.seen)
-        });
+        this.strongholdStatuses.set(id, cloneStrongholdEntry(entry));
       });
     } else if (Object.keys(persistedStrongholds).length > 0) {
       Object.entries(persistedStrongholds).forEach(([id, entry]) => {
-        this.strongholdStatuses.set(id, {
-          captured: Boolean(entry?.captured),
-          seen: Boolean(entry?.seen)
-        });
+        this.strongholdStatuses.set(id, cloneStrongholdEntry(entry));
       });
     }
 
@@ -360,7 +369,7 @@ export class GameState {
     }
     const snapshot: StrongholdPersistence = {};
     Object.entries(data.strongholds).forEach(([id, entry]) => {
-      snapshot[id] = { captured: Boolean(entry?.captured), seen: Boolean(entry?.seen) };
+      snapshot[id] = cloneStrongholdEntry(entry as StrongholdPersistenceEntry);
     });
     return snapshot;
   }
