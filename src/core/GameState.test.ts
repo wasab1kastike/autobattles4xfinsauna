@@ -237,6 +237,42 @@ describe('GameState', () => {
     expect(loaded.hasPolicy('eco')).toBe(true);
   });
 
+  it('applies and revokes the Hypersteam Levy modifiers cleanly', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 500);
+    state.addResource(Resource.SAUNAKUNNIA, 500);
+
+    expect(state.setPolicyEnabled('eco', true)).toBe(true);
+    expect(state.setPolicyEnabled('temperance', true)).toBe(true);
+    expect(state.setPolicyEnabled('steam-diplomats', true)).toBe(true);
+    expect(state.setPolicyEnabled('steam-debt-protocol', true)).toBe(true);
+
+    const baselinePassive = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const baselineEnemy = state.getEnemyScalingSnapshot();
+    expect(baselinePassive).toBe(7);
+    expect(baselineEnemy.aggression).toBeCloseTo(1.25);
+    expect(baselineEnemy.cadence).toBeCloseTo(1.15);
+    expect(baselineEnemy.strength).toBeCloseTo(1);
+
+    expect(state.setPolicyEnabled('hypersteam-levy', true)).toBe(true);
+
+    const empoweredPassive = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const empoweredEnemy = state.getEnemyScalingSnapshot();
+    expect(empoweredPassive).toBe(12);
+    expect(empoweredEnemy.aggression).toBeCloseTo(1.75);
+    expect(empoweredEnemy.cadence).toBeCloseTo(1.38);
+    expect(empoweredEnemy.strength).toBeCloseTo(1.1);
+
+    expect(state.setPolicyEnabled('hypersteam-levy', false)).toBe(true);
+
+    const restoredPassive = (state as any).passiveGeneration[Resource.SAUNA_BEER];
+    const restoredEnemy = state.getEnemyScalingSnapshot();
+    expect(restoredPassive).toBe(baselinePassive);
+    expect(restoredEnemy.aggression).toBeCloseTo(baselineEnemy.aggression);
+    expect(restoredEnemy.cadence).toBeCloseTo(baselineEnemy.cadence);
+    expect(restoredEnemy.strength).toBeCloseTo(baselineEnemy.strength);
+  });
+
   it('rejects policies when prerequisites are missing', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNAKUNNIA, 100);
