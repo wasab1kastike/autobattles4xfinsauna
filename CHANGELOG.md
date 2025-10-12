@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Guard stronghold encounter unit registration so early seeding no longer
+  triggers the "Game runtime has not been configured" crash, letting the GitHub
+  Pages build render again after deployment.
 
 - Resolve the blank GitHub Pages splash by deriving the Vite base path from
   deployment environment overrides and mirroring the docs bundle with
