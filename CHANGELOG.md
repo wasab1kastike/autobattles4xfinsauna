@@ -9,7 +9,6 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Updated the supporter call-to-action to launch the demo from the new `/play` endpoint for clarity.
-- Elevated the hero playtest CTA with immediate-build messaging and a direct route to the GitHub Pages demo.
 
 ### Fixed
 - Scoped asset ignore patterns to the local `dist/` output so GitHub Pages bundles remain tracked.

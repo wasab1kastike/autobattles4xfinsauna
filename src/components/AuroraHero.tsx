@@ -21,7 +21,7 @@ export default function AuroraHero() {
           className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-sauna-frost shadow-neon backdrop-blur"
         >
           <Sparkle className="h-4 w-4" />
-          <span>Sprint build ready for immediate playtesting</span>
+          <span>Playable slice updated every sprint</span>
         </motion.div>
 
         <motion.h1
@@ -42,7 +42,7 @@ export default function AuroraHero() {
           className="max-w-3xl text-lg text-slate-200 md:text-xl"
         >
           Orchestrate a band of sauna guardians who harness elemental steam to shield the Nordic frontier. Optimise your
-          roster, experiment with relics, and dive straight into the sprint build to validate combat feel under neon auroras.
+          roster, experiment with relics, and let the auto-battler spectacle unfold under neon auroras.
         </motion.p>
 
         <motion.div
@@ -52,15 +52,6 @@ export default function AuroraHero() {
           transition={{ duration: 0.7, delay: 0.3 }}
           className="flex flex-wrap justify-center gap-4"
         >
-          <a
-            href="https://wasab1kastike.github.io/autobattles4xfinsauna/play/"
-            className="group rounded-full bg-gradient-to-r from-sauna-frost via-cyan-300 to-sauna-ember px-9 py-3 text-base font-semibold text-slate-950 shadow-[0_0_35px_rgba(56,189,248,0.55)] transition hover:scale-105 hover:shadow-[0_0_45px_rgba(255,122,24,0.6)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sauna-frost/70"
-          >
-            <span className="flex items-center gap-2">
-              <Sparkle className="h-4 w-4 transition-transform group-hover:rotate-12" />
-              Playtest the Latest Build
-            </span>
-          </a>
           <a
             href="#roadmap"
             className="rounded-full bg-gradient-to-r from-sauna-ember via-sauna-glow to-sauna-frost px-8 py-3 text-base font-semibold text-slate-950 shadow-lg shadow-sauna-ember/30 transition hover:scale-105 hover:shadow-xl"
