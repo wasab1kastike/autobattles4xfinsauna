@@ -3,6 +3,6 @@ import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/autobattles4xfinsauna/',
+  base: '/', // custom domain at root
   plugins: [react()],
 });
