@@ -1,3 +1,5 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:04f1d45304daccdb22a4c2da444679ccd4b7bd62772bae49c88c58d9ba36a514
-size 241
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#a4d67a" />
+  <polygon points="16,48 32,16 48,48" fill="#d2691e" />
+  <rect x="24" y="32" width="16" height="16" fill="#f4a460" />
+</svg>
