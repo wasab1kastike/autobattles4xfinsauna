@@ -19,6 +19,7 @@ export interface UnitSpawnOptions extends UnitBuildOptions {
   appearanceId?: string;
   random?: () => number;
   appearanceRandom?: () => number;
+  isBoss?: boolean;
 }
 
 function resolveAppearanceSampler(options?: UnitSpawnOptions): (() => number) | undefined {
@@ -49,6 +50,7 @@ function instantiateArchetype(
     options?.appearanceId,
     appearanceSampler
   );
+  const isBoss = Boolean(options?.isBoss ?? archetype.tags?.includes('boss'));
   return new Unit(
     id,
     archetype.id,
@@ -57,7 +59,8 @@ function instantiateArchetype(
     stats,
     archetype.priorityFactions,
     options?.behavior,
-    appearance
+    appearance,
+    isBoss
   );
 }
 

@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- Realign the Battle Rhythm doctrine with design notes by removing the unintended
-  global damage boost from its modifiers and refreshing combat regression tests.
+
 
 - Launch the Hypersteam Levy Ultimatum, a prestige-gated double-edged economy
   boost that drenches breweries in bonus Sauna Beer while enemy aggression,
