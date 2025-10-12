@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && rimraf docs && cp -R dist docs && rimraf docs/play && mkdir -p docs/play && cp -R dist/. docs/play && rimraf docs/play/CNAME",
+    "build": "vite build && rimraf docs && cp -R dist docs",
     "preview": "vite preview"
   },
   "dependencies": {
