@@ -60,8 +60,8 @@ const roadmap = [
 const supporters = [
   {
     title: "Play the Latest Build",
-    description: "GitHub Pages hosts the evergreen demo updated on every main branch deployment.",
-    href: "https://wasab1kastike.github.io/autobattles4xfinsauna/",
+    description: "Launch the GitHub Pages demo in a dedicated /play environment updated with every main deployment.",
+    href: "https://wasab1kastike.github.io/autobattles4xfinsauna/play/",
     cta: "Launch Demo",
   },
   {
