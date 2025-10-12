@@ -16,3 +16,7 @@
 
 - Configure the Vite build to publish from `/autobattles4xfinsauna/`, ensuring
   GitHub Pages deploys assets with the correct base path.
+
+- Restore the GitHub Pages deployment workflow so it installs, fetches, and
+  checks out Git LFS assets before building, guaranteeing CI publishes complete
+  game resources.
