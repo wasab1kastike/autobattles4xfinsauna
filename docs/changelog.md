@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Guard stronghold encounter unit registration so early seeding no longer
+  triggers the "Game runtime has not been configured" crash, letting the GitHub
+  Pages build render again after deployment.
+
 - Inject the active git commit into production builds so the published site and
   runtime freshness checks surface the exact deployed hash.
 

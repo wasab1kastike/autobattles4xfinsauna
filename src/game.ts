@@ -1129,8 +1129,9 @@ function registerUnit(unit: Unit): void {
     }
     persona = unitToSaunoja.get(unit.id) ?? null;
   }
-  if (getGameRuntime().getCanvas()) {
-    invalidateFrame();
+  const runtime = tryGetRuntimeInstance();
+  if (runtime?.getCanvas()) {
+    runtime.invalidateFrame();
   }
   if (unit.faction === 'player') {
     const steward = 'Our';

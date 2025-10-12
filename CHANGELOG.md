@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Guard stronghold encounter unit registration so early seeding no longer
+  triggers the "Game runtime has not been configured" crash, letting the GitHub
+  Pages build render again after deployment.
 
 - Inject the active git commit into production Vite builds so GitHub Pages and
   runtime freshness checks report the correct `#7c8ab05`-style build marker.
