@@ -8,3 +8,4 @@
 *.ts !text !filter !merge !diff
 *.tsx !text !filter !merge !diff
 *.yml !text !filter !merge !diff
+LICENSE -filter -diff -merge
