@@ -2,11 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Fixed
-- Scoped asset ignore patterns to the local `dist/` output so GitHub Pages bundles remain tracked.
-
 ## [1.0.0] - 2025-10-12
 
 ### Added
