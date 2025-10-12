@@ -349,7 +349,6 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
         movementRange: 1.05
       },
       hitChanceBonus: 0.05,
-      damageDealtMultiplier: 1.1,
       upkeepMultiplier: 1.1
     },
     spotlight: 'Drumbeats roll across the training grounds, pushing every strike to land true.',
