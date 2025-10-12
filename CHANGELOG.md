@@ -3,6 +3,10 @@
 ## Unreleased
 
 
+- Inject the active git commit into production Vite builds so GitHub Pages and
+  runtime freshness checks report the correct `#7c8ab05`-style build marker.
+
+
 
 - Prevent stale build reload loops in privacy-restricted browsers by falling
   back to URL-based guards when session storage writes fail, document the

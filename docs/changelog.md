@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Inject the active git commit into production builds so the published site and
+  runtime freshness checks surface the exact deployed hash.
+
 - Launch the Steam Debt Protocol economic edict, blending deluxe passive Sauna
   Beer bonds with reversible enemy aggression and cadence spikes plus a mild
   upkeep surge while the toggle is active.
