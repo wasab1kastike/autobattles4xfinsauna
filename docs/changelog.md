@@ -13,3 +13,6 @@
 - Cloak newly seeded enemy strongholds in fog unless prior saves revealed them,
   keeping fresh campaigns mysterious and covering the regression with
   progression tests.
+
+- Configure the Vite build to publish from `/autobattles4xfinsauna/`, ensuring
+  GitHub Pages deploys assets with the correct base path.
