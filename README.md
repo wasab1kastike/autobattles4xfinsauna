@@ -27,6 +27,13 @@ npm run build
 
 Commit both the `dist/` (ignored) and `docs/` (tracked) outputs appropriately. Only `docs/` is committed—`dist/` remains transient. After pushing to `main`, GitHub Pages will update within a few minutes without any LFS placeholders.
 
+### Custom Domain: artobest.com
+
+- GitHub Pages publishes this site via the `docs/` folder, which now includes a generated `CNAME` file pointing at **artobest.com**.
+- The source of truth for that file lives in `public/CNAME`; Vite copies it into the production build automatically so the domain survives every deploy.
+- Confirm that your DNS provider has an `ALIAS`/`ANAME`/`A` record to GitHub's Pages IPs **or** a `CNAME` to `your-username.github.io`. GitHub's [custom domain docs](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site) contain the up-to-date IP list.
+- After updating DNS, click **Verify domain** within the repository's **Settings → Pages** section to ensure GitHub recognises the mapping.
+
 ### Keeping GitHub Pages Healthy
 
 - Never track JavaScript, CSS, or HTML files with Git LFS.
