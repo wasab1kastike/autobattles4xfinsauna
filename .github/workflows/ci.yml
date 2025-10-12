@@ -1,3 +1,19 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:9dc26f487b3004aa778177f3b5f8dcc81c046e97811e4f2f240a88a42c2bd75a
-size 2889
+﻿name: CI (LFS enabled)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+          fetch-depth: 0
+      - name: Show LFS files
+        run: |
+          git lfs version
+          git lfs ls-files
