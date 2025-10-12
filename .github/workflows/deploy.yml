@@ -25,6 +25,15 @@ jobs:
           lfs: true
           fetch-depth: 0
 
+      - name: Install Git LFS
+        run: git lfs install
+
+      - name: Fetch LFS objects
+        run: git lfs fetch --all
+
+      - name: Checkout LFS objects
+        run: git lfs checkout
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
