@@ -20,7 +20,7 @@ export default function SupportersPanel({ cards }: SupportersPanelProps) {
           key={card.title}
           href={card.href}
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noreferrer"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: index * 0.05 }}
