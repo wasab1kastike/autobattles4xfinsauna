@@ -1,3 +1,68 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:542bc3a309d7fa2106a7e2aeebe6031bad1cdee7a06859bfc3d249766e4020ba
-size 3199
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="mine-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1e3a" />
+      <stop offset="0.5" stop-color="#231c35" />
+      <stop offset="1" stop-color="#110f1c" />
+    </linearGradient>
+    <linearGradient id="mine-ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2d1720" />
+      <stop offset="1" stop-color="#16090f" />
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a77947" />
+      <stop offset="0.5" stop-color="#7b4f2d" />
+      <stop offset="1" stop-color="#4c2c18" />
+    </linearGradient>
+    <linearGradient id="arch" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4e3d5c" />
+      <stop offset="0.45" stop-color="#2d203c" />
+      <stop offset="1" stop-color="#1a1326" />
+    </linearGradient>
+    <linearGradient id="ore" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5ae0ff" />
+      <stop offset="0.5" stop-color="#2f9bcc" />
+      <stop offset="1" stop-color="#1a4f82" />
+    </linearGradient>
+    <radialGradient id="torch-glow" cx="32" cy="22" r="18" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffdb99" stop-opacity="0.9" />
+      <stop offset="1" stop-color="#ffdb99" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="cart-metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9ca9b4" />
+      <stop offset="1" stop-color="#4c5564" />
+    </linearGradient>
+    <linearGradient id="cart-face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#626c7e" />
+      <stop offset="1" stop-color="#2e3646" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" fill="url(#mine-sky)" />
+  <ellipse cx="32" cy="22" rx="22" ry="16" fill="url(#torch-glow)" />
+  <path d="M8 46c6-14 18-22 32-22 8 0 12 3 16 8v18H8z" fill="url(#arch)" />
+  <g opacity="0.35">
+    <path d="M10 40c4-9 15-17 26-17 6 0 11 1.8 14 6.2l2 3.4c-3-5-8-7.6-16-7.6-10.3 0-19.5 6.6-24 15z" fill="#9b84bb" />
+  </g>
+  <rect y="48" width="64" height="16" fill="url(#mine-ground)" />
+  <g>
+    <rect x="12" y="26" width="6" height="28" rx="1.5" fill="url(#beam)" />
+    <rect x="46" y="26" width="6" height="28" rx="1.5" fill="url(#beam)" />
+    <rect x="18" y="22" width="28" height="6" rx="1.5" fill="url(#beam)" />
+  </g>
+  <path d="M16 50h32v10H16z" fill="url(#cart-face)" stroke="#151923" stroke-width="1.5" stroke-linejoin="round" />
+  <path d="M20 50l4-8h16l4 8" fill="url(#cart-metal)" stroke="#1c212c" stroke-width="1.25" stroke-linejoin="round" />
+  <g opacity="0.85">
+    <path d="M24 34l-4 10 6 2 3-8z" fill="url(#ore)" />
+    <path d="M34 30l-6 12 6 2 6-10z" fill="url(#ore)" />
+    <path d="M42 36l-4 8 5 1.5 3-6z" fill="url(#ore)" opacity="0.85" />
+  </g>
+  <g fill="#0f141d" opacity="0.6">
+    <circle cx="22" cy="58" r="5" />
+    <circle cx="42" cy="58" r="5" />
+  </g>
+  <g fill="#a3b4c1">
+    <circle cx="22" cy="58" r="2.2" />
+    <circle cx="42" cy="58" r="2.2" />
+  </g>
+  <path d="M8 48c4-4 12-6 24-6s20 2 24 6c-5-2-13-3-24-3s-19 1-24 3z" fill="#2b1420" opacity="0.6" />
+</svg>

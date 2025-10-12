@@ -1,3 +1,141 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:ba1a442e95058d3646e94978be2719620a11dd13fc0cdf3d5d5e722aad99aeb4
-size 4864
+import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { Unit } from '../units/Unit.ts';
+import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/heat.ts';
+import type { SaunaTier } from '../sauna/tiers.ts';
+
+const DEFAULT_SAUNA_MAX_HEALTH = 500;
+const DEFAULT_SAUNA_VISION_RANGE = 4;
+
+export function pickFreeTileAround(
+  origin: AxialCoord,
+  radiusOrUnits: number | Unit[],
+  maybeUnits?: Unit[]
+): AxialCoord | null {
+  const radius = typeof radiusOrUnits === 'number' ? radiusOrUnits : 2;
+  const units = (typeof radiusOrUnits === 'number' ? maybeUnits : radiusOrUnits) ?? [];
+  const candidates: AxialCoord[] = [];
+  for (let dq = -radius; dq <= radius; dq++) {
+    const rMin = Math.max(-radius, -dq - radius);
+    const rMax = Math.min(radius, -dq + radius);
+    for (let dr = rMin; dr <= rMax; dr++) {
+      const dist = Math.max(Math.abs(dq), Math.abs(dr), Math.abs(-dq - dr));
+      if (dist === 0 || dist > radius) continue;
+      const coord = { q: origin.q + dq, r: origin.r + dr };
+      const occupied = units.some(
+        (u) => !u.isDead() && u.coord.q === coord.q && u.coord.r === coord.r
+      );
+      if (!occupied) {
+        candidates.push(coord);
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index];
+}
+
+export interface Sauna {
+  id: 'sauna';
+  pos: AxialCoord;
+  auraRadius: number;
+  visionRange: number;
+  regenPerSec: number;
+  rallyToFront: boolean;
+  /** Player-selected maximum number of active attendants allowed on the field. */
+  maxRosterSize: number;
+  maxHealth: number;
+  health: number;
+  destroyed: boolean;
+  heat: number;
+  heatPerTick: number;
+  playerSpawnThreshold: number;
+  playerSpawnCooldown: number;
+  playerSpawnTimer: number;
+  /**
+   * Accumulates elapsed seconds between upkeep drains so beer only ticks down
+   * at the intended cadence.
+   */
+  beerUpkeepAccumulator: number;
+  heatTracker: SaunaHeat;
+}
+
+export interface SaunaInitOptions {
+  /** Initial roster cap to seed onto the sauna. */
+  maxRosterSize?: number;
+  /** Maximum structure health. Defaults to {@link DEFAULT_SAUNA_MAX_HEALTH}. */
+  maxHealth?: number;
+  /** Starting health for the structure. Defaults to the configured max health. */
+  health?: number;
+  /** Optional tier descriptor to seed sauna properties such as vision. */
+  tier?: Pick<SaunaTier, 'visionRange'> | null;
+  /** Override the tier-driven vision radius if needed for tests. */
+  visionRange?: number;
+}
+
+export function createSauna(
+  pos: AxialCoord,
+  heatConfig?: SaunaHeatInit,
+  options: SaunaInitOptions = {}
+): Sauna {
+  const tracker = createSaunaHeat(heatConfig);
+  const heatPerTick = tracker.getBuildRate();
+  const cooldown = tracker.getCooldownSeconds();
+  const timer = tracker.timeUntilNextTrigger();
+  const initialRosterCap = Number.isFinite(options.maxRosterSize)
+    ? Math.max(0, Math.floor(options.maxRosterSize ?? 0))
+    : 0;
+  const resolvedMaxHealth = Number.isFinite(options.maxHealth)
+    ? Math.max(1, Math.floor(options.maxHealth ?? DEFAULT_SAUNA_MAX_HEALTH))
+    : DEFAULT_SAUNA_MAX_HEALTH;
+  const resolvedHealth = Number.isFinite(options.health)
+    ? Math.max(0, Math.min(resolvedMaxHealth, Math.floor(options.health ?? resolvedMaxHealth)))
+    : resolvedMaxHealth;
+  const resolvedVisionRange = Number.isFinite(options.visionRange)
+    ? Math.max(0, Math.floor(options.visionRange ?? 0))
+    : Math.max(0, Math.floor(options.tier?.visionRange ?? DEFAULT_SAUNA_VISION_RANGE));
+
+  return {
+    id: 'sauna',
+    pos,
+    auraRadius: 2,
+    visionRange: resolvedVisionRange,
+    regenPerSec: 1,
+    rallyToFront: false,
+    maxRosterSize: initialRosterCap,
+    maxHealth: resolvedMaxHealth,
+    health: resolvedHealth,
+    destroyed: resolvedHealth <= 0,
+    heat: tracker.getHeat(),
+    heatPerTick,
+    playerSpawnThreshold: tracker.getThreshold(),
+    playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown : 0,
+    playerSpawnTimer: Number.isFinite(timer) ? timer : 0,
+    beerUpkeepAccumulator: 0,
+    heatTracker: tracker
+  };
+}
+
+export interface SaunaDamageResult {
+  amount: number;
+  remainingHealth: number;
+  destroyed: boolean;
+}
+
+export function damageSauna(sauna: Sauna, rawAmount: number): SaunaDamageResult {
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0 || sauna.destroyed) {
+    return { amount: 0, remainingHealth: Math.max(0, sauna.health), destroyed: sauna.destroyed };
+  }
+  const previousHealth = Math.max(0, sauna.health);
+  const damage = Math.min(previousHealth, Math.max(0, Math.floor(rawAmount)));
+  const nextHealth = Math.max(0, previousHealth - damage);
+  sauna.health = nextHealth;
+  if (nextHealth <= 0) {
+    sauna.health = 0;
+    sauna.destroyed = true;
+  }
+  return { amount: damage, remainingHealth: sauna.health, destroyed: sauna.destroyed };
+}

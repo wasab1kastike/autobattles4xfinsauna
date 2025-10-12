@@ -1,3 +1,29 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:deb1d7029323cf4f043094dd6aef2b2e6e74128a8491e203ddec49b9e1b04086
-size 1712
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Plains Tile</title>
+  <desc id="desc">Rolling plains with sunrise gradients and glowing grasses.</desc>
+  <defs>
+    <radialGradient id="plains-bg" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#111827" />
+    </radialGradient>
+    <linearGradient id="plains-field" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#facc15" />
+      <stop offset="100%" stop-color="#eab308" />
+    </linearGradient>
+    <linearGradient id="plains-haze" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="plains-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#facc15" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#plains-bg)" />
+  <g filter="url(#plains-glow)">
+    <path d="M16 88c20-18 36-22 48-22s28 4 48 22" fill="url(#plains-field)" stroke="#fef9c3" stroke-width="2" stroke-linecap="round" />
+    <path d="M24 102c16-14 32-18 40-18s24 4 40 18" fill="none" stroke="#fde68a" stroke-width="5" stroke-linecap="round" opacity="0.5" />
+    <path d="M32 70c12-10 24-14 32-14s20 4 32 14" fill="url(#plains-haze)" opacity="0.7" />
+    <path d="M52 78l4 12m8-12l4 12m8-12l4 12" stroke="#fef3c7" stroke-width="3" stroke-linecap="round" opacity="0.8" />
+  </g>
+  <circle cx="40" cy="36" r="8" fill="#fef08a" opacity="0.7" />
+</svg>

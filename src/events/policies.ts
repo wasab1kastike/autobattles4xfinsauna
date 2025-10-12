@@ -1,3 +1,41 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:92fd893b2f092b1ad51cf0883b378c81f6846a67215a92ac2a0733b6208f9800
-size 1096
+import { eventBus } from './EventBus';
+import {
+  listPolicies,
+  type PolicyEffectHook,
+  type PolicyDefinition,
+  type PolicyEffectPayload
+} from '../data/policies.ts';
+
+const disposers: Array<() => void> = [];
+
+function subscribeEffect(definition: PolicyDefinition, effect: PolicyEffectHook): void {
+  const seenStates = new WeakSet<PolicyEffectPayload['state']>();
+  const listener = (payload: PolicyEffectPayload): void => {
+    if (payload.policy.id !== definition.id) {
+      return;
+    }
+    if (effect.once !== false && seenStates.has(payload.state)) {
+      return;
+    }
+    effect.invoke(payload);
+    if (effect.once !== false) {
+      seenStates.add(payload.state);
+    }
+  };
+
+  eventBus.on<PolicyEffectPayload>(effect.event, listener);
+  disposers.push(() => eventBus.off(effect.event, listener));
+}
+
+for (const definition of listPolicies()) {
+  for (const effect of definition.effects) {
+    subscribeEffect(definition, effect);
+  }
+}
+
+export function disposePolicyListeners(): void {
+  while (disposers.length > 0) {
+    const dispose = disposers.pop();
+    dispose?.();
+  }
+}

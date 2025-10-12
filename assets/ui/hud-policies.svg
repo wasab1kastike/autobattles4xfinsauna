@@ -1,3 +1,48 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bbe69a202c3e8eea49a065d7b98dfbe55045321abf61e1d8477418e92c6cb846
-size 2914
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-labelledby="title desc">
+  <title id="title">Policies parchment badge</title>
+  <desc id="desc">An illuminated parchment with a quill and radiant seals symbolising policy management.</desc>
+  <defs>
+    <radialGradient id="parchmentGlow" cx="48%" cy="46%" r="58%">
+      <stop offset="0%" stop-color="#fde68a" stop-opacity="0.92" />
+      <stop offset="60%" stop-color="#f97316" stop-opacity="0.58" />
+      <stop offset="100%" stop-color="#7c2d12" stop-opacity="0.85" />
+    </radialGradient>
+    <linearGradient id="paperFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff7ed" />
+      <stop offset="55%" stop-color="#fde68a" />
+      <stop offset="100%" stop-color="#fcd34d" />
+    </linearGradient>
+    <linearGradient id="paperEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fcd34d" />
+      <stop offset="100%" stop-color="#fb923c" />
+    </linearGradient>
+    <linearGradient id="quillShaft" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e2e8f0" />
+      <stop offset="50%" stop-color="#cbd5f5" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+    <linearGradient id="quillTrim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="60" cy="60" r="52" fill="url(#parchmentGlow)" stroke="rgba(244, 191, 99, 0.55)" stroke-width="2.4" />
+    <path d="M34 32h44c6.6 0 12 5.4 12 12v28c0 6.6-5.4 12-12 12H44l-10 12V44c0-6.6 5.4-12 12-12z" fill="url(#paperFill)" stroke="rgba(124, 45, 18, 0.45)" stroke-width="2.2" />
+    <path d="M78 32v11.2c0 3.3 2.7 6 6 6H90" stroke="rgba(249, 115, 22, 0.55)" stroke-width="2.2" />
+    <g stroke="rgba(124, 45, 18, 0.38)" stroke-width="2.6" opacity="0.8">
+      <path d="M42 50h26" />
+      <path d="M42 60h30" />
+      <path d="M42 70h22" />
+    </g>
+    <circle cx="86" cy="74" r="8.5" fill="url(#paperEdge)" stroke="rgba(124, 45, 18, 0.55)" stroke-width="2" />
+    <circle cx="86" cy="74" r="4" fill="rgba(255, 255, 255, 0.85)" stroke="rgba(249, 115, 22, 0.75)" stroke-width="1.2" />
+    <path d="M50 36v-6c0-4.4 3.6-8 8-8h6" stroke="rgba(234, 88, 12, 0.55)" stroke-width="2.2" />
+    <path d="M32 84h12l-12 14z" fill="url(#paperEdge)" stroke="rgba(124, 45, 18, 0.45)" stroke-width="1.8" />
+    <path d="M52 82 88 38" stroke="url(#quillTrim)" stroke-width="3.4" />
+    <path d="M44 88c8-6 16-12 24-22" stroke="url(#quillShaft)" stroke-width="4.2" />
+    <path d="M68 46 88 26" stroke="url(#quillTrim)" stroke-width="3" />
+    <path d="M90 24c2.2 2.2 2.2 6 0 8.2-2.2 2.2-5.8 2.2-8 0" stroke="rgba(14, 165, 233, 0.6)" stroke-width="2.8" />
+  </g>
+</svg>

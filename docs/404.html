@@ -1,3 +1,80 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:d38c7e4985657fea2933886a9fcbda2e5d7ce9f6629316edc1f93eae37f02f37
-size 2359
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="1; url=./" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Autobattles4xFinsauna</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: radial-gradient(circle at top, rgba(16, 41, 70, 0.9), rgba(3, 10, 18, 0.95));
+        --fg: #f3f7fb;
+        --accent: #6ec1ff;
+        --shadow: rgba(0, 0, 0, 0.55);
+        --font: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        font-family: var(--font);
+        color: var(--fg);
+      }
+      main {
+        text-align: center;
+        padding: 2.5rem 3rem;
+        border-radius: 1.5rem;
+        background: rgba(10, 22, 38, 0.72);
+        box-shadow: 0 1.5rem 3rem var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+      h1 {
+        font-size: clamp(1.75rem, 3vw + 1rem, 2.75rem);
+        margin: 0 0 1rem;
+        letter-spacing: 0.04em;
+      }
+      p {
+        margin: 0 0 1.5rem;
+        line-height: 1.6;
+        color: rgba(243, 247, 251, 0.85);
+      }
+      a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), #3b8cff);
+        color: #041020;
+        font-weight: 600;
+        text-decoration: none;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+        box-shadow: 0 0.75rem 1.5rem rgba(110, 193, 255, 0.35);
+      }
+      a:hover,
+      a:focus {
+        transform: translateY(-2px);
+        box-shadow: 0 1.25rem 2.5rem rgba(110, 193, 255, 0.4);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        a,
+        a:hover,
+        a:focus {
+          transition: none;
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Redirecting you to the sauna...</h1>
+      <p>If the automatic redirect does not trigger, follow the link below to return to the lobby.</p>
+      <a href="./" aria-label="Return to the Autobattles4xFinsauna home page">Return to base</a>
+    </main>
+  </body>
+</html>

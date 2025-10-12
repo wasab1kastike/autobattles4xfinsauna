@@ -1,3 +1,38 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:0bf4e28024af4545fb606dde4e532a9f3ecbbb01c97ddfee3d9ea7a1c974d0e4
-size 2714
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-labelledby="title desc">
+  <title id="title">Roster crest badge</title>
+  <desc id="desc">A luminous midnight crest with a polished shield and guardian motif used for the roster navigation badge.</desc>
+  <defs>
+    <radialGradient id="orbGlow" cx="50%" cy="48%" r="52%">
+      <stop offset="0%" stop-color="#647dee" stop-opacity="0.95" />
+      <stop offset="65%" stop-color="#1e3a8a" stop-opacity="0.72" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.9" />
+    </radialGradient>
+    <linearGradient id="shieldMetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="50%" stop-color="#dbeafe" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+    <linearGradient id="shieldShade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#1e293b" stop-opacity="0.55" />
+    </linearGradient>
+    <linearGradient id="crestFlare" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.35" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="60" cy="60" r="52" fill="url(#orbGlow)" stroke="rgba(148, 197, 255, 0.45)" stroke-width="2.4" />
+    <path d="M60 18c-18 0-34 13.5-34 30v18c0 20.5 12.4 32.2 34 40.6 21.6-8.4 34-20.1 34-40.6V48c0-16.5-16-30-34-30z" fill="url(#shieldShade)" stroke="rgba(59, 130, 246, 0.35)" stroke-width="2.2" />
+    <path d="M60 22c-16 0-30 12.1-30 26v16c0 18 10.8 27.8 30 35 19.2-7.2 30-17 30-35V48c0-13.9-14-26-30-26z" fill="url(#shieldMetal)" stroke="rgba(15, 23, 42, 0.45)" stroke-width="1.6" />
+    <path d="M60 36c-11.6 0-20.8 8.4-20.8 19v10c5.6-5.2 13-8.2 20.8-8.2S74.4 59.8 80 65V55c0-10.6-9.2-19-20-19z" fill="url(#shieldShade)" />
+    <path d="M60 40c-9.2 0-16.6 6.5-16.6 15.2 5-3.8 10.6-5.6 16.6-5.6 6 0 11.6 1.8 16.6 5.6C76.6 46.5 69.2 40 60 40z" fill="url(#crestFlare)" opacity="0.6" />
+    <path d="M48 72c4.8 5.6 12 9 12 16.2 0 4.6-1.8 7.8-4.6 10 3.6 0.8 7.2 0.8 10.8 0-2.8-2.2-4.6-5.4-4.6-10C61.6 81 68.8 77.6 74 72" stroke="rgba(14, 116, 144, 0.65)" stroke-width="2.2" />
+    <path d="M60 32l5.4-12.6M60 32l-5.4-12.6" stroke="rgba(226, 232, 240, 0.85)" stroke-width="2.6" />
+    <g stroke="rgba(226, 232, 240, 0.55)" stroke-width="3.1">
+      <path d="M36 56c-5.4 6-8 13-8 21.6 4.6-3 9.4-4.6 14.6-4.6" />
+      <path d="M84 56c5.4 6 8 13 8 21.6-4.6-3-9.4-4.6-14.6-4.6" />
+    </g>
+  </g>
+</svg>

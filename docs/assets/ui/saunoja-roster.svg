@@ -1,3 +1,69 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:91248843c8771c4b6b4817d233ffab0a518b03e569f5964849c76b60afb0cc56
-size 4416
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Saunoja roster crest</title>
+  <desc id="desc">A polished dark shield crest featuring a vigilant Saunoja warrior framed by steam plumes.</desc>
+  <defs>
+    <linearGradient id="outer-frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f1f5f9" />
+      <stop offset="38%" stop-color="#cbd5f5" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+    <linearGradient id="shield-body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="48%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+    <linearGradient id="shield-sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 0.58)" />
+      <stop offset="25%" stop-color="rgba(255, 255, 255, 0.16)" />
+      <stop offset="70%" stop-color="rgba(15, 118, 110, 0.0)" />
+      <stop offset="100%" stop-color="rgba(59, 130, 246, 0.35)" />
+    </linearGradient>
+    <linearGradient id="helm-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc" />
+      <stop offset="45%" stop-color="#cbd5f5" />
+      <stop offset="100%" stop-color="#94a3b8" />
+    </linearGradient>
+    <linearGradient id="visor-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="sigil-flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f97316" />
+      <stop offset="55%" stop-color="#ea580c" />
+      <stop offset="100%" stop-color="#b91c1c" />
+    </linearGradient>
+    <radialGradient id="inner-glow" cx="50%" cy="42%" r="62%">
+      <stop offset="0%" stop-color="rgba(148, 163, 184, 0.65)" />
+      <stop offset="100%" stop-color="rgba(15, 23, 42, 0)" />
+    </radialGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M80 6c34 0 62 26 62 58v30c0 36-20 58-62 74-42-16-62-38-62-74V64C18 32 46 6 80 6z" fill="url(#outer-frame)" stroke="rgba(15, 23, 42, 0.65)" stroke-width="2.5" />
+    <path d="M80 14c-28 0-52 20-52 46v28c0 31 18 48 52 62 34-14 52-31 52-62V60C132 34 108 14 80 14z" fill="url(#shield-body)" stroke="rgba(15, 23, 42, 0.9)" stroke-width="1.8" />
+    <path d="M80 18c-24 0-46 18-46 40v24c0 26 16 41 46 53 30-12 46-27 46-53V58C126 36 104 18 80 18z" fill="url(#inner-glow)" opacity="0.8" />
+    <path d="M80 18c-24 0-46 18-46 40 12-16 32-22 46-22s34 6 46 22c0-22-22-40-46-40z" fill="url(#shield-sheen)" opacity="0.6" />
+    <path d="M80 36c-18 0-32 14-32 32v16c0 18 14 32 32 32s32-14 32-32V68c0-18-14-32-32-32z" fill="url(#helm-grad)" stroke="rgba(15, 23, 42, 0.6)" stroke-width="1.6" />
+    <path d="M60 90c10 9 30 9 40 0" stroke="rgba(15, 23, 42, 0.5)" stroke-width="4" />
+    <path d="M80 46c-12 0-22 8-22 20v12c6-6 14-10 22-10s16 4 22 10V66c0-12-10-20-22-20z" fill="url(#visor-grad)" />
+    <path d="M80 54c-9 0-16 6-16 14 6-4 10-6 16-6s10 2 16 6c0-8-7-14-16-14z" fill="#1d4ed8" opacity="0.65" />
+    <path d="M80 100c-6 0-10 4-10 10 4-2 6-3 10-3s6 1 10 3c0-6-4-10-10-10z" fill="#475569" opacity="0.75" />
+    <path d="M80 112c0 8-4 16-10 22 6 2 14 2 20 0-6-6-10-14-10-22z" fill="url(#sigil-flame)" stroke="rgba(124, 45, 18, 0.85)" stroke-width="1.2" />
+    <path d="M70 130c3 4 6 6 10 6s7-2 10-6" stroke="rgba(249, 250, 251, 0.7)" stroke-width="2" />
+    <g stroke="rgba(148, 163, 184, 0.65)" stroke-width="3.2">
+      <path d="M44 66c-8 10-12 22-12 36 6-4 12-6 18-6" />
+      <path d="M116 66c8 10 12 22 12 36-6-4-12-6-18-6" />
+    </g>
+    <g stroke="#e2e8f0" stroke-width="2.4" opacity="0.85">
+      <path d="M50 44c-6 6-10 14-10 24 6-4 12-6 18-6" />
+      <path d="M110 44c6 6 10 14 10 24-6-4-12-6-18-6" />
+    </g>
+    <g stroke="#38bdf8" stroke-width="2.2" opacity="0.75">
+      <path d="M46 94c-6 6-8 14-8 24 6-4 12-6 18-4" />
+      <path d="M114 94c6 6 8 14 8 24-6-4-12-6-18-4" />
+    </g>
+    <path d="M80 32l6-16M80 32l-6-16" stroke="#e2e8f0" stroke-width="2.4" />
+    <path d="M64 128c-12 4-22 10-28 18 10 2 22 0 34-6" stroke="rgba(15, 23, 42, 0.35)" stroke-width="2" />
+    <path d="M96 128c12 4 22 10 28 18-10 2-22 0-34-6" stroke="rgba(15, 23, 42, 0.35)" stroke-width="2" />
+  </g>
+</svg>

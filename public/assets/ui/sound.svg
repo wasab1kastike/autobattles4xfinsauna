@@ -1,3 +1,22 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a6e2803909d3b78ee51e1add925a0368df250a73ec158d84c3b3bf7ab8083c79
-size 1211
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Sound Icon</title>
+  <desc id="desc">A sleek speaker emitting audio waves.</desc>
+  <defs>
+    <linearGradient id="sound-body" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#94a3b8" />
+      <stop offset="100%" stop-color="#475569" />
+    </linearGradient>
+    <linearGradient id="sound-wave" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0ea5e9" />
+    </linearGradient>
+    <filter id="sound-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#38bdf8" flood-opacity="0.35" />
+    </filter>
+  </defs>
+  <g filter="url(#sound-glow)" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 24h8l12-10v36l-12-10h-8z" fill="url(#sound-body)" stroke="#e2e8f0" stroke-width="2" />
+    <path d="M40 20c4 4 6 8 6 12s-2 8-6 12" fill="none" stroke="url(#sound-wave)" stroke-width="4" />
+    <path d="M46 16c6 6 10 12 10 16s-4 10-10 16" fill="none" stroke="url(#sound-wave)" stroke-width="3" opacity="0.6" />
+  </g>
+</svg>

@@ -1,3 +1,52 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:690b93a814c318dc8c725bf345d8ff517b738c7cee1a773407cee2aa346574c0
-size 1279
+import type { SaunojaItem } from '../units/saunoja.ts';
+
+export type EquipmentSlotId = 'supply' | 'weapon' | 'focus' | 'relic';
+
+export interface EquipmentSlotDefinition {
+  readonly id: EquipmentSlotId;
+  readonly label: string;
+  readonly description: string;
+  readonly maxStacks: number;
+}
+
+export interface EquipmentModifier {
+  readonly health?: number;
+  readonly attackDamage?: number;
+  readonly attackRange?: number;
+  readonly movementRange?: number;
+  readonly defense?: number;
+  readonly shield?: number;
+}
+
+export interface EquipmentItemDefinition {
+  readonly id: string;
+  readonly slot: EquipmentSlotId;
+  readonly modifiers?: EquipmentModifier;
+  readonly maxStacks?: number;
+}
+
+export interface EquippedItem extends SaunojaItem {
+  readonly slot: EquipmentSlotId;
+  readonly maxStacks: number;
+  readonly modifiers: EquipmentModifier;
+}
+
+export type EquipmentMap = Record<EquipmentSlotId, EquippedItem | null>;
+
+export type EquipmentLoadout = Readonly<EquipmentMap>;
+
+export const EQUIPMENT_SLOT_IDS: readonly EquipmentSlotId[] = Object.freeze([
+  'supply',
+  'weapon',
+  'focus',
+  'relic'
+]);
+
+export function createEmptyLoadout(): EquipmentMap {
+  return {
+    supply: null,
+    weapon: null,
+    focus: null,
+    relic: null
+  } satisfies EquipmentMap;
+}

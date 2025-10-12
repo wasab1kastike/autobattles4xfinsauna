@@ -1,3 +1,92 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:945dd1b6daa2963c7b17c1b20d3af5daf6db1a5d2928b471250ab563b066d2ef
-size 2633
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setupInventoryHud } from './inventoryHud.ts';
+import type { InventoryEvent, InventoryState } from '../inventory/state.ts';
+import type { StashPanelController } from './stash/StashPanel.tsx';
+
+const focusMock = vi.fn();
+const setOpenMock = vi.fn();
+const renderMock = vi.fn();
+const destroyMock = vi.fn();
+
+let stashPanel: StashPanelController;
+
+vi.mock('./stash/StashPanel.tsx', () => {
+  return {
+    createStashPanel: vi.fn(() => stashPanel)
+  };
+});
+
+describe('setupInventoryHud', () => {
+  let overlay: HTMLElement;
+
+  beforeEach(() => {
+    overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    focusMock.mockReset();
+    setOpenMock.mockReset();
+    renderMock.mockReset();
+    destroyMock.mockReset();
+
+    stashPanel = {
+      element: document.createElement('div'),
+      render: renderMock,
+      setOpen: setOpenMock,
+      focus: focusMock,
+      destroy: destroyMock,
+      setAutoEquip: vi.fn()
+    } satisfies StashPanelController;
+  });
+
+  afterEach(() => {
+    overlay.remove();
+  });
+
+  it('keeps the overlay interactive when focusing the panel throws', () => {
+    focusMock.mockImplementation(() => {
+      throw new Error('focus failed');
+    });
+
+    const listeners = new Set<(event: InventoryEvent) => void>();
+
+    const inventory = {
+      isAutoEquipEnabled: () => false,
+      getStash: () => [],
+      getInventory: () => [],
+      equipFromStash: vi.fn(),
+      equipFromInventory: vi.fn(),
+      moveToInventory: vi.fn(),
+      moveToStash: vi.fn(),
+      discardFromStash: vi.fn(),
+      discardFromInventory: vi.fn(),
+      on: (listener: (event: InventoryEvent) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      }
+    } as unknown as InventoryState;
+
+    const hud = setupInventoryHud(inventory);
+
+    const stashLayer = overlay.querySelector('#inventory-stash-layer');
+    expect(stashLayer).not.toBeNull();
+    expect(stashLayer?.contains(stashPanel.element)).toBe(true);
+
+    const inventoryToggle = overlay.querySelector<HTMLButtonElement>('[data-ui="inventory-toggle"]');
+    expect(inventoryToggle).not.toBeNull();
+
+    setOpenMock.mockClear();
+
+    inventoryToggle!.click();
+
+    expect(setOpenMock).toHaveBeenCalledWith(true);
+    expect(overlay.classList.contains('inventory-panel-open')).toBe(true);
+
+    inventoryToggle!.click();
+
+    expect(setOpenMock).toHaveBeenCalledWith(false);
+    expect(overlay.classList.contains('inventory-panel-open')).toBe(false);
+
+    hud.destroy();
+  });
+});
