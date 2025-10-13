@@ -22,12 +22,17 @@ jobs:
         with:
           lfs: true
           fetch-depth: 0
-      - name: Checkout LFS objects
-        run: git lfs checkout
+
+      - name: Pull LFS objects
+        run: |
+          git lfs install --local
+          git lfs fetch --all
+          git lfs checkout
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - run: npm ci
       - run: npm run build
