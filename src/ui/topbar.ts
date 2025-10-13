@@ -174,8 +174,10 @@ export function setupTopbar(
   badgeRow.appendChild(enemyRamp.container);
   badgeRow.appendChild(time.container);
 
-  const numberFormatter = new Intl.NumberFormat('en-US');
-  const deltaFormatter = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero' });
+  const locale =
+    typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+  const numberFormatter = new Intl.NumberFormat(locale);
+  const deltaFormatter = new Intl.NumberFormat(locale, { signDisplay: 'exceptZero' });
   const resourceNames: Record<Resource, string> = {
     [Resource.SAUNA_BEER]: 'Sauna Beer',
     [Resource.SAUNAKUNNIA]: 'Saunakunnia',

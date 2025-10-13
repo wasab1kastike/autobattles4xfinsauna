@@ -74,6 +74,12 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
         const msg = `Failed to load image: ${resolvedSrc}`;
         console.error(msg);
         failures.push(msg);
+        const placeholderSrc = paths.images?.placeholder;
+        if (placeholderSrc) {
+          const placeholder = new Image();
+          placeholder.src = resolveAssetUrl(placeholderSrc);
+          images[key] = placeholder;
+        }
         resolve();
       };
       img.src = resolvedSrc;
