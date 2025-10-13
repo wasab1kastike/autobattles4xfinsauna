@@ -22,6 +22,9 @@ import type { PixelCoord } from './hex/HexUtils.ts';
 
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 
+let wheelFrameRequested = false;
+let pendingWheelEvent: { clientX: number; clientY: number; deltaY: number } | null = null;
+
 const cleanupHandlers: Array<() => void> = [];
 let initToken = 0;
 let canvasRef: HTMLCanvasElement | null = null;
@@ -202,9 +205,27 @@ bootstrapLoader.subscribe(handleLoaderEvent);
 function onWheel(event: WheelEvent): void {
   if (!canvasRef) return;
   event.preventDefault();
-  const scaleFactor = Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY);
-  const targetZoom = camera.zoom * scaleFactor;
-  applyZoomAtPoint(canvasRef, event.clientX, event.clientY, targetZoom);
+  pendingWheelEvent = {
+    clientX: event.clientX,
+    clientY: event.clientY,
+    deltaY: event.deltaY,
+  };
+  if (wheelFrameRequested) {
+    return;
+  }
+  wheelFrameRequested = true;
+  requestAnimationFrame(() => {
+    wheelFrameRequested = false;
+    if (!canvasRef || !pendingWheelEvent) {
+      pendingWheelEvent = null;
+      return;
+    }
+    const { clientX, clientY, deltaY } = pendingWheelEvent;
+    pendingWheelEvent = null;
+    const scaleFactor = Math.exp(-deltaY * WHEEL_ZOOM_SENSITIVITY);
+    const targetZoom = camera.zoom * scaleFactor;
+    applyZoomAtPoint(canvasRef, clientX, clientY, targetZoom);
+  });
 }
 
 function onCanvasClick(event: MouseEvent): void {
@@ -249,6 +270,8 @@ export function destroy(): void {
   clearCleanupHandlers();
   loaderHandle?.dispose();
   loaderHandle = null;
+  wheelFrameRequested = false;
+  pendingWheelEvent = null;
   if (canvasRef) {
     canvasRef.style.cursor = '';
   }
