@@ -300,6 +300,7 @@ function disposeUiV2Controllers(): void {
   uiV2SaunaController = null;
 }
 const IDLE_FRAME_LIMIT = 10;
+const STATE_AUTO_SAVE_INTERVAL_SECONDS = 10;
 
 let animationFrameId: number | null = null;
 let running = false;
@@ -308,6 +309,7 @@ let frameDirty = true;
 let idleFrameCount = 0;
 let gameLoopCallback: FrameRequestCallback | null = null;
 let pauseListenerAttached = false;
+let stateSaveAccumulatorSeconds = STATE_AUTO_SAVE_INTERVAL_SECONDS;
 
 export function invalidateFrame(): void {
   frameDirty = true;
@@ -1685,7 +1687,12 @@ const clock = new GameClock(1000, (deltaMs) => {
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
   }
-  state.save();
+  stateSaveAccumulatorSeconds += dtSeconds;
+  if (stateSaveAccumulatorSeconds >= STATE_AUTO_SAVE_INTERVAL_SECONDS) {
+    stateSaveAccumulatorSeconds =
+      stateSaveAccumulatorSeconds % STATE_AUTO_SAVE_INTERVAL_SECONDS;
+    state.save();
+  }
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
     if (unit.isDead() || unit.faction !== 'player') {
@@ -2421,6 +2428,7 @@ export function cleanup(): void {
   running = false;
   gameLoopCallback = null;
   idleFrameCount = 0;
+  stateSaveAccumulatorSeconds = STATE_AUTO_SAVE_INTERVAL_SECONDS;
   unitVisionSnapshots.clear();
   objectiveTracker?.offProgress(handleObjectiveProgress);
   objectiveTracker?.dispose();
@@ -2508,6 +2516,7 @@ export async function start(): Promise<void> {
     return;
   }
   running = true;
+  stateSaveAccumulatorSeconds = STATE_AUTO_SAVE_INTERVAL_SECONDS;
   if (!pauseListenerAttached) {
     eventBus.on('game:pause-changed', onPauseChanged);
     pauseListenerAttached = true;
