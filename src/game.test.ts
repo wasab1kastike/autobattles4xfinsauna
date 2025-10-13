@@ -183,6 +183,32 @@ describe('game logging', () => {
     expect(finalPrelude2).toBeGreaterThan(finalMessages.lastIndexOf('prelude 1'));
   });
 
+  it('avoids redundant roster re-renders when nothing changed', async () => {
+    const rosterHudModule = await import('./ui/rosterHUD.ts');
+    const renderRosterSpy = vi.fn();
+    vi.spyOn(rosterHudModule, 'setupRosterHUD').mockImplementation((container, options) => ({
+      updateSummary: vi.fn(),
+      installRenderer: vi.fn(),
+      renderRoster: renderRosterSpy,
+      setExpanded: vi.fn(),
+      toggleExpanded: vi.fn(),
+      destroy: vi.fn()
+    }));
+
+    const { __refreshRosterPanelForTest } = await initGame();
+
+    const initialCalls = renderRosterSpy.mock.calls.length;
+    __refreshRosterPanelForTest({ force: true });
+    expect(renderRosterSpy.mock.calls.length).toBe(initialCalls + 1);
+
+    const afterForcedUpdate = renderRosterSpy.mock.calls.length;
+    __refreshRosterPanelForTest({ force: false });
+    expect(renderRosterSpy.mock.calls.length).toBe(afterForcedUpdate);
+
+    __refreshRosterPanelForTest({ force: true });
+    expect(renderRosterSpy.mock.calls.length).toBe(afterForcedUpdate + 1);
+  });
+
   it('tracks the active Saunoja roster as units rally and fall', async () => {
     const { eventBus, __getActiveRosterCountForTest } = await initGame();
     const { Unit } = await import('./units/Unit.ts');

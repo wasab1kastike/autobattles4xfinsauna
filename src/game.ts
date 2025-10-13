@@ -228,6 +228,7 @@ let pendingRosterRenderer: ((entries: RosterEntry[]) => void) | null = null;
 let pendingRosterEntries: RosterEntry[] | null = null;
 let lastRosterSummary: RosterHudSummary | null = null;
 let lastRosterEntries: RosterEntry[] = [];
+let lastRosterSignatures: Map<string, string> = new Map();
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 const rosterSummaryListeners = new Set<(summary: RosterHudSummary) => void>();
@@ -300,6 +301,7 @@ function disposeUiV2Controllers(): void {
   uiV2SaunaController = null;
 }
 const IDLE_FRAME_LIMIT = 10;
+const ROSTER_REFRESH_INTERVAL_MS = 150;
 
 let animationFrameId: number | null = null;
 let running = false;
@@ -308,6 +310,7 @@ let frameDirty = true;
 let idleFrameCount = 0;
 let gameLoopCallback: FrameRequestCallback | null = null;
 let pauseListenerAttached = false;
+let rosterRefreshTimer = 0;
 
 export function invalidateFrame(): void {
   frameDirty = true;
@@ -919,7 +922,9 @@ export function setupGame(
   notifyHudElapsed();
   notifyEnemyRamp(null);
   lastRosterEntries = [];
+  lastRosterSignatures.clear();
   lastRosterSummary = null;
+  rosterRefreshTimer = 0;
   canvas = canvasEl;
   if (unitFx) {
     unitFx.dispose();
@@ -2533,7 +2538,11 @@ export async function start(): Promise<void> {
       clock.tick(delta);
       updateSaunaHud();
       updateTopbarHud(delta);
-      refreshRosterPanel();
+      rosterRefreshTimer += delta;
+      if (rosterRefreshTimer >= ROSTER_REFRESH_INTERVAL_MS) {
+        rosterRefreshTimer %= ROSTER_REFRESH_INTERVAL_MS;
+        refreshRosterPanel(undefined, { force: false });
+      }
     }
     if (frameDirty) {
       idleFrameCount = 0;
@@ -2566,6 +2575,10 @@ export function __rebuildRightPanelForTest(): void {
 
 export function __syncSaunojaRosterForTest(): boolean {
   return syncSaunojaRosterWithUnits();
+}
+
+export function __refreshRosterPanelForTest(options?: { force?: boolean }): void {
+  refreshRosterPanel(undefined, { force: options?.force ?? true });
 }
 
 export function __getActiveRosterCountForTest(): number {
@@ -2787,15 +2800,58 @@ function buildRosterSummary(): RosterHudSummary {
   return { count: total, card } satisfies RosterHudSummary;
 }
 
-function refreshRosterPanel(entries?: RosterEntry[]): void {
+function rosterEntrySignature(entry: RosterEntry): string {
+  try {
+    return JSON.stringify(entry);
+  } catch (error) {
+    console.warn('Failed to serialize roster entry for diffing', error);
+    return `${entry.id}:${Math.random()}`;
+  }
+}
+
+function hasRosterPanelChanges(
+  view: RosterEntry[],
+  signatures: Map<string, string>
+): boolean {
+  if (view.length !== lastRosterEntries.length) {
+    return true;
+  }
+  for (let index = 0; index < view.length; index += 1) {
+    const entry = view[index];
+    const previous = lastRosterEntries[index];
+    if (!previous || previous.id !== entry.id) {
+      return true;
+    }
+    const previousSignature = lastRosterSignatures.get(entry.id);
+    const nextSignature = signatures.get(entry.id);
+    if (previousSignature !== nextSignature) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function refreshRosterPanel(
+  entries?: RosterEntry[],
+  options: { force?: boolean } = {}
+): void {
+  const { force = true } = options;
   const view = entries ?? buildRosterEntries();
+  const nextSignatures = new Map<string, string>();
+  for (const entry of view) {
+    nextSignatures.set(entry.id, rosterEntrySignature(entry));
+  }
+  if (!force && !hasRosterPanelChanges(view, nextSignatures)) {
+    return;
+  }
   pendingRosterEntries = view;
   notifyRosterEntries(view);
   syncSelectionOverlay();
-  if (!rosterHud) {
-    return;
+  if (rosterHud) {
+    rosterHud.renderRoster(view);
   }
-  rosterHud.renderRoster(view);
+  lastRosterSignatures = nextSignatures;
+  rosterRefreshTimer = 0;
 }
 
 function updateRosterDisplay(): void {
