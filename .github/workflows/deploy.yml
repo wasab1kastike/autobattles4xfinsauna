@@ -26,8 +26,12 @@ jobs:
       - name: Pull LFS objects
         run: |
           git lfs install --local
-          git lfs fetch --all
-          git lfs checkout
+          git lfs pull origin main
+
+      - name: Verify LFS checkout
+        run: |
+          ls -l assets/units | head -5
+          file assets/units/saunoja-01.png || true
 
       - uses: actions/setup-node@v4
         with:
