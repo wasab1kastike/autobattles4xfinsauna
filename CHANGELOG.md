@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fix the right panel view flex layout so Policies, Events, and Enemy Scaling
+  scroll smoothly across desktop and mobile breakpoints.
+
 - Guard stronghold encounter unit registration so early seeding no longer
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
