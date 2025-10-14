@@ -53,6 +53,7 @@
   --radius-pill: 999px;
   --transition-snappy: 180ms ease;
   --hud-padding: clamp(12px, 2vw, 28px);
+  --right-panel-width: max(260px, 32vw);
   color: var(--color-foreground);
   background-color: var(--color-background);
   font-synthesis: none;
@@ -1952,7 +1953,7 @@ body > #game-container {
 }
 
 #right-panel {
-  flex: 0 0 clamp(260px, 32vw, 420px);
+  flex: 0 0 var(--right-panel-width);
   max-height: calc(100vh - (var(--hud-padding) * 2));
   color: var(--color-foreground);
   overflow: hidden;
@@ -2128,7 +2129,7 @@ body > #game-container {
 .right-panel-slide__sheet {
   position: relative;
   flex: 0 0 auto;
-  width: min(92vw, clamp(260px, 32vw, 420px));
+  width: min(92vw, var(--right-panel-width));
   max-width: 100%;
   height: 100%;
   padding: clamp(16px, 6vw, 24px);
@@ -4943,8 +4944,7 @@ body > #game-container {
     top: clamp(16px, 4vw, 24px);
     right: clamp(16px, 4vw, 24px);
     bottom: clamp(16px, 4vw, 24px);
-    width: min(clamp(260px, 32vw, 420px), calc(100vw - 32px));
-    max-width: clamp(260px, 32vw, 420px);
+    width: min(var(--right-panel-width), calc(100vw - 32px));
     max-height: calc(100vh - clamp(32px, 8vw, 48px));
     flex: 0 0 auto;
     transform: translateX(0);
