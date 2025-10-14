@@ -352,7 +352,7 @@ describe('rosterHUD', () => {
 
       const closeButton = overlay.querySelector<HTMLButtonElement>('[data-panel-action="close-roster"]');
       expect(closeButton).not.toBeNull();
-      expect(closeButton?.getAttribute('aria-label')).toBe('Close roster command console');
+      expect(closeButton?.getAttribute('aria-label')).toBe('Close command console panel');
       expect(closeButton?.dataset.panelOpen).toBe('true');
 
       expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(true);

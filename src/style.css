@@ -1957,7 +1957,8 @@ body > #game-container {
   color: var(--color-foreground);
   overflow: hidden;
   z-index: 140;
-  align-self: flex-start;
+  align-self: stretch;
+  min-height: 0;
   transition: transform var(--transition-snappy), opacity var(--transition-snappy),
     visibility var(--transition-snappy);
 }

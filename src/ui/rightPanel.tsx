@@ -186,17 +186,17 @@ export function setupRightPanel(
   let skipInitialRosterExpand = true;
 
   const rosterVisibilityListeners = new Set<(isOpen: boolean) => void>();
-  let rosterCloseButton: HTMLButtonElement | null = null;
+  const panelCloseButtons = new Set<HTMLButtonElement>();
 
-  const updateRosterCloseButtonState = (visible: boolean): void => {
-    if (!rosterCloseButton) {
-      return;
+  const updatePanelCloseButtonsState = (): void => {
+    const panelOpen = isPanelOpen();
+    const expanded = panelOpen ? 'true' : 'false';
+    for (const button of panelCloseButtons) {
+      button.dataset.panelOpen = expanded;
+      button.dataset.panelEnabled = expanded;
+      button.setAttribute('aria-expanded', expanded);
+      button.setAttribute('aria-disabled', panelOpen ? 'false' : 'true');
     }
-    const expanded = visible ? 'true' : 'false';
-    rosterCloseButton.dataset.panelOpen = expanded;
-    rosterCloseButton.dataset.panelEnabled = expanded;
-    rosterCloseButton.setAttribute('aria-expanded', expanded);
-    rosterCloseButton.setAttribute('aria-disabled', expanded === 'true' ? 'false' : 'true');
   };
 
   const isPanelOpen = (): boolean => {
@@ -207,8 +207,8 @@ export function setupRightPanel(
   };
 
   const emitRosterVisibility = (): void => {
+    updatePanelCloseButtonsState();
     const visible = activeView === 'roster' && isPanelOpen();
-    updateRosterCloseButtonState(visible);
     for (const listener of rosterVisibilityListeners) {
       try {
         listener(visible);
@@ -448,6 +448,24 @@ export function setupRightPanel(
     }
   };
 
+  const registerPanelCloseButton = (button: HTMLButtonElement): void => {
+    const handlePanelCloseClick = () => {
+      closePanelForViewport();
+      if (!isMobileViewport) {
+        toggle.focus({ preventScroll: true });
+      }
+    };
+
+    panelCloseButtons.add(button);
+    button.addEventListener('click', handlePanelCloseClick);
+    updatePanelCloseButtonsState();
+
+    disposers.push(() => {
+      panelCloseButtons.delete(button);
+      button.removeEventListener('click', handlePanelCloseClick);
+    });
+  };
+
   const handleViewportChange = (event: MediaQueryListEvent): void => {
     if (isMobileViewport) {
       return;
@@ -592,6 +610,31 @@ export function setupRightPanel(
   content.classList.add('panel-content');
   panel.appendChild(content);
 
+  const panelToolbar = doc.createElement('div');
+  panelToolbar.className = 'panel-toolbar panel-view__toolbar';
+  content.appendChild(panelToolbar);
+
+  const panelClose = doc.createElement('button');
+  panelClose.type = 'button';
+  panelClose.className = 'panel-view__close panel-view__close--roster';
+  panelClose.dataset.panelAction = 'close-roster';
+  panelClose.setAttribute('aria-controls', panel.id);
+  panelClose.setAttribute('aria-label', 'Close command console panel');
+  panelClose.title = 'Close command console panel';
+  panelClose.setAttribute('aria-expanded', 'false');
+
+  const panelCloseIcon = doc.createElement('span');
+  panelCloseIcon.className = 'panel-view__close-icon';
+  panelCloseIcon.setAttribute('aria-hidden', 'true');
+
+  const panelCloseLabel = doc.createElement('span');
+  panelCloseLabel.className = 'panel-view__close-label';
+  panelCloseLabel.textContent = 'Close panel';
+
+  panelClose.append(panelCloseIcon, panelCloseLabel);
+  panelToolbar.appendChild(panelClose);
+  registerPanelCloseButton(panelClose);
+
   const viewRoot = doc.createElement('div');
   viewRoot.className = 'panel-views';
   content.appendChild(viewRoot);
@@ -602,45 +645,6 @@ export function setupRightPanel(
   rosterView.setAttribute('role', 'region');
   rosterView.setAttribute('aria-live', 'polite');
   rosterView.setAttribute('aria-label', 'Battalion roster');
-
-  const rosterToolbar = doc.createElement('div');
-  rosterToolbar.className = 'panel-view__toolbar panel-view__toolbar--roster';
-
-  const rosterClose = doc.createElement('button');
-  rosterClose.type = 'button';
-  rosterClose.className = 'panel-view__close panel-view__close--roster';
-  rosterClose.dataset.panelAction = 'close-roster';
-  rosterClose.setAttribute('aria-controls', panel.id);
-  rosterClose.setAttribute('aria-label', 'Close roster command console');
-  rosterClose.title = 'Close roster command console';
-  rosterClose.setAttribute('aria-expanded', 'false');
-
-  const rosterCloseIcon = doc.createElement('span');
-  rosterCloseIcon.className = 'panel-view__close-icon';
-  rosterCloseIcon.setAttribute('aria-hidden', 'true');
-
-  const rosterCloseLabel = doc.createElement('span');
-  rosterCloseLabel.className = 'panel-view__close-label';
-  rosterCloseLabel.textContent = 'Close roster';
-
-  rosterClose.append(rosterCloseIcon, rosterCloseLabel);
-  rosterToolbar.appendChild(rosterClose);
-  rosterView.appendChild(rosterToolbar);
-
-  rosterCloseButton = rosterClose;
-  updateRosterCloseButtonState(activeView === 'roster' && isPanelOpen());
-
-  const handleRosterCloseClick = () => {
-    if (!rosterCloseButton) {
-      return;
-    }
-    closePanelForViewport();
-    if (!isMobileViewport) {
-      toggle.focus({ preventScroll: true });
-    }
-  };
-  rosterClose.addEventListener('click', handleRosterCloseClick);
-  disposers.push(() => rosterClose.removeEventListener('click', handleRosterCloseClick));
 
   const rosterContainer = doc.createElement('div');
   rosterContainer.className = 'panel-section panel-section--scroll';
@@ -1420,7 +1424,7 @@ export function setupRightPanel(
     slideOver.remove();
     toggle.remove();
     panel.remove();
-    rosterCloseButton = null;
+    panelCloseButtons.clear();
     overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
     viewListeners.clear();
     rosterVisibilityListeners.clear();
