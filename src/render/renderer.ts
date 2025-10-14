@@ -155,6 +155,7 @@ interface RenderEntry {
   renderCoord: AxialCoord;
   maxHealth: number;
   animationOffset: PixelCoord | null;
+  statusOnly: boolean;
 }
 
 interface RenderGroup {
@@ -350,9 +351,10 @@ export function drawUnits(
 
     const appearanceId = unit.getAppearanceId();
     const spriteKey = `unit-${appearanceId}`;
-    const fallbackSprite = assets.images[spriteKey] ?? placeholder;
-    const slice = assets.atlas?.slices[spriteKey] ?? null;
-    const atlasCanvas = assets.atlas ? assets.atlas.canvas : null;
+    const statusOnly = unit.type === 'stronghold-structure';
+    const fallbackSprite = statusOnly ? null : assets.images[spriteKey] ?? placeholder;
+    const slice = statusOnly ? null : assets.atlas?.slices[spriteKey] ?? null;
+    const atlasCanvas = statusOnly ? null : assets.atlas ? assets.atlas.canvas : null;
     const maxHealth = unit.getMaxHealth();
     const alpha = fx?.getUnitAlpha?.(unit);
     const normalizedAlpha = typeof alpha === 'number' ? clamp(alpha, 0, 1) : 1;
@@ -371,7 +373,7 @@ export function drawUnits(
     const precomputedPlacement = getSpritePlacement(placementInput);
 
     const filters: string[] = [];
-    if (unit.stats.health / maxHealth < 0.5) {
+    if (!statusOnly && unit.stats.health / maxHealth < 0.5) {
       filters.push('saturate(0)');
     }
 
@@ -431,7 +433,8 @@ export function drawUnits(
       alpha: normalizedAlpha,
       renderCoord,
       maxHealth,
-      animationOffset
+      animationOffset,
+      statusOnly
     });
   }
 
@@ -571,7 +574,7 @@ export function drawUnits(
     const primary = group.entries[group.primaryIndex];
     const primaryJob: RenderJob = {
       entry: primary,
-      drawBase: true,
+      drawBase: !primary.statusOnly,
       offset: primary.animationOffset ? { ...primary.animationOffset } : null,
       anchor: null,
       anchorSource: null,
@@ -592,7 +595,7 @@ export function drawUnits(
       const offset = computeStackOffset(stackIndex);
       jobs.push({
         entry,
-        drawBase: false,
+        drawBase: !entry.statusOnly,
         offset: mergeOffsets(entry.animationOffset, offset),
         anchor: null,
         anchorSource: primaryJob,

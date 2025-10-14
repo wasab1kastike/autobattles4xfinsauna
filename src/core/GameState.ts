@@ -43,6 +43,15 @@ function cloneStrongholdEntry(
     captured: Boolean(entry.captured),
     seen: Boolean(entry.seen)
   };
+  if (typeof entry.structureHealth === 'number' && Number.isFinite(entry.structureHealth)) {
+    snapshot.structureHealth = Math.max(0, entry.structureHealth);
+  }
+  if (typeof entry.structureMaxHealth === 'number' && Number.isFinite(entry.structureMaxHealth)) {
+    snapshot.structureMaxHealth = Math.max(1, entry.structureMaxHealth);
+  }
+  if (entry.structureDestroyed) {
+    snapshot.structureDestroyed = true;
+  }
   if (entry.boss) {
     const loot = Array.isArray(entry.boss.loot) ? [...entry.boss.loot] : undefined;
     snapshot.boss = {

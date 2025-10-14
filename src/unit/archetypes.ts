@@ -140,6 +140,20 @@ const emberHighlordDefinition: UnitArchetypeDefinition = Object.freeze({
   }
 } satisfies UnitArchetypeDefinition);
 
+const strongholdStructureDefinition: UnitArchetypeDefinition = Object.freeze({
+  id: 'stronghold-structure',
+  displayName: 'Stronghold Core',
+  cost: 0,
+  tags: ['enemy', 'structure'],
+  stats: {
+    health: { base: 320, growth: 0, curve: 'linear', round: 'round' },
+    attackDamage: { base: 0, growth: 0, round: 'round' },
+    attackRange: { base: 0, growth: 0, round: 'round' },
+    movementRange: { base: 0, growth: 0, round: 'round' },
+    visionRange: { base: 0, growth: 0, round: 'round' }
+  }
+} satisfies UnitArchetypeDefinition);
+
 const UNIT_ARCHETYPES: Record<UnitArchetypeId, UnitArchetypeDefinition> = Object.freeze({
   soldier: soldierDefinition,
   archer: archerDefinition,
@@ -150,7 +164,8 @@ const UNIT_ARCHETYPES: Record<UnitArchetypeId, UnitArchetypeDefinition> = Object
   'aurora-warden': auroraWardenDefinition,
   'glacier-sentinel': glacierSentinelDefinition,
   'spirit-keeper': spiritKeeperDefinition,
-  'ember-highlord': emberHighlordDefinition
+  'ember-highlord': emberHighlordDefinition,
+  'stronghold-structure': strongholdStructureDefinition
 });
 
 export function getUnitArchetype(id: UnitArchetypeId): UnitArchetypeDefinition {
@@ -180,3 +195,4 @@ export { auroraWardenDefinition as AURORA_WARDEN_ARCHETYPE };
 export { glacierSentinelDefinition as GLACIER_SENTINEL_ARCHETYPE };
 export { spiritKeeperDefinition as SPIRIT_KEEPER_ARCHETYPE };
 export { emberHighlordDefinition as EMBER_HIGHLORD_ARCHETYPE };
+export { strongholdStructureDefinition as STRONGHOLD_STRUCTURE_ARCHETYPE };
