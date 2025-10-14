@@ -62,6 +62,27 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
   const sounds: Record<string, HTMLAudioElement> = {};
   const failures: string[] = [];
 
+  const getPlaceholderImage = (() => {
+    let memoized: HTMLImageElement | null = null;
+    return () => {
+      if (memoized) {
+        return memoized;
+      }
+
+      const placeholder = new Image();
+      const placeholderSrc = paths.images?.placeholder;
+      if (placeholderSrc) {
+        placeholder.src = resolveAssetUrl(placeholderSrc);
+      } else {
+        placeholder.src =
+          'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+      }
+
+      memoized = placeholder;
+      return memoized;
+    };
+  })();
+
   const imagePromises = Object.entries(paths.images ?? {}).map(([key, src]) => {
     return new Promise<void>((resolve) => {
       const resolvedSrc = resolveAssetUrl(src);
@@ -74,12 +95,7 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
         const msg = `Failed to load image: ${resolvedSrc}`;
         console.error(msg);
         failures.push(msg);
-        const placeholderSrc = paths.images?.placeholder;
-        if (placeholderSrc) {
-          const placeholder = new Image();
-          placeholder.src = resolveAssetUrl(placeholderSrc);
-          images[key] = placeholder;
-        }
+        images[key] = getPlaceholderImage();
         resolve();
       };
       img.src = resolvedSrc;
