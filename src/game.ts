@@ -197,7 +197,10 @@ import {
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
 import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
-import { pickStrongholdSpawnCoord } from './world/spawn/strongholdSpawn.ts';
+import {
+  pickStrongholdSpawnCoord,
+  type StrongholdSpawnExclusionZone
+} from './world/spawn/strongholdSpawn.ts';
 import {
   disposeHudSignals,
   getHudElapsedMs as getHudElapsedMsSnapshot,
@@ -297,6 +300,7 @@ const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
+let saunaInitialReveal: StrongholdSpawnExclusionZone | null = null;
 let getTierContextRef: () => SaunaTierContext = () => ({
   artocoinBalance: getArtocoinBalance(),
   ownedTierIds: getPurchasedTierIds()
@@ -1078,7 +1082,8 @@ function pickStrongholdSpawnTile(): AxialCoord | undefined {
   const strongholdCoord = pickStrongholdSpawnCoord({
     map,
     units,
-    random: Math.random
+    random: Math.random,
+    excludeZones: saunaInitialReveal ? [saunaInitialReveal] : undefined
   });
   if (strongholdCoord) {
     return strongholdCoord;
@@ -1236,6 +1241,12 @@ saunaLifecycle = createSaunaLifecycle({
   minSpawnLimit: MIN_SPAWN_LIMIT
 });
 sauna = saunaLifecycle.sauna;
+if (!saunaInitialReveal) {
+  saunaInitialReveal = {
+    center: { ...sauna.pos },
+    radius: sauna.visionRange
+  } satisfies StrongholdSpawnExclusionZone;
+}
 getTierContextRef = saunaLifecycle.getTierContext;
 getActiveTierIdRef = saunaLifecycle.getActiveTierId;
 getActiveTierLimitRef = saunaLifecycle.getActiveTierLimit;

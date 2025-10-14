@@ -1,13 +1,19 @@
 import type { AxialCoord } from '../../hex/HexUtils.ts';
 import type { HexMap } from '../../hexmap.ts';
 import type { Unit } from '../../units/Unit.ts';
-import { getNeighbors } from '../../hex/HexUtils.ts';
+import { getNeighbors, hexDistance } from '../../hex/HexUtils.ts';
 import { listStrongholds } from '../strongholds.ts';
+
+export interface StrongholdSpawnExclusionZone {
+  readonly center: AxialCoord;
+  readonly radius: number;
+}
 
 export interface StrongholdSpawnContext {
   readonly map: HexMap;
   readonly units: Iterable<Unit>;
   readonly random?: () => number;
+  readonly excludeZones?: readonly StrongholdSpawnExclusionZone[];
 }
 
 function coordKey(coord: AxialCoord): string {
@@ -31,6 +37,11 @@ export function pickStrongholdSpawnCoord(
   const addCandidate = (coord: AxialCoord) => {
     const key = coordKey(coord);
     if (occupied.has(key) || seen.has(key)) {
+      return;
+    }
+    if (
+      context.excludeZones?.some((zone) => hexDistance(zone.center, coord) <= zone.radius)
+    ) {
       return;
     }
     context.map.ensureTile(coord.q, coord.r);

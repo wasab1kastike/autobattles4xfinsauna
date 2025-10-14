@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { HexMap } from '../src/hexmap.ts';
 import type { Unit } from '../src/units/Unit.ts';
 import { spawnEnemyBundle } from '../src/world/spawn/enemy_spawns.ts';
-import { getNeighbors, type AxialCoord } from '../src/hex/HexUtils.ts';
+import { getNeighbors, hexDistance, type AxialCoord } from '../src/hex/HexUtils.ts';
 import {
   STRONGHOLD_CONFIG,
   listStrongholds,
@@ -71,5 +71,48 @@ describe('enemy stronghold spawn integration', () => {
 
     expect(anchoredStronghold).toBeDefined();
     expect(isNeighborOrSame(units[0].coord, anchoredStronghold!.coord)).toBe(true);
+  });
+
+  it('avoids spawning inside exclusion zones', () => {
+    const map = new HexMap(10, 10, 32);
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+
+    const strongholds = listStrongholds();
+    const protectedStronghold = strongholds.find((entry) => entry.id === 'aurora-watch');
+    expect(protectedStronghold).toBeDefined();
+
+    const excludeZone = {
+      center: { q: 0, r: 0 },
+      radius: 5
+    } as const;
+
+    for (const entry of strongholds) {
+      if (entry !== protectedStronghold) {
+        entry.captured = true;
+      }
+    }
+
+    const result = pickStrongholdSpawnCoord({
+      map,
+      units: [],
+      random: () => 0,
+      excludeZones: [excludeZone]
+    });
+
+    expect(result).toBeUndefined();
+
+    // Restore registry state for the follow-up check.
+    resetStrongholdRegistry();
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+
+    const outsideResult = pickStrongholdSpawnCoord({
+      map,
+      units: [],
+      random: () => 0,
+      excludeZones: [excludeZone]
+    });
+
+    expect(outsideResult).toBeDefined();
+    expect(hexDistance(outsideResult!, excludeZone.center)).toBeGreaterThan(excludeZone.radius);
   });
 });
