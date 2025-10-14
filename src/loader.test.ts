@@ -95,6 +95,18 @@ describe('loadAssets', () => {
 });
 
 describe('resolveAssetUrl', () => {
+  it('emits root-relative assets when the resolved base is root', () => {
+    expect(resolveAssetUrl('/assets/banner.png')).toBe('/assets/banner.png');
+    expect(resolveAssetUrl('/assets/banner.png', '/')).toBe('/assets/banner.png');
+  });
+
+  it('preserves slug prefixes only when the base explicitly includes them', () => {
+    expect(resolveAssetUrl('/assets/banner.png', '/autobattles4xfinsauna/')).toBe(
+      '/autobattles4xfinsauna/assets/banner.png'
+    );
+    expect(resolveAssetUrl('/assets/banner.png', '/')).toBe('/assets/banner.png');
+  });
+
   it('returns absolute URLs unchanged', () => {
     expect(resolveAssetUrl('https://example.com/image.png', '/app/')).toBe('https://example.com/image.png');
   });
