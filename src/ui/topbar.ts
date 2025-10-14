@@ -174,8 +174,13 @@ export function setupTopbar(
   badgeRow.appendChild(enemyRamp.container);
   badgeRow.appendChild(time.container);
 
-  const locale =
-    typeof navigator !== 'undefined' && navigator.language ? navigator.language : 'en-US';
+  const locale = (() => {
+    if (typeof navigator === 'undefined') {
+      return 'en-US';
+    }
+    const { language } = navigator;
+    return typeof language === 'string' && language.trim().length > 0 ? language : 'en-US';
+  })();
   const numberFormatter = new Intl.NumberFormat(locale);
   const deltaFormatter = new Intl.NumberFormat(locale, { signDisplay: 'exceptZero' });
   const resourceNames: Record<Resource, string> = {
