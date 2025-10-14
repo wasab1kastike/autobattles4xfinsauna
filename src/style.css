@@ -563,8 +563,8 @@ body > #game-container {
 }
 
 .hud-right-column {
-  width: min(100%, clamp(260px, 32vw, 420px));
-  max-width: clamp(260px, 32vw, 420px);
+  width: min(100%, var(--right-panel-width));
+  max-width: var(--right-panel-width);
 }
 
 #ui-overlay:not(.hud-grid) .hud-right-column {
