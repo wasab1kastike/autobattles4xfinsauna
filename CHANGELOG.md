@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Resolve unit and building sprite URLs through Vite's asset pipeline so
+  production bundles reference the hashed art assets and render the portraits
+  instead of the placeholder textures.
+
 - Guard stronghold encounter unit registration so early seeding no longer
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
