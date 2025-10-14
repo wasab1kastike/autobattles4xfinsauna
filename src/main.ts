@@ -205,11 +205,17 @@ bootstrapLoader.subscribe(handleLoaderEvent);
 function onWheel(event: WheelEvent): void {
   if (!canvasRef) return;
   event.preventDefault();
-  pendingWheelEvent = {
-    clientX: event.clientX,
-    clientY: event.clientY,
-    deltaY: event.deltaY,
-  };
+  if (pendingWheelEvent) {
+    pendingWheelEvent.clientX = event.clientX;
+    pendingWheelEvent.clientY = event.clientY;
+    pendingWheelEvent.deltaY += event.deltaY;
+  } else {
+    pendingWheelEvent = {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      deltaY: event.deltaY,
+    };
+  }
   if (wheelFrameRequested) {
     return;
   }
