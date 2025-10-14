@@ -46,7 +46,8 @@ export type UnitArchetypeId =
   | 'aurora-warden'
   | 'glacier-sentinel'
   | 'spirit-keeper'
-  | 'ember-highlord';
+  | 'ember-highlord'
+  | 'stronghold-structure';
 
 export interface UnitArchetypeDefinition {
   id: UnitArchetypeId;

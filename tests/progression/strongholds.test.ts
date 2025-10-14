@@ -4,6 +4,7 @@ import { GameState } from '../../src/core/GameState.ts';
 import { HexMap } from '../../src/hexmap.ts';
 import { createObjectiveTracker } from '../../src/progression/objectives.ts';
 import { calculateKillExperience, XP_BOSS_KILL } from '../../src/game/experience.ts';
+import type { Unit } from '../../src/units/Unit.ts';
 import { createUnit } from '../../src/units/UnitFactory.ts';
 import {
   getStrongholdSnapshot,
@@ -80,7 +81,7 @@ describe('enemy strongholds integration', () => {
 
   it('clears stronghold tiles and awards boss XP when the leader falls', () => {
     const map = new HexMap(10, 10);
-    const spawned: ReturnType<typeof createUnit>[] = [];
+    const spawned: Unit[] = [];
     seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
       encounters: {
         registerUnit: (unit) => spawned.push(unit),
@@ -93,24 +94,14 @@ describe('enemy strongholds integration', () => {
     const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
     expect(tile?.building).toBe('city');
 
-    expect(spawned).toHaveLength(0);
+    const structures = spawned.filter((unit) => unit.type === 'stronghold-structure');
+    expect(structures).toHaveLength(STRONGHOLD_CONFIG.strongholds.length);
 
-    tile?.placeBuilding(null);
-
-    expect(spawned).toHaveLength(1);
-
-    const snapshotAfterCapture = getStrongholdSnapshot();
-    expect(snapshotAfterCapture[firstStronghold.id]?.captured).toBe(true);
-    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.spawned).toBe(true);
-    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.defeated).toBeUndefined();
-
-    const boss = spawned.find(
+    const structure = structures.find(
       (unit) =>
-        unit?.isBoss &&
-        unit.coord.q === firstStronghold.coord.q &&
-        unit.coord.r === firstStronghold.coord.r
+        unit.coord.q === firstStronghold.coord.q && unit.coord.r === firstStronghold.coord.r
     );
-    expect(boss).toBeDefined();
+    expect(structure).toBeDefined();
 
     const attacker = createUnit(
       'soldier',
@@ -119,6 +110,22 @@ describe('enemy strongholds integration', () => {
       'player'
     );
     expect(attacker).toBeTruthy();
+
+    structure!.takeDamage(structure!.getMaxHealth() + 50, attacker ?? undefined);
+
+    const bosses = spawned.filter((unit) => unit.isBoss);
+    expect(bosses).toHaveLength(1);
+    const boss = bosses[0];
+    expect(boss).toBeDefined();
+    expect(boss!.coord.q).toBe(firstStronghold.coord.q);
+    expect(boss!.coord.r).toBe(firstStronghold.coord.r);
+
+    const snapshotAfterCapture = getStrongholdSnapshot();
+    expect(snapshotAfterCapture[firstStronghold.id]?.captured).toBe(true);
+    expect(snapshotAfterCapture[firstStronghold.id]?.structureDestroyed).toBe(true);
+    expect(snapshotAfterCapture[firstStronghold.id]?.structureHealth).toBe(0);
+    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.spawned).toBe(true);
+    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.defeated).toBeUndefined();
 
     boss!.takeDamage(boss!.stats.health + 50, attacker ?? undefined);
 
@@ -135,9 +142,9 @@ describe('enemy strongholds integration', () => {
     expect(xpSummary.xp).toBe(XP_BOSS_KILL);
   });
 
-  it('spawns boss encounters after destruction when loading persistence', () => {
+  it('persists partially damaged structures across reloads', () => {
     const map = new HexMap(10, 10);
-    const spawned: ReturnType<typeof createUnit>[] = [];
+    const spawned: Unit[] = [];
     seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
       encounters: {
         registerUnit: (unit) => spawned.push(unit)
@@ -147,19 +154,90 @@ describe('enemy strongholds integration', () => {
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
 
-    const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
-    expect(tile?.building).toBe('city');
+    const structure = spawned.find(
+      (unit) =>
+        unit.type === 'stronghold-structure' &&
+        unit.coord.q === firstStronghold!.coord.q &&
+        unit.coord.r === firstStronghold!.coord.r
+    );
+    expect(structure).toBeDefined();
 
-    tile?.placeBuilding(null);
+    const attacker = createUnit(
+      'soldier',
+      'persistence-attacker',
+      { q: firstStronghold!.coord.q + 1, r: firstStronghold!.coord.r },
+      'player'
+    );
+    expect(attacker).toBeTruthy();
 
-    expect(spawned).toHaveLength(1);
+    const initialHealth = structure!.stats.health;
+    structure!.takeDamage(50, attacker ?? undefined);
+    expect(structure!.stats.health).toBeLessThan(initialHealth);
+
+    const snapshot = getStrongholdSnapshot();
+    const entry = snapshot[firstStronghold!.id];
+    expect(entry?.structureDestroyed).toBeUndefined();
+    expect(entry?.structureHealth).toBeGreaterThan(0);
+    expect(entry?.structureHealth).toBeLessThan(entry?.structureMaxHealth ?? Infinity);
+
+    resetStrongholdRegistry();
+
+    const mapReloaded = new HexMap(10, 10);
+    const respawned: Unit[] = [];
+
+    seedEnemyStrongholds(mapReloaded, STRONGHOLD_CONFIG, snapshot, {
+      encounters: {
+        registerUnit: (unit) => respawned.push(unit)
+      }
+    });
+
+    const reloadedStructure = respawned.find(
+      (unit) =>
+        unit.type === 'stronghold-structure' &&
+        unit.coord.q === firstStronghold!.coord.q &&
+        unit.coord.r === firstStronghold!.coord.r
+    );
+    expect(reloadedStructure).toBeDefined();
+    expect(reloadedStructure!.stats.health).toBe(entry?.structureHealth);
+    expect(reloadedStructure!.getMaxHealth()).toBe(entry?.structureMaxHealth);
+  });
+
+  it('spawns boss encounters after destruction when loading persistence', () => {
+    const map = new HexMap(10, 10);
+    const spawned: Unit[] = [];
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
+      encounters: {
+        registerUnit: (unit) => spawned.push(unit)
+      }
+    });
+
+    const [firstStronghold] = listStrongholds();
+    expect(firstStronghold).toBeDefined();
+
+    const structure = spawned.find(
+      (unit) =>
+        unit.type === 'stronghold-structure' &&
+        unit.coord.q === firstStronghold!.coord.q &&
+        unit.coord.r === firstStronghold!.coord.r
+    );
+    expect(structure).toBeDefined();
+
+    const attacker = createUnit(
+      'soldier',
+      'reload-attacker',
+      { q: firstStronghold!.coord.q + 1, r: firstStronghold!.coord.r },
+      'player'
+    );
+    expect(attacker).toBeTruthy();
+
+    structure!.takeDamage(structure!.getMaxHealth() + 10, attacker ?? undefined);
 
     const snapshot = getStrongholdSnapshot();
 
     resetStrongholdRegistry();
 
     const mapReloaded = new HexMap(10, 10);
-    const respawned: ReturnType<typeof createUnit>[] = [];
+    const respawned: Unit[] = [];
 
     seedEnemyStrongholds(mapReloaded, STRONGHOLD_CONFIG, snapshot, {
       encounters: {
@@ -169,7 +247,9 @@ describe('enemy strongholds integration', () => {
 
     const reloadedTile = mapReloaded.getTile(firstStronghold!.coord.q, firstStronghold!.coord.r);
     expect(reloadedTile?.building).toBeNull();
-    expect(respawned).toHaveLength(1);
-    expect(respawned[0]?.isBoss).toBe(true);
+    const bosses = respawned.filter((unit) => unit.isBoss);
+    expect(bosses).toHaveLength(1);
+    expect(bosses[0]?.coord.q).toBe(firstStronghold!.coord.q);
+    expect(bosses[0]?.coord.r).toBe(firstStronghold!.coord.r);
   });
 });

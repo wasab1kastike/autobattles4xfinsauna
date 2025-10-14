@@ -21,7 +21,8 @@ const UNIT_APPEARANCE_VARIANTS: Readonly<Record<UnitArchetypeId, readonly UnitAp
   'aurora-warden': ORC_APPEARANCES,
   'glacier-sentinel': ORC_APPEARANCES,
   'spirit-keeper': ORC_APPEARANCES,
-  'ember-highlord': ORC_APPEARANCES
+  'ember-highlord': ORC_APPEARANCES,
+  'stronghold-structure': []
 });
 
 const VALID_APPEARANCE_IDS: ReadonlySet<UnitAppearanceId> = new Set<UnitAppearanceId>([
@@ -37,7 +38,8 @@ const VALID_APPEARANCE_IDS: ReadonlySet<UnitAppearanceId> = new Set<UnitAppearan
     'aurora-warden',
     'glacier-sentinel',
     'spirit-keeper',
-    'ember-highlord'
+    'ember-highlord',
+    'stronghold-structure'
   ])
 ]);
 
