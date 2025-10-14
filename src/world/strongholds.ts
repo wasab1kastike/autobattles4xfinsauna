@@ -7,6 +7,7 @@ import {
   mergeStrongholdEncounterPersistence,
   resetStrongholdEncounters,
   seedStrongholdEncounter,
+  spawnStrongholdBoss,
   type StrongholdEncounterHooks
 } from './strongholdEncounters.ts';
 
@@ -33,6 +34,7 @@ export interface StrongholdConfig {
 }
 
 export interface StrongholdBossPersistence {
+  readonly spawned?: boolean;
   readonly defeated?: boolean;
   readonly loot?: readonly string[];
 }
@@ -122,9 +124,13 @@ function trackTileCapture(metadata: StrongholdMetadata, map: HexMap): void {
   }
   tile.addMutationListener((mutation: TileMutation) => {
     if (mutation === 'building') {
+      const wasCaptured = metadata.captured;
       metadata.captured = tile.building !== 'city';
       if (metadata.captured) {
         metadata.seen = true;
+        if (!wasCaptured) {
+          spawnStrongholdBoss(metadata.id);
+        }
       }
       return;
     }
