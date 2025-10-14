@@ -17,7 +17,11 @@ const UNIT_APPEARANCE_VARIANTS: Readonly<Record<UnitArchetypeId, readonly UnitAp
   'avanto-marauder': ORC_APPEARANCES,
   raider: ORC_APPEARANCES,
   'raider-captain': ORC_APPEARANCES,
-  'raider-shaman': ORC_APPEARANCES
+  'raider-shaman': ORC_APPEARANCES,
+  'aurora-warden': ORC_APPEARANCES,
+  'glacier-sentinel': ORC_APPEARANCES,
+  'spirit-keeper': ORC_APPEARANCES,
+  'ember-highlord': ORC_APPEARANCES
 });
 
 const VALID_APPEARANCE_IDS: ReadonlySet<UnitAppearanceId> = new Set<UnitAppearanceId>([
@@ -29,7 +33,11 @@ const VALID_APPEARANCE_IDS: ReadonlySet<UnitAppearanceId> = new Set<UnitAppearan
     'avanto-marauder',
     'raider',
     'raider-captain',
-    'raider-shaman'
+    'raider-shaman',
+    'aurora-warden',
+    'glacier-sentinel',
+    'spirit-keeper',
+    'ember-highlord'
   ])
 ]);
 

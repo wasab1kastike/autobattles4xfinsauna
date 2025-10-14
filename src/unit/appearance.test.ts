@@ -34,6 +34,23 @@ describe('unit appearance helpers', () => {
     expect(sampled).toBe('enemy-orc-1');
   });
 
+  it('reuses orc variants for boss archetypes', () => {
+    const bossArchetypes = [
+      'aurora-warden',
+      'glacier-sentinel',
+      'spirit-keeper',
+      'ember-highlord'
+    ] as const;
+
+    for (const archetype of bossArchetypes) {
+      const sampled = resolveUnitAppearance(archetype, undefined, makeSampler([0]));
+      const followUp = resolveUnitAppearance(archetype, undefined, makeSampler([0.5]));
+      expect(['enemy-orc-1', 'enemy-orc-2']).toContain(sampled);
+      expect(['enemy-orc-1', 'enemy-orc-2']).toContain(followUp);
+      expect(resolveUnitAppearance(archetype, 'enemy-orc-2')).toBe('enemy-orc-2');
+    }
+  });
+
   it('resolves saunoja appearances independently', () => {
     expect(resolveSaunojaAppearance('saunoja')).toBe('saunoja');
     expect(resolveSaunojaAppearance('archer', makeSampler([0]))).toBe('saunoja');
