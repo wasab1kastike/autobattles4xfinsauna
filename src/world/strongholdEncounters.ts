@@ -23,7 +23,9 @@ interface EncounterState {
   readonly lootRolls: number;
   readonly eliteLoot: boolean;
   readonly random: () => number;
+  readonly registerUnit?: (unit: Unit) => void;
   bossUnitId: string | null;
+  spawned: boolean;
   defeated: boolean;
   loot: readonly string[];
 }
@@ -48,6 +50,7 @@ function finalizeEncounter(state: EncounterState): void {
     return;
   }
   state.defeated = true;
+  state.spawned = true;
   state.bossUnitId = null;
   const tile = state.map.getTile(state.metadata.coord.q, state.metadata.coord.r);
   if (tile) {
@@ -88,7 +91,10 @@ export function seedStrongholdEncounter(
   const initialLoot = Array.isArray(persisted?.boss?.loot)
     ? Object.freeze([...persisted!.boss!.loot])
     : Object.freeze([]);
-  const defeated = Boolean(persisted?.boss?.defeated || metadata.captured);
+  const defeated = Boolean(persisted?.boss?.defeated);
+  const spawnRequested = Boolean(
+    !defeated && (persisted?.boss?.spawned || persisted?.captured || metadata.captured)
+  );
   const state: EncounterState = {
     metadata,
     map,
@@ -96,7 +102,9 @@ export function seedStrongholdEncounter(
     lootRolls: sanitizeRolls(boss?.lootRolls),
     eliteLoot: Boolean(boss?.eliteLoot),
     random,
+    registerUnit: hooks?.registerUnit,
     bossUnitId: null,
+    spawned: spawnRequested,
     defeated,
     loot: initialLoot
   };
@@ -105,47 +113,28 @@ export function seedStrongholdEncounter(
     return;
   }
 
-  const unitId = `stronghold-${metadata.id}-boss`;
-  const unit = createUnit(boss.unit, unitId, metadata.coord, boss.faction, {
-    level: boss.level,
-    appearanceId: boss.appearanceId,
-    behavior: 'defend',
-    isBoss: true
-  });
-  if (!unit) {
-    return;
+  if (spawnRequested) {
+    spawnStrongholdBoss(metadata.id);
   }
-
-  state.bossUnitId = unit.id;
-  const registerUnit = hooks?.registerUnit;
-  registerUnit?.(unit);
-
-  const onDeath = () => {
-    finalizeEncounter(state);
-    eventBus.off('unitDied', listener);
-    activeUnits.delete(unit.id);
-  };
-
-  const listener = (payload: { unitId: string }) => {
-    if (payload.unitId === unit.id) {
-      onDeath();
-    }
-  };
-
-  activeUnits.set(unit.id, listener);
-  eventBus.on('unitDied', listener);
-  unit.onDeath(onDeath);
 }
 
 export function getStrongholdEncounterSnapshot(): Record<string, StrongholdBossPersistence> {
   const snapshot: Record<string, StrongholdBossPersistence> = {};
   for (const [id, state] of encounters.entries()) {
-    if (state.defeated || state.loot.length > 0) {
-      snapshot[id] = {
-        defeated: state.defeated,
-        loot: [...state.loot]
-      } satisfies StrongholdBossPersistence;
+    if (!state.spawned && !state.defeated && state.loot.length === 0) {
+      continue;
     }
+    const entry: StrongholdBossPersistence = {};
+    if (state.spawned) {
+      entry.spawned = true;
+    }
+    if (state.defeated) {
+      entry.defeated = true;
+    }
+    if (state.loot.length > 0) {
+      entry.loot = [...state.loot];
+    }
+    snapshot[id] = entry;
   }
   return snapshot;
 }
@@ -163,6 +152,9 @@ export function mergeStrongholdEncounterPersistence(
     }
     const bossEntry = entry?.boss;
     if (bossEntry) {
+      if (bossEntry.spawned || entry?.captured) {
+        state.spawned = true;
+      }
       if (bossEntry.defeated) {
         state.defeated = true;
         state.bossUnitId = null;
@@ -170,6 +162,59 @@ export function mergeStrongholdEncounterPersistence(
       if (Array.isArray(bossEntry.loot)) {
         state.loot = Object.freeze([...bossEntry.loot]);
       }
+      if (!state.defeated && state.spawned && !state.bossUnitId) {
+        spawnStrongholdBoss(id);
+      }
+    } else if (entry?.captured && !state.defeated && !state.bossUnitId) {
+      state.spawned = true;
+      spawnStrongholdBoss(id);
     }
   }
+}
+
+export function spawnStrongholdBoss(strongholdId: string): Unit | null {
+  const state = encounters.get(strongholdId);
+  if (!state) {
+    return null;
+  }
+  const boss = state.metadata.boss;
+  if (!boss || state.defeated) {
+    return null;
+  }
+  state.spawned = true;
+  if (state.bossUnitId) {
+    return null;
+  }
+
+  const unitId = `stronghold-${state.metadata.id}-boss`;
+  const unit = createUnit(boss.unit, unitId, state.metadata.coord, boss.faction, {
+    level: boss.level,
+    appearanceId: boss.appearanceId,
+    behavior: 'defend',
+    isBoss: true
+  });
+  if (!unit) {
+    return null;
+  }
+
+  state.bossUnitId = unit.id;
+  const registerUnit = state.registerUnit;
+  registerUnit?.(unit);
+
+  const onDeath = () => {
+    finalizeEncounter(state);
+    eventBus.off('unitDied', listener);
+    activeUnits.delete(unit.id);
+  };
+
+  const listener = (payload: { unitId: string }) => {
+    if (payload.unitId === unit.id) {
+      onDeath();
+    }
+  };
+
+  activeUnits.set(unit.id, listener);
+  eventBus.on('unitDied', listener);
+  unit.onDeath(onDeath);
+  return unit;
 }

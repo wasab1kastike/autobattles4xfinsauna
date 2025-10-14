@@ -93,6 +93,17 @@ describe('enemy strongholds integration', () => {
     const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
     expect(tile?.building).toBe('city');
 
+    expect(spawned).toHaveLength(0);
+
+    tile?.placeBuilding(null);
+
+    expect(spawned).toHaveLength(1);
+
+    const snapshotAfterCapture = getStrongholdSnapshot();
+    expect(snapshotAfterCapture[firstStronghold.id]?.captured).toBe(true);
+    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.spawned).toBe(true);
+    expect(snapshotAfterCapture[firstStronghold.id]?.boss?.defeated).toBeUndefined();
+
     const boss = spawned.find(
       (unit) =>
         unit?.isBoss &&
@@ -116,10 +127,49 @@ describe('enemy strongholds integration', () => {
 
     const snapshot = getStrongholdSnapshot();
     expect(snapshot[firstStronghold.id]?.captured).toBe(true);
+    expect(snapshot[firstStronghold.id]?.boss?.spawned).toBe(true);
     expect(snapshot[firstStronghold.id]?.boss?.defeated).toBe(true);
 
     const xpSummary = calculateKillExperience(boss!);
     expect(xpSummary.boss).toBe(true);
     expect(xpSummary.xp).toBe(XP_BOSS_KILL);
+  });
+
+  it('spawns boss encounters after destruction when loading persistence', () => {
+    const map = new HexMap(10, 10);
+    const spawned: ReturnType<typeof createUnit>[] = [];
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
+      encounters: {
+        registerUnit: (unit) => spawned.push(unit)
+      }
+    });
+
+    const [firstStronghold] = listStrongholds();
+    expect(firstStronghold).toBeDefined();
+
+    const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
+    expect(tile?.building).toBe('city');
+
+    tile?.placeBuilding(null);
+
+    expect(spawned).toHaveLength(1);
+
+    const snapshot = getStrongholdSnapshot();
+
+    resetStrongholdRegistry();
+
+    const mapReloaded = new HexMap(10, 10);
+    const respawned: ReturnType<typeof createUnit>[] = [];
+
+    seedEnemyStrongholds(mapReloaded, STRONGHOLD_CONFIG, snapshot, {
+      encounters: {
+        registerUnit: (unit) => respawned.push(unit)
+      }
+    });
+
+    const reloadedTile = mapReloaded.getTile(firstStronghold!.coord.q, firstStronghold!.coord.r);
+    expect(reloadedTile?.building).toBeNull();
+    expect(respawned).toHaveLength(1);
+    expect(respawned[0]?.isBoss).toBe(true);
   });
 });
