@@ -6,6 +6,10 @@
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
 
+- Resolve the Vite base path to `/` when a custom domain is detected via an
+  absolute `homepage` or bundled `public/CNAME`, keeping repository-prefixed
+  slugs as an opt-in fallback for GitHub-hosted deployments.
+
 - Resolve the blank GitHub Pages splash by deriving the Vite base path from
   deployment environment overrides and mirroring the docs bundle with
   relative asset URLs so repo-hosted builds load their hashed scripts.

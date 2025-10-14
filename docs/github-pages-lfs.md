@@ -21,3 +21,7 @@ npm run build
 ```
 
 If the LFS objects cannot be fetched (for example when working in a sandboxed environment), expect `npm install` to fail because `package.json` is still an LFS pointer. In that scenario, CI remains the source of truth for deployable artifacts.
+
+## Base path resolution on GitHub Pages
+
+Custom domains change how GitHub Pages mounts the generated site. The Vite configuration now inspects any explicit base overrides (`PUBLIC_BASE_PATH`, `BASE_PATH`, `VITE_BASE_PATH`, or `VITE_BASE`), the `homepage` declared in `package.json`, and the presence of `public/CNAME` to decide which base path to emit. When the homepage points at an absolute URL or a `CNAME` file is bundled, the build defaults to `/` so custom domains serve root-relative assets. Repository-prefixed fallbacks are only used when no custom domain indicators are present, preventing regressions when the domain setup changes.
