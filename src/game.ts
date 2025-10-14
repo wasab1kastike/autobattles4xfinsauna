@@ -301,6 +301,29 @@ const overlaySaunojasScratch: Saunoja[] = [];
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
 let saunaInitialReveal: StrongholdSpawnExclusionZone | null = null;
+
+function refreshSaunaInitialReveal(currentSauna: Sauna | undefined): void {
+  if (!currentSauna) {
+    saunaInitialReveal = null;
+    return;
+  }
+
+  const nextZone: StrongholdSpawnExclusionZone = {
+    center: { ...currentSauna.pos },
+    radius: currentSauna.visionRange
+  };
+
+  if (
+    saunaInitialReveal &&
+    saunaInitialReveal.radius === nextZone.radius &&
+    saunaInitialReveal.center.q === nextZone.center.q &&
+    saunaInitialReveal.center.r === nextZone.center.r
+  ) {
+    return;
+  }
+
+  saunaInitialReveal = nextZone;
+}
 let getTierContextRef: () => SaunaTierContext = () => ({
   artocoinBalance: getArtocoinBalance(),
   ownedTierIds: getPurchasedTierIds()
@@ -1241,12 +1264,7 @@ saunaLifecycle = createSaunaLifecycle({
   minSpawnLimit: MIN_SPAWN_LIMIT
 });
 sauna = saunaLifecycle.sauna;
-if (!saunaInitialReveal) {
-  saunaInitialReveal = {
-    center: { ...sauna.pos },
-    radius: sauna.visionRange
-  } satisfies StrongholdSpawnExclusionZone;
-}
+refreshSaunaInitialReveal(sauna);
 getTierContextRef = saunaLifecycle.getTierContext;
 getActiveTierIdRef = saunaLifecycle.getActiveTierId;
 getActiveTierLimitRef = saunaLifecycle.getActiveTierLimit;
@@ -1274,6 +1292,7 @@ const syncLifecycleWithUnlocks = (
   if (options.persist && !tierChanged) {
     updateRosterDisplay();
   }
+  refreshSaunaInitialReveal(sauna);
 };
 
 syncActiveTierWithUnlocks = (options) => {
@@ -1281,6 +1300,7 @@ syncActiveTierWithUnlocks = (options) => {
 };
 
 syncLifecycleWithUnlocks({ persist: true });
+refreshSaunaInitialReveal(sauna);
 
 function buildGameRuntimeContext(): GameRuntimeContext {
   return {
