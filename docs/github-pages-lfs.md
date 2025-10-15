@@ -8,7 +8,9 @@ Our GitHub Pages workflow therefore performs the following steps before running 
 2. `git lfs fetch --all` so every referenced object is available.
 3. `git lfs checkout` to replace pointers with the real files.
 
-Only after these steps succeed does the workflow install dependencies and generate the static site.
+Only after these steps succeed does the workflow install dependencies and generate the static site. We also smoke-check the
+generated bundle (`dist/index.html` must exist, include a `<title>`, and ship the fallback `dist/404.html`) before handing the
+artifact to GitHub Pages so broken builds are caught before deployment.
 
 For local verification, mirror the CI sequence:
 
@@ -21,6 +23,10 @@ npm run build
 ```
 
 If the LFS objects cannot be fetched (for example when working in a sandboxed environment), expect `npm install` to fail because `package.json` is still an LFS pointer. In that scenario, CI remains the source of truth for deployable artifacts.
+
+## Deployments only when content changes
+
+The Pages workflow now starts with a lightweight change-detection job driven by [`tj-actions/changed-files`](https://github.com/tj-actions/changed-files). If a push only touches files outside the runtime, asset, tooling, or docs bundles, the workflow exits early after logging that no deploy-impacting files moved. Manual `workflow_dispatch` runs still force a rebuild, letting maintainers republish without making a dummy commit while avoiding the GitHub Pages queue churn that previously produced *"Canceling since a higher priority waiting request for pages exists"* notices on rapid pushes.
 
 ## Base path resolution on GitHub Pages
 
