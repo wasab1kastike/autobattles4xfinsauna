@@ -33,7 +33,7 @@ import {
   type SaunaTierContext,
   type SaunaTierId
 } from './sauna/tiers.ts';
-import { resetAutoFrame } from './camera/autoFrame.ts';
+import { markRevealed, resetAutoFrame } from './camera/autoFrame.ts';
 import {
   configureGameRuntime,
   getGameRuntime as getGameRuntimeImpl,
@@ -1412,6 +1412,7 @@ const clock = new GameClock(1000, (deltaMs) => {
     updateRosterDisplay();
   }
   state.save();
+  const coordsToReveal = new Set<string>();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
     if (unit.isDead() || unit.faction !== 'player') {
@@ -1432,9 +1433,30 @@ const clock = new GameClock(1000, (deltaMs) => {
       continue;
     }
 
-    map.revealAround(unit.coord, radius, { autoFrame: false });
+    for (let dq = -radius; dq <= radius; dq++) {
+      const rMin = Math.max(-radius, -dq - radius);
+      const rMax = Math.min(radius, -dq + radius);
+      for (let dr = rMin; dr <= rMax; dr++) {
+        const q = unit.coord.q + dq;
+        const r = unit.coord.r + dr;
+        coordsToReveal.add(`${q},${r}`);
+      }
+    }
     unitVisionSnapshots.set(unit.id, { coordKey: currentKey, radius });
     lastRevealTimes.set(unit.id, now);
+  }
+  for (const key of coordsToReveal) {
+    const [qString, rString] = key.split(',');
+    const q = Number.parseInt(qString, 10);
+    const r = Number.parseInt(rString, 10);
+    if (Number.isNaN(q) || Number.isNaN(r)) {
+      continue;
+    }
+    const tile = map.ensureTile(q, r);
+    if (tile.isFogged) {
+      tile.reveal();
+      markRevealed({ q, r }, map.hexSize);
+    }
   }
   invalidateFrame();
 });
