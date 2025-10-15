@@ -47,6 +47,12 @@ export type HudLayout = {
   mobileBar: HTMLDivElement;
 };
 
+export type HudPortalElements = {
+  overlay: HTMLElement;
+  resourceBar: HTMLDivElement;
+  buildId: HTMLElement;
+};
+
 const OVERLAY_GRID_CLASSES = {
   base: [
     'hud-grid',
@@ -594,4 +600,92 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     side: regions.right,
     mobileBar,
   } satisfies HudLayout;
+}
+
+export function ensureHudPortal(root: HTMLElement): HudPortalElements {
+  const doc = root.ownerDocument ?? document;
+
+  let overlay = root.querySelector<HTMLElement>('#ui-overlay');
+  if (!overlay) {
+    overlay = doc.createElement('div');
+    overlay.id = 'ui-overlay';
+    root.appendChild(overlay);
+  }
+
+  const layout = ensureHudLayout(overlay);
+
+  let buildId = overlay.querySelector<HTMLElement>('#build-id');
+  if (!buildId) {
+    buildId = doc.createElement('footer');
+    buildId.id = 'build-id';
+    buildId.setAttribute('aria-live', 'polite');
+    buildId.setAttribute('aria-label', 'Development build');
+    buildId.dataset.buildState = 'development';
+    buildId.title = 'Unversioned development build';
+
+    const label = doc.createElement('span');
+    label.className = 'build-id__label';
+    label.textContent = 'Build';
+
+    const value = doc.createElement('span');
+    value.className = 'build-id__value';
+    value.dataset.buildCommit = '';
+    value.dataset.state = 'dev';
+    value.textContent = '—';
+
+    buildId.append(label, value);
+    layout.regions.bottom.appendChild(buildId);
+  } else {
+    if (!buildId.hasAttribute('aria-live')) {
+      buildId.setAttribute('aria-live', 'polite');
+    }
+    if (!buildId.hasAttribute('aria-label')) {
+      buildId.setAttribute('aria-label', 'Development build');
+    }
+    if (!buildId.dataset.buildState) {
+      buildId.dataset.buildState = 'development';
+    }
+    if (!buildId.title) {
+      buildId.title = 'Unversioned development build';
+    }
+
+    let label = buildId.querySelector<HTMLSpanElement>('.build-id__label');
+    if (!label) {
+      label = doc.createElement('span');
+      label.className = 'build-id__label';
+      label.textContent = 'Build';
+      buildId.prepend(label);
+    }
+
+    let value = buildId.querySelector<HTMLSpanElement>('.build-id__value');
+    if (!value) {
+      value = doc.createElement('span');
+      value.className = 'build-id__value';
+      buildId.appendChild(value);
+    }
+    if (!value.dataset.buildCommit) {
+      value.dataset.buildCommit = '';
+    }
+    if (!value.dataset.state) {
+      value.dataset.state = 'dev';
+    }
+    if (!value.textContent || value.textContent.trim().length === 0) {
+      value.textContent = '—';
+    }
+  }
+
+  if (buildId.parentElement !== layout.regions.bottom) {
+    layout.regions.bottom.appendChild(buildId);
+  }
+
+  const resourceBar = layout.tabs.panels.roster;
+  if (!resourceBar.textContent || resourceBar.textContent.trim().length === 0) {
+    resourceBar.textContent = 'Saunoja Roster: 0';
+  }
+
+  return {
+    overlay,
+    resourceBar,
+    buildId,
+  } satisfies HudPortalElements;
 }

@@ -3,6 +3,7 @@ import { setupGame, start, handleCanvasClick, cleanup } from './game.ts';
 import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { createHud, type HudController, type LoadingHandle, type BannerOptions } from './ui/hud.ts';
+import { ensureHudPortal } from './ui/layout.ts';
 import { useIsMobile } from './ui/hooks/useIsMobile.ts';
 import { createBootstrapLoader, type LoaderStatusEvent } from './bootstrap/loader.ts';
 import { ensureLatestDeployment } from './bootstrap/ensureLatestDeployment.ts';
@@ -76,9 +77,6 @@ function applyBuildIdentity(): void {
     container.dataset.buildState = isCommitAvailable ? 'release' : 'development';
   }
 }
-
-applyBuildIdentity();
-
 
 void ensureLatestDeployment();
 
@@ -290,14 +288,17 @@ export function destroy(): void {
 
 export function init(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
-  const resourceBar = document.getElementById('resource-bar');
-  const overlay = document.getElementById('ui-overlay');
+  const hudRoot = document.getElementById('hud-root') as HTMLElement | null;
+  const portal = hudRoot ? ensureHudPortal(hudRoot) : null;
+  const overlay = portal?.overlay ?? document.getElementById('ui-overlay');
+  const resourceBar = portal?.resourceBar ?? document.getElementById('resource-bar');
 
   if (!canvas || !resourceBar || !overlay) {
     console.error(
       'Autobattles4xFinsauna shell is missing the required canvas, overlay, or resource bar elements.',
       {
         hasCanvas: Boolean(canvas),
+        hasHudRoot: Boolean(hudRoot),
         hasResourceBar: Boolean(resourceBar),
         hasOverlay: Boolean(overlay),
       }
@@ -315,6 +316,8 @@ export function init(): void {
   resourceBarRef = resourceBar;
   overlayRef = overlay;
   hud = createHud(overlay);
+
+  applyBuildIdentity();
 
   const mobileViewport = useIsMobile();
   addCleanup(() => mobileViewport.dispose());
