@@ -3,7 +3,7 @@ import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { BattleManager } from './battle/BattleManager.ts';
 import { pixelToAxial } from './hex/HexUtils.ts';
-import type { AxialCoord, PixelCoord } from './hex/HexUtils.ts';
+import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { resolveSaunojaAppearance } from './unit/appearance.ts';
@@ -59,6 +59,7 @@ import {
   createRosterSyncService,
   cloneStatBlock
 } from './game/roster/rosterSync.ts';
+import { createInputHandlers } from './game/runtime/inputHandlers.ts';
 import {
   configureRosterOrchestrator,
   saunojas,
@@ -303,6 +304,41 @@ configureRosterOrchestrator({
   getActiveRosterCount: () => getActiveRosterCount(),
   syncSelectionOverlay: () => syncSelectionOverlay()
 });
+let gameController: GameController | null = null;
+
+const requireGameController = (): GameController => {
+  if (!gameController) {
+    throw new Error('Game controller has not been initialized.');
+  }
+  return gameController;
+};
+
+const {
+  setSelectedCoord,
+  deselectAllSaunojas,
+  clearSaunojaSelection,
+  focusSaunoja,
+  focusSaunojaById,
+  setupGame,
+  handleCanvasClick
+} = createInputHandlers({
+  rosterService,
+  syncSelectionOverlay: () => syncSelectionOverlay(),
+  saveUnits: () => rosterService.saveUnits(),
+  updateRosterDisplay: () => updateRosterDisplay(),
+  invalidateFrame: () => invalidateFrame(),
+  getGameController: () => requireGameController()
+});
+
+export {
+  setSelectedCoord,
+  deselectAllSaunojas,
+  clearSaunojaSelection,
+  focusSaunoja,
+  focusSaunojaById,
+  setupGame,
+  handleCanvasClick
+};
 const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 let saunaLifecycle: SaunaLifecycleResult | null = null;
@@ -981,7 +1017,7 @@ function syncSaunojaRosterWithUnits(): boolean {
   return rosterSync.syncRosterWithUnits(units);
 }
 
-const gameController = new GameController({
+gameController = new GameController({
   eventBus,
   getGameRuntime: () => getGameRuntime(),
   invalidateFrame: () => invalidateFrame(),
@@ -1007,11 +1043,12 @@ const gameController = new GameController({
   createMapRenderer: (map) => new HexMapRenderer(map)
 });
 
-const map = gameController.map;
-const animator = gameController.animator;
-const battleManager = gameController.battleManager;
-const mapRenderer = gameController.mapRenderer;
-const invalidateTerrainCache = gameController.getTerrainInvalidator();
+const controller = requireGameController();
+const map = controller.map;
+const animator = controller.animator;
+const battleManager = controller.battleManager;
+const mapRenderer = controller.mapRenderer;
+const invalidateTerrainCache = controller.getTerrainInvalidator();
 
 const state = new GameState(1000);
 const persistedStrongholds = state.peekPersistedStrongholds();
@@ -1672,56 +1709,7 @@ if (!restoredSave) {
 
 const storedSelection = saunojas.find((unit) => unit.selected);
 if (storedSelection) {
-  rosterService.setSelectedCoord(storedSelection.coord);
-}
-
-function setSelectedCoord(next: AxialCoord | null): boolean {
-  const changed = rosterService.setSelectedCoord(next);
-  if (changed) {
-    syncSelectionOverlay();
-  }
-  return changed;
-}
-
-function deselectAllSaunojas(except?: Saunoja): boolean {
-  return rosterService.deselectAllSaunojas(except);
-}
-
-function clearSaunojaSelection(): boolean {
-  const changed = rosterService.clearSaunojaSelection();
-  syncSelectionOverlay();
-  return changed;
-}
-
-function focusSaunoja(target: Saunoja): boolean {
-  const changed = rosterService.focusSaunoja(target);
-  syncSelectionOverlay();
-  return changed;
-}
-
-function focusSaunojaById(unitId: string): void {
-  const target = saunojas.find((unit) => unit.id === unitId);
-  if (!target) {
-    return;
-  }
-  if (!focusSaunoja(target)) {
-    return;
-  }
-  saveUnits();
-  updateRosterDisplay();
-  invalidateFrame();
-}
-
-export function setupGame(
-  canvasEl: HTMLCanvasElement,
-  resourceBarEl: HTMLElement,
-  overlayEl: HTMLElement
-): void {
-  gameController.setupGame(canvasEl, resourceBarEl, overlayEl);
-}
-
-export function handleCanvasClick(world: PixelCoord): void {
-  gameController.handleCanvasClick(world);
+  setSelectedCoord(storedSelection.coord);
 }
 
 function equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult {
@@ -1788,7 +1776,7 @@ function unequipSlotToStash(unitId: string, slot: EquipmentSlotId): boolean {
 }
 
 export function draw(): void {
-  gameController.draw();
+  requireGameController().draw();
 }
 
 const onPolicyApplied = ({ policy }: PolicyAppliedEvent): void => {
@@ -1987,13 +1975,13 @@ const onUnitDied = ({
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
-  gameController.cleanup();
+  requireGameController().cleanup();
   hudCoordinator.dispose();
   disposeHudSignals();
 }
 
 export async function start(): Promise<void> {
-  await gameController.start();
+  await requireGameController().start();
 }
 
 export { logEvent as log };
