@@ -3,10 +3,6 @@
 ## Unreleased
 
 
-- Throttle auto-framing camera tweens to dispatch once per tick and make
-  `markRevealed` idempotent so reveal bursts do not spam overlapping camera
-  animations.
-
 
 
 - Remove the change-detection gate from the GitHub Pages workflow so every
