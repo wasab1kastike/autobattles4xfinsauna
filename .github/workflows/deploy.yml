@@ -68,12 +68,6 @@ jobs:
           lfs: true
           fetch-depth: 0
 
-      - name: Pull LFS objects
-        run: |
-          git lfs install --local
-          git lfs fetch --all
-          git lfs checkout
-
       - name: Verify LFS checkout
         run: |
           ls -l assets/units | head -5
