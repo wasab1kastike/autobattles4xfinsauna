@@ -6,6 +6,10 @@ export type HudLayoutRegions = {
   bottom: HTMLDivElement;
 };
 
+const HUD_ROOT_ID = 'hud-root';
+const HUD_OVERLAY_ID = 'ui-overlay';
+const DEFAULT_RESOURCE_BAR_TEXT = 'Saunoja Roster: 0';
+
 export type HudLayoutAnchors = {
   topLeftCluster: HTMLDivElement;
   topRightCluster: HTMLDivElement;
@@ -45,6 +49,13 @@ export type HudLayout = {
    */
   side: HTMLDivElement;
   mobileBar: HTMLDivElement;
+};
+
+export type HudOverlayContext = {
+  overlay: HTMLElement;
+  layout: HudLayout;
+  resourceBar: HTMLDivElement;
+  buildId: HTMLElement;
 };
 
 const OVERLAY_GRID_CLASSES = {
@@ -198,6 +209,67 @@ function applyVariantClasses(overlay: HTMLElement, regions: HudLayoutRegions): v
     }
     region.classList.add(...classes);
   }
+}
+
+function ensureBuildBadge(layout: HudLayout, doc: Document): HTMLElement {
+  const region = layout.regions.bottom;
+  let buildId = region.querySelector<HTMLElement>('#build-id');
+  if (!buildId) {
+    buildId = doc.createElement('footer');
+    buildId.id = 'build-id';
+    buildId.setAttribute('aria-live', 'polite');
+    buildId.setAttribute('aria-label', 'Development build');
+    buildId.dataset.buildState = buildId.dataset.buildState ?? 'development';
+    buildId.title = buildId.title || 'Unversioned development build';
+    const label = doc.createElement('span');
+    label.className = 'build-id__label';
+    label.textContent = 'Build';
+    const value = doc.createElement('span');
+    value.className = 'build-id__value';
+    value.dataset.buildCommit = value.dataset.buildCommit ?? '';
+    value.dataset.state = value.dataset.state ?? 'dev';
+    value.textContent = value.textContent?.trim() || '—';
+    buildId.append(label, value);
+    region.appendChild(buildId);
+  } else {
+    if (!buildId.querySelector('.build-id__label')) {
+      const label = doc.createElement('span');
+      label.className = 'build-id__label';
+      label.textContent = 'Build';
+      buildId.prepend(label);
+    }
+    const value =
+      buildId.querySelector<HTMLSpanElement>('[data-build-commit]') ??
+      (() => {
+        const span = doc.createElement('span');
+        span.className = 'build-id__value';
+        span.dataset.buildCommit = '';
+        span.dataset.state = 'dev';
+        span.textContent = '—';
+        buildId.appendChild(span);
+        return span;
+      })();
+    value.classList.add('build-id__value');
+    if (!value.dataset.state) {
+      value.dataset.state = 'dev';
+    }
+    if (!value.textContent || value.textContent.trim().length === 0) {
+      value.textContent = '—';
+    }
+    if (!buildId.dataset.buildState) {
+      buildId.dataset.buildState = 'development';
+    }
+    if (!buildId.hasAttribute('aria-live')) {
+      buildId.setAttribute('aria-live', 'polite');
+    }
+    if (!buildId.hasAttribute('aria-label')) {
+      buildId.setAttribute('aria-label', 'Development build');
+    }
+    if (!buildId.title) {
+      buildId.title = 'Unversioned development build';
+    }
+  }
+  return buildId;
 }
 
 function ensureBottomTabs(
@@ -594,4 +666,79 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     side: regions.right,
     mobileBar,
   } satisfies HudLayout;
+}
+
+export function ensureHudOverlayContext({
+  mount,
+  doc,
+}: {
+  mount?: HTMLElement | null;
+  doc?: Document;
+} = {}): HudOverlayContext | null {
+  const activeDoc = doc ?? (typeof document !== 'undefined' ? document : undefined);
+  if (!activeDoc) {
+    return null;
+  }
+
+  const mountPoint =
+    mount ??
+    activeDoc.getElementById(HUD_ROOT_ID) ??
+    undefined;
+
+  let overlay =
+    activeDoc.getElementById(HUD_OVERLAY_ID) ??
+    mountPoint?.querySelector<HTMLElement>(`#${HUD_OVERLAY_ID}`) ??
+    null;
+
+  if (!overlay && mountPoint) {
+    overlay = activeDoc.createElement('div');
+    overlay.id = HUD_OVERLAY_ID;
+    mountPoint.appendChild(overlay);
+  }
+
+  if (!overlay) {
+    return null;
+  }
+
+  if (mountPoint && overlay.parentElement !== mountPoint) {
+    mountPoint.appendChild(overlay);
+  }
+
+  const layout = ensureHudLayout(overlay);
+  const resourceBar = layout.tabs.panels.roster;
+  if (
+    resourceBar &&
+    resourceBar.childElementCount === 0 &&
+    (!resourceBar.textContent || resourceBar.textContent.trim().length === 0)
+  ) {
+    resourceBar.textContent = DEFAULT_RESOURCE_BAR_TEXT;
+  }
+  const buildId = ensureBuildBadge(layout, activeDoc);
+
+  return {
+    overlay,
+    layout,
+    resourceBar,
+    buildId,
+  } satisfies HudOverlayContext;
+}
+
+export function getHudOverlayElement({
+  mount,
+  doc,
+}: {
+  mount?: HTMLElement | null;
+  doc?: Document;
+} = {}): HTMLElement | null {
+  return ensureHudOverlayContext({ mount, doc })?.overlay ?? null;
+}
+
+export function getHudResourceBar({
+  mount,
+  doc,
+}: {
+  mount?: HTMLElement | null;
+  doc?: Document;
+} = {}): HTMLDivElement | null {
+  return ensureHudOverlayContext({ mount, doc })?.resourceBar ?? null;
 }

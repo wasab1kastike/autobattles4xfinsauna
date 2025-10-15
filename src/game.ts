@@ -19,6 +19,7 @@ import type { Sauna } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
 import { recordEnemyScalingTelemetry } from './state/telemetry/enemyScaling.ts';
 import { setupSaunaUI, type SaunaUIController } from './ui/sauna.tsx';
+import { getHudOverlayElement } from './ui/layout.ts';
 import type {
   SelectionItemSlot,
   SelectionStatusChip,
@@ -1433,7 +1434,7 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   }
   clock.stop();
   invalidateFrame();
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) {
     return;
   }

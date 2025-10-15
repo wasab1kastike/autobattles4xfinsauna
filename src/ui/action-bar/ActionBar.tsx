@@ -13,6 +13,7 @@ import {
   showAudioSettingsOverlay,
   type AudioSettingsOverlayHandle
 } from '../overlays/settings.tsx';
+import { getHudOverlayElement } from '../layout.ts';
 
 export type ActionBarAbilityHandlers = {
   useSisuBurst?: () => boolean;
@@ -224,7 +225,7 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
   }, []);
 
   const toggleAudioOverlay = useCallback(() => {
-    const overlay = document.getElementById('ui-overlay');
+    const overlay = getHudOverlayElement();
     if (!overlay) {
       return false;
     }

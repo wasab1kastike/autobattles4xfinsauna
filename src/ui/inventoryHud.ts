@@ -5,7 +5,7 @@ import type {
   InventoryItem,
   InventoryState
 } from '../inventory/state.ts';
-import { ensureHudLayout, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
+import { ensureHudLayout, getHudOverlayElement, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
 import { zIndex } from './theme/tokens.ts';
 import {
   createDefaultFilterState,
@@ -241,7 +241,7 @@ export function setupInventoryHud(
   inventory: InventoryState,
   options: InventoryHudOptions = {}
 ): { destroy: () => void } {
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) {
     return { destroy: () => {} };
   }

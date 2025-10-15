@@ -9,7 +9,7 @@ import {
   type SaunaTierContext,
   type SaunaTierId
 } from '../sauna/tiers.ts';
-import { ensureHudLayout } from './layout.ts';
+import { ensureHudLayout, getHudOverlayElement } from './layout.ts';
 
 export interface SaunaUIOptions {
   getActiveTierId?: () => SaunaTierId;
@@ -30,7 +30,7 @@ export function setupSaunaUI(
   sauna: Sauna,
   options: SaunaUIOptions = {}
 ): SaunaUIController {
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) {
     return {
       update: () => {},

@@ -1,6 +1,6 @@
 import { eventBus } from '../events';
 import { GameState, Resource } from '../core/GameState.ts';
-import { ensureHudLayout } from './layout.ts';
+import { ensureHudLayout, getHudOverlayElement } from './layout.ts';
 import {
   loadArtocoinBalance,
   onArtocoinChange,
@@ -102,7 +102,7 @@ export function setupTopbar(
   state: GameState,
   icons: TopbarIcons = {}
 ): TopbarControls {
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) {
     return {
       update: () => {},

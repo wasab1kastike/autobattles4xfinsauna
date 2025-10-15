@@ -17,6 +17,9 @@ const renderShell = () => {
   document.body.innerHTML = `
     <div id="game-container">
       <canvas id="game-canvas"></canvas>
+    </div>
+    <div id="root"></div>
+    <div id="hud-root">
       <div id="ui-overlay">
         <div class="hud-layout-root" data-hud-root>
           <div class="hud-region hud-top-row" data-hud-region="top">

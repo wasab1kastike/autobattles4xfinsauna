@@ -1,7 +1,8 @@
 import { radii, shadows, zIndex } from './theme/tokens.ts';
+import { getHudOverlayElement } from './layout.ts';
 
 export function showError(messages: string[]): void {
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) return;
 
   const blocker = document.createElement('div');

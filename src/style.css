@@ -82,6 +82,7 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  position: relative;
   background:
     radial-gradient(circle at 20% -10%, rgba(56, 189, 248, 0.26), transparent 55%),
     radial-gradient(circle at 80% 110%, rgba(248, 113, 113, 0.18), transparent 60%),
@@ -137,24 +138,20 @@ button {
 #root {
   position: relative;
   width: 100%;
-  flex: 1 1 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 0 0 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  overflow: hidden;
+  overflow: visible;
   background:
     radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.35), transparent 60%),
     linear-gradient(135deg, rgba(2, 6, 23, 0.9), rgba(15, 23, 42, 0.92));
 }
 
-#root > #game-container {
-  flex: 1 1 auto;
-}
-
 #game-container {
   position: relative;
+  flex: 1 1 auto;
   width: 100%;
   height: 100%;
   min-height: 100%;
@@ -164,6 +161,15 @@ button {
   border-radius: clamp(18px, 3vw, 28px);
   box-shadow: var(--shadow-strong);
   isolation: isolate;
+}
+
+#hud-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: clamp(18px, 3vw, 28px);
+  overflow: hidden;
 }
 
 #game-canvas {

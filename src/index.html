@@ -13,33 +13,10 @@
     <title>Autobattles4xFinsauna</title>
   </head>
   <body>
-    <div id="root">
-      <div id="game-container">
-        <canvas id="game-canvas"></canvas>
-        <div id="ui-overlay">
-          <div class="hud-layout-root" data-hud-root>
-            <div class="hud-region hud-top-row" data-hud-region="top"></div>
-            <div class="hud-region hud-actions" data-hud-region="left"></div>
-            <div class="hud-region hud-content" data-hud-region="content"></div>
-            <div class="hud-region hud-right-column" data-hud-region="right">
-              <div id="resource-bar">Saunoja Roster: 0</div>
-            </div>
-            <div class="hud-region hud-bottom-row" data-hud-region="bottom">
-              <footer
-                id="build-id"
-                aria-live="polite"
-                aria-label="Development build"
-                data-build-state="development"
-                title="Unversioned development build"
-              >
-                <span class="build-id__label">Build</span>
-                <span class="build-id__value" data-build-commit data-state="dev">—</span>
-              </footer>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div id="game-container">
+      <canvas id="game-canvas"></canvas>
     </div>
+    <div id="root"></div>
     <div id="hud-root"></div>
     <script type="module" src="./main.ts"></script>
   </body>
