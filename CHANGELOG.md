@@ -3,18 +3,9 @@
 ## Unreleased
 
 
-- Accelerate battlefield pathfinding by introducing a dedicated priority queue
-  for unit A* searches, trimming CPU spikes when dozens of squads reroute
-  across the map.
 
 
 
-- Throttle fog-of-war reveals to one update per unit every 120 ms so repeated
-  render ticks skip redundant map refreshes and improve performance.
-
-- Batch fog-of-war reveals across all player units each tick so shared tiles
-  only process once, eliminating redundant auto-frame work and smoothing the
-  camera loop.
 
 - Remove the change-detection gate from the GitHub Pages workflow so every
   push to `main` rebuilds and redeploys the site without being skipped.

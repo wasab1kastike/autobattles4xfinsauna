@@ -12,6 +12,13 @@ import { damageSauna } from '../sim/sauna.ts';
 import { eventBus } from '../events';
 import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
 import type { Animator } from '../render/Animator.ts';
+import {
+  CHUNK_POPULATION_RADIUS,
+  ENABLE_CHUNK_POPULATION,
+  chunkCoordFromKey,
+  chunkKeyFromAxial,
+  populateChunk,
+} from '../map/hex/chunking.ts';
 
 export const MAX_ENEMIES = 30;
 
@@ -248,6 +255,7 @@ export class BattleManager {
                 } else {
                   unit.setCoord(nextCoord);
                 }
+                this.populateChunksIfNeeded(unit, previous);
                 unit.advancePathCache(1);
                 const currentKey = coordKey(unit.coord);
                 if (currentKey === coordKey(goal)) {
@@ -298,6 +306,7 @@ export class BattleManager {
             } else {
               unit.setCoord(nextCoord);
             }
+            this.populateChunksIfNeeded(unit, previous);
             unit.advancePathCache(1);
           }
         } else {
@@ -324,6 +333,21 @@ export class BattleManager {
         }
       }
     }
+  }
+
+  private populateChunksIfNeeded(unit: Unit, previous: AxialCoord): void {
+    if (!ENABLE_CHUNK_POPULATION || unit.faction !== 'player') {
+      return;
+    }
+
+    const previousChunk = chunkKeyFromAxial(previous.q, previous.r);
+    const currentChunk = chunkKeyFromAxial(unit.coord.q, unit.coord.r);
+
+    if (previousChunk === currentChunk) {
+      return;
+    }
+
+    populateChunk(this.map, chunkCoordFromKey(currentChunk), CHUNK_POPULATION_RADIUS);
   }
 
   private tryAttackSauna(unit: Unit, sauna: Sauna): boolean {
