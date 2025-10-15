@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Restructure the HTML shell so the game canvas lives in its own container
+  while the HUD overlay mounts dynamically under a dedicated `#hud-root`
+  portal, keeping the GitHub Pages bundle and runtime bootstrap aligned.
+
 
 
 

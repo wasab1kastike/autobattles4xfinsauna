@@ -4,6 +4,7 @@ import type { Saunoja } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import { setupRightPanel, type GameEvent, type RosterEntry } from '../../ui/rightPanel.tsx';
 import { setupHudNavigation, type HudNavigationView } from '../../ui/hudNavigation.tsx';
+import { getHudOverlayElement } from '../../ui/layout.ts';
 import type { EquipmentSlotId } from '../../items/types.ts';
 import type { RosterService } from '../runtime/rosterService.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
@@ -76,7 +77,7 @@ export function initializeRightPanel(
     }
   });
 
-  const overlay = typeof document !== 'undefined' ? document.getElementById('ui-overlay') : null;
+  const overlay = getHudOverlayElement();
   const navigation = setupHudNavigation(overlay, {
     initialView: 'roster',
     onNavigate: (view) => {

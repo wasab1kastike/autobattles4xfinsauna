@@ -1,4 +1,9 @@
-import { ensureHudLayout, type HudBottomTabId, ROSTER_HUD_OPEN_CLASS } from './layout.ts';
+import {
+  ensureHudLayout,
+  getHudOverlayElement,
+  type HudBottomTabId,
+  ROSTER_HUD_OPEN_CLASS,
+} from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 import type { UnitBehavior } from '../unit/types.ts';
 
@@ -84,7 +89,7 @@ export function setupRosterHUD(
 
   const doc = container.ownerDocument ?? document;
   const overlay =
-    container.closest<HTMLElement>('#ui-overlay') ?? doc.getElementById('ui-overlay');
+    container.closest<HTMLElement>('#ui-overlay') ?? getHudOverlayElement({ doc });
   const layout = overlay ? ensureHudLayout(overlay) : null;
   const bottomTabs = layout?.tabs ?? null;
   let suppressTabSync = false;

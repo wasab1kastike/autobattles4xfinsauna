@@ -4,6 +4,7 @@ import { assetPaths, setAssets } from './game/assets.ts';
 import { loadAssets } from './loader.ts';
 import { createHud, type HudController, type LoadingHandle, type BannerOptions } from './ui/hud.ts';
 import { useIsMobile } from './ui/hooks/useIsMobile.ts';
+import { ensureHudOverlayContext } from './ui/layout.ts';
 import { createBootstrapLoader, type LoaderStatusEvent } from './bootstrap/loader.ts';
 import { ensureLatestDeployment } from './bootstrap/ensureLatestDeployment.ts';
 import { attachPointerPan } from './input/pointerPan.ts';
@@ -30,7 +31,7 @@ let initToken = 0;
 let canvasRef: HTMLCanvasElement | null = null;
 let hud: HudController = createHud(null);
 let loaderHandle: LoadingHandle | null = null;
-let resourceBarRef: HTMLElement | null = null;
+let resourceBarRef: HTMLDivElement | null = null;
 let overlayRef: HTMLElement | null = null;
 
 export interface GameOrchestrator {
@@ -290,20 +291,25 @@ export function destroy(): void {
 
 export function init(): void {
   const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;
-  const resourceBar = document.getElementById('resource-bar');
-  const overlay = document.getElementById('ui-overlay');
+  const hudMount = document.getElementById('hud-root');
+  const overlayContext = ensureHudOverlayContext({ mount: hudMount });
+  const overlay = overlayContext?.overlay ?? null;
+  const resourceBar = overlayContext?.resourceBar ?? null;
 
   if (!canvas || !resourceBar || !overlay) {
     console.error(
       'Autobattles4xFinsauna shell is missing the required canvas, overlay, or resource bar elements.',
       {
         hasCanvas: Boolean(canvas),
+        hasHudMount: Boolean(hudMount),
         hasResourceBar: Boolean(resourceBar),
         hasOverlay: Boolean(overlay),
       }
     );
     return;
   }
+
+  applyBuildIdentity();
 
   if (canvasRef) {
     destroy();

@@ -9,6 +9,7 @@ import {
 } from '../events';
 import {
   ensureHudLayout,
+  getHudOverlayElement,
   HUD_OVERLAY_COLLAPSED_CLASS,
   type HudBottomTabId,
 } from './layout.ts';
@@ -73,7 +74,7 @@ export function setupRightPanel(
   onViewChange: (listener: (view: RightPanelView) => void) => () => void;
   dispose: () => void;
 } {
-  const overlay = document.getElementById('ui-overlay');
+  const overlay = getHudOverlayElement();
   if (!overlay) {
     return {
       log: () => {},
