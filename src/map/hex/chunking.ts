@@ -3,6 +3,8 @@ import type { HexMap } from '../../hexmap.ts';
 import { pixelToAxialUnrounded } from '../../hex/HexUtils.ts';
 
 export const HEX_CHUNK_SIZE = 16;
+export const CHUNK_POPULATION_RADIUS = 4;
+export const ENABLE_CHUNK_POPULATION = false;
 
 export interface AxialBounds {
   qMin: number;
@@ -135,6 +137,10 @@ export function chunkCoordFromKey(key: ChunkKey): ChunkCoord {
   return { q, r };
 }
 
+export function chunkCoordFromAxial(q: number, r: number): ChunkCoord {
+  return { q: toChunkIndex(q), r: toChunkIndex(r) };
+}
+
 export function chunkRangeFromBounds(bounds: AxialBounds): ChunkRange {
   return {
     qMin: toChunkIndex(bounds.qMin),
@@ -180,4 +186,24 @@ export function ensureChunksPopulated(map: HexMap, range: ChunkRange): void {
   for (const chunk of enumerateChunks(range)) {
     ensureChunkPopulated(map, chunk);
   }
+}
+
+export function populateChunk(
+  map: HexMap,
+  center: ChunkCoord,
+  radius = CHUNK_POPULATION_RADIUS
+): void {
+  if (!ENABLE_CHUNK_POPULATION) {
+    return;
+  }
+
+  const normalizedRadius = Number.isFinite(radius) ? Math.max(0, Math.floor(radius)) : 0;
+  const range: ChunkRange = {
+    qMin: center.q - normalizedRadius,
+    qMax: center.q + normalizedRadius,
+    rMin: center.r - normalizedRadius,
+    rMax: center.r + normalizedRadius,
+  };
+
+  ensureChunksPopulated(map, range);
 }
