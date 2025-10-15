@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Trim redundant GitHub Pages runs by gating deployments behind a changed-file
+  detector, align the LFS fetch/checkout sequence with the documented flow,
+  and add dist smoke checks so the queue no longer floods with canceled builds.
+
 - Resolve unit and building sprite URLs through Vite's asset pipeline so
   production bundles reference the hashed art assets and render the portraits
   instead of the placeholder textures.
