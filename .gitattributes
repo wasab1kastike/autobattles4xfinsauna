@@ -9,6 +9,11 @@
 *.wav  filter=lfs diff=lfs merge=lfs -text
 *.ogg  filter=lfs diff=lfs merge=lfs -text
 
+# Do not track generated documentation assets in LFS; store real files.
+docs/assets/** -filter -diff -merge -text
+docs/assets/**/*.png -filter -diff -merge -text
+docs/assets/**/*.svg -filter -diff -merge -text
+
 # === Text files (keep normal diffs + EOL normalization) ===
 *.js   text
 *.ts   text
