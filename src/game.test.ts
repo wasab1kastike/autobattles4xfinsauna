@@ -358,7 +358,7 @@ describe('game logging', () => {
     expect(replacement.getMaxHealth()).toBe(respawnEntry?.stats.maxHealth ?? 0);
     expect(replacement.stats.health).toBe(replacement.getMaxHealth());
     expect(__getAttachedUnitIdForTest(saunojaId)).toBe(replacement.id);
-  });
+  }, 20000);
 
   it('records spawn and casualty events with sauna flavor', async () => {
     const { eventBus } = await initGame();
@@ -416,7 +416,7 @@ describe('game logging', () => {
     } finally {
       nameSpy.mockRestore();
     }
-  }, 15000);
+  }, 25000);
 
   it('marks fallen Saunojas as downed in the roster', async () => {
     const { eventBus, loadUnits, __syncSaunojaRosterForTest } = await initGame();

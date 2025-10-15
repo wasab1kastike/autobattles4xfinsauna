@@ -14,7 +14,6 @@ import {
   type PolicyAppliedEvent,
   type PolicyRevokedEvent
 } from './data/policies.ts';
-import type { SaunaDamagedPayload, SaunaDestroyedPayload } from './events/types.ts';
 import { pickFreeTileAround } from './sim/sauna.ts';
 import type { Sauna } from './sim/sauna.ts';
 import { EnemySpawner, type EnemySpawnerRuntimeModifiers } from './sim/EnemySpawner.ts';
@@ -48,6 +47,7 @@ import {
   getRosterCapLimit as getRosterCapLimitImpl,
   setRosterCapValue as setRosterCapValueImpl
 } from './game/runtime/index.ts';
+import { createHudCoordinator } from './game/runtime/hudCoordinator.ts';
 import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import { GameController } from './game/GameController.ts';
 import {
@@ -163,7 +163,6 @@ import {
   SAUNOJA_STORAGE_KEY
 } from './game/rosterStorage.ts';
 import { loadSaunaSettings, saveSaunaSettings } from './game/saunaSettings.ts';
-import { setupRosterHUD, type RosterHudController } from './ui/rosterHUD.ts';
 import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 import { getLogHistory, logEvent, subscribeToLogs } from './ui/logging.ts';
@@ -208,7 +207,6 @@ import {
 import {
   disposeHudSignals,
   getHudElapsedMs as getHudElapsedMsSnapshot,
-  incrementHudElapsedMs,
   notifyEnemyRamp,
   notifyHudElapsed,
   setHudElapsedMs as setHudElapsedMsSnapshot
@@ -243,6 +241,14 @@ const MIN_SPAWN_LIMIT = 3;
 const BASE_ENEMY_DIFFICULTY = 1;
 
 const getGameRuntime = getGameRuntimeImpl;
+
+const hudCoordinator = createHudCoordinator({
+  getRuntime: () => getGameRuntime(),
+  eventBus,
+  updateRosterDisplay: () => updateRosterDisplay(),
+  refreshRosterPanel: (entries) => refreshRosterPanel(entries)
+});
+const hudEventHandlers = hudCoordinator.getEventHandlers();
 
 function tryGetRuntimeInstance(): ReturnType<typeof getGameRuntime> | null {
   try {
@@ -935,21 +941,6 @@ function startTutorialIfNeeded(): void {
   tutorial.start();
 }
 
-function installRosterRenderer(renderer: (entries: RosterEntry[]) => void): void {
-  const runtime = getGameRuntime();
-  runtime.setPendingRosterRenderer(renderer);
-  const rosterHud = runtime.getRosterHud();
-  if (!rosterHud) {
-    return;
-  }
-  rosterHud.installRenderer(renderer);
-  const pendingEntries = runtime.getPendingRosterEntries();
-  if (pendingEntries) {
-    rosterHud.renderRoster(pendingEntries);
-    runtime.setPendingRosterEntries(null);
-  }
-}
-
 export function saveUnits(): void {
   rosterService.saveUnits();
 }
@@ -1162,36 +1153,6 @@ const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
 
 eventBus.on('unitSpawned', onUnitSpawned);
 
-const onInventoryChanged = (): void => {
-  refreshRosterPanel();
-};
-
-const onModifierChanged = (): void => {
-  refreshRosterPanel();
-};
-
-eventBus.on('inventoryChanged', onInventoryChanged);
-eventBus.on('modifierAdded', onModifierChanged);
-eventBus.on('modifierRemoved', onModifierChanged);
-eventBus.on('modifierExpired', onModifierChanged);
-
-const onSaunaDamaged = (payload: SaunaDamagedPayload): void => {
-  getGameRuntime().getSaunaUiController()?.handleDamage?.(payload);
-};
-
-const onSaunaDestroyed = (payload: SaunaDestroyedPayload): void => {
-  getGameRuntime().getSaunaUiController()?.handleDestroyed?.(payload);
-};
-
-eventBus.on('saunaDamaged', onSaunaDamaged);
-eventBus.on('saunaDestroyed', onSaunaDestroyed);
-
-const onUnitStatsChanged = (): void => {
-  updateRosterDisplay();
-};
-
-eventBus.on('unit:stats:changed', onUnitStatsChanged);
-
 const onPolicyLifecycleChanged = (): void => {
   recalculatePolicyModifiers();
 };
@@ -1353,18 +1314,18 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     getUnitEventHandlers: () => ({
       onUnitDied,
       onUnitSpawned,
-      onInventoryChanged,
-      onModifierChanged,
-      onUnitStatsChanged,
-      onSaunaDamaged,
-      onSaunaDestroyed
+      onInventoryChanged: hudEventHandlers.onInventoryChanged,
+      onModifierChanged: hudEventHandlers.onModifierChanged,
+      onUnitStatsChanged: hudEventHandlers.onUnitStatsChanged,
+      onSaunaDamaged: hudEventHandlers.onSaunaDamaged,
+      onSaunaDestroyed: hudEventHandlers.onSaunaDestroyed
     }),
     getTerrainInvalidator: () => invalidateTerrainCache,
     getClock: () => clock,
     isGamePaused: () => isGamePaused(),
     onPauseChanged: () => onPauseChanged(),
-    updateTopbarHud: (deltaMs) => updateTopbarHud(deltaMs),
-    updateSaunaHud: () => updateSaunaHud(),
+    updateTopbarHud: (deltaMs) => hudCoordinator.updateTopbarHud(deltaMs),
+    updateSaunaHud: () => hudCoordinator.updateSaunaHud(),
     refreshRosterPanel: (entries) => refreshRosterPanel(entries),
     draw: () => draw(),
     getIdleFrameLimit: () => IDLE_FRAME_LIMIT
@@ -1675,19 +1636,6 @@ function getSelectedInventoryContext(): InventoryComparisonContext | null {
     currentStats: { ...selected.effectiveStats }
   } satisfies InventoryComparisonContext;
 }
-
-function updateSaunaHud(): void {
-  getGameRuntime().getSaunaUiController()?.update();
-}
-
-function updateTopbarHud(deltaMs: number): void {
-  if (Number.isFinite(deltaMs) && deltaMs > 0) {
-    incrementHudElapsedMs(deltaMs);
-  }
-  notifyHudElapsed(getHudElapsedMsSnapshot());
-  getGameRuntime().getTopbarControls()?.update(deltaMs);
-}
-
 
 function spawn(type: UnitType, coord: AxialCoord): void {
   const id = `u${units.length + 1}`;
@@ -2040,6 +1988,7 @@ eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {
   gameController.cleanup();
+  hudCoordinator.dispose();
   disposeHudSignals();
 }
 
@@ -2072,7 +2021,7 @@ export function __rebuildRightPanelForTest(): void {
       getActiveTierLimit: () => getActiveTierLimitRef(),
       updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
     },
-    (renderer) => installRosterRenderer(renderer)
+    (renderer) => hudCoordinator.installRosterRenderer(renderer)
   );
   runtime.setAddEvent(bridge.addEvent);
   runtime.setDisposeRightPanel(bridge.dispose);
