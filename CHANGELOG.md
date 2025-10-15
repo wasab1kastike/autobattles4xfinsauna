@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retire the disabled GitHub Pages workflow file so GitHub only loads the
+  active deployment automations.
+
 - Trim redundant GitHub Pages runs by gating deployments behind a changed-file
   detector, align the LFS fetch/checkout sequence with the documented flow,
   and add dist smoke checks so the queue no longer floods with canceled builds.
