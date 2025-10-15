@@ -55,10 +55,8 @@ import {
   type RosterPersonaBaseline,
   type RosterService
 } from './game/runtime/rosterService.ts';
-import {
-  createRosterSyncService,
-  cloneStatBlock
-} from './game/roster/rosterSync.ts';
+import { cloneStatBlock, type ClaimSaunojaResult } from './game/roster/rosterSync.ts';
+import { configureGameLoader } from './game/runtime/loader.ts';
 import { createInputHandlers } from './game/runtime/inputHandlers.ts';
 import {
   configureRosterOrchestrator,
@@ -186,10 +184,7 @@ import {
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
 import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
-import {
-  pickStrongholdSpawnCoord,
-  type StrongholdSpawnExclusionZone
-} from './world/spawn/strongholdSpawn.ts';
+import type { StrongholdSpawnExclusionZone } from './world/spawn/strongholdSpawn.ts';
 import {
   applyNgPlusState as applyRuntimeNgPlusState,
   getActiveTierIdRef as getActiveTierIdAccessor,
@@ -298,6 +293,17 @@ let rosterService: RosterService = createRosterService({
   rollUpkeep: () => rollSaunojaUpkeep()
 });
 
+let loadUnitsImpl: () => Saunoja[] = () => [];
+let saveUnitsImpl: () => void = () => rosterService.saveUnits();
+let registerUnitImpl: (unit: Unit) => void = () => {};
+let syncSaunojaRosterWithUnitsImpl: () => boolean = () => false;
+let claimSaunojaImpl: (unit: Unit) => ClaimSaunojaResult = () => {
+  throw new Error('Game loader has not been configured.');
+};
+let detachSaunojaImpl: (unitId: string) => void = () => {};
+let pickStrongholdSpawnTileImpl: () => AxialCoord | undefined = () => undefined;
+let restoredSave = false;
+
 configureRosterOrchestrator({
   getUnitById: (id) => unitsById.get(id),
   getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
@@ -324,7 +330,7 @@ const {
 } = createInputHandlers({
   rosterService,
   syncSelectionOverlay: () => syncSelectionOverlay(),
-  saveUnits: () => rosterService.saveUnits(),
+  saveUnits: () => saveUnitsImpl(),
   updateRosterDisplay: () => updateRosterDisplay(),
   invalidateFrame: () => invalidateFrame(),
   getGameController: () => requireGameController()
@@ -419,6 +425,23 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
     items,
     statuses
   } satisfies UnitSelectionPayload;
+}
+
+function describeUnit(unit: Unit, attachedSaunoja?: Saunoja | null): string {
+  if (unit.type === 'stronghold-structure') {
+    return 'enemy stronghold';
+  }
+  if (unit.faction === 'player') {
+    const persona = attachedSaunoja ?? unitToSaunoja.get(unit.id) ?? null;
+    const name = persona?.name?.trim();
+    if (name) {
+      return name;
+    }
+  }
+
+  const ctorName = unit.constructor?.name ?? 'Unit';
+  const spacedName = ctorName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+  return `${spacedName} ${unit.id}`.trim();
 }
 
 function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
@@ -978,31 +1001,15 @@ function startTutorialIfNeeded(): void {
 }
 
 export function saveUnits(): void {
-  rosterService.saveUnits();
+  saveUnitsImpl();
 }
-
-const rosterSync = createRosterSyncService({
-  rosterService,
-  saunojas,
-  saunojaPolicyBaselines,
-  unitToSaunoja,
-  saunojaToUnit,
-  ensureSaunojaPolicyBaseline,
-  applySaunojaBehaviorPreference,
-  updateBaseStatsFromUnit,
-  onRosterChanged: () => {
-    saveUnits();
-    syncSelectionOverlay();
-  },
-  setSelectedCoord
-});
 
 export function loadUnits(): Saunoja[] {
-  return rosterSync.loadUnits();
+  return loadUnitsImpl();
 }
 
-function claimSaunoja(unit: Unit) {
-  return rosterSync.claimSaunoja(unit);
+function claimSaunoja(unit: Unit): ClaimSaunojaResult {
+  return claimSaunojaImpl(unit);
 }
 function hexDistance(a: AxialCoord, b: AxialCoord): number {
   const ay = -a.q - a.r;
@@ -1014,7 +1021,7 @@ const units: Unit[] = [];
 const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
 
 function syncSaunojaRosterWithUnits(): boolean {
-  return rosterSync.syncRosterWithUnits(units);
+  return syncSaunojaRosterWithUnitsImpl();
 }
 
 gameController = new GameController({
@@ -1051,6 +1058,46 @@ const mapRenderer = controller.mapRenderer;
 const invalidateTerrainCache = controller.getTerrainInvalidator();
 
 const state = new GameState(1000);
+const inventory = new InventoryState();
+reloadSaunaShopState();
+
+const loader = configureGameLoader({
+  state,
+  eventBus,
+  map,
+  units,
+  unitsById,
+  rosterService,
+  saunojas,
+  saunojaPolicyBaselines,
+  unitToSaunoja,
+  saunojaToUnit,
+  ensureSaunojaPolicyBaseline,
+  applySaunojaBehaviorPreference,
+  updateBaseStatsFromUnit,
+  setSelectedCoord: (coord) => setSelectedCoord(coord),
+  syncSelectionOverlay: () => syncSelectionOverlay(),
+  refreshRosterPanel: () => refreshRosterPanel(),
+  updateRosterDisplay: () => updateRosterDisplay(),
+  tryGetRuntimeInstance: () => tryGetRuntimeInstance(),
+  logEvent: (payload) => logEvent(payload),
+  getSaunaInitialReveal: () => saunaInitialReveal,
+  unitVisionSnapshots,
+  initialNgPlusState: currentNgPlusState,
+  applyNgPlusState: (ngPlus) => applyNgPlusState(ngPlus),
+  saveNgPlusState: (ngPlus) => saveNgPlusState(ngPlus)
+});
+
+loadUnitsImpl = loader.loadUnits;
+saveUnitsImpl = loader.saveUnits;
+registerUnitImpl = loader.registerUnit;
+syncSaunojaRosterWithUnitsImpl = loader.syncSaunojaRosterWithUnits;
+claimSaunojaImpl = loader.claimSaunoja;
+detachSaunojaImpl = loader.detachSaunoja;
+pickStrongholdSpawnTileImpl = loader.pickStrongholdSpawnTile;
+restoredSave = loader.restoredSave;
+currentNgPlusState = loader.ngPlusState;
+
 const persistedStrongholds = state.peekPersistedStrongholds();
 seedEnemyStrongholds(map, STRONGHOLD_CONFIG, persistedStrongholds, {
   encounters: {
@@ -1063,132 +1110,17 @@ function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
 }
 
-function pickEdgeFallback(): AxialCoord | undefined {
-  const occupied = new Set<string>();
-  for (const unit of units) {
-    if (!unit.isDead()) {
-      occupied.add(coordKey(unit.coord));
-    }
-  }
-
-  const candidates: AxialCoord[] = [];
-  const { minQ, maxQ, minR, maxR } = map;
-
-  const addCandidate = (coord: AxialCoord): void => {
-    const key = coordKey(coord);
-    if (occupied.has(key)) {
-      return;
-    }
-    map.ensureTile(coord.q, coord.r);
-    candidates.push(coord);
-  };
-
-  for (let q = minQ; q <= maxQ; q++) {
-    addCandidate({ q, r: minR });
-    if (maxR !== minR) {
-      addCandidate({ q, r: maxR });
-    }
-  }
-
-  for (let r = minR + 1; r <= maxR - 1; r++) {
-    addCandidate({ q: minQ, r });
-    if (maxQ !== minQ) {
-      addCandidate({ q: maxQ, r });
-    }
-  }
-
-  if (candidates.length === 0) {
-    return undefined;
-  }
-
-  const index = Math.floor(Math.random() * candidates.length);
-  return candidates[index];
-}
-
 function pickStrongholdSpawnTile(): AxialCoord | undefined {
-  const strongholdCoord = pickStrongholdSpawnCoord({
-    map,
-    units,
-    random: Math.random,
-    excludeZones: saunaInitialReveal ? [saunaInitialReveal] : undefined
-  });
-  if (strongholdCoord) {
-    return strongholdCoord;
-  }
-  return pickEdgeFallback();
+  return pickStrongholdSpawnTileImpl();
 }
-
-type UnitSpawnedPayload = { unit: Unit };
 
 function detachSaunoja(unitId: string): void {
-  const saunoja = unitToSaunoja.get(unitId);
-  if (!saunoja) {
-    return;
-  }
-  saunojaPolicyBaselines.delete(saunoja);
-  unitVisionSnapshots.delete(unitId);
-  unitToSaunoja.delete(unitId);
-  if (saunojaToUnit.get(saunoja.id) === unitId) {
-    saunojaToUnit.delete(saunoja.id);
-  }
-}
-
-function describeUnit(unit: Unit, attachedSaunoja?: Saunoja | null): string {
-  if (unit.type === 'stronghold-structure') {
-    return 'enemy stronghold';
-  }
-  if (unit.faction === 'player') {
-    const persona = attachedSaunoja ?? unitToSaunoja.get(unit.id) ?? null;
-    const name = persona?.name?.trim();
-    if (name) {
-      return name;
-    }
-  }
-
-  const ctorName = unit.constructor?.name ?? 'Unit';
-  const spacedName = ctorName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-  return `${spacedName} ${unit.id}`.trim();
+  detachSaunojaImpl(unitId);
 }
 
 function registerUnit(unit: Unit): void {
-  if (unitsById.has(unit.id)) {
-    return;
-  }
-  units.push(unit);
-  unitsById.set(unit.id, unit);
-  let persona: Saunoja | null = null;
-  if (unit.faction === 'player') {
-    const changed = syncSaunojaRosterWithUnits();
-    if (!changed) {
-      refreshRosterPanel();
-    }
-    persona = unitToSaunoja.get(unit.id) ?? null;
-  }
-  const runtime = tryGetRuntimeInstance();
-  if (runtime?.getCanvas()) {
-    runtime.invalidateFrame();
-  }
-  if (unit.faction === 'player') {
-    const steward = 'Our';
-    const unitName = describeUnit(unit, persona);
-    logEvent({
-      type: 'spawn',
-      message: `${steward} ${unitName} emerges from the steam.`,
-      metadata: {
-        unitId: unit.id,
-        unitName,
-        steward
-      }
-    });
-    updateRosterDisplay();
-  }
+  registerUnitImpl(unit);
 }
-
-const onUnitSpawned = ({ unit }: UnitSpawnedPayload): void => {
-  registerUnit(unit);
-};
-
-eventBus.on('unitSpawned', onUnitSpawned);
 
 const onPolicyLifecycleChanged = (): void => {
   recalculatePolicyModifiers();
@@ -1216,18 +1148,6 @@ function recalculatePolicyModifiers(): void {
   }
 }
 
-const inventory = new InventoryState();
-reloadSaunaShopState();
-const restoredSave = state.load(map);
-if (restoredSave) {
-  const hydratedNgPlus = state.getNgPlusState();
-  applyNgPlusState(hydratedNgPlus);
-  saveNgPlusState(hydratedNgPlus);
-} else {
-  const seededNgPlus = state.setNgPlusState(currentNgPlusState);
-  applyNgPlusState(seededNgPlus);
-  saveNgPlusState(seededNgPlus);
-}
 state.setEnemyScalingBase({
   aggression: 1,
   cadence: 1,
