@@ -25,8 +25,20 @@ jobs:
 
       - name: Ensure LFS files are present
         run: |
+          git lfs install --local
           git lfs pull || true
           git lfs checkout || true
+
+      - name: Derive Vite base path
+        run: |
+          if [ -f public/CNAME ]; then
+            echo "PUBLIC_BASE_PATH=/" >> "$GITHUB_ENV"
+          else
+            repo_name="${GITHUB_REPOSITORY##*/}"
+            if [ -n "$repo_name" ]; then
+              echo "PUBLIC_BASE_PATH=/$repo_name/" >> "$GITHUB_ENV"
+            fi
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -45,7 +57,9 @@ jobs:
           # SPA fallback
           if [ -f dist/index.html ]; then cp dist/index.html dist/404.html; fi
           # Custom domain
-          echo "artobest.com" > dist/CNAME
+          if [ -f public/CNAME ]; then
+            cp public/CNAME dist/CNAME
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -8,6 +8,11 @@
 - Retire the disabled GitHub Pages workflow file so GitHub only loads the
   active deployment automations.
 
+- Restore the repository-prefixed Vite base fallback when the custom domain
+  marker is absent so forked GitHub Pages builds load assets, and export the
+  derived base path from the workflow while copying the bundled `public/CNAME`
+  file instead of rewriting the domain.
+
 - Trim redundant GitHub Pages runs by gating deployments behind a changed-file
   detector, align the LFS fetch/checkout sequence with the documented flow,
   and add dist smoke checks so the queue no longer floods with canceled builds.

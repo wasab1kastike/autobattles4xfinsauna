@@ -27,3 +27,8 @@
 - Restore the GitHub Pages deployment workflow so it installs, fetches, and
   checks out Git LFS assets before building, guaranteeing CI publishes complete
   game resources.
+
+- Restore the repository-prefixed Vite base fallback when the custom domain
+  marker is absent so forked GitHub Pages builds load assets, and export the
+  derived base path from the workflow while copying the bundled `public/CNAME`
+  file instead of rewriting the domain.

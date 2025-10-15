@@ -111,12 +111,19 @@ function resolveBasePath(): string {
   }
 
   const homepage = resolveHomepageBase();
+  const hasCustomDomain = hasCustomDomainIndicator();
 
   if (homepage.base) {
-    return homepage.base;
+    if (!homepage.absolute) {
+      return homepage.base;
+    }
+
+    if (homepage.base !== '/' || hasCustomDomain) {
+      return homepage.base;
+    }
   }
 
-  if (homepage.absolute || hasCustomDomainIndicator()) {
+  if (hasCustomDomain) {
     return '/';
   }
 

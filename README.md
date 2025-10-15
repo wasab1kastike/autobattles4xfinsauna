@@ -131,7 +131,10 @@ npm run build
 ```
 
 Providing `PUBLIC_BASE_PATH=./` preserves fully relative output for static host
-previews while keeping hashed assets reachable.
+previews while keeping hashed assets reachable. When the custom domain CNAME is
+absent (for example on a fork), the GitHub Pages workflow automatically exports
+`PUBLIC_BASE_PATH=/<repo>/` so bundled assets stay rooted under the repository
+slug instead of the production `/` domain.
 
 ## Deployment
 
