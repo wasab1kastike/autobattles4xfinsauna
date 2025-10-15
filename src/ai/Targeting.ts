@@ -20,6 +20,13 @@ export class Targeting {
       return null;
     }
 
+    const nonStructureEnemies = enemies.filter(
+      (enemy) => enemy.type !== 'stronghold-structure'
+    );
+    if (nonStructureEnemies.length > 0) {
+      enemies = nonStructureEnemies;
+    }
+
     if (unit.priorityFactions.length > 0) {
       const preferred = enemies.filter((e) =>
         unit.priorityFactions.includes(e.faction)

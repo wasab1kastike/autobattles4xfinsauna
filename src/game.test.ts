@@ -559,6 +559,61 @@ describe('setupGame classic HUD', () => {
   });
 });
 
+describe('stronghold sieges', () => {
+  it('does not grant loot, XP, or SISU when a stronghold structure collapses', async () => {
+    const { InventoryState } = await import('./inventory/state.ts');
+    const lootSpy = vi.spyOn(InventoryState.prototype, 'addLoot');
+    const loggingModule = await import('./ui/logging.ts');
+    const logSpy = vi.spyOn(loggingModule, 'logEvent');
+
+    const { eventBus, getGameStateInstance } = await initGame();
+    const state = getGameStateInstance();
+    const baselineSisu = state.getResource(Resource.SISU);
+    const baselineSaunakunnia = state.getResource(Resource.SAUNAKUNNIA);
+    const initialLootCalls = lootSpy.mock.calls.length;
+
+    const { Unit } = await import('./units/Unit.ts');
+    const stats = { health: 200, attackDamage: 12, attackRange: 1, movementRange: 1 } as const;
+
+    const structure = new Unit(
+      'siege-structure',
+      'stronghold-structure',
+      { q: 6, r: 0 },
+      'enemy',
+      {
+        ...stats,
+        attackDamage: 0
+      }
+    );
+    eventBus.emit('unitSpawned', { unit: structure });
+
+    const attacker = new Unit('siege-attacker', 'soldier', { q: 5, r: 0 }, 'player', {
+      ...stats
+    });
+
+    structure.takeDamage(structure.getMaxHealth() + 50, attacker);
+    expect(structure.isDead()).toBe(true);
+
+    await flushLogs();
+
+    expect(lootSpy.mock.calls.length).toBe(initialLootCalls);
+
+    const stateAfter = getGameStateInstance();
+    expect(stateAfter.getResource(Resource.SISU)).toBe(baselineSisu);
+    expect(stateAfter.getResource(Resource.SAUNAKUNNIA)).toBe(baselineSaunakunnia);
+
+    const logMessages = logSpy.mock.calls
+      .map(([payload]) => payload?.message ?? '')
+      .filter((message): message is string => typeof message === 'string' && message.length > 0);
+    expect(logMessages.some((message) => message.includes('Our grit surges'))).toBe(false);
+    expect(logMessages.some((message) => /earns\s+\d+\s+XP/.test(message))).toBe(false);
+    expect(logMessages.some((message) => message.includes('Our siege engines topple'))).toBe(true);
+
+    lootSpy.mockRestore();
+    logSpy.mockRestore();
+  }, 15000);
+});
+
 describe('rendering', () => {
   it('passes all active units to the renderer while Saunoja overlays target unattached attendants', async () => {
     const assetsModule = await import('./game/assets.ts');
@@ -593,6 +648,7 @@ describe('rendering', () => {
     });
 
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    const gradientStub = { addColorStop: vi.fn() };
     const fakeCtx = {
       canvas: document.createElement('canvas') as HTMLCanvasElement,
       save: vi.fn(),
@@ -600,7 +656,30 @@ describe('rendering', () => {
       translate: vi.fn(),
       setTransform: vi.fn(),
       clearRect: vi.fn(),
-      scale: vi.fn()
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      clip: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+      createLinearGradient: vi.fn(() => gradientStub),
+      createRadialGradient: vi.fn(() => gradientStub),
+      arc: vi.fn(),
+      ellipse: vi.fn(),
+      setLineDash: vi.fn(),
+      createImageData: vi.fn((width: number, height?: number) => {
+        const resolvedHeight = height ?? width;
+        return {
+          data: new Uint8ClampedArray(width * resolvedHeight * 4),
+          width,
+          height: resolvedHeight
+        } as unknown as ImageData;
+      }),
+      putImageData: vi.fn()
     } as unknown as CanvasRenderingContext2D;
     const ctxStub = vi.fn(function (this: HTMLCanvasElement) {
       fakeCtx.canvas = this;
@@ -612,13 +691,13 @@ describe('rendering', () => {
       value: ctxStub
     });
 
+    const renderModule = await import('./render/renderer.ts');
+    const renderSpy = vi.spyOn(renderModule, 'draw').mockImplementation(() => {});
+
     const { eventBus, draw } = await initGame();
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     canvas.width = 640;
     canvas.height = 360;
-
-    const renderModule = await import('./render/renderer.ts');
-    const renderSpy = vi.spyOn(renderModule, 'draw').mockImplementation(() => {});
 
     const { Unit } = await import('./units/Unit.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
