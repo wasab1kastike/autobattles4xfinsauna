@@ -152,6 +152,69 @@ describe('TerrainCache', () => {
     }
   });
 
+  it('recomputes cached chunk offsets when the map expands into negative axial coordinates', () => {
+    const map = new HexMap(2, 2);
+    const originTile = map.ensureTile(0, 0);
+    originTile.reveal();
+
+    const drawImage = vi.fn();
+    const ctx = createStubContext(drawImage);
+    const originalCreateElement = document.createElement;
+    const offscreenCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+    } as unknown as HTMLCanvasElement;
+
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          offscreenCanvas.width = 0;
+          offscreenCanvas.height = 0;
+          return offscreenCanvas;
+        }
+        return originalCreateElement.call(document, tagName);
+      });
+
+    try {
+      const cache = new TerrainCache(map);
+      const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
+      ensureChunksPopulated(map, range);
+      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
+      const images = {
+        'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
+      };
+
+      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      const initialChunk = initialChunks.find((chunk) => chunk.key === '0,0');
+      expect(initialChunk).toBeDefined();
+
+      const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
+      const centerPixel = axialToPixel({ q: 0, r: 0 }, map.hexSize);
+      expect(initialChunk!.origin.x).toBeCloseTo(centerPixel.x - origin.x - hexWidth / 2, 5);
+      expect(initialChunk!.origin.y).toBeCloseTo(centerPixel.y - origin.y - hexHeight / 2, 5);
+
+      const diagonalTile = map.ensureTile(-1, -1);
+      diagonalTile.reveal();
+      const shiftedOrigin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
+
+      const rerenderedChunks = cache.getRenderableChunks(range, map.hexSize, images, shiftedOrigin);
+      const rerenderedChunk = rerenderedChunks.find((chunk) => chunk.key === '0,0');
+      expect(rerenderedChunk).toBeDefined();
+      expect(rerenderedChunk).not.toBe(initialChunk);
+
+      expect(rerenderedChunk!.origin.x).toBeCloseTo(centerPixel.x - shiftedOrigin.x - hexWidth / 2, 5);
+      expect(rerenderedChunk!.origin.y).toBeCloseTo(centerPixel.y - shiftedOrigin.y - hexHeight / 2, 5);
+      expect(rerenderedChunk!.origin.x).not.toBeCloseTo(initialChunk!.origin.x, 5);
+      expect(rerenderedChunk!.origin.y).not.toBeCloseTo(initialChunk!.origin.y, 5);
+    } finally {
+      createElementSpy.mockRestore();
+    }
+  });
+
   it('marks affected chunks dirty once terrain icons finish loading', async () => {
     clearIconCache();
     const map = new HexMap(1, 1);

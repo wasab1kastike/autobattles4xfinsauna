@@ -44,6 +44,7 @@ export class FogCache {
   private readonly dirtyChunks = new Set<ChunkKey>();
   private readonly unsubscribe: () => void;
   private lastOrigin?: PixelCoord;
+  private lastBounds?: { minQ: number; maxQ: number; minR: number; maxR: number };
 
   constructor(private readonly map: HexMap) {
     this.unsubscribe = map.addTileChangeListener((coord, tile, change) => {
@@ -63,16 +64,24 @@ export class FogCache {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.lastOrigin = undefined;
+    this.lastBounds = undefined;
   }
 
   invalidate(): void {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.lastOrigin = undefined;
+    this.lastBounds = undefined;
   }
 
   markTileDirty(q: number, r: number): void {
     this.dirtyChunks.add(chunkKeyFromAxial(q, r));
+  }
+
+  private markAllChunksDirty(): void {
+    for (const key of this.chunkCanvases.keys()) {
+      this.dirtyChunks.add(key);
+    }
   }
 
   getRenderableChunks(
@@ -81,14 +90,30 @@ export class FogCache {
     zoom: number,
     origin: PixelCoord
   ): FogChunkCanvas[] {
+    const currentBounds = {
+      minQ: this.map.minQ,
+      maxQ: this.map.maxQ,
+      minR: this.map.minR,
+      maxR: this.map.maxR,
+    };
+
+    if (
+      !this.lastBounds ||
+      this.lastBounds.minQ !== currentBounds.minQ ||
+      this.lastBounds.maxQ !== currentBounds.maxQ ||
+      this.lastBounds.minR !== currentBounds.minR ||
+      this.lastBounds.maxR !== currentBounds.maxR
+    ) {
+      this.markAllChunksDirty();
+      this.lastBounds = { ...currentBounds };
+    }
+
     if (
       !this.lastOrigin ||
       this.lastOrigin.x !== origin.x ||
       this.lastOrigin.y !== origin.y
     ) {
-      for (const key of this.chunkCanvases.keys()) {
-        this.dirtyChunks.add(key);
-      }
+      this.markAllChunksDirty();
       this.lastOrigin = { ...origin };
     }
     const chunks: FogChunkCanvas[] = [];
