@@ -469,9 +469,12 @@ describe('game logging', () => {
       JSON.stringify({ maxRosterSize: 2, activeTierId: 'ember-circuit' })
     );
 
-    const { __getActiveTierIdForTest } = await initGame();
+    await initGame();
+    const { getActiveTierId: getLifecycleTierId } = await import(
+      './game/runtime/saunaLifecycleManager.ts'
+    );
 
-    expect(__getActiveTierIdForTest()).toBe('mythic-conclave');
+    expect(getLifecycleTierId()).toBe('mythic-conclave');
 
     const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
     const parsed = stored
@@ -593,15 +596,40 @@ describe('rendering', () => {
     });
 
     const originalGetContext = HTMLCanvasElement.prototype.getContext;
-    const fakeCtx = {
+    const ctxTarget: Record<PropertyKey, unknown> = {
       canvas: document.createElement('canvas') as HTMLCanvasElement,
       save: vi.fn(),
       restore: vi.fn(),
       translate: vi.fn(),
       setTransform: vi.fn(),
       clearRect: vi.fn(),
-      scale: vi.fn()
-    } as unknown as CanvasRenderingContext2D;
+      scale: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      clip: vi.fn(),
+      fillRect: vi.fn(),
+      drawImage: vi.fn(),
+      createRadialGradient: vi.fn(() => ({ addColorStop: vi.fn() })),
+      createImageData: vi.fn((width: number, height: number) => ({
+        data: new Uint8ClampedArray(Math.max(1, Math.floor(width * height * 4)))
+      })),
+      getImageData: vi.fn((x: number, y: number, width: number, height: number) => ({
+        data: new Uint8ClampedArray(Math.max(1, Math.floor(width * height * 4)))
+      })),
+      putImageData: vi.fn()
+    };
+    const fakeCtx = new Proxy(ctxTarget, {
+      get(target, prop: PropertyKey) {
+        if (!(prop in target)) {
+          target[prop] = vi.fn();
+        }
+        return target[prop];
+      }
+    }) as CanvasRenderingContext2D;
     const ctxStub = vi.fn(function (this: HTMLCanvasElement) {
       fakeCtx.canvas = this;
       return fakeCtx;
@@ -612,13 +640,13 @@ describe('rendering', () => {
       value: ctxStub
     });
 
+    const renderModule = await import('./render/renderer.ts');
+    const renderSpy = vi.spyOn(renderModule, 'draw').mockImplementation(() => {});
+
     const { eventBus, draw } = await initGame();
     const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     canvas.width = 640;
     canvas.height = 360;
-
-    const renderModule = await import('./render/renderer.ts');
-    const renderSpy = vi.spyOn(renderModule, 'draw').mockImplementation(() => {});
 
     const { Unit } = await import('./units/Unit.ts');
     const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
@@ -638,6 +666,7 @@ describe('rendering', () => {
       renderSpy.mockClear();
       draw();
 
+      expect(ctxStub).toHaveBeenCalled();
       expect(renderSpy).toHaveBeenCalledTimes(1);
       const [, , , unitsArg, , drawOptions] = renderSpy.mock.calls[0]!;
       expect(unitsArg.some((unit) => unit.id === playerUnit.id)).toBe(true);
