@@ -133,14 +133,7 @@ import {
   getLevelForExperience,
   type StatAwards
 } from './progression/experiencePlan.ts';
-import {
-  createNgPlusRng,
-  ensureNgPlusRunState,
-  loadNgPlusState,
-  planNextNgPlusRun,
-  saveNgPlusState,
-  type NgPlusState
-} from './progression/ngplus.ts';
+import { planNextNgPlusRun, saveNgPlusState, type NgPlusState } from './progression/ngplus.ts';
 import {
   calculateArtocoinPayout,
   creditArtocoins,
@@ -187,11 +180,7 @@ import {
   subscribeToSaunaShop as subscribeToSaunaShopState
 } from './game/saunaShopState.ts';
 import { initializeClassicHud } from './game/setup/hud.ts';
-import {
-  createSaunaLifecycle,
-  type SaunaLifecycleResult,
-  type SaunaTierChangeContext
-} from './game/setup/sauna.ts';
+import { type SaunaLifecycleResult, type SaunaTierChangeContext } from './game/setup/sauna.ts';
 import {
   initializeRightPanel as createRightPanelBridge,
   type RightPanelBridge
@@ -201,6 +190,21 @@ import {
   pickStrongholdSpawnCoord,
   type StrongholdSpawnExclusionZone
 } from './world/spawn/strongholdSpawn.ts';
+import {
+  applyNgPlusState as applyRuntimeNgPlusState,
+  getActiveTierIdRef as getActiveTierIdAccessor,
+  getActiveTierLimitRef as getActiveTierLimitAccessor,
+  getEnemyRandom,
+  getLootRandom,
+  getNgPlusState,
+  getResolveSpawnLimitRef as getResolveSpawnLimitAccessor,
+  getSetActiveTierRef as getSetActiveTierAccessor,
+  getSpawnTierQueue,
+  getTierContextRef as getTierContextRefAccessor,
+  getUpdateRosterCapRef as getUpdateRosterCapAccessor,
+  initSaunaLifecycle,
+  withLifecycleSync
+} from './game/runtime/saunaLifecycleManager.ts';
 import {
   disposeHudSignals,
   getHudElapsedMs as getHudElapsedMsSnapshot,
@@ -251,18 +255,15 @@ function tryGetRuntimeInstance(): ReturnType<typeof getGameRuntime> | null {
   }
 }
 
-let currentNgPlusState: NgPlusState = ensureNgPlusRunState(loadNgPlusState());
-let enemyRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
-let lootRandom: () => number = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
-let syncActiveTierWithUnlocks:
-  | ((options?: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void }) => void)
-  | null = null;
+let currentNgPlusState: NgPlusState = getNgPlusState();
+let enemyRandom: () => number = getEnemyRandom();
+let lootRandom: () => number = getLootRandom();
 
 function applyNgPlusState(next: NgPlusState): void {
-  currentNgPlusState = ensureNgPlusRunState(next);
-  enemyRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x01);
-  lootRandom = createNgPlusRng(currentNgPlusState.runSeed, 0x02);
-  syncActiveTierWithUnlocks?.({ persist: true });
+  applyRuntimeNgPlusState(next);
+  currentNgPlusState = getNgPlusState();
+  enemyRandom = getEnemyRandom();
+  lootRandom = getLootRandom();
 }
 
 function determineLootRollCount(randomSource: () => number): number {
@@ -301,19 +302,17 @@ const overlaySaunojasScratch: Saunoja[] = [];
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
 let saunaInitialReveal: StrongholdSpawnExclusionZone | null = null;
-let getTierContextRef: () => SaunaTierContext = () => ({
-  artocoinBalance: getArtocoinBalance(),
-  ownedTierIds: getPurchasedTierIds()
-});
-let getActiveTierIdRef: () => SaunaTierId = () => DEFAULT_SAUNA_TIER_ID;
-let getActiveTierLimitRef: () => number = () => 0;
-let updateRosterCapRef: (value: number, options?: { persist?: boolean }) => number = (value) => value;
-let resolveSpawnLimitRef: () => number = () => MIN_SPAWN_LIMIT;
+let getTierContextRef: () => SaunaTierContext = getTierContextRefAccessor();
+let getActiveTierIdRef: () => SaunaTierId = getActiveTierIdAccessor();
+let getActiveTierLimitRef: () => number = getActiveTierLimitAccessor();
+let updateRosterCapRef: (value: number, options?: { persist?: boolean }) => number =
+  getUpdateRosterCapAccessor();
+let resolveSpawnLimitRef: () => number = getResolveSpawnLimitAccessor();
 let setActiveTierRef: (
   tierId: SaunaTierId,
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
-) => boolean = () => false;
-let spawnTierQueue: PlayerSpawnTierHelpers;
+) => boolean = getSetActiveTierAccessor();
+let spawnTierQueue: PlayerSpawnTierHelpers = getSpawnTierQueue();
 
 const IDLE_FRAME_LIMIT = 10;
 
@@ -1236,7 +1235,7 @@ state.setEnemyScalingBase({
   cadence: 1,
   strength: 1
 });
-saunaLifecycle = createSaunaLifecycle({
+saunaLifecycle = initSaunaLifecycle({
   map,
   ngPlusState: currentNgPlusState,
   getActiveRosterCount: () => getActiveRosterCount(),
@@ -1250,38 +1249,40 @@ if (!saunaInitialReveal) {
     radius: sauna.visionRange
   } satisfies StrongholdSpawnExclusionZone;
 }
-getTierContextRef = saunaLifecycle.getTierContext;
-getActiveTierIdRef = saunaLifecycle.getActiveTierId;
-getActiveTierLimitRef = saunaLifecycle.getActiveTierLimit;
-updateRosterCapRef = saunaLifecycle.updateRosterCap;
-resolveSpawnLimitRef = saunaLifecycle.resolveSpawnLimit;
-setActiveTierRef = saunaLifecycle.setActiveTier;
-spawnTierQueue = saunaLifecycle.spawnTierQueue;
+getTierContextRef = getTierContextRefAccessor();
+getActiveTierIdRef = getActiveTierIdAccessor();
+getActiveTierLimitRef = getActiveTierLimitAccessor();
+updateRosterCapRef = getUpdateRosterCapAccessor();
+resolveSpawnLimitRef = getResolveSpawnLimitAccessor();
+setActiveTierRef = getSetActiveTierAccessor();
+spawnTierQueue = getSpawnTierQueue();
 
-const syncLifecycleWithUnlocks = (
-  options: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void } = {}
-): void => {
-  if (!saunaLifecycle) {
-    return;
+const syncLifecycleWithUnlocks = withLifecycleSync(
+  (
+    sync: (options?: {
+      persist?: boolean;
+      onTierChanged?: (context: SaunaTierChangeContext) => void;
+    }) => void
+  ) => {
+    return (
+      options: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void } = {}
+    ): void => {
+      let tierChanged = false;
+      sync({
+        ...options,
+        onTierChanged: (context) => {
+          tierChanged = true;
+          options.onTierChanged?.(context);
+          getGameRuntime().getSaunaUiController()?.update?.();
+          updateRosterDisplay();
+        }
+      });
+      if (options.persist && !tierChanged) {
+        updateRosterDisplay();
+      }
+    };
   }
-  let tierChanged = false;
-  saunaLifecycle.syncActiveTierWithUnlocks({
-    persist: options.persist,
-    onTierChanged: (context) => {
-      tierChanged = true;
-      options.onTierChanged?.(context);
-      getGameRuntime().getSaunaUiController()?.update?.();
-      updateRosterDisplay();
-    }
-  });
-  if (options.persist && !tierChanged) {
-    updateRosterDisplay();
-  }
-};
-
-syncActiveTierWithUnlocks = (options) => {
-  syncLifecycleWithUnlocks(options ?? {});
-};
+);
 
 syncLifecycleWithUnlocks({ persist: true });
 
