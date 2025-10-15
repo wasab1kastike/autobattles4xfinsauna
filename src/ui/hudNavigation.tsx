@@ -1,10 +1,9 @@
 import rosterIconUrl from '../../assets/ui/hud-roster.svg';
 import policiesIconUrl from '../../assets/ui/hud-policies.svg';
 import eventsIconUrl from '../../assets/ui/hud-events.svg';
-import enemyScalingIconUrl from '../../assets/ui/hud-scaling.svg';
 import { ensureHudLayout } from './layout.ts';
 
-export type HudNavigationView = 'roster' | 'policies' | 'events' | 'enemy-scaling';
+export type HudNavigationView = 'roster' | 'policies' | 'events';
 
 type HudNavigationOptions = {
   onNavigate?: (view: HudNavigationView) => void;
@@ -39,12 +38,6 @@ const NAVIGATION_ITEMS: Array<{
     label: 'Events',
     description: 'Review incoming briefings',
     icon: eventsIconUrl
-  },
-  {
-    id: 'enemy-scaling',
-    label: 'Enemy Scaling',
-    description: 'Audit ramp pressure telemetry',
-    icon: enemyScalingIconUrl
   }
 ];
 
