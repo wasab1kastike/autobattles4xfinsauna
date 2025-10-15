@@ -2,7 +2,7 @@ import type { AxialCoord } from './hex/HexUtils.ts';
 import { getNeighbors as axialNeighbors } from './hex/HexUtils.ts';
 import { HexTile, type TileMutation } from './hex/HexTile.ts';
 import { terrainAt } from './map/terrain.ts';
-import { markRevealed, autoFrame, tweenCamera } from './camera/autoFrame.ts';
+import { markRevealed, autoFrame, queueCameraTween } from './camera/autoFrame.ts';
 
 export type TileChangeType = TileMutation | 'created';
 export type TileChangeListener = (coord: AxialCoord, tile: HexTile, change: TileChangeType) => void;
@@ -157,7 +157,7 @@ export class HexMap {
         })()
       : { width: 0, height: 0, safeRight: 0 };
     const frame = autoFrame(viewport);
-    tweenCamera(frame, 300);
+    queueCameraTween(frame, 300);
   }
 
 }
