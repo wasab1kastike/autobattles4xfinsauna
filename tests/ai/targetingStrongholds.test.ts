@@ -39,4 +39,27 @@ describe('Targeting stronghold structures', () => {
 
     expect(fallback).toBe(stronghold);
   });
+
+  it('targets strongholds when other enemies are too far away', () => {
+    const attacker = new Unit('attacker', 'soldier', { q: 0, r: 0 }, 'player', {
+      ...baseStats
+    });
+    const distantRaider = new Unit('raider-2', 'raider', { q: 10, r: 0 }, 'enemy', {
+      ...baseStats
+    });
+    const nearbyStronghold = new Unit(
+      'stronghold-2',
+      'stronghold-structure',
+      { q: 2, r: 0 },
+      'enemy',
+      {
+        ...baseStats,
+        attackDamage: 0
+      }
+    );
+
+    const target = Targeting.selectTarget(attacker, [distantRaider, nearbyStronghold]);
+
+    expect(target).toBe(nearbyStronghold);
+  });
 });

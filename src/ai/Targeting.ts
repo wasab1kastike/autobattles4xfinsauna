@@ -20,11 +20,22 @@ export class Targeting {
       return null;
     }
 
-    const nonStructureEnemies = enemies.filter(
-      (enemy) => enemy.type !== 'stronghold-structure'
+    const movementRange = Number.isFinite(unit.stats.movementRange)
+      ? unit.stats.movementRange
+      : 0;
+    const attackRange = Number.isFinite(unit.stats.attackRange)
+      ? unit.stats.attackRange
+      : 0;
+    const proximityRange = movementRange + attackRange;
+
+    const hasNearbyNonStructureEnemy = enemies.some(
+      (enemy) =>
+        enemy.type !== 'stronghold-structure' &&
+        unit.distanceTo(enemy.coord) <= proximityRange
     );
-    if (nonStructureEnemies.length > 0) {
-      enemies = nonStructureEnemies;
+
+    if (hasNearbyNonStructureEnemy) {
+      enemies = enemies.filter((enemy) => enemy.type !== 'stronghold-structure');
     }
 
     if (unit.priorityFactions.length > 0) {
