@@ -163,6 +163,7 @@ export class TerrainCache {
   private readonly readyIconPaths = new Set<string>();
   private readonly unsubscribe: () => void;
   private lastOrigin?: PixelCoord;
+  private lastBounds?: { minQ: number; maxQ: number; minR: number; maxR: number };
 
   constructor(private readonly map: HexMap) {
     this.unsubscribe = map.addTileChangeListener((coord, _tile, change) => {
@@ -177,6 +178,7 @@ export class TerrainCache {
     this.cachedImages = undefined;
     this.clearIconTracking();
     this.lastOrigin = undefined;
+    this.lastBounds = undefined;
   }
 
   invalidate(): void {
@@ -185,6 +187,7 @@ export class TerrainCache {
     this.cachedImages = undefined;
     this.clearIconTracking();
     this.lastOrigin = undefined;
+    this.lastBounds = undefined;
   }
 
   markChunkDirty(key: ChunkKey): void {
@@ -195,20 +198,42 @@ export class TerrainCache {
     this.dirtyChunks.add(chunkKeyFromAxial(q, r));
   }
 
+  private markAllChunksDirty(): void {
+    for (const key of this.chunkCanvases.keys()) {
+      this.dirtyChunks.add(key);
+    }
+  }
+
   getRenderableChunks(
     range: ChunkRange,
     hexSize: number,
     images: LoadedAssets['images'],
     origin: PixelCoord
   ): ChunkCanvas[] {
+    const currentBounds = {
+      minQ: this.map.minQ,
+      maxQ: this.map.maxQ,
+      minR: this.map.minR,
+      maxR: this.map.maxR,
+    };
+
+    if (
+      !this.lastBounds ||
+      this.lastBounds.minQ !== currentBounds.minQ ||
+      this.lastBounds.maxQ !== currentBounds.maxQ ||
+      this.lastBounds.minR !== currentBounds.minR ||
+      this.lastBounds.maxR !== currentBounds.maxR
+    ) {
+      this.markAllChunksDirty();
+      this.lastBounds = { ...currentBounds };
+    }
+
     if (
       !this.lastOrigin ||
       this.lastOrigin.x !== origin.x ||
       this.lastOrigin.y !== origin.y
     ) {
-      for (const key of this.chunkCanvases.keys()) {
-        this.dirtyChunks.add(key);
-      }
+      this.markAllChunksDirty();
       this.lastOrigin = { ...origin };
     }
     this.refreshAssets(images);
@@ -232,9 +257,7 @@ export class TerrainCache {
     }
 
     this.cachedImages = images;
-    for (const key of this.chunkCanvases.keys()) {
-      this.dirtyChunks.add(key);
-    }
+    this.markAllChunksDirty();
   }
 
   private onTileChange(coord: { q: number; r: number }, change: TileChangeType): void {

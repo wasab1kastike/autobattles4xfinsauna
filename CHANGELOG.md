@@ -13,6 +13,10 @@
   production bundles reference the hashed art assets and render the portraits
   instead of the placeholder textures.
 
+- Track the live hex bounds in the terrain and fog caches so map expansions
+  invalidate chunk offsets before rendering, keeping terrain and fog aligned
+  after negative-coordinate growth and covering the regression with Vitest.
+
 - Guard stronghold encounter unit registration so early seeding no longer
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
