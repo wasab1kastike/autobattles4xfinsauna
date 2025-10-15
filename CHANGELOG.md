@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Remove the change-detection gate from the GitHub Pages workflow so every
+  push to `main` rebuilds and redeploys the site without being skipped.
+
 - Retire the disabled GitHub Pages workflow file so GitHub only loads the
   active deployment automations.
 
