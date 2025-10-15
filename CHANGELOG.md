@@ -24,6 +24,10 @@
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
 
+- Confirm the Vite `dev`, `build`, and `preview` scripts remain intact so
+  `npm run build` reliably emits the production bundle into `dist/` for local,
+  CI, and GitHub Pages deployments.
+
 - Resolve the Vite base path to `/` when a custom domain is detected via an
   absolute `homepage` or bundled `public/CNAME`, keeping repository-prefixed
   slugs as an opt-in fallback for GitHub-hosted deployments.
