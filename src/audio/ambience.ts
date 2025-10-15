@@ -5,6 +5,7 @@ import {
   onMixerChange,
   setMusicVolume
 } from './mixer.ts';
+import { resolveAssetUrl } from '../loader.ts';
 
 type AmbienceLayer = {
   source: AudioBufferSourceNode;
@@ -19,7 +20,8 @@ export type AmbienceState = {
   globallyMuted: boolean;
 };
 
-const AMBIENCE_SOURCES = ['/assets/sounds/sauna-forest.ogg', '/assets/sounds/sauna-forest.mp3'];
+const AMBIENCE_FILENAMES = ['/assets/sounds/sauna-forest.ogg', '/assets/sounds/sauna-forest.mp3'] as const;
+const AMBIENCE_SOURCES = AMBIENCE_FILENAMES.map((filename) => resolveAssetUrl(filename));
 const ENABLED_KEY = 'audio_enabled';
 
 const listeners = new Set<(state: AmbienceState) => void>();
