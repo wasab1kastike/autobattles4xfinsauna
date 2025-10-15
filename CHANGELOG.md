@@ -4,10 +4,7 @@
 
 
 
-- Introduce an optional chunk pre-population routine guarded by
-  `ENABLE_CHUNK_POPULATION` so enabling the flag expands surrounding map
-  chunks as player units cross chunk boundaries, reducing hitching in large
-  skirmishes.
+
 
 - Remove the change-detection gate from the GitHub Pages workflow so every
   push to `main` rebuilds and redeploys the site without being skipped.

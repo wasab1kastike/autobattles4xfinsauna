@@ -6,6 +6,7 @@ import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
 import type { UnitBehavior, UnitStats } from '../unit/types.ts';
 import { normalizeAppearanceId } from '../unit/appearance.ts';
+import { PriorityQueue } from './PriorityQueue.ts';
 import type {
   CombatParticipant,
   CombatHookMap,
@@ -477,28 +478,29 @@ export class Unit {
     const start = this.coord;
     const startKey = coordKey(start);
     const targetKey = coordKey(target);
-    const open = new Set<string>([startKey]);
     const cameFrom = new Map<string, string | null>([[startKey, null]]);
     const gScore = new Map<string, number>([[startKey, 0]]);
-    const fScore = new Map<string, number>([[startKey, hexDistance(start, target)]]);
+    const startFScore = hexDistance(start, target);
+    const fScore = new Map<string, number>([[startKey, startFScore]]);
+    const open = new PriorityQueue<string>();
+    const inOpen = new Map<string, number>();
+    open.push(startKey, startFScore);
+    inOpen.set(startKey, startFScore);
 
-    while (open.size > 0) {
-      let currentKey: string | null = null;
-      let bestF = Infinity;
-      for (const key of open) {
-        const value = fScore.get(key) ?? Infinity;
-        if (value < bestF) {
-          bestF = value;
-          currentKey = key;
-        }
-      }
-      if (currentKey === null) {
+    while (!open.isEmpty()) {
+      const currentEntry = open.pop();
+      if (!currentEntry) {
         break;
       }
+      const { value: currentKey, priority } = currentEntry;
+      const trackedPriority = inOpen.get(currentKey);
+      if (trackedPriority === undefined || trackedPriority !== priority) {
+        continue;
+      }
+      inOpen.delete(currentKey);
       if (currentKey === targetKey) {
         break;
       }
-      open.delete(currentKey);
       const current = fromKey(currentKey);
       const currentG = gScore.get(currentKey) ?? Infinity;
       for (const neighbor of getNeighbors(current)) {
@@ -510,8 +512,10 @@ export class Unit {
         if (tentativeG < (gScore.get(neighborKey) ?? Infinity)) {
           cameFrom.set(neighborKey, currentKey);
           gScore.set(neighborKey, tentativeG);
-          fScore.set(neighborKey, tentativeG + hexDistance(neighbor, target));
-          open.add(neighborKey);
+          const neighborFScore = tentativeG + hexDistance(neighbor, target);
+          fScore.set(neighborKey, neighborFScore);
+          open.push(neighborKey, neighborFScore);
+          inOpen.set(neighborKey, neighborFScore);
         }
       }
     }

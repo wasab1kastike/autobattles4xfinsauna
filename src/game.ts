@@ -1019,6 +1019,9 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
 
 const units: Unit[] = [];
 const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
+const lastRevealTimes = new Map<string, number>();
+
+const REVEAL_THROTTLE_MS = 120;
 
 function syncSaunojaRosterWithUnits(): boolean {
   return syncSaunojaRosterWithUnitsImpl();
@@ -1236,7 +1239,10 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     startTutorialIfNeeded: () => startTutorialIfNeeded(),
     disposeTutorial: () => disposeTutorial(),
     getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
-    resetUnitVisionSnapshots: () => unitVisionSnapshots.clear(),
+    resetUnitVisionSnapshots: () => {
+      unitVisionSnapshots.clear();
+      lastRevealTimes.clear();
+    },
     resetObjectiveTracker: () => {
       objectiveTracker?.offProgress(handleObjectiveProgress);
       objectiveTracker?.dispose();
@@ -1420,8 +1426,15 @@ const clock = new GameClock(1000, (deltaMs) => {
       continue;
     }
 
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const lastReveal = lastRevealTimes.get(unit.id);
+    if (lastReveal !== undefined && now - lastReveal < REVEAL_THROTTLE_MS) {
+      continue;
+    }
+
     map.revealAround(unit.coord, radius, { autoFrame: false });
     unitVisionSnapshots.set(unit.id, { coordKey: currentKey, radius });
+    lastRevealTimes.set(unit.id, now);
   }
   invalidateFrame();
 });

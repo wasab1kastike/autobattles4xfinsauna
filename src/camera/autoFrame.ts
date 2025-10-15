@@ -12,7 +12,11 @@ function key(c: AxialCoord): string {
 /** Track a hex as revealed and update the current hex size. */
 export function markRevealed(coord: AxialCoord, hexSize: number): void {
   currentHexSize = hexSize;
-  revealedHexes.add(key(coord));
+  const coordKey = key(coord);
+  if (revealedHexes.has(coordKey)) {
+    return;
+  }
+  revealedHexes.add(coordKey);
 }
 
 export interface ViewportSize {
@@ -114,6 +118,44 @@ export function tweenCamera(target: CameraFrame, duration = 300): void {
   } else {
     setTimeout(() => step(typeof performance !== 'undefined' ? performance.now() : Date.now()), 0);
   }
+}
+
+interface PendingTween {
+  frame: CameraFrame;
+  duration: number;
+}
+
+let pendingTween: PendingTween | null = null;
+let tweenDispatchScheduled = false;
+
+function dispatchPendingTween(): void {
+  tweenDispatchScheduled = false;
+  const payload = pendingTween;
+  pendingTween = null;
+  if (payload) {
+    tweenCamera(payload.frame, payload.duration);
+  }
+}
+
+function scheduleTweenDispatch(): void {
+  if (tweenDispatchScheduled) {
+    return;
+  }
+  tweenDispatchScheduled = true;
+  if (typeof requestAnimationFrame !== 'undefined') {
+    requestAnimationFrame((_time: number) => {
+      dispatchPendingTween();
+    });
+  } else {
+    setTimeout(() => {
+      dispatchPendingTween();
+    }, 0);
+  }
+}
+
+export function queueCameraTween(frame: CameraFrame, duration = 300): void {
+  pendingTween = { frame, duration };
+  scheduleTweenDispatch();
 }
 
 /** Clear all tracked revealed tiles. Useful when starting a new game. */
