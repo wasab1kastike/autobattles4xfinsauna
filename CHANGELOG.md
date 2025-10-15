@@ -4,6 +4,9 @@
 
 
 
+- Batch fog-of-war reveals across player units each tick so the map processes
+  a single reveal pass without redundant camera adjustments.
+
 - Remove the change-detection gate from the GitHub Pages workflow so every
   push to `main` rebuilds and redeploys the site without being skipped.
 
