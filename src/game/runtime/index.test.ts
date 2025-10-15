@@ -21,6 +21,7 @@ import type { Sauna } from '../../sim/sauna.ts';
 import type { SaunaTierContext, SaunaTierId, SaunaTierChangeContext } from '../../sauna/tiers.ts';
 import type { RosterService } from './rosterService.ts';
 import type { Unit } from '../../unit/index.ts';
+import type { UnitBehavior } from '../../unit/types.ts';
 import type { Saunoja, SaunojaItem } from '../../units/saunoja.ts';
 import type { EquipmentSlotId } from '../../items/types.ts';
 import type { EnemyRampSummary } from '../../ui/topbar.ts';
@@ -73,6 +74,7 @@ const createStubContext = (
   notifyHudElapsed: noop,
   notifyEnemyRamp: (_summary: EnemyRampSummary | null) => {},
   syncSelectionOverlay: noop,
+  setBehaviorPreference: (_unitId: string, _behavior: UnitBehavior) => true,
   updateRosterDisplay: noop,
   getSelectedInventoryContext: () => null as InventoryComparisonContext | null,
   equipItemToSaunoja: (_unitId: string, _item: SaunojaItem) => ({

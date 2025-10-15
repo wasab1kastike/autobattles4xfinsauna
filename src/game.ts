@@ -1220,6 +1220,8 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     notifyHudElapsed: () => notifyHudElapsed(getHudElapsedMsSnapshot()),
     notifyEnemyRamp: (summary) => notifyEnemyRamp(summary),
     syncSelectionOverlay: () => syncSelectionOverlay(),
+    setBehaviorPreference: (unitId, behavior) =>
+      setSaunojaBehaviorPreference(unitId, behavior),
     updateRosterDisplay: () => updateRosterDisplay(),
     getSelectedInventoryContext: () => getSelectedInventoryContext(),
     equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),

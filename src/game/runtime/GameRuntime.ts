@@ -64,6 +64,7 @@ export interface GameRuntimeContext {
   notifyHudElapsed(): void;
   notifyEnemyRamp(summary: EnemyRampSummary | null): void;
   syncSelectionOverlay(): void;
+  setBehaviorPreference(unitId: string, behavior: UnitBehavior): boolean;
   updateRosterDisplay(): void;
   getSelectedInventoryContext(): InventoryComparisonContext | null;
   equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult;
@@ -147,6 +148,19 @@ export class GameRuntime {
   constructor(context: GameRuntimeContext, rosterService: RosterService) {
     this.ctx = context;
     this.rosterService = rosterService;
+  }
+
+  private applySelectionBehaviorChange(
+    unitId: string,
+    behavior: UnitBehavior
+  ): boolean {
+    const changed = this.ctx.setBehaviorPreference(unitId, behavior);
+    if (changed) {
+      this.rosterService.saveUnits();
+      this.ctx.updateRosterDisplay();
+    }
+    this.ctx.syncSelectionOverlay();
+    return changed;
   }
 
   getCanvas(): HTMLCanvasElement | null {
@@ -319,14 +333,19 @@ export class GameRuntime {
       this.combatAnimations = null;
     }
 
+    const baseBehaviorChange = (unitId: string, behavior: UnitBehavior) => {
+      this.applySelectionBehaviorChange(unitId, behavior);
+    };
+
     this.unitFx = createUnitFxManager({
       canvas: canvasEl,
       overlay: overlayEl,
       mapRenderer: this.ctx.mapRenderer,
       getUnitById: (id) => this.ctx.getUnitById(id),
-      requestDraw: () => this.invalidateFrame()
+      requestDraw: () => this.invalidateFrame(),
+      onBehaviorChange: baseBehaviorChange
     });
-    this.unitFx.setBehaviorChangeHandler(null);
+    this.unitFx.setBehaviorChangeHandler(baseBehaviorChange);
 
     this.combatAnimations = createUnitCombatAnimator({
       getUnitById: (id) => this.ctx.getUnitById(id),
@@ -591,18 +610,20 @@ export class GameRuntime {
       unitId: string,
       behavior: UnitBehavior
     ) => {
+      this.applySelectionBehaviorChange(unitId, behavior);
       hudResult.changeBehavior?.(unitId, behavior);
-      this.ctx.syncSelectionOverlay();
     };
     this.unitFx?.setBehaviorChangeHandler(changeBehaviorHandler);
 
     const disposeRightPanel = hudResult.disposeRightPanel;
     this.disposeRightPanel = disposeRightPanel
       ? () => {
-          this.unitFx?.setBehaviorChangeHandler(null);
+          this.unitFx?.setBehaviorChangeHandler(baseBehaviorChange);
           disposeRightPanel();
         }
-      : null;
+      : () => {
+          this.unitFx?.setBehaviorChangeHandler(baseBehaviorChange);
+        };
     this.addEvent = hudResult.addEvent;
     hudResult.postSetup?.();
   }
