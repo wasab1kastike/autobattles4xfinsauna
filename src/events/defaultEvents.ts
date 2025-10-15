@@ -1,3 +1,4 @@
+import { resolveAssetUrl } from '../loader.ts';
 import { eventScheduler, type ScheduledEventSpec } from './scheduler.ts';
 import type { EventScheduler } from './scheduler.ts';
 
@@ -8,7 +9,7 @@ export const defaultEvents: ScheduledEventSpec[] = [
       headline: 'Command Briefing: Ember Shift',
       body:
         'Sauna Command uplinks a focused playbook for your opening salvo. Keep the roster nimble, channel the ember currents, and set the tone for this run.',
-      art: '/assets/ui/saunoja-roster.svg',
+      art: resolveAssetUrl('/assets/ui/saunoja-roster.svg'),
       typography: 'serif',
       animation: 'aurora',
       accentColor: '#7bdff2',
@@ -22,7 +23,7 @@ export const defaultEvents: ScheduledEventSpec[] = [
       headline: 'Recon Telemetry Uploaded',
       body:
         'Forward drones stitched together a glacial panorama of enemy routes. Prioritize rapid response teams while the snowpack is still undisturbed.',
-      art: '/assets/ui/resource.svg',
+      art: resolveAssetUrl('/assets/ui/resource.svg'),
       typography: 'sans',
       animation: 'pulse',
       accentColor: '#fbcfe8',
@@ -36,7 +37,7 @@ export const defaultEvents: ScheduledEventSpec[] = [
       headline: 'Sauna Courier Docked',
       body:
         'A lacquered supply skiff glides into the bay with artisan tonics and reinforced stave kits. Decide how to allocate the haul before the next assault.',
-      art: '/assets/ui/sauna-beer.svg',
+      art: resolveAssetUrl('/assets/ui/sauna-beer.svg'),
       typography: 'serif',
       animation: 'tilt',
       accentColor: '#fde68a',
