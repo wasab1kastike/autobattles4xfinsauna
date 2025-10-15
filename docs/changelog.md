@@ -21,8 +21,8 @@
   keeping fresh campaigns mysterious and covering the regression with
   progression tests.
 
-- Configure the Vite build to publish from `/autobattles4xfinsauna/`, ensuring
-  GitHub Pages deploys assets with the correct base path.
+- Pin the Vite `base` configuration to `'/'` so GitHub Pages custom domains
+  always serve root-relative assets without extra environment overrides.
 
 - Restore the GitHub Pages deployment workflow so it installs, fetches, and
   checks out Git LFS assets before building, guaranteeing CI publishes complete
