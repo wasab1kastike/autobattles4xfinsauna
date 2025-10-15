@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retire the enemy scaling HUD navigation button and telemetry console so the
+  command overlay focuses on core roster, policy, and events workflows.
+
 - Remove the change-detection gate from the GitHub Pages workflow so every
   push to `main` rebuilds and redeploys the site without being skipped.
 
