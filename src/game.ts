@@ -1107,6 +1107,9 @@ function detachSaunoja(unitId: string): void {
 }
 
 function describeUnit(unit: Unit, attachedSaunoja?: Saunoja | null): string {
+  if (unit.type === 'stronghold-structure') {
+    return 'enemy stronghold';
+  }
   if (unit.faction === 'player') {
     const persona = attachedSaunoja ?? unitToSaunoja.get(unit.id) ?? null;
     const name = persona?.name?.trim();
@@ -1897,9 +1900,15 @@ const onUnitDied = ({
     }
   }
   const label = fallen ? describeUnit(fallen, persona) : `unit ${unitId}`;
+  const isStrongholdStructure = fallen?.type === 'stronghold-structure';
 
   let xpUpdated = false;
-  if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
+  if (
+    !isStrongholdStructure &&
+    attackerFaction === 'player' &&
+    unitFaction &&
+    unitFaction !== 'player'
+  ) {
     const attackerUnit = attackerId ? unitsById.get(attackerId) ?? null : null;
     const { xp: xpReward, elite, boss } = calculateKillExperience(fallen);
     if (xpReward > 0) {
@@ -1934,7 +1943,12 @@ const onUnitDied = ({
   if (unitFaction === 'player' || xpUpdated) {
     updateRosterDisplay();
   }
-  if (attackerFaction === 'player' && unitFaction && unitFaction !== 'player') {
+  if (
+    !isStrongholdStructure &&
+    attackerFaction === 'player' &&
+    unitFaction &&
+    unitFaction !== 'player'
+  ) {
     const treatAsElite = isEliteUnit(fallen ?? null) || lootRandom() < BASE_ELITE_ODDS;
     const lootRollCount = determineLootRollCount(lootRandom);
     if (lootRollCount > 0) {
@@ -1980,6 +1994,7 @@ const onUnitDied = ({
     }
   }
   if (
+    !isStrongholdStructure &&
     attackerFaction === 'player' &&
     unitFaction &&
     unitFaction !== 'player'
@@ -1999,15 +2014,26 @@ const onUnitDied = ({
   if (fallenCoord) {
     map.revealAround(fallenCoord, 1, { autoFrame: false });
   }
-  const side = unitFaction === 'player' ? 'our' : 'a rival';
-  logEvent({
-    type: 'combat',
-    message: `The steam hushes as ${side} ${label} grows still.`,
-    metadata: {
-      side,
-      unit: label
-    }
-  });
+  if (isStrongholdStructure) {
+    logEvent({
+      type: 'progression',
+      message: 'Our siege engines topple an enemy stronghold.',
+      metadata: {
+        unit: label,
+        context: 'stronghold-siege'
+      }
+    });
+  } else {
+    const side = unitFaction === 'player' ? 'our' : 'a rival';
+    logEvent({
+      type: 'combat',
+      message: `The steam hushes as ${side} ${label} grows still.`,
+      metadata: {
+        side,
+        unit: label
+      }
+    });
+  }
 };
 eventBus.on('unitDied', onUnitDied);
 
