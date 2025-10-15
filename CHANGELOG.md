@@ -18,6 +18,10 @@
   absolute `homepage` or bundled `public/CNAME`, keeping repository-prefixed
   slugs as an opt-in fallback for GitHub-hosted deployments.
 
+- Invalidate terrain and fog render caches when the origin shifts so expanding
+  the map bounds re-aligns chunk canvases, and cover the regression with a
+  dedicated TerrainCache test.
+
 - Resolve the blank GitHub Pages splash by deriving the Vite base path from
   deployment environment overrides and mirroring the docs bundle with
   relative asset URLs so repo-hosted builds load their hashed scripts.
