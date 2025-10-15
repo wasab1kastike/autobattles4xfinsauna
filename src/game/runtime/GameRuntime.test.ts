@@ -272,6 +272,7 @@ describe('GameRuntime', () => {
       notifyHudElapsed: vi.fn(),
       notifyEnemyRamp: vi.fn(),
       syncSelectionOverlay: vi.fn(),
+      setBehaviorPreference: vi.fn(() => true),
       updateRosterDisplay: vi.fn(),
       getSelectedInventoryContext: vi.fn(() => null as InventoryComparisonContext | null),
       equipItemToSaunoja: vi.fn(() => ({ result: 'ok' } as EquipAttemptResult)),
@@ -311,7 +312,8 @@ describe('GameRuntime', () => {
   it('rebuilds HUD controllers and keeps the overlay polished on setup', () => {
     let runtime!: GameRuntime;
     const context = createContext(() => runtime);
-    runtime = new GameRuntime(context, createRosterService());
+    const rosterService = createRosterService();
+    runtime = new GameRuntime(context, rosterService);
 
     const canvas = document.createElement('canvas');
     const resourceBar = document.createElement('div');
@@ -343,7 +345,8 @@ describe('GameRuntime', () => {
   it('bridges behavior changes from the mini HUD to the right panel', () => {
     let runtime!: GameRuntime;
     const context = createContext(() => runtime);
-    runtime = new GameRuntime(context, createRosterService());
+    const rosterService = createRosterService();
+    runtime = new GameRuntime(context, rosterService);
 
     const canvas = document.createElement('canvas');
     const resourceBar = document.createElement('div');
@@ -354,7 +357,8 @@ describe('GameRuntime', () => {
     const latestUnitFx = unitFxResults.at(-1);
     expect(latestUnitFx?.setBehaviorChangeHandler).toHaveBeenCalled();
     const behaviorHandlerCalls = latestUnitFx?.setBehaviorChangeHandler.mock.calls ?? [];
-    expect(behaviorHandlerCalls[0]?.[0]).toBeNull();
+    const initialBehaviorFn = behaviorHandlerCalls[0]?.[0];
+    expect(typeof initialBehaviorFn).toBe('function');
     const behaviorFn = behaviorHandlerCalls[1]?.[0];
     expect(typeof behaviorFn).toBe('function');
 
@@ -363,12 +367,15 @@ describe('GameRuntime', () => {
     latestHud?.changeBehavior.mockClear();
 
     behaviorFn?.('saunoja-1', 'attack');
+    expect(context.setBehaviorPreference).toHaveBeenCalledWith('saunoja-1', 'attack');
     expect(latestHud?.changeBehavior).toHaveBeenCalledWith('saunoja-1', 'attack');
     expect(context.syncSelectionOverlay).toHaveBeenCalledTimes(1);
+    expect(rosterService.saveUnits).toHaveBeenCalledTimes(1);
+    expect(context.updateRosterDisplay).toHaveBeenCalled();
 
     runtime.getDisposeRightPanel()?.();
     const finalCall = latestUnitFx?.setBehaviorChangeHandler.mock.calls.at(-1);
-    expect(finalCall?.[0]).toBeNull();
+    expect(typeof finalCall?.[0]).toBe('function');
   });
 
   it('attaches pause listeners once and cleans up event bus subscriptions on cleanup', async () => {
