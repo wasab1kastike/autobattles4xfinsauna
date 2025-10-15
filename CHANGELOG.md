@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Retire the legacy `pages.yml` workflow so GitHub only queues the consolidated
+  Pages deployment pipeline and refresh the deployment docs to describe the
+  streamlined job structure.
+
 - Remove the change-detection gate from the GitHub Pages workflow so every
   push to `main` rebuilds and redeploys the site without being skipped.
 
