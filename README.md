@@ -91,6 +91,9 @@ npm install
 - `npm run build` – compile TypeScript and emit the production bundle to
   `dist/`.
 - `npm run preview` – serve the production bundle locally.
+- These scripts mirror Vite's defaults so every local or CI build can rely on
+  `npm run build` producing a fresh `dist/` directory without additional
+  configuration.
 - `npm run audio:lint` – render every procedural cue and authored WAV to verify
   LUFS and peak compliance.
 - `npm test` – run the loudness QA, Vitest suite, live demo availability check,
