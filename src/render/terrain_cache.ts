@@ -162,6 +162,7 @@ export class TerrainCache {
   private readonly iconSubscriptions = new Map<string, () => void>();
   private readonly readyIconPaths = new Set<string>();
   private readonly unsubscribe: () => void;
+  private lastOrigin?: PixelCoord;
 
   constructor(private readonly map: HexMap) {
     this.unsubscribe = map.addTileChangeListener((coord, _tile, change) => {
@@ -175,6 +176,7 @@ export class TerrainCache {
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
+    this.lastOrigin = undefined;
   }
 
   invalidate(): void {
@@ -182,6 +184,7 @@ export class TerrainCache {
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
+    this.lastOrigin = undefined;
   }
 
   markChunkDirty(key: ChunkKey): void {
@@ -198,6 +201,16 @@ export class TerrainCache {
     images: LoadedAssets['images'],
     origin: PixelCoord
   ): ChunkCanvas[] {
+    if (
+      !this.lastOrigin ||
+      this.lastOrigin.x !== origin.x ||
+      this.lastOrigin.y !== origin.y
+    ) {
+      for (const key of this.chunkCanvases.keys()) {
+        this.dirtyChunks.add(key);
+      }
+      this.lastOrigin = { ...origin };
+    }
     this.refreshAssets(images);
     const renderable: ChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);

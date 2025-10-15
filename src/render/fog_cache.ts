@@ -43,6 +43,7 @@ export class FogCache {
   private readonly chunkCanvases = new Map<ChunkKey, Map<string, FogChunkCanvas>>();
   private readonly dirtyChunks = new Set<ChunkKey>();
   private readonly unsubscribe: () => void;
+  private lastOrigin?: PixelCoord;
 
   constructor(private readonly map: HexMap) {
     this.unsubscribe = map.addTileChangeListener((coord, tile, change) => {
@@ -61,11 +62,13 @@ export class FogCache {
     this.unsubscribe();
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
+    this.lastOrigin = undefined;
   }
 
   invalidate(): void {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
+    this.lastOrigin = undefined;
   }
 
   markTileDirty(q: number, r: number): void {
@@ -78,6 +81,16 @@ export class FogCache {
     zoom: number,
     origin: PixelCoord
   ): FogChunkCanvas[] {
+    if (
+      !this.lastOrigin ||
+      this.lastOrigin.x !== origin.x ||
+      this.lastOrigin.y !== origin.y
+    ) {
+      for (const key of this.chunkCanvases.keys()) {
+        this.dirtyChunks.add(key);
+      }
+      this.lastOrigin = { ...origin };
+    }
     const chunks: FogChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);
     const keyForZoom = zoomKey(zoom);

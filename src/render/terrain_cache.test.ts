@@ -3,6 +3,7 @@ import { HexMap } from '../hexmap.ts';
 import { TerrainCache } from './terrain_cache.ts';
 import { ensureChunksPopulated } from '../map/hex/chunking.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
+import { getHexDimensions } from '../hex/HexDimensions.ts';
 import { clearIconCache } from './loadIcon.ts';
 
 function createStubContext(drawImage: ReturnType<typeof vi.fn>) {
@@ -82,6 +83,70 @@ describe('TerrainCache', () => {
       tile.placeBuilding('barracks');
       cache.getRenderableChunks(range, map.hexSize, images, origin);
       expect(offscreenDrawImage).toHaveBeenCalled();
+    } finally {
+      createElementSpy.mockRestore();
+    }
+  });
+
+  it('re-renders chunks when the map origin shifts after expanding bounds', () => {
+    const map = new HexMap(2, 2);
+    const tile = map.ensureTile(0, 0);
+    tile.reveal();
+
+    const drawImage = vi.fn();
+    const ctx = createStubContext(drawImage);
+    const originalCreateElement = document.createElement;
+    const offscreenCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+    } as unknown as HTMLCanvasElement;
+
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          offscreenCanvas.width = 0;
+          offscreenCanvas.height = 0;
+          return offscreenCanvas;
+        }
+        return originalCreateElement.call(document, tagName);
+      });
+
+    try {
+      const cache = new TerrainCache(map);
+      const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
+      ensureChunksPopulated(map, range);
+      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
+      const images = {
+        'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
+      };
+
+      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      expect(initialChunks).toHaveLength(1);
+      const initialChunk = initialChunks.find((chunk) => chunk.key === '0,0');
+      expect(initialChunk).toBeDefined();
+
+      const { width: hexWidth } = getHexDimensions(map.hexSize);
+      const centerPixel = axialToPixel({ q: 0, r: 0 }, map.hexSize);
+      const expectedInitialX = centerPixel.x - origin.x - hexWidth / 2;
+      expect(initialChunk!.origin.x).toBeCloseTo(expectedInitialX, 5);
+
+      const newTile = map.ensureTile(-1, 0);
+      newTile.reveal();
+      const shiftedOrigin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
+
+      const rerenderedChunks = cache.getRenderableChunks(range, map.hexSize, images, shiftedOrigin);
+      expect(rerenderedChunks).toHaveLength(1);
+      const rerenderedChunk = rerenderedChunks.find((chunk) => chunk.key === '0,0');
+      expect(rerenderedChunk).toBeDefined();
+      expect(rerenderedChunk).not.toBe(initialChunk);
+
+      const expectedShiftedX = centerPixel.x - shiftedOrigin.x - hexWidth / 2;
+      expect(rerenderedChunk!.origin.x).toBeCloseTo(expectedShiftedX, 5);
+      expect(rerenderedChunk!.origin.x).not.toBeCloseTo(initialChunk!.origin.x, 5);
     } finally {
       createElementSpy.mockRestore();
     }
