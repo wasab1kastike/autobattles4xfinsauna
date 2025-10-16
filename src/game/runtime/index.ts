@@ -33,6 +33,10 @@ export function configureGameRuntime(next: GameRuntimeBootstrap): void {
   runtimeInstance = null;
 }
 
+export function isGameRuntimeConfigured(): boolean {
+  return bootstrap !== null;
+}
+
 function requireBootstrap(): GameRuntimeBootstrap {
   if (!bootstrap) {
     throw new Error('Game runtime has not been configured.');

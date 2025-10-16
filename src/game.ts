@@ -37,6 +37,7 @@ import {
 import { markRevealed, resetAutoFrame } from './camera/autoFrame.ts';
 import {
   configureGameRuntime,
+  isGameRuntimeConfigured,
   getGameRuntime as getGameRuntimeImpl,
   setExternalSaunaUiController as setExternalSaunaUiControllerImpl,
   getGameStateInstance as getGameStateInstanceImpl,
@@ -380,6 +381,9 @@ let spawnTierQueue: PlayerSpawnTierHelpers = getSpawnTierQueue();
 const IDLE_FRAME_LIMIT = 10;
 
 export function invalidateFrame(): void {
+  if (!isGameRuntimeConfigured()) {
+    return;
+  }
   getGameRuntime().invalidateFrame();
 }
 
