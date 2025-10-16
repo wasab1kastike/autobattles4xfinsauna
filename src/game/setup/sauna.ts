@@ -19,6 +19,7 @@ import { loadSaunaSettings, saveSaunaSettings } from '../saunaSettings.ts';
 import { grantSaunaTier } from '../../progression/saunaShop.ts';
 import type { NgPlusState } from '../../progression/ngplus.ts';
 import type { LogEventPayload } from '../../ui/logging.ts';
+import type { StrongholdSpawnExclusionZone } from '../../world/spawn/strongholdSpawn.ts';
 
 export interface SaunaLifecycleOptions {
   map: HexMap;
@@ -26,6 +27,7 @@ export interface SaunaLifecycleOptions {
   getActiveRosterCount: () => number;
   logEvent: (event: LogEventPayload) => void;
   minSpawnLimit: number;
+  onVisionRangeChanged?: (zone: StrongholdSpawnExclusionZone) => void;
 }
 
 export interface SaunaTierChangeContext {
@@ -60,7 +62,7 @@ export function clampRosterCap(value: number, limit: number): number {
 }
 
 export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifecycleResult {
-  const { map, ngPlusState, getActiveRosterCount, logEvent, minSpawnLimit } = options;
+  const { map, ngPlusState, getActiveRosterCount, logEvent, minSpawnLimit, onVisionRangeChanged } = options;
 
   const saunaSettings = loadSaunaSettings();
 
@@ -115,6 +117,8 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   const sanitizeVisionRange = (value: number): number =>
     Math.max(0, Math.floor(Number.isFinite(value) ? value : 0));
 
+  let lastNotifiedVisionRange = Number.NaN;
+
   const updateSaunaVisionFromTier = (tier: SaunaTier, options: { reveal?: boolean } = {}): void => {
     const resolved = sanitizeVisionRange(tier.visionRange);
     if (resolved !== sauna.visionRange) {
@@ -122,6 +126,10 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     }
     if (options.reveal) {
       map.revealAround(sauna.pos, sauna.visionRange);
+    }
+    if (sauna.visionRange !== lastNotifiedVisionRange) {
+      onVisionRangeChanged?.({ center: { ...sauna.pos }, radius: sauna.visionRange });
+      lastNotifiedVisionRange = sauna.visionRange;
     }
   };
 

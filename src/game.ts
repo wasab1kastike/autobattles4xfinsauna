@@ -350,7 +350,21 @@ const friendlyVisionUnitScratch: Unit[] = [];
 const overlaySaunojasScratch: Saunoja[] = [];
 let saunaLifecycle: SaunaLifecycleResult | null = null;
 let sauna: Sauna;
-let saunaInitialReveal: StrongholdSpawnExclusionZone | null = null;
+
+function getSaunaStrongholdExclusionZone(): StrongholdSpawnExclusionZone | null {
+  if (!sauna) {
+    return null;
+  }
+  const { pos, visionRange } = sauna;
+  if (!pos) {
+    return null;
+  }
+  const radius = Math.max(0, Math.floor(Number.isFinite(visionRange) ? visionRange : 0));
+  return {
+    center: { ...pos },
+    radius
+  } satisfies StrongholdSpawnExclusionZone;
+}
 let getTierContextRef: () => SaunaTierContext = getTierContextRefAccessor();
 let getActiveTierIdRef: () => SaunaTierId = getActiveTierIdAccessor();
 let getActiveTierLimitRef: () => number = getActiveTierLimitAccessor();
@@ -1060,6 +1074,9 @@ const animator = controller.animator;
 const battleManager = controller.battleManager;
 const mapRenderer = controller.mapRenderer;
 const invalidateTerrainCache = controller.getTerrainInvalidator();
+const handleSaunaVisionRangeChanged = (): void => {
+  invalidateTerrainCache();
+};
 
 const state = new GameState(1000);
 const inventory = new InventoryState();
@@ -1085,7 +1102,7 @@ const loader = configureGameLoader({
   updateRosterDisplay: () => updateRosterDisplay(),
   tryGetRuntimeInstance: () => tryGetRuntimeInstance(),
   logEvent: (payload) => logEvent(payload),
-  getSaunaInitialReveal: () => saunaInitialReveal,
+  getSaunaSpawnExclusionZone: () => getSaunaStrongholdExclusionZone(),
   unitVisionSnapshots,
   initialNgPlusState: currentNgPlusState,
   applyNgPlusState: (ngPlus) => applyNgPlusState(ngPlus),
@@ -1162,15 +1179,12 @@ saunaLifecycle = initSaunaLifecycle({
   ngPlusState: currentNgPlusState,
   getActiveRosterCount: () => getActiveRosterCount(),
   logEvent,
-  minSpawnLimit: MIN_SPAWN_LIMIT
+  minSpawnLimit: MIN_SPAWN_LIMIT,
+  onVisionRangeChanged: () => {
+    handleSaunaVisionRangeChanged();
+  }
 });
 sauna = saunaLifecycle.sauna;
-if (!saunaInitialReveal) {
-  saunaInitialReveal = {
-    center: { ...sauna.pos },
-    radius: sauna.visionRange
-  } satisfies StrongholdSpawnExclusionZone;
-}
 getTierContextRef = getTierContextRefAccessor();
 getActiveTierIdRef = getActiveTierIdAccessor();
 getActiveTierLimitRef = getActiveTierLimitAccessor();
