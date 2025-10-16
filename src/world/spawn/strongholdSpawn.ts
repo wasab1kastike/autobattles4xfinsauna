@@ -40,7 +40,12 @@ export function pickStrongholdSpawnCoord(
       return;
     }
     if (
-      context.excludeZones?.some((zone) => hexDistance(zone.center, coord) <= zone.radius)
+      context.excludeZones?.some((zone) => {
+        const radius = Number.isFinite(zone.radius)
+          ? Math.max(1, Math.floor(zone.radius))
+          : 1;
+        return hexDistance(zone.center, coord) <= radius;
+      })
     ) {
       return;
     }
