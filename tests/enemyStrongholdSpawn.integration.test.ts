@@ -134,4 +134,35 @@ describe('enemy stronghold spawn integration', () => {
 
     expect(coord).toBeUndefined();
   });
+
+  it('treats zero-radius exclusion zones as at least one tile', () => {
+    const map = new HexMap(10, 10, 32);
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+
+    const strongholds = listStrongholds();
+    const anchored = strongholds.find((entry) => entry.id === 'aurora-watch');
+    expect(anchored).toBeDefined();
+
+    for (const entry of strongholds) {
+      if (entry !== anchored) {
+        entry.captured = true;
+      }
+    }
+
+    const zoneCenter = getNeighbors(anchored!.coord)[4]!;
+    const result = pickStrongholdSpawnCoord({
+      map,
+      units: [],
+      random: () => 0,
+      excludeZones: [
+        {
+          center: zoneCenter,
+          radius: 0
+        }
+      ]
+    });
+
+    expect(result).toBeDefined();
+    expect(hexDistance(result!, zoneCenter)).toBeGreaterThan(1);
+  });
 });
