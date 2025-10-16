@@ -45,7 +45,7 @@ type NgPlusApplier = (state: NgPlusState) => void;
 
 type NgPlusSaver = (state: NgPlusState) => void;
 
-type StrongholdRevealGetter = () => StrongholdSpawnExclusionZone | null;
+type StrongholdExclusionZoneGetter = () => StrongholdSpawnExclusionZone | null;
 
 type SaveUnitsFn = () => void;
 
@@ -81,7 +81,7 @@ export interface GameLoaderDependencies {
   updateRosterDisplay: RosterDisplayUpdater;
   tryGetRuntimeInstance: RuntimeProvider;
   logEvent: LogEvent;
-  getSaunaInitialReveal: StrongholdRevealGetter;
+  getSaunaSpawnExclusionZone: StrongholdExclusionZoneGetter;
   unitVisionSnapshots: VisionSnapshotStore;
   initialNgPlusState: NgPlusState;
   applyNgPlusState: NgPlusApplier;
@@ -120,7 +120,7 @@ export function configureGameLoader({
   updateRosterDisplay,
   tryGetRuntimeInstance,
   logEvent,
-  getSaunaInitialReveal,
+  getSaunaSpawnExclusionZone,
   unitVisionSnapshots,
   initialNgPlusState,
   applyNgPlusState,
@@ -253,12 +253,12 @@ export function configureGameLoader({
   };
 
   const pickStrongholdSpawnTile: PickSpawnTileFn = () => {
-    const saunaInitialReveal = getSaunaInitialReveal();
+    const saunaExclusionZone = getSaunaSpawnExclusionZone();
     const strongholdCoord = pickStrongholdSpawnCoord({
       map,
       units,
       random: Math.random,
-      excludeZones: saunaInitialReveal ? [saunaInitialReveal] : undefined
+      excludeZones: saunaExclusionZone ? [saunaExclusionZone] : undefined
     });
     if (strongholdCoord) {
       return strongholdCoord;
