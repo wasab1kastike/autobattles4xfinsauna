@@ -74,6 +74,10 @@
   hit cap, upkeep surcharges, fresh Vitest regression coverage, and refreshed
   policy docs describing the full combat doctrine ladder.
 
+- Guarantee at least one enemy stronghold is revealed when seeding a new map so
+  extended sauna vision upgrades still surface an objective, and cover the
+  regression with updated stronghold seeding tests.
+
 - Rally enemy reinforcements from surviving strongholds, spawning squads on or
   adjacent to active bastions before falling back to edge entries, and cover the
   new routing with integration tests.

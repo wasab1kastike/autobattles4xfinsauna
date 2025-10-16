@@ -1,4 +1,4 @@
-import type { AxialCoord } from '../hex/HexUtils.ts';
+import { hexDistance, type AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { TileMutation } from '../hex/HexTile.ts';
 import type { UnitArchetypeId } from '../unit/types.ts';
@@ -289,6 +289,9 @@ export function seedEnemyStrongholds(
   if (registerUnit && encounterHooks && !encounterHooks.registerUnit) {
     encounterHooks.registerUnit = registerUnit;
   }
+  const seededStrongholds: StrongholdMetadata[] = [];
+  let hasVisibleStronghold = false;
+
   for (const spec of config.strongholds) {
     const tile = map.ensureTile(spec.coord.q, spec.coord.r);
     const persistedEntry = persisted?.[spec.id];
@@ -327,6 +330,10 @@ export function seedEnemyStrongholds(
       structureUnitId: null
     };
     registry.set(spec.id, metadata);
+    seededStrongholds.push(metadata);
+    if (!metadata.captured && metadata.seen) {
+      hasVisibleStronghold = true;
+    }
     if (!captured) {
       const structureUnit = createUnit(
         'stronghold-structure',
@@ -355,6 +362,33 @@ export function seedEnemyStrongholds(
     }
     trackTileCapture(metadata, map);
     seedStrongholdEncounter(map, metadata, encounterHooks, persistedEntry ?? null);
+  }
+
+  if (!hasVisibleStronghold) {
+    const center: AxialCoord = {
+      q: Math.floor((map.minQ + map.maxQ) / 2),
+      r: Math.floor((map.minR + map.maxR) / 2)
+    };
+    let chosen: StrongholdMetadata | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const metadata of seededStrongholds) {
+      if (metadata.captured) {
+        continue;
+      }
+      const distance = hexDistance(center, metadata.coord);
+      if (!Number.isFinite(distance)) {
+        continue;
+      }
+      if (!chosen || distance < bestDistance) {
+        chosen = metadata;
+        bestDistance = distance;
+      }
+    }
+    if (chosen) {
+      const tile = map.ensureTile(chosen.coord.q, chosen.coord.r);
+      tile.reveal();
+      chosen.seen = true;
+    }
   }
 }
 
