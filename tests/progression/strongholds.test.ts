@@ -46,16 +46,22 @@ describe('enemy strongholds integration', () => {
     tracker.dispose();
   });
 
-  it('cloaks uncaptured strongholds in fog on seed', () => {
+  it('keeps most strongholds cloaked but guarantees at least one revealed', () => {
     const map = new HexMap(10, 10);
     seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+
+    let revealed = 0;
 
     for (const stronghold of STRONGHOLD_CONFIG.strongholds) {
       const tile = map.getTile(stronghold.coord.q, stronghold.coord.r);
       expect(tile).toBeDefined();
       expect(tile?.building).toBe('city');
-      expect(tile?.isFogged).toBe(true);
+      if (tile && !tile.isFogged) {
+        revealed += 1;
+      }
     }
+
+    expect(revealed).toBe(1);
   });
 
   it('decrements remaining strongholds when a city falls', () => {
