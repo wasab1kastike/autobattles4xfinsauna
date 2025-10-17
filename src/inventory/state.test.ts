@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   InventoryState,
+  type CarryoverItemSeed,
   type InventoryEvent,
   type InventoryComparison,
   type EquipAttemptResult
@@ -143,5 +144,40 @@ describe('InventoryState', () => {
     const removed = inventory.discardFromInventory(0);
     expect(removed?.id).toBe('emberglass-arrow');
     expect(inventory.getInventory()).toHaveLength(0);
+  });
+
+  it('limits carryover items to three and clears the ready inventory', () => {
+    const inventory = new InventoryState({ now: () => 1400 });
+    inventory.addItem(SAMPLE_ITEM, { autoEquip: false });
+    inventory.moveToInventory(0);
+    inventory.addItem(
+      { id: 'windstep-totem', name: 'Windstep Totem', quantity: 1 },
+      { autoEquip: false }
+    );
+
+    expect(inventory.getInventory()).toHaveLength(1);
+    expect(inventory.getStash()).toHaveLength(1);
+
+    const seeds: CarryoverItemSeed[] = [
+      { id: 'safeguard-scroll', name: 'Safeguard Scroll', quantity: 1 },
+      { id: 'emberglass-arrow', name: 'Emberglass Arrow', quantity: 2 },
+      { id: 'glacial-lantern', name: 'Glacial Lantern', quantity: 1 },
+      { id: 'frostbite-remedy', name: 'Frostbite Remedy', quantity: 4 }
+    ];
+
+    inventory.setCarryoverItems(seeds);
+
+    expect(inventory.getInventory()).toHaveLength(0);
+    expect(inventory.getStash()).toHaveLength(3);
+
+    const reload = new InventoryState({ now: () => 1500 });
+    expect(reload.getInventory()).toHaveLength(0);
+    const stash = reload.getStash();
+    expect(stash).toHaveLength(3);
+    expect(stash.map((item) => item.id)).toEqual([
+      'safeguard-scroll',
+      'emberglass-arrow',
+      'glacial-lantern'
+    ]);
   });
 });

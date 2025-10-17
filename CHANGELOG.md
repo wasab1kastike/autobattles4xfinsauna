@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Fix end-of-run carryover sanitization so only the explicitly selected loadout
+  gear persists into NG+, trim stale equipment from roster storage, and extend
+  inventory and roster tests to enforce the three-item cap after resets.
+
+- Let commanders secure up to three carryover items from squad loadouts or the
+  shared stash via the end-of-run overlay, trim any unselected gear before the
+  next NG+ reload, and lock in inventory persistence coverage for the three-item
+  cap.
+
 - Refresh the end-of-run overlay with a polished roster selector that blocks
   "New run" until an attendant is chosen, persists that survivor into the next
   loop, and locks in regression coverage for the storage trim.

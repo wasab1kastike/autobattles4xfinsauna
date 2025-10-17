@@ -127,6 +127,12 @@ export interface InventoryReceipt {
   readonly location: InventoryLocation;
 }
 
+export type CarryoverItemSeed = SaunojaItem & {
+  readonly sourceTableId?: string;
+  readonly sourceEntryId?: string;
+  readonly acquiredAt?: number;
+};
+
 type SerializedInventory = {
   readonly autoEquip?: boolean;
   readonly stash?: readonly (InventoryItem & { readonly acquiredAt: number })[];
@@ -342,6 +348,33 @@ export class InventoryState {
 
   getInventorySize(): number {
     return this.inventory.length;
+  }
+
+  setCarryoverItems(items: readonly CarryoverItemSeed[]): void {
+    const seeds = Array.isArray(items) ? items.slice(0, 3) : [];
+    const baseTimestamp = this.now();
+    const sanitized = seeds.map((seed, index) => {
+      const timestampCandidate = Number.isFinite(seed.acquiredAt)
+        ? (seed.acquiredAt as number)
+        : baseTimestamp + index;
+      const timestamp = Math.max(0, Math.round(timestampCandidate));
+      return sanitizeItem(
+        {
+          id: seed.id,
+          name: seed.name,
+          description: seed.description,
+          icon: seed.icon,
+          rarity: seed.rarity,
+          quantity: seed.quantity
+        },
+        timestamp,
+        { tableId: seed.sourceTableId, entryId: seed.sourceEntryId }
+      );
+    });
+
+    this.stash = sanitized;
+    this.inventory = [];
+    this.persist();
   }
 
   addLoot(drop: RolledLootItem, options: AcquisitionOptions = {}): InventoryReceipt {

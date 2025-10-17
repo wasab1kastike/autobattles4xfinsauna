@@ -125,4 +125,108 @@ describe('rosterStorage', () => {
     expect(restored[0]?.id).toBe('saunoja-2');
     expect(restored[0]?.selected).toBe(true);
   });
+
+  it('only retains explicitly selected loadout items when preparing the next run', () => {
+    const roster = [
+      makeSaunoja({
+        id: 'saunoja-1',
+        name: 'Aava',
+        xp: 360,
+        upkeep: 2,
+        items: [
+          {
+            id: 'steamed-bandages',
+            name: 'Steamed Bandages',
+            description: 'Fresh wraps warmed in the sauna for rapid mending.',
+            icon: '/assets/items/bandages.svg',
+            rarity: 'uncommon',
+            quantity: 2
+          },
+          {
+            id: 'emberglass-arrow',
+            name: 'Emberglass Arrow',
+            description: 'Ignites targets on hit',
+            icon: '/assets/items/emberglass.svg',
+            rarity: 'rare',
+            quantity: 1
+          }
+        ]
+      })
+    ];
+
+    persistRosterSelection(roster, 'saunoja-1', {
+      keepItems: [
+        {
+          ...roster[0].items[0]
+        }
+      ]
+    });
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(1);
+    const [unit] = restored;
+    expect(unit.items).toHaveLength(1);
+    expect(unit.items[0]?.id).toBe('steamed-bandages');
+    expect(unit.items[0]?.quantity).toBe(2);
+  });
+
+  it('limits carried loadout items to three unique selections', () => {
+    const roster = [
+      makeSaunoja({
+        id: 'saunoja-1',
+        name: 'Aava',
+        xp: 540,
+        upkeep: 3,
+        items: [
+          {
+            id: 'steamed-bandages',
+            name: 'Steamed Bandages',
+            description: 'Fresh wraps warmed in the sauna for rapid mending.',
+            icon: '/assets/items/bandages.svg',
+            rarity: 'uncommon',
+            quantity: 2
+          },
+          {
+            id: 'emberglass-arrow',
+            name: 'Emberglass Arrow',
+            description: 'Ignites targets on hit',
+            icon: '/assets/items/emberglass.svg',
+            rarity: 'rare',
+            quantity: 1
+          },
+          {
+            id: 'windstep-totem',
+            name: 'Windstep Totem',
+            description: 'A carved charm that lightens the bearer\'s stride.',
+            icon: '/assets/items/totem.svg',
+            rarity: 'rare',
+            quantity: 1
+          },
+          {
+            id: 'spirit-oak-charm',
+            name: 'Spirit Oak Charm',
+            description: 'An heirloom talisman steeped in sauna lore.',
+            icon: '/assets/items/charm.svg',
+            rarity: 'epic',
+            quantity: 1
+          }
+        ]
+      })
+    ];
+
+    persistRosterSelection(roster, 'saunoja-1', {
+      keepItems: roster[0].items.map((item) => ({ ...item }))
+    });
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(1);
+    const [unit] = restored;
+    expect(unit.items).toHaveLength(3);
+    expect(unit.items.map((item) => item.id)).toEqual([
+      'steamed-bandages',
+      'emberglass-arrow',
+      'windstep-totem'
+    ]);
+    expect(unit.equipment.relic).toBeNull();
+  });
 });

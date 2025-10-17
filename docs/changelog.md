@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Fix NG+ carryover persistence so only the chosen loadout gear survives resets,
+  clear any stale equipment from roster storage, and extend coverage to ensure
+  the three-item storage cap remains enforced after a run restart.
+
+- Let commanders secure up to three carryover items from squad loadouts or the
+  shared stash via the end-of-run overlay, trimming the rest before the next
+  NG+ reload and covering the inventory cap with automated tests.
+
 - Guard stronghold encounter unit registration so early seeding no longer
   triggers the "Game runtime has not been configured" crash, letting the GitHub
   Pages build render again after deployment.
