@@ -8,6 +8,7 @@ export interface UnitAttackPayload {
   timestamp: number;
   impactAt: number;
   recoverAt: number;
+  attackProfile?: string;
 }
 
 export interface UnitDamagedPayload {
