@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Shift the Glacier Bastion, Spirit Thicket, and Ember Sanctum strongholds
+  farther from the sauna core so their spawn points respect the exclusion
+  radius and no longer crowd the opening map reveal.
+
 - Fix end-of-run carryover sanitization so only the explicitly selected loadout
   gear persists into NG+, trim stale equipment from roster storage, and extend
   inventory and roster tests to enforce the three-item cap after resets.
