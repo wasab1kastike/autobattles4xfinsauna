@@ -190,7 +190,7 @@ export const STRONGHOLD_CONFIG: StrongholdConfig = Object.freeze({
     Object.freeze({
       id: 'glacier-bastion',
       label: 'Glacier Bastion',
-      coord: Object.freeze({ q: 7, r: 3 }),
+      coord: Object.freeze({ q: 9, r: 0 }),
       guardTier: 'icebreaker-vanguard',
       lootTableId: 'enemy-champions',
       structureTier: 'bastion',
@@ -205,7 +205,7 @@ export const STRONGHOLD_CONFIG: StrongholdConfig = Object.freeze({
     Object.freeze({
       id: 'spirit-thicket',
       label: 'Spirit Thicket',
-      coord: Object.freeze({ q: 4, r: 7 }),
+      coord: Object.freeze({ q: 0, r: 8 }),
       guardTier: 'deepwood-wardens',
       lootTableId: 'deepwood-offerings',
       structureTier: 'citadel',
@@ -220,7 +220,7 @@ export const STRONGHOLD_CONFIG: StrongholdConfig = Object.freeze({
     Object.freeze({
       id: 'ember-sanctum',
       label: 'Ember Sanctum',
-      coord: Object.freeze({ q: 8, r: 6 }),
+      coord: Object.freeze({ q: 9, r: 9 }),
       guardTier: 'forgeborn-legion',
       lootTableId: 'enemy-raiders',
       structureTier: 'sanctum',

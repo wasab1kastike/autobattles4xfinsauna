@@ -1041,6 +1041,8 @@ function hexDistance(a: AxialCoord, b: AxialCoord): number {
   return Math.max(Math.abs(a.q - b.q), Math.abs(a.r - b.r), Math.abs(ay - by));
 }
 
+export { hexDistance };
+
 const units: Unit[] = [];
 const unitVisionSnapshots = new Map<string, { coordKey: string; radius: number }>();
 const lastRevealTimes = new Map<string, number>();

@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { HexMap } from '../src/hexmap.ts';
 import type { Unit } from '../src/units/Unit.ts';
 import { spawnEnemyBundle } from '../src/world/spawn/enemy_spawns.ts';
-import { getNeighbors, hexDistance, type AxialCoord } from '../src/hex/HexUtils.ts';
+import {
+  getNeighbors,
+  hexDistance as hexDistanceFromUtils,
+  type AxialCoord
+} from '../src/hex/HexUtils.ts';
 import {
   STRONGHOLD_CONFIG,
   listStrongholds,
@@ -10,6 +14,7 @@ import {
   seedEnemyStrongholds
 } from '../src/world/strongholds.ts';
 import { pickStrongholdSpawnCoord } from '../src/world/spawn/strongholdSpawn.ts';
+import { hexDistance as gameHexDistance } from '../src/game.ts';
 
 function isNeighborOrSame(target: AxialCoord, origin: AxialCoord): boolean {
   if (target.q === origin.q && target.r === origin.r) {
@@ -21,6 +26,22 @@ function isNeighborOrSame(target: AxialCoord, origin: AxialCoord): boolean {
 describe('enemy stronghold spawn integration', () => {
   afterEach(() => {
     resetStrongholdRegistry();
+  });
+
+  it('keeps configured strongholds outside the sauna exclusion radius', () => {
+    const map = new HexMap(10, 10, 32);
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+
+    const center = { q: Math.floor(map.width / 2), r: Math.floor(map.height / 2) };
+    const exclusionRadius = 5;
+
+    const seededStrongholds = listStrongholds();
+    expect(seededStrongholds).toHaveLength(STRONGHOLD_CONFIG.strongholds.length);
+
+    for (const entry of seededStrongholds) {
+      const distance = gameHexDistance(center, entry.coord);
+      expect(distance).toBeGreaterThanOrEqual(exclusionRadius);
+    }
   });
 
   it('spawns reinforcements from surviving strongholds', () => {
@@ -113,7 +134,9 @@ describe('enemy stronghold spawn integration', () => {
     });
 
     expect(outsideResult).toBeDefined();
-    expect(hexDistance(outsideResult!, excludeZone.center)).toBeGreaterThan(excludeZone.radius);
+    expect(hexDistanceFromUtils(outsideResult!, excludeZone.center)).toBeGreaterThan(
+      excludeZone.radius
+    );
   });
 
   it('respects expanded sauna vision radius', () => {
@@ -163,6 +186,6 @@ describe('enemy stronghold spawn integration', () => {
     });
 
     expect(result).toBeDefined();
-    expect(hexDistance(result!, zoneCenter)).toBeGreaterThan(1);
+    expect(hexDistanceFromUtils(result!, zoneCenter)).toBeGreaterThan(1);
   });
 });
