@@ -191,6 +191,7 @@ import {
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
 import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
+import { abandonStrongholdEncounters } from './world/strongholdEncounters.ts';
 import type { StrongholdSpawnExclusionZone } from './world/spawn/strongholdSpawn.ts';
 import {
   applyNgPlusState as applyRuntimeNgPlusState,
@@ -1501,6 +1502,9 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   if (endScreen) {
     endScreen.destroy();
     endScreen = null;
+  }
+  if (resolution.outcome === 'lose') {
+    abandonStrongholdEncounters();
   }
   const snapshot = enemySpawner.getSnapshot();
   const payout = calculateArtocoinPayout(resolution.outcome, {
