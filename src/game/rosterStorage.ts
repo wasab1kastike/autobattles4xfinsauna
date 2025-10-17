@@ -237,6 +237,12 @@ export function persistRosterSelection(
       typeof source.description === 'string' ? source.description : candidate.description;
     const icon = typeof source.icon === 'string' ? source.icon : candidate.icon;
     const rarity = typeof source.rarity === 'string' ? source.rarity : candidate.rarity;
+    const attackAnimation =
+      typeof source.attackAnimation === 'string' && source.attackAnimation.trim().length > 0
+        ? source.attackAnimation.trim()
+        : typeof candidate.attackAnimation === 'string' && candidate.attackAnimation.trim().length > 0
+          ? candidate.attackAnimation.trim()
+          : undefined;
     const quantitySource = Number.isFinite((source as SaunojaItem).quantity)
       ? (source as SaunojaItem).quantity
       : candidate.quantity;
@@ -249,6 +255,7 @@ export function persistRosterSelection(
       name: nameSource,
       description: typeof description === 'string' ? description : undefined,
       icon: typeof icon === 'string' ? icon : undefined,
+      attackAnimation,
       rarity: typeof rarity === 'string' ? rarity : undefined,
       quantity
     });

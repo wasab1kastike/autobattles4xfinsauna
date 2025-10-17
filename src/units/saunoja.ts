@@ -24,6 +24,8 @@ export interface SaunojaItem {
   readonly description?: string;
   /** Optional relative path to an illustrative icon. */
   readonly icon?: string;
+  /** Optional combat animation key that decorates attack playback. */
+  readonly attackAnimation?: string;
   /** Optional rarity tag used for HUD styling. */
   readonly rarity?: SaunojaItemRarity | string;
   /** Visible quantity badge when the item stacks. */
@@ -268,6 +270,10 @@ function sanitizeItem(entry: unknown): SaunojaItem | null {
   }
   const description = typeof data.description === 'string' ? data.description.trim() : undefined;
   const icon = typeof data.icon === 'string' ? data.icon.trim() : undefined;
+  const attackAnimation =
+    typeof data.attackAnimation === 'string' && data.attackAnimation.trim().length > 0
+      ? data.attackAnimation.trim()
+      : undefined;
   const rarity = typeof data.rarity === 'string' ? data.rarity.trim() : undefined;
   const quantitySource = typeof data.quantity === 'number' ? data.quantity : Number(data.quantity);
   const quantity = Number.isFinite(quantitySource) ? Math.max(1, Math.round(quantitySource as number)) : 1;
@@ -276,6 +282,7 @@ function sanitizeItem(entry: unknown): SaunojaItem | null {
     name: nameSource,
     description,
     icon,
+    attackAnimation,
     rarity,
     quantity
   } satisfies SaunojaItem;

@@ -173,11 +173,16 @@ function sanitizeItem(
   const rarity = typeof source.rarity === 'string' ? source.rarity.trim() : undefined;
   const icon = typeof source.icon === 'string' ? source.icon : undefined;
   const description = typeof source.description === 'string' ? source.description : undefined;
+  const attackAnimation =
+    typeof source.attackAnimation === 'string' && source.attackAnimation.trim().length > 0
+      ? source.attackAnimation.trim()
+      : undefined;
   return {
     id: source.id,
     name: source.name,
     description,
     icon,
+    attackAnimation,
     rarity,
     quantity,
     acquiredAt,

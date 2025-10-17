@@ -37,6 +37,14 @@ const SLOT_DEFINITIONS: Record<EquipmentSlotId, EquipmentSlotDefinition> = Objec
   })
 });
 
+/**
+ * Equipment item blueprints keyed by identifier.
+ *
+ * Supported attack animation keys:
+ * - 'cleave' for heavy melee swings.
+ * - 'lunge' for close-range thrusts.
+ * - 'volley' for ranged or projectile-based attacks.
+ */
 const ITEM_DEFINITIONS: Record<string, EquipmentItemDefinition> = Object.freeze({
   'birch-sap-satchel': Object.freeze({
     id: 'birch-sap-satchel',
@@ -77,12 +85,14 @@ const ITEM_DEFINITIONS: Record<string, EquipmentItemDefinition> = Object.freeze(
   'glacier-brand': Object.freeze({
     id: 'glacier-brand',
     slot: 'weapon',
+    attackAnimation: 'cleave',
     modifiers: { attackDamage: 3 },
     maxStacks: 1
   }),
   'emberglass-arrow': Object.freeze({
     id: 'emberglass-arrow',
     slot: 'weapon',
+    attackAnimation: 'volley',
     modifiers: { attackDamage: 1, attackRange: 2 },
     maxStacks: 1
   }),
@@ -161,6 +171,7 @@ function cloneItem(item: SaunojaItem, quantity: number): SaunojaItem {
     name: item.name,
     description: item.description,
     icon: item.icon,
+    attackAnimation: item.attackAnimation,
     rarity: item.rarity,
     quantity
   } satisfies SaunojaItem;
@@ -176,8 +187,10 @@ function toEquippedItem(
   const limit = Math.max(1, Math.floor(definition.maxStacks ?? slotDef.maxStacks));
   const resolvedQuantity = Math.min(limit, quantity);
   const modifiers = definition.modifiers ?? ({} as EquipmentModifier);
+  const attackAnimation = source.attackAnimation ?? definition.attackAnimation;
   return {
     ...cloneItem(source, resolvedQuantity),
+    attackAnimation,
     slot,
     maxStacks: limit,
     modifiers

@@ -21,11 +21,18 @@ export interface EquipmentModifier {
 export interface EquipmentItemDefinition {
   readonly id: string;
   readonly slot: EquipmentSlotId;
+  /**
+   * Optional combat animation key applied while this item is equipped.
+   * Supported keys: 'cleave', 'lunge', 'volley'. Additional keys gracefully
+   * fall back to default playback when unknown.
+   */
+  readonly attackAnimation?: string;
   readonly modifiers?: EquipmentModifier;
   readonly maxStacks?: number;
 }
 
 export interface EquippedItem extends SaunojaItem {
+  readonly attackAnimation?: string;
   readonly slot: EquipmentSlotId;
   readonly maxStacks: number;
   readonly modifiers: EquipmentModifier;
