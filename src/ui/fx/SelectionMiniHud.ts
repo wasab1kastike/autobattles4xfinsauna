@@ -111,6 +111,7 @@ function ensureStyles(): void {
       color: rgba(241, 245, 249, 0.96);
       position: relative;
       overflow: hidden;
+      pointer-events: auto;
     }
 
     .ui-selection-mini-hud__card::before {
