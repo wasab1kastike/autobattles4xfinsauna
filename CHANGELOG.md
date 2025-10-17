@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Enable the selection mini HUD card to accept pointer input while the outer
+  overlay remains click-through, so behavior toggles work without blocking map
+  interactions.
+
 - Establish a six-hex sauna exclusion radius and reposition the Glacier
   Bastion, Spirit Thicket, and Ember Sanctum strongholds on the 10×10 map so
   their spawn points respect the limit and no longer crowd the opening reveal.
