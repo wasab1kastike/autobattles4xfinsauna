@@ -1,4 +1,4 @@
-import type { Saunoja } from '../units/saunoja.ts';
+import type { Saunoja, SaunojaItem } from '../units/saunoja.ts';
 import { makeSaunoja } from '../units/saunoja.ts';
 import { EQUIPMENT_SLOT_IDS } from '../items/types.ts';
 
@@ -179,7 +179,8 @@ export function saveUnits(units: readonly Saunoja[]): void {
 
 export function persistRosterSelection(
   units: readonly Saunoja[],
-  selectedUnitId: string | null
+  selectedUnitId: string | null,
+  options: { keepItems?: readonly SaunojaItem[] } = {}
 ): void {
   const storage = getSaunojaStorage();
   if (!storage) {
@@ -205,10 +206,89 @@ export function persistRosterSelection(
     return;
   }
 
+  const existingItems = new Map<string, SaunojaItem>();
+  for (const item of selected.items) {
+    if (typeof item?.id === 'string' && item.id.length > 0 && !existingItems.has(item.id)) {
+      existingItems.set(item.id, item);
+    }
+  }
+
+  const sanitizedItems: SaunojaItem[] = [];
+  const seenIds = new Set<string>();
+  for (const candidate of options.keepItems ?? []) {
+    if (!candidate) {
+      continue;
+    }
+    const id = typeof candidate.id === 'string' ? candidate.id.trim() : '';
+    if (!id || seenIds.has(id)) {
+      continue;
+    }
+    const source = existingItems.get(id) ?? candidate;
+    const nameSource =
+      typeof source.name === 'string' && source.name.trim().length > 0
+        ? source.name.trim()
+        : typeof candidate.name === 'string'
+          ? candidate.name.trim()
+          : '';
+    if (!nameSource) {
+      continue;
+    }
+    const description =
+      typeof source.description === 'string' ? source.description : candidate.description;
+    const icon = typeof source.icon === 'string' ? source.icon : candidate.icon;
+    const rarity = typeof source.rarity === 'string' ? source.rarity : candidate.rarity;
+    const quantitySource = Number.isFinite((source as SaunojaItem).quantity)
+      ? (source as SaunojaItem).quantity
+      : candidate.quantity;
+    const quantity = Number.isFinite(quantitySource)
+      ? Math.max(1, Math.round(quantitySource as number))
+      : 1;
+
+    sanitizedItems.push({
+      id,
+      name: nameSource,
+      description: typeof description === 'string' ? description : undefined,
+      icon: typeof icon === 'string' ? icon : undefined,
+      rarity: typeof rarity === 'string' ? rarity : undefined,
+      quantity
+    });
+    seenIds.add(id);
+    if (sanitizedItems.length >= 3) {
+      break;
+    }
+  }
+
+  const keepQuantities = new Map<string, number>();
+  for (const item of sanitizedItems) {
+    keepQuantities.set(item.id, item.quantity);
+  }
+
+  selected.items = sanitizedItems.map((item) => ({ ...item }));
+
+  if (selected.equipment) {
+    for (const slot of EQUIPMENT_SLOT_IDS) {
+      const equipped = selected.equipment[slot];
+      if (!equipped || typeof equipped !== 'object') {
+        selected.equipment[slot] = null;
+        continue;
+      }
+      const quantity = keepQuantities.get(equipped.id);
+      if (!quantity) {
+        selected.equipment[slot] = null;
+        continue;
+      }
+      selected.equipment[slot] = {
+        ...equipped,
+        quantity
+      };
+    }
+  }
+
   saveUnits([
     {
       ...selected,
-      selected: true
+      selected: true,
+      items: sanitizedItems
     }
   ]);
 }
