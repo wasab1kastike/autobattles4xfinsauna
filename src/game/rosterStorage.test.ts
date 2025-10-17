@@ -4,6 +4,7 @@ import {
   SAUNOJA_STORAGE_KEY,
   getSaunojaStorage,
   loadUnits,
+  persistRosterSelection,
   saveUnits
 } from './rosterStorage.ts';
 
@@ -102,5 +103,26 @@ describe('rosterStorage', () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  it('persists only the chosen attendant when preparing the next run', () => {
+    const roster = [
+      makeSaunoja({ id: 'saunoja-1', name: 'Aava', xp: 360, upkeep: 2 }),
+      makeSaunoja({ id: 'saunoja-2', name: 'Kalle', xp: 120, upkeep: 1 })
+    ];
+
+    saveUnits(roster);
+    persistRosterSelection(roster, 'saunoja-2');
+
+    const stored = window.localStorage?.getItem(SAUNOJA_STORAGE_KEY);
+    expect(stored).toBeTypeOf('string');
+    const serialized = JSON.parse(stored ?? '[]');
+    expect(serialized).toHaveLength(1);
+    expect(serialized[0]?.id).toBe('saunoja-2');
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(1);
+    expect(restored[0]?.id).toBe('saunoja-2');
+    expect(restored[0]?.selected).toBe(true);
   });
 });

@@ -124,7 +124,7 @@ import {
   type LootUpgradeChangeEvent
 } from './progression/lootUpgrades.ts';
 import { applyEquipment } from './unit/calc.ts';
-import { getAssets, uiIcons } from './game/assets.ts';
+import { assetPaths, getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
 import {
@@ -160,11 +160,16 @@ import type { EquipmentSlotId, EquippedItem, EquipmentModifier } from './items/t
 import {
   getSaunojaStorage,
   loadUnits as loadRosterFromStorage,
+  persistRosterSelection,
   saveUnits as persistRosterToStorage,
   SAUNOJA_STORAGE_KEY
 } from './game/rosterStorage.ts';
 import { loadSaunaSettings, saveSaunaSettings } from './game/saunaSettings.ts';
-import { showEndScreen, type EndScreenController } from './ui/overlays/EndScreen.tsx';
+import {
+  showEndScreen,
+  type EndScreenController,
+  type EndScreenRosterEntry
+} from './ui/overlays/EndScreen.tsx';
 import { isTutorialDone, setTutorialDone } from './save/local_flags.ts';
 import { getLogHistory, logEvent, subscribeToLogs } from './ui/logging.ts';
 import {
@@ -1526,6 +1531,30 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   saveNgPlusState(nextRunNgPlusState);
   state.setNgPlusState(nextRunNgPlusState);
   applyNgPlusState(nextRunNgPlusState);
+  const loadedAssets = getAssets();
+  const defaultPortraitKey = 'unit-saunoja';
+  const fallbackPortrait =
+    loadedAssets?.images?.[defaultPortraitKey]?.src ??
+    assetPaths.images?.[defaultPortraitKey] ??
+    undefined;
+  const rosterForEndScreen: EndScreenRosterEntry[] = saunojas.map((unit) => {
+    const appearanceKey = `unit-${unit.appearanceId}`;
+    const portraitCandidate =
+      loadedAssets?.images?.[appearanceKey]?.src ??
+      assetPaths.images?.[appearanceKey] ??
+      fallbackPortrait;
+    return {
+      id: unit.id,
+      name: unit.name,
+      level: getLevelForExperience(unit.xp),
+      xp: unit.xp,
+      upkeep: unit.upkeep,
+      hp: unit.hp,
+      maxHp: unit.maxHp,
+      traits: [...unit.traits],
+      portraitUrl: portraitCandidate ?? undefined
+    } satisfies EndScreenRosterEntry;
+  });
   const controller = showEndScreen({
     container: overlay,
     resolution,
@@ -1535,12 +1564,25 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
       spent: getArtocoinsSpentThisRun()
     },
     resourceLabels: RESOURCE_LABELS,
-    onNewRun: () => {
+    roster: rosterForEndScreen,
+    onNewRun: (selectedUnitId) => {
+      const carryForwardId = selectedUnitId ?? null;
       if (import.meta.env.DEV) {
         console.debug('Advancing to NG+ run', {
           level: nextRunNgPlusState.ngPlusLevel,
-          unlockSlots: nextRunNgPlusState.unlockSlots
+          unlockSlots: nextRunNgPlusState.unlockSlots,
+          carryForward: carryForwardId
         });
+      }
+      if (carryForwardId) {
+        for (const unit of saunojas) {
+          unit.selected = unit.id === carryForwardId;
+        }
+      }
+      try {
+        persistRosterSelection(saunojas, carryForwardId);
+      } catch (error) {
+        console.warn('Failed to persist selected attendant for NG+', error);
       }
       try {
         if (typeof window !== 'undefined') {
