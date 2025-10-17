@@ -1,5 +1,6 @@
 # Changelog
-
+- Restore the policies HUD view so the right-panel tab toggle switches into
+  the policy grid, keeping the council controls visible again.
 ## Unreleased
 
 - Fix end-of-run carryover sanitization so only the explicitly selected loadout

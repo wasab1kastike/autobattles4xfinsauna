@@ -740,19 +740,33 @@ export function setupRightPanel(
     events: eventsView
   };
 
-  const syncRosterState = (view: RightPanelView) => {
+  const syncBottomTabForView = (view: RightPanelView): void => {
+    let targetTab: HudBottomTabId | null = null;
+    if (view === 'roster') {
+      targetTab = 'roster';
+    } else if (view === 'policies') {
+      targetTab = 'policies';
+    }
+
+    if (!targetTab || syncingBottomTabs || bottomTabs.getActive() === targetTab) {
+      return;
+    }
+
+    syncingBottomTabs = true;
+    bottomTabs.setActive(targetTab);
+    syncingBottomTabs = false;
+  };
+
+  const syncViewState = (view: RightPanelView) => {
     const shouldSkipExpand = skipInitialRosterExpand;
     skipInitialRosterExpand = false;
-    if (view === 'roster') {
-      if (!syncingBottomTabs) {
-        syncingBottomTabs = true;
-        bottomTabs.setActive('roster');
-        syncingBottomTabs = false;
-      }
-      if (!shouldSkipExpand) {
-        openPanelForViewport();
-      }
+
+    syncBottomTabForView(view);
+
+    if ((view === 'roster' || view === 'policies') && !shouldSkipExpand) {
+      openPanelForViewport();
     }
+
     emitRosterVisibility();
   };
 
@@ -766,12 +780,12 @@ export function setupRightPanel(
       element.hidden = !isActive;
       element.dataset.active = isActive ? 'true' : 'false';
     });
-    syncRosterState(next);
+    syncViewState(next);
   };
 
   const showView = (view: RightPanelView) => {
     if (activeView === view) {
-      syncRosterState(view);
+      syncViewState(view);
       return;
     }
     applyView(view);
@@ -793,9 +807,7 @@ export function setupRightPanel(
     if (syncingBottomTabs) {
       return;
     }
-    if (tabId === 'roster') {
-      showView('roster');
-    }
+    showView(tabId);
   });
   disposers.push(detachBottomTabListener);
 
