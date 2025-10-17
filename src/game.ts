@@ -1782,8 +1782,8 @@ function unequipItemFromSaunoja(unitId: string, slot: EquipmentSlotId): SaunojaI
   if (attendant.selected) {
     syncSelectionOverlay();
   }
-  const { id, name, description, icon, rarity, quantity } = outcome.removed;
-  return { id, name, description, icon, rarity, quantity } satisfies SaunojaItem;
+  const { id, name, description, icon, attackAnimation, rarity, quantity } = outcome.removed;
+  return { id, name, description, icon, attackAnimation, rarity, quantity } satisfies SaunojaItem;
 }
 
 function equipSlotFromStash(unitId: string, slot: EquipmentSlotId): boolean {
