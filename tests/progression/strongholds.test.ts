@@ -13,6 +13,11 @@ import {
   seedEnemyStrongholds,
   STRONGHOLD_CONFIG
 } from '../../src/world/strongholds.ts';
+import {
+  abandonStrongholdEncounters,
+  resetStrongholdEncounters,
+  spawnStrongholdBoss
+} from '../../src/world/strongholdEncounters.ts';
 
 function makeTracker(map: HexMap): ReturnType<typeof createObjectiveTracker> {
   return createObjectiveTracker({
@@ -25,10 +30,12 @@ function makeTracker(map: HexMap): ReturnType<typeof createObjectiveTracker> {
 describe('enemy strongholds integration', () => {
   beforeEach(() => {
     resetStrongholdRegistry();
+    resetStrongholdEncounters();
   });
 
   afterEach(() => {
     resetStrongholdRegistry();
+    resetStrongholdEncounters();
   });
 
   it('reports seeded totals for a fresh session', () => {
@@ -257,5 +264,36 @@ describe('enemy strongholds integration', () => {
     expect(bosses).toHaveLength(1);
     expect(bosses[0]?.coord.q).toBe(firstStronghold!.coord.q);
     expect(bosses[0]?.coord.r).toBe(firstStronghold!.coord.r);
+  });
+
+  it('abandoning active stronghold bosses clears the battlefield', () => {
+    const map = new HexMap(10, 10);
+    const activeUnits = new Map<string, Unit>();
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG, null, {
+      encounters: {
+        registerUnit: (unit) => {
+          activeUnits.set(unit.id, unit);
+          unit.onDeath(() => {
+            activeUnits.delete(unit.id);
+          });
+        },
+        random: () => 0.23
+      }
+    });
+
+    const [firstStronghold] = listStrongholds();
+    expect(firstStronghold).toBeDefined();
+    const boss = spawnStrongholdBoss(firstStronghold!.id);
+    expect(boss).toBeTruthy();
+    expect(boss?.isDead()).toBe(false);
+    expect(activeUnits.has(boss!.id)).toBe(true);
+
+    abandonStrongholdEncounters();
+
+    expect(activeUnits.has(boss!.id)).toBe(false);
+    expect(boss?.isDead()).toBe(true);
+
+    const snapshot = getStrongholdSnapshot();
+    expect(snapshot[firstStronghold!.id]?.boss?.defeated).toBe(true);
   });
 });

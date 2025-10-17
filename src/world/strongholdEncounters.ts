@@ -32,7 +32,24 @@ interface EncounterState {
 
 const DEFAULT_LOOT_ROLLS = 3;
 const encounters = new Map<string, EncounterState>();
-const activeUnits = new Map<string, (payload: { unitId: string }) => void>();
+
+interface ActiveEncounterUnit {
+  readonly unit: Unit;
+  readonly listener: (payload: { unitId: string }) => void;
+  readonly finalize: () => void;
+  readonly dispose: () => void;
+}
+
+const activeUnits = new Map<string, ActiveEncounterUnit>();
+
+function removeActiveEncounterUnit(unitId: string): void {
+  const entry = activeUnits.get(unitId);
+  if (!entry) {
+    return;
+  }
+  entry.dispose();
+  activeUnits.delete(unitId);
+}
 
 function sanitizeRolls(requested?: number): number {
   if (!Number.isFinite(requested)) {
@@ -73,10 +90,29 @@ function finalizeEncounter(state: EncounterState): void {
 
 export function resetStrongholdEncounters(): void {
   encounters.clear();
-  for (const listener of activeUnits.values()) {
-    eventBus.off('unitDied', listener);
+  for (const entry of activeUnits.values()) {
+    entry.dispose();
   }
   activeUnits.clear();
+}
+
+export function abandonStrongholdEncounters(): void {
+  for (const state of encounters.values()) {
+    if (!state.spawned || state.defeated) {
+      continue;
+    }
+
+    const activeUnit = state.bossUnitId ? activeUnits.get(state.bossUnitId) : null;
+    if (activeUnit) {
+      const { unit } = activeUnit;
+      activeUnit.finalize();
+      unit.setShield(0);
+      unit.takeDamage(unit.getMaxHealth() + 9999);
+      continue;
+    }
+
+    finalizeEncounter(state);
+  }
 }
 
 export function seedStrongholdEncounter(
@@ -201,20 +237,28 @@ export function spawnStrongholdBoss(strongholdId: string): Unit | null {
   const registerUnit = state.registerUnit;
   registerUnit?.(unit);
 
-  const onDeath = () => {
+  const finalizeBoss = () => {
     finalizeEncounter(state);
-    eventBus.off('unitDied', listener);
-    activeUnits.delete(unit.id);
+    removeActiveEncounterUnit(unit.id);
   };
 
   const listener = (payload: { unitId: string }) => {
     if (payload.unitId === unit.id) {
-      onDeath();
+      finalizeBoss();
     }
   };
 
-  activeUnits.set(unit.id, listener);
+  const entry: ActiveEncounterUnit = {
+    unit,
+    listener,
+    finalize: finalizeBoss,
+    dispose: () => {
+      eventBus.off('unitDied', listener);
+    }
+  };
+
+  activeUnits.set(unit.id, entry);
   eventBus.on('unitDied', listener);
-  unit.onDeath(onDeath);
+  unit.onDeath(finalizeBoss);
   return unit;
 }
