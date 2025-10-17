@@ -574,6 +574,26 @@ export function setSaunojaBehaviorPreference(unitId: string, behavior: UnitBehav
   return applySaunojaBehaviorPreference(attendant, behavior);
 }
 
+function deriveUnitAttackProfile(loadout: readonly EquippedItem[]): string | null {
+  let fallback: string | null = null;
+  for (const item of loadout) {
+    if (typeof item.attackAnimation !== 'string') {
+      continue;
+    }
+    const normalized = item.attackAnimation.trim();
+    if (!normalized) {
+      continue;
+    }
+    if (item.slot === 'weapon') {
+      return normalized;
+    }
+    if (!fallback) {
+      fallback = normalized;
+    }
+  }
+  return fallback;
+}
+
 function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void {
   attendant.effectiveStats = { ...stats };
   attendant.maxHp = Math.max(1, Math.round(stats.health));
@@ -581,6 +601,8 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   attendant.defense = typeof stats.defense === 'number' ? Math.max(0, stats.defense) : undefined;
   attendant.shield = typeof stats.shield === 'number' ? Math.max(0, stats.shield) : 0;
 
+  const loadout = loadoutItems(attendant.equipment);
+  const attackProfile = deriveUnitAttackProfile(loadout);
   const unit = getAttachedUnitFor(attendant);
   if (unit) {
     applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
@@ -597,6 +619,7 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
       nextStats.visionRange = attendant.effectiveStats.visionRange;
     }
     unit.updateStats(nextStats);
+    unit.setAttackProfile(attackProfile);
     if (typeof attendant.effectiveStats.shield === 'number') {
       unit.setShield(attendant.effectiveStats.shield);
     } else if (attendant.shield <= 0) {
@@ -1828,6 +1851,22 @@ const onPolicyRevoked = ({ policy }: PolicyRevokedEvent): void => {
 };
 eventBus.on(POLICY_EVENTS.REVOKED, onPolicyRevoked);
 
+const onUnitSpawned = ({ unit }: { unit: Unit }): void => {
+  registerUnit(unit);
+
+  if (unit.faction !== 'player') {
+    return;
+  }
+
+  const persona = unitToSaunoja.get(unit.id) ?? null;
+  if (!persona) {
+    return;
+  }
+
+  const attackProfile = deriveUnitAttackProfile(loadoutItems(persona.equipment));
+  unit.setAttackProfile(attackProfile);
+};
+
 const onUnitDied = ({
   unitId,
   attackerId,
@@ -1996,6 +2035,7 @@ const onUnitDied = ({
     });
   }
 };
+eventBus.on('unitSpawned', onUnitSpawned);
 eventBus.on('unitDied', onUnitDied);
 
 export function cleanup(): void {

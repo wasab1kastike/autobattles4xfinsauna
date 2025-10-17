@@ -57,6 +57,7 @@ export class Unit {
   private experience = 0;
   private behavior: UnitBehavior;
   private appearanceId: string;
+  private attackProfile: string | null = null;
 
   public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
@@ -146,6 +147,19 @@ export class Unit {
     this.appearanceId = this.sanitizeAppearanceId(appearanceId ?? undefined);
   }
 
+  getAttackProfile(): string | null {
+    return this.attackProfile;
+  }
+
+  setAttackProfile(profile?: string | null): void {
+    if (typeof profile === 'string') {
+      const normalized = profile.trim();
+      this.attackProfile = normalized.length > 0 ? normalized : null;
+      return;
+    }
+    this.attackProfile = null;
+  }
+
   private sanitizeAppearanceId(candidate?: string): string {
     const normalized = normalizeAppearanceId(candidate);
     if (normalized) {
@@ -167,6 +181,7 @@ export class Unit {
     const targetCoord = { q: target.coord.q, r: target.coord.r };
     const impactAt = now + UNIT_ATTACK_IMPACT_MS;
     const recoverAt = now + UNIT_ATTACK_TOTAL_MS;
+    const attackProfile = this.getAttackProfile() ?? undefined;
     const payload: UnitAttackPayload = {
       attackerId: this.id,
       targetId: target.id,
@@ -174,7 +189,8 @@ export class Unit {
       targetCoord,
       timestamp: now,
       impactAt,
-      recoverAt
+      recoverAt,
+      attackProfile
     };
     eventBus.emit('unitAttack', payload);
 

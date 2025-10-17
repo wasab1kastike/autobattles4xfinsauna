@@ -3,6 +3,15 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Update the main HUD lifecycle regression test to expect the three-button
+  navigation toolbar so the suite reflects the current command console layout.
+
+- Sync Saunoja attack profiles onto their battlefield units, emit the profile
+  with attack events, and preserve the value when equipment loadouts change or
+  units respawn.
+- Keep stacked unit rendering from redrawing multiple bases when sharing a hex
+  and teach HUD tests to exercise a minimal event bus so lifecycle coverage
+  matches the new spawn handling.
 - Enable the selection mini HUD card to accept pointer input while the outer
   overlay remains click-through, so behavior toggles work without blocking map
   interactions.

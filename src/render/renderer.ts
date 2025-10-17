@@ -595,7 +595,7 @@ export function drawUnits(
       const offset = computeStackOffset(stackIndex);
       jobs.push({
         entry,
-        drawBase: !entry.statusOnly,
+        drawBase: false,
         offset: mergeOffsets(entry.animationOffset, offset),
         anchor: null,
         anchorSource: primaryJob,

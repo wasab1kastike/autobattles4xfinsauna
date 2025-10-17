@@ -3,12 +3,38 @@ import { HUD_OVERLAY_COLLAPSED_CLASS } from './ui/layout.ts';
 
 vi.mock('./events', async () => {
   const actual = await vi.importActual<typeof import('./events')>('./events');
+  const listeners = new Map<string, Set<(payload: unknown) => void>>();
+
+  const on = vi.fn((event: string, handler: (payload: unknown) => void) => {
+    let bucket = listeners.get(event);
+    if (!bucket) {
+      bucket = new Set();
+      listeners.set(event, bucket);
+    }
+    bucket.add(handler);
+  });
+
+  const off = vi.fn((event: string, handler: (payload: unknown) => void) => {
+    const bucket = listeners.get(event);
+    bucket?.delete(handler);
+  });
+
+  const emit = vi.fn((event: string, payload: unknown) => {
+    const bucket = listeners.get(event);
+    if (!bucket) {
+      return;
+    }
+    for (const handler of bucket) {
+      handler(payload);
+    }
+  });
+
   return {
     ...actual,
     eventBus: {
-      on: vi.fn(),
-      off: vi.fn(),
-      emit: vi.fn(),
+      on,
+      off,
+      emit,
     },
   };
 });
@@ -95,7 +121,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
     const navToolbar = document.querySelector('[data-hud-navigation]');
     expect(navToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
-    expect(navToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(4);
+    expect(navToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
     expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
     orchestrator.cleanup();
@@ -119,7 +145,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(1);
     const rebuiltToolbar = document.querySelector('[data-hud-navigation]');
     expect(rebuiltToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
-    expect(rebuiltToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(4);
+    expect(rebuiltToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
   });
 
   it('ignores the legacy HUD v2 flag and renders the classic HUD', async () => {
