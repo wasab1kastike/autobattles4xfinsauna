@@ -57,11 +57,86 @@ function cloneCoord(coord: AxialCoord | null | undefined): AxialCoord | null {
   return { q: coord.q, r: coord.r } satisfies AxialCoord;
 }
 
+type EasingFunction = (t: number) => number;
+
+const linear: EasingFunction = (t: number) => t;
+
+interface AttackProfileGlowConfig {
+  lungePeak: number;
+  lungeEase: EasingFunction;
+  recoverPeak: number;
+  recoverEase: EasingFunction;
+}
+
+interface AttackProfileConfig {
+  windupPullback: number;
+  windupEase: EasingFunction;
+  lungeDistance: number;
+  lungeEase: EasingFunction;
+  recoverDistance: number;
+  recoverEase: EasingFunction;
+  glow: AttackProfileGlowConfig;
+}
+
+const ATTACK_PROFILE_CONFIGS: Record<string, AttackProfileConfig> = Object.freeze({
+  default: {
+    windupPullback: 0.16,
+    windupEase: easeOutCubic,
+    lungeDistance: 0.36,
+    lungeEase: easeOutBack,
+    recoverDistance: 0.18,
+    recoverEase: easeOutCubic,
+    glow: {
+      lungePeak: 1,
+      lungeEase: easeOutQuad,
+      recoverPeak: 0.45,
+      recoverEase: linear
+    }
+  },
+  cleave: {
+    windupPullback: 0.22,
+    windupEase: easeOutCubic,
+    lungeDistance: 0.48,
+    lungeEase: easeOutBack,
+    recoverDistance: 0.24,
+    recoverEase: easeOutCubic,
+    glow: {
+      lungePeak: 1,
+      lungeEase: easeOutCubic,
+      recoverPeak: 0.6,
+      recoverEase: easeOutQuad
+    }
+  },
+  volley: {
+    windupPullback: 0.1,
+    windupEase: easeOutQuad,
+    lungeDistance: 0.28,
+    lungeEase: easeOutCubic,
+    recoverDistance: 0.14,
+    recoverEase: easeOutQuad,
+    glow: {
+      lungePeak: 0.6,
+      lungeEase: easeOutQuad,
+      recoverPeak: 0.3,
+      recoverEase: easeOutCubic
+    }
+  }
+});
+
+function resolveAttackProfileConfig(profile: string | undefined | null): AttackProfileConfig {
+  if (!profile) {
+    return ATTACK_PROFILE_CONFIGS.default;
+  }
+  const key = profile.toLowerCase();
+  return ATTACK_PROFILE_CONFIGS[key] ?? ATTACK_PROFILE_CONFIGS.default;
+}
+
 interface AttackState {
   start: number;
   impactAt: number;
   end: number;
   direction: PixelCoord;
+  profile?: string;
 }
 
 interface HitState {
@@ -138,6 +213,10 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
     if (!payload || !payload.attackerId) {
       return;
     }
+    const normalizedProfile =
+      typeof payload.attackProfile === 'string'
+        ? payload.attackProfile.trim().toLowerCase() || undefined
+        : undefined;
     const attackerCoord = cloneCoord(payload.attackerCoord) ?? resolveUnitCoord(getUnitById(payload.attackerId));
     const targetCoord = cloneCoord(payload.targetCoord) ?? resolveUnitCoord(getUnitById(payload.targetId));
     const direction = resolveDirection(attackerCoord, targetCoord);
@@ -150,7 +229,7 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
       : start + UNIT_ATTACK_TOTAL_MS;
 
     const entry = states.get(payload.attackerId) ?? {};
-    entry.attack = { start, impactAt, end, direction } satisfies AttackState;
+    entry.attack = { start, impactAt, end, direction, profile: normalizedProfile } satisfies AttackState;
     states.set(payload.attackerId, entry);
     scheduleDraw();
   };
@@ -188,24 +267,25 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
     const lungeDuration = Math.max(UNIT_ATTACK_LUNGE_MS, toImpact - UNIT_ATTACK_WINDUP_MS);
     const recoverDuration = Math.max(UNIT_ATTACK_RECOVER_MS, state.end - state.impactAt);
     const direction = state.direction;
+    const config = resolveAttackProfileConfig(state.profile);
 
     let offset: PixelCoord = { x: 0, y: 0 };
     let glow = 0;
 
     if (elapsed <= UNIT_ATTACK_WINDUP_MS) {
       const progress = clamp(elapsed / UNIT_ATTACK_WINDUP_MS, 0, 1);
-      const pullBack = easeOutCubic(progress) * 0.16;
+      const pullBack = config.windupEase(progress) * config.windupPullback;
       offset = { x: -direction.x * pullBack, y: -direction.y * pullBack };
     } else if (elapsed <= toImpact) {
       const progress = clamp((elapsed - UNIT_ATTACK_WINDUP_MS) / lungeDuration, 0, 1);
-      const surge = easeOutBack(progress) * 0.36;
+      const surge = config.lungeEase(progress) * config.lungeDistance;
       offset = { x: direction.x * surge, y: direction.y * surge };
-      glow = easeOutQuad(progress);
+      glow = Math.max(glow, config.glow.lungePeak * config.glow.lungeEase(progress));
     } else {
       const progress = clamp((elapsed - toImpact) / recoverDuration, 0, 1);
-      const settle = (1 - easeOutCubic(progress)) * 0.18;
+      const settle = (1 - config.recoverEase(progress)) * config.recoverDistance;
       offset = { x: direction.x * settle, y: direction.y * settle };
-      glow = Math.max(glow, (1 - progress) * 0.45);
+      glow = Math.max(glow, config.glow.recoverPeak * (1 - config.glow.recoverEase(progress)));
     }
 
     return { offset, glow };
