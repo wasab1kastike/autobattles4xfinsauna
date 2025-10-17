@@ -1,13 +1,26 @@
 import { Resource } from '../../core/GameState.ts';
 import type { ObjectiveResolution } from '../../progression/objectives.ts';
 
+export interface EndScreenRosterEntry {
+  readonly id: string;
+  readonly name: string;
+  readonly level: number;
+  readonly xp: number;
+  readonly upkeep: number;
+  readonly hp: number;
+  readonly maxHp: number;
+  readonly traits?: readonly string[];
+  readonly portraitUrl?: string;
+}
+
 export interface EndScreenOptions {
   container: HTMLElement | null;
   resolution: ObjectiveResolution;
-  onNewRun: () => void;
+  onNewRun: (selectedUnitId: string | null) => void;
   onDismiss?: () => void;
   resourceLabels?: Record<Resource, string>;
   artocoinSummary?: EndScreenArtocoinSummary;
+  roster?: readonly EndScreenRosterEntry[];
 }
 
 export interface EndScreenArtocoinSummary {
@@ -157,6 +170,12 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
   }
 
   const labels = { ...DEFAULT_RESOURCE_LABELS, ...(options.resourceLabels ?? {}) };
+  const rosterEntries = options.roster ?? [];
+  const requiresRosterSelection = rosterEntries.length > 0;
+  const rosterGroupName = `end-screen-roster-${Date.now()}`;
+  const rosterCardRefs = new Map<string, HTMLElement>();
+  const rosterInputRefs: HTMLInputElement[] = [];
+  let selectedUnitId: string | null = null;
 
   const overlay = document.createElement('div');
   overlay.className = 'end-screen';
@@ -240,8 +259,36 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
   newRunButton.type = 'button';
   newRunButton.className = 'end-screen__button end-screen__button--primary';
   newRunButton.textContent = 'New run';
+
+  const syncSelectionState = (): void => {
+    const disabled = requiresRosterSelection && !selectedUnitId;
+    newRunButton.disabled = disabled;
+    if (disabled) {
+      newRunButton.setAttribute('aria-disabled', 'true');
+    } else {
+      newRunButton.removeAttribute('aria-disabled');
+    }
+  };
+
+  const applySelectionVisuals = (): void => {
+    rosterCardRefs.forEach((card, id) => {
+      card.classList.toggle('is-selected', id === selectedUnitId);
+    });
+  };
+
+  const setSelectedUnit = (unitId: string | null): void => {
+    selectedUnitId = unitId;
+    syncSelectionState();
+    applySelectionVisuals();
+  };
+
+  syncSelectionState();
+
   newRunButton.addEventListener('click', () => {
-    onNewRun();
+    if (requiresRosterSelection && !selectedUnitId) {
+      return;
+    }
+    onNewRun(selectedUnitId);
   });
 
   const dismissButton = document.createElement('button');
@@ -254,7 +301,127 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
 
   actions.append(newRunButton, dismissButton);
 
-  panel.append(title, subtitle, metrics, artocoinSection, rewardHeading, rewards, actions);
+  let rosterSection: HTMLElement | null = null;
+
+  if (requiresRosterSelection) {
+    rosterSection = document.createElement('section');
+    rosterSection.className = 'end-screen__roster';
+
+    const rosterHeading = document.createElement('h3');
+    rosterHeading.className = 'end-screen__section-title';
+    rosterHeading.textContent = 'Choose a returning attendant';
+
+    const rosterHint = document.createElement('p');
+    rosterHint.className = 'end-screen__roster-hint';
+    rosterHint.textContent = 'Only one attendant can carry their experience forward. Select who endures.';
+
+    const rosterGrid = document.createElement('div');
+    rosterGrid.className = 'end-screen__roster-grid';
+
+    for (const entry of rosterEntries) {
+      const card = document.createElement('label');
+      card.className = 'end-screen__roster-card';
+      card.dataset.status = entry.hp > 0 ? 'ready' : 'downed';
+      card.dataset.unitId = entry.id;
+
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = rosterGroupName;
+      input.value = entry.id;
+      input.className = 'end-screen__roster-radio';
+      input.addEventListener('change', () => {
+        if (input.checked) {
+          setSelectedUnit(entry.id);
+        }
+      });
+      input.addEventListener('focus', () => {
+        card.classList.add('is-focused');
+      });
+      input.addEventListener('blur', () => {
+        card.classList.remove('is-focused');
+      });
+
+      rosterInputRefs.push(input);
+      rosterCardRefs.set(entry.id, card);
+
+      const portrait = document.createElement('div');
+      portrait.className = 'end-screen__roster-portrait';
+
+      if (entry.portraitUrl) {
+        const image = document.createElement('img');
+        image.className = 'end-screen__roster-image';
+        image.src = entry.portraitUrl;
+        image.alt = entry.name;
+        portrait.append(image);
+      } else {
+        const placeholder = document.createElement('span');
+        placeholder.className = 'end-screen__roster-placeholder';
+        const initial = entry.name?.trim()?.charAt(0) ?? '?';
+        placeholder.textContent = initial.toUpperCase();
+        portrait.append(placeholder);
+      }
+
+      const status = document.createElement('span');
+      status.className = 'end-screen__roster-status';
+      status.dataset.state = entry.hp > 0 ? 'ready' : 'downed';
+      status.textContent = entry.hp > 0 ? 'Ready' : 'Downed';
+      portrait.append(status);
+
+      const body = document.createElement('div');
+      body.className = 'end-screen__roster-body';
+
+      const name = document.createElement('div');
+      name.className = 'end-screen__roster-name';
+      name.textContent = entry.name;
+
+      const meta = document.createElement('div');
+      meta.className = 'end-screen__roster-meta';
+      meta.textContent = `Level ${Math.max(1, Math.floor(entry.level))} • ${Math.max(0, Math.floor(entry.xp))} XP`;
+
+      const vitals = document.createElement('div');
+      vitals.className = 'end-screen__roster-vitals';
+      const hp = Math.max(0, Math.round(entry.hp));
+      const maxHp = Math.max(0, Math.round(entry.maxHp));
+      vitals.textContent = `HP ${hp}/${maxHp} • Upkeep ${Math.max(0, Math.round(entry.upkeep))}`;
+
+      body.append(name, meta, vitals);
+
+      if (entry.traits && entry.traits.length > 0) {
+        const traitList = document.createElement('ul');
+        traitList.className = 'end-screen__roster-traits';
+        for (const trait of entry.traits.slice(0, 4)) {
+          const item = document.createElement('li');
+          item.className = 'end-screen__roster-trait';
+          item.textContent = trait;
+          traitList.append(item);
+        }
+        body.append(traitList);
+      }
+
+      card.append(input, portrait, body);
+      rosterGrid.append(card);
+    }
+
+    rosterSection.append(rosterHeading, rosterHint, rosterGrid);
+    syncSelectionState();
+  }
+
+  const sections: HTMLElement[] = [
+    title,
+    subtitle,
+    metrics,
+    artocoinSection,
+    rewardHeading,
+    rewards
+  ];
+
+  if (rosterSection) {
+    sections.push(rosterSection);
+  }
+
+  sections.push(actions);
+
+  panel.append(...sections);
   overlay.append(panel);
   container.append(overlay);
 
@@ -267,6 +434,10 @@ export function showEndScreen(options: EndScreenOptions): EndScreenController {
 
   const focusPrimary = (): void => {
     requestAnimationFrame(() => {
+      if (requiresRosterSelection && rosterInputRefs[0]) {
+        rosterInputRefs[0].focus({ preventScroll: true });
+        return;
+      }
       newRunButton.focus({ preventScroll: true });
     });
   };

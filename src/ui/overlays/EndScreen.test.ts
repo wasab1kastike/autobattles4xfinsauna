@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Resource } from '../../core/GameState.ts';
 import type { ObjectiveResolution } from '../../progression/objectives.ts';
-import { showEndScreen } from './EndScreen.tsx';
+import { showEndScreen, type EndScreenRosterEntry } from './EndScreen.tsx';
 
 describe('showEndScreen', () => {
   let container: HTMLElement;
@@ -23,6 +23,8 @@ describe('showEndScreen', () => {
         bankruptDurationMs: 0
       },
       sauna: { maxHealth: 1_000, health: 0, destroyed: true, destroyedAt: 41_500 },
+      enemyKills: 0,
+      exploration: { revealedHexes: 0 },
       startedAt: 0
     },
     rewards: {
@@ -33,6 +35,31 @@ describe('showEndScreen', () => {
       }
     }
   };
+
+  const rosterTemplate: EndScreenRosterEntry[] = [
+    {
+      id: 'attendant-1',
+      name: 'Aava the Bold',
+      level: 5,
+      xp: 420,
+      upkeep: 2,
+      hp: 14,
+      maxHp: 22,
+      traits: ['Bold', 'Resilient'],
+      portraitUrl: '/assets/units/saunoja-01.png'
+    },
+    {
+      id: 'attendant-2',
+      name: 'Kalle the Steadfast',
+      level: 3,
+      xp: 180,
+      upkeep: 1,
+      hp: 0,
+      maxHp: 20,
+      traits: ['Guardian'],
+      portraitUrl: '/assets/units/saunoja-02.png'
+    }
+  ];
 
   beforeEach(() => {
     container = document.createElement('div');
@@ -62,7 +89,8 @@ describe('showEndScreen', () => {
       container,
       resolution: baseResolution,
       onNewRun: vi.fn(),
-      onDismiss: vi.fn()
+      onDismiss: vi.fn(),
+      roster: rosterTemplate.map((entry) => ({ ...entry }))
     });
 
     const subtitle = container.querySelector('.end-screen__subtitle');
@@ -78,7 +106,8 @@ describe('showEndScreen', () => {
       container,
       resolution: baseResolution,
       onNewRun: vi.fn(),
-      artocoinSummary: { balance: 480, earned: 135, spent: 90 }
+      artocoinSummary: { balance: 480, earned: 135, spent: 90 },
+      roster: rosterTemplate.map((entry) => ({ ...entry }))
     });
 
     const ledgerValues = Array.from(
@@ -90,6 +119,38 @@ describe('showEndScreen', () => {
       { text: '90', polarity: 'negative' },
       { text: '480', polarity: 'neutral' }
     ]);
+
+    controller.destroy();
+  });
+
+  it('requires picking an attendant before a new run is available', () => {
+    const onNewRun = vi.fn();
+    const controller = showEndScreen({
+      container,
+      resolution: baseResolution,
+      onNewRun,
+      roster: rosterTemplate.map((entry) => ({ ...entry }))
+    });
+
+    const newRunButton = container.querySelector<HTMLButtonElement>('.end-screen__button--primary');
+    expect(newRunButton?.disabled).toBe(true);
+
+    const radios = Array.from(
+      container.querySelectorAll<HTMLInputElement>('.end-screen__roster-radio')
+    );
+    expect(radios).toHaveLength(2);
+
+    const firstRadio = radios[0];
+    firstRadio.checked = true;
+    firstRadio.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(newRunButton?.disabled).toBe(false);
+
+    newRunButton?.click();
+    expect(onNewRun).toHaveBeenCalledWith('attendant-1');
+
+    const selectedCard = container.querySelector('.end-screen__roster-card.is-selected');
+    expect(selectedCard?.getAttribute('data-unit-id')).toBe('attendant-1');
 
     controller.destroy();
   });

@@ -176,3 +176,39 @@ export function saveUnits(units: readonly Saunoja[]): void {
     console.warn('Failed to persist Saunoja units', error);
   }
 }
+
+export function persistRosterSelection(
+  units: readonly Saunoja[],
+  selectedUnitId: string | null
+): void {
+  const storage = getSaunojaStorage();
+  if (!storage) {
+    return;
+  }
+
+  if (!selectedUnitId) {
+    try {
+      storage.removeItem(SAUNOJA_STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear Saunoja roster selection', error);
+    }
+    return;
+  }
+
+  const selected = units.find((unit) => unit.id === selectedUnitId);
+  if (!selected) {
+    try {
+      storage.removeItem(SAUNOJA_STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear Saunoja roster selection', error);
+    }
+    return;
+  }
+
+  saveUnits([
+    {
+      ...selected,
+      selected: true
+    }
+  ]);
+}

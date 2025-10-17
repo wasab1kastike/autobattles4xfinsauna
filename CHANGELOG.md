@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh the end-of-run overlay with a polished roster selector that blocks
+  "New run" until an attendant is chosen, persists that survivor into the next
+  loop, and locks in regression coverage for the storage trim.
+
 - Restructure the HTML shell so the game canvas lives in its own container
   while the HUD overlay mounts dynamically under a dedicated `#hud-root`
   portal, keeping the GitHub Pages bundle and runtime bootstrap aligned.
