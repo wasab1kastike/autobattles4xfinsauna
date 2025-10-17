@@ -61,6 +61,8 @@ export function clampRosterCap(value: number, limit: number): number {
   return Math.max(0, Math.min(maxCap, sanitized));
 }
 
+export const MIN_SAUNA_STRONGHOLD_DISTANCE = 6;
+
 export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifecycleResult {
   const { map, ngPlusState, getActiveRosterCount, logEvent, minSpawnLimit, onVisionRangeChanged } = options;
 
