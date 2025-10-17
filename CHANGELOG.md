@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Tune combat attack animations to honor the synced profile payload, storing
+  the profile on the animator state, branching easing/glow tables for cleave
+  versus volley swings, and covering the variants with rendering tests.
+
 - Allow behavior preference updates to resolve Saunojas via attached unit IDs
   so battlefield commands stay in sync when toggling behavior from unit
   references, and extend roster tests to cover the new lookup path.

@@ -49,6 +49,44 @@ describe('createUnitCombatAnimator', () => {
     expect(requestDraw).toHaveBeenCalled();
   });
 
+  it('adapts easing and intensity based on the attack profile', () => {
+    const cleaveStart = 4_000;
+    eventBus.emit('unitAttack', {
+      attackerId: 'attacker',
+      targetId: 'target',
+      attackerCoord: { q: 0, r: 0 },
+      targetCoord: { q: 1, r: 0 },
+      timestamp: cleaveStart,
+      impactAt: cleaveStart + UNIT_ATTACK_IMPACT_MS,
+      recoverAt: cleaveStart + UNIT_ATTACK_TOTAL_MS,
+      attackProfile: 'CLEAVE'
+    });
+
+    animator.step(cleaveStart + UNIT_ATTACK_IMPACT_MS - 40);
+    const cleaveSample = animator.getState('attacker');
+    expect(cleaveSample).not.toBeNull();
+
+    const secondStart = cleaveStart + 5_000;
+    eventBus.emit('unitAttack', {
+      attackerId: 'attacker',
+      targetId: 'target',
+      attackerCoord: { q: 0, r: 0 },
+      targetCoord: { q: 1, r: 0 },
+      timestamp: secondStart,
+      impactAt: secondStart + UNIT_ATTACK_IMPACT_MS,
+      recoverAt: secondStart + UNIT_ATTACK_TOTAL_MS,
+      attackProfile: 'volley'
+    });
+
+    animator.step(secondStart + UNIT_ATTACK_IMPACT_MS - 40);
+    const volleySample = animator.getState('attacker');
+    expect(volleySample).not.toBeNull();
+
+    expect(cleaveSample!.glow).toBeGreaterThan(volleySample!.glow);
+    expect(cleaveSample!.offset.x).toBeGreaterThan(volleySample!.offset.x);
+    expect(volleySample!.glow).toBeGreaterThan(0);
+  });
+
   it('applies recoil and fades out after the hit animation completes', () => {
     const impactStart = 5_000 + UNIT_ATTACK_IMPACT_MS;
     eventBus.emit('unitDamaged', {
