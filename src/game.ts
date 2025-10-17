@@ -567,7 +567,10 @@ function applySaunojaBehaviorPreference(
 }
 
 export function setSaunojaBehaviorPreference(unitId: string, behavior: UnitBehavior): boolean {
-  const attendant = saunojas.find((unit) => unit.id === unitId);
+  let attendant = saunojas.find((unit) => unit.id === unitId);
+  if (!attendant) {
+    attendant = unitToSaunoja.get(unitId);
+  }
   if (!attendant) {
     return false;
   }

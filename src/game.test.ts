@@ -1041,6 +1041,10 @@ describe('saunoja persistence', () => {
     expect(changed).toBe(true);
     expect(ally.getBehavior()).toBe('attack');
 
+    const changedByUnitId = setSaunojaBehaviorPreference(ally.id, 'explore');
+    expect(changedByUnitId).toBe(true);
+    expect(ally.getBehavior()).toBe('explore');
+
     saveUnits();
 
     const stored = window.localStorage?.getItem('autobattles:saunojas');
@@ -1050,13 +1054,13 @@ describe('saunoja persistence', () => {
       behavior?: string;
     }>;
     const storedEntry = serializedRoster.find((entry) => entry?.id === targetId);
-    expect(storedEntry?.behavior).toBe('attack');
+    expect(storedEntry?.behavior).toBe('explore');
 
     const reloaded = loadUnits();
     const updated = reloaded.find((unit) => unit.id === targetId);
-    expect(updated?.behavior).toBe('attack');
+    expect(updated?.behavior).toBe('explore');
 
-    const unchanged = setSaunojaBehaviorPreference(targetId, 'attack');
+    const unchanged = setSaunojaBehaviorPreference(targetId, 'explore');
     expect(unchanged).toBe(false);
   }, 20000);
 });
