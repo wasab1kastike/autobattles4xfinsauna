@@ -15,6 +15,7 @@ import {
 } from '../src/world/strongholds.ts';
 import { pickStrongholdSpawnCoord } from '../src/world/spawn/strongholdSpawn.ts';
 import { hexDistance as gameHexDistance } from '../src/game.ts';
+import { MIN_SAUNA_STRONGHOLD_DISTANCE } from '../src/game/setup/sauna.ts';
 
 function isNeighborOrSame(target: AxialCoord, origin: AxialCoord): boolean {
   if (target.q === origin.q && target.r === origin.r) {
@@ -33,7 +34,7 @@ describe('enemy stronghold spawn integration', () => {
     seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
 
     const center = { q: Math.floor(map.width / 2), r: Math.floor(map.height / 2) };
-    const exclusionRadius = 5;
+    const exclusionRadius = MIN_SAUNA_STRONGHOLD_DISTANCE;
 
     const seededStrongholds = listStrongholds();
     expect(seededStrongholds).toHaveLength(STRONGHOLD_CONFIG.strongholds.length);
