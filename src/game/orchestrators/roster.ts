@@ -3,7 +3,7 @@ import { EQUIPMENT_SLOT_IDS, type EquipmentModifier } from '../../items/types.ts
 import { getSlotDefinition } from '../../items/equip.ts';
 import type { RosterEntry, RosterStats } from '../../ui/panels/RosterPanel.tsx';
 import type { RosterHudSummary, RosterCardViewModel } from '../../ui/rosterHUD.ts';
-import type { Saunoja } from '../../units/saunoja.ts';
+import type { Saunoja, SaunojaClass } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
 import { getLevelProgress, getTotalStatAwards } from '../../progression/experiencePlan.ts';
@@ -18,6 +18,7 @@ type RosterOrchestratorDependencies = {
   getAttachedUnitFor(attendant: Saunoja): Unit | null;
   getActiveRosterCount(): number;
   syncSelectionOverlay(): void;
+  promote(attendant: Saunoja, klass: SaunojaClass): boolean;
 };
 
 let orchestratorDeps: RosterOrchestratorDependencies | null = null;
@@ -31,6 +32,15 @@ function requireDeps(): RosterOrchestratorDependencies {
 
 export function configureRosterOrchestrator(deps: RosterOrchestratorDependencies): void {
   orchestratorDeps = deps;
+}
+
+export function promoteSaunoja(unitId: string, klass: SaunojaClass): boolean {
+  const attendant =
+    saunojas.find((unit) => unit.id === unitId) ?? unitToSaunoja.get(unitId) ?? null;
+  if (!attendant) {
+    return false;
+  }
+  return requireDeps().promote(attendant, klass);
 }
 
 export const saunojas: Saunoja[] = [];

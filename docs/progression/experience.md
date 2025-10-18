@@ -56,6 +56,11 @@ Every level-up grants focused stat packages aligned with pacing beats. Totals su
 | 11 | +10 | +6 | +6 | Audio choir swell.
 | 12 | +12 | +7 | +6 | Mastery banner and stat summary.
 
+## Saunoja Promotions
+- Reaching level 12 unlocks a roster promotion that costs **150 Saunakunnia** and lets commanders specialize a Saunoja as a **Tank**, **Rogue**, **Wizard**, or **Speedster**.
+- Promotions reset the attendant's XP to level 1, roll back cumulative stat awards, and then immediately reapply policy modifiers so the baseline feels familiar while opening new class perks.
+- Battlefield units linked to the promoted Saunoja inherit the reset XP, keeping combat HUD readouts consistent without manual resyncs.
+
 ## UI & Feedback Beats
 1. **Persistent XP Ribbon** – A high-contrast ribbon beneath the wave timer pulses as XP arrives. Chunked ticks (20 XP) ensure clarity during peak combat.
 2. **Level-Up Overlay** – A 1.2-second freeze-frame with particle burst, presenting stat awards and the next unlock. Player regains control after dismissing or auto-timeout.

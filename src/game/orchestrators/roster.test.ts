@@ -50,7 +50,8 @@ describe('roster orchestrator', () => {
         return attachedId ? unitsById.get(attachedId) ?? null : null;
       },
       getActiveRosterCount: () => activeRosterCount,
-      syncSelectionOverlay: () => {}
+      syncSelectionOverlay: () => {},
+      promote: () => false
     });
   });
 

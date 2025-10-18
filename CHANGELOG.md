@@ -2,9 +2,7 @@
 - Restore the policies HUD view so the right-panel tab toggle switches into
   the policy grid, keeping the council controls visible again.
 ## Unreleased
-- Remove cross-policy prerequisites so every doctrine is unlocked through
-  resource thresholds alone, and refresh policy docs to detail the new access
-  flow.
+
 - Refresh HUD navigation regression coverage so the Policies tab now exercises
   the dedicated sheet controller, add focused Vitest specs for
   `setupPoliciesWindow`, and update the docs/site guidance to reflect the

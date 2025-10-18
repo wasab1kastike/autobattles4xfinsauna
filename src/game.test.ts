@@ -9,6 +9,7 @@ import { GameState, Resource } from './core/GameState.ts';
 import { createSauna } from './sim/sauna.ts';
 import { runEconomyTick } from './economy/tick.ts';
 import { getSoldierStats } from './units/Soldier.ts';
+import { getExperienceForLevel, getLevelProgress } from './progression/experiencePlan.ts';
 import { clearLogs, logStore } from './ui/logging.ts';
 import type { UnitSpriteAtlas } from './render/units/spriteAtlas.ts';
 
@@ -482,6 +483,59 @@ describe('game logging', () => {
       : null;
     expect(parsed?.activeTierId).toBe('mythic-conclave');
     expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
+  });
+
+  it('promotes a level 12 Saunoja, resetting XP and storing the class', async () => {
+    const {
+      eventBus,
+      loadUnits,
+      promoteSaunoja,
+      getGameStateInstance,
+      __grantRosterExperienceForTest,
+      __syncSaunojaRosterForTest
+    } = await initGame();
+    const { Unit } = await import('./units/Unit.ts');
+
+    const state = getGameStateInstance();
+    state.addResource(Resource.SAUNAKUNNIA, 1_000);
+
+    __syncSaunojaRosterForTest();
+    await flushLogs();
+
+    __grantRosterExperienceForTest(getExperienceForLevel(12));
+    await flushLogs();
+
+    const rosterAfterXp = loadUnits();
+    expect(rosterAfterXp.length).toBeGreaterThan(0);
+    const promotedTarget = rosterAfterXp[0]!;
+    const beforeProgress = getLevelProgress(promotedTarget.xp);
+    expect(beforeProgress.level).toBeGreaterThanOrEqual(12);
+
+    const resourceBefore = state.getResource(Resource.SAUNAKUNNIA);
+    const soldierStats = getSoldierStats();
+    const battlefieldUnit = new Unit(
+      promotedTarget.id,
+      'soldier',
+      { q: promotedTarget.coord.q, r: promotedTarget.coord.r },
+      'player',
+      soldierStats
+    );
+    eventBus.emit('unitSpawned', { unit: battlefieldUnit });
+
+    const promotionSucceeded = promoteSaunoja(promotedTarget.id, 'wizard');
+    expect(promotionSucceeded).toBe(true);
+
+    const resourceAfter = state.getResource(Resource.SAUNAKUNNIA);
+    expect(resourceBefore - resourceAfter).toBe(150);
+
+    const rosterAfterPromotion = loadUnits();
+    const refreshedTarget = rosterAfterPromotion.find((unit) => unit.id === promotedTarget.id);
+    expect(refreshedTarget).toBeTruthy();
+    const finalProgress = getLevelProgress(refreshedTarget!.xp);
+    expect(finalProgress.level).toBe(1);
+    expect(refreshedTarget!.xp).toBe(getExperienceForLevel(1));
+    expect(refreshedTarget!.klass).toBe('wizard');
+    expect(battlefieldUnit.getExperience()).toBe(refreshedTarget!.xp);
   });
 
   it('updates stored Saunoja coordinates when a friendly unit moves', async () => {
