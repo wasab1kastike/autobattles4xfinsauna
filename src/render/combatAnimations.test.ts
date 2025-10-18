@@ -9,6 +9,25 @@ interface StubUnit {
   renderCoord: AxialCoord;
 }
 
+const makeKeywordEffects = () => ({
+  attacker: {
+    tickHpDamage: 0,
+    tickShieldDamage: 0,
+    shieldGranted: 0,
+    shieldConsumed: 0,
+    lifesteal: 0,
+    keywordShieldRemaining: 0
+  },
+  defender: {
+    tickHpDamage: 0,
+    tickShieldDamage: 0,
+    shieldGranted: 0,
+    shieldConsumed: 0,
+    lifesteal: 0,
+    keywordShieldRemaining: 0
+  }
+});
+
 describe('createUnitCombatAnimator', () => {
   const units = new Map<string, StubUnit>();
   const requestDraw = vi.fn();
@@ -95,7 +114,8 @@ describe('createUnitCombatAnimator', () => {
       targetCoord: { q: 1, r: 0 },
       amount: 12,
       remainingHealth: 6,
-      timestamp: impactStart
+      timestamp: impactStart,
+      keywordEffects: makeKeywordEffects()
     });
 
     animator.step(impactStart + 40);
@@ -106,5 +126,48 @@ describe('createUnitCombatAnimator', () => {
 
     animator.step(impactStart + UNIT_HIT_RECOIL_MS + 10);
     expect(animator.getState('target')).toBeNull();
+  });
+
+  it('amplifies hit flash and glow when shields or dots trigger', () => {
+    const baselineAnimator = createUnitCombatAnimator({ getUnitById, requestDraw });
+    const baseStart = 7_500 + UNIT_ATTACK_IMPACT_MS;
+    eventBus.emit('unitDamaged', {
+      attackerId: 'attacker',
+      targetId: 'target',
+      targetCoord: { q: 1, r: 0 },
+      amount: 4,
+      remainingHealth: 6,
+      timestamp: baseStart,
+      keywordEffects: makeKeywordEffects()
+    });
+    baselineAnimator.step(baseStart + 40);
+    const baseline = baselineAnimator.getState('target');
+    baselineAnimator.dispose();
+
+    const enhancedAnimator = createUnitCombatAnimator({ getUnitById, requestDraw });
+    const enhancedStart = baseStart + 60;
+    const enhancedEffects = makeKeywordEffects();
+    enhancedEffects.defender.tickHpDamage = 2;
+    enhancedEffects.defender.tickShieldDamage = 1;
+    enhancedEffects.defender.shieldConsumed = 3;
+    enhancedEffects.defender.shieldGranted = 4;
+    enhancedEffects.attacker.shieldGranted = 2;
+    eventBus.emit('unitDamaged', {
+      attackerId: 'attacker',
+      targetId: 'target',
+      targetCoord: { q: 1, r: 0 },
+      amount: 4,
+      remainingHealth: 6,
+      timestamp: enhancedStart,
+      keywordEffects: enhancedEffects
+    });
+    enhancedAnimator.step(enhancedStart + 40);
+    const enhanced = enhancedAnimator.getState('target');
+    enhancedAnimator.dispose();
+
+    expect(baseline).not.toBeNull();
+    expect(enhanced).not.toBeNull();
+    expect(enhanced!.flash).toBeGreaterThan(baseline!.flash);
+    expect(enhanced!.glow).toBeGreaterThan(baseline!.glow);
   });
 });

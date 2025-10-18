@@ -144,6 +144,9 @@ interface HitState {
   end: number;
   direction: PixelCoord;
   intensity: number;
+  shieldBoost: number;
+  dotBoost: number;
+  shieldGlow: number;
 }
 
 interface UnitState {
@@ -243,13 +246,26 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
     const attackerCoord = cloneCoord(resolveUnitCoord(attackerUnit));
     const targetCoord = cloneCoord(payload.targetCoord) ?? resolveUnitCoord(targetUnit);
     const direction = resolveDirection(attackerCoord, targetCoord);
+    const defenderEffects = payload.keywordEffects?.defender;
+    const shieldAbsorb = defenderEffects
+      ? Math.max(
+          0,
+          (defenderEffects.shieldConsumed ?? 0) + (defenderEffects.tickShieldDamage ?? 0)
+        )
+      : 0;
+    const dotDamage = defenderEffects ? Math.max(0, defenderEffects.tickHpDamage ?? 0) : 0;
+    const shieldGranted = defenderEffects ? Math.max(0, defenderEffects.shieldGranted ?? 0) : 0;
+
     const start = Number.isFinite(payload.timestamp) ? (payload.timestamp as number) : lastSample;
     const end = start + UNIT_HIT_RECOIL_MS;
-    const normalizedAmount = Math.max(0, Math.min(40, payload.amount));
+    const normalizedAmount = Math.max(0, Math.min(40, payload.amount + shieldAbsorb * 0.5 + dotDamage * 0.4));
     const intensity = normalizedAmount / 40;
+    const shieldBoost = Math.min(1, shieldAbsorb / 12);
+    const dotBoost = Math.min(1, dotDamage / 12);
+    const shieldGlow = Math.min(1, shieldGranted / 12);
 
     const entry = states.get(payload.targetId) ?? {};
-    entry.hit = { start, end, direction, intensity } satisfies HitState;
+    entry.hit = { start, end, direction, intensity, shieldBoost, dotBoost, shieldGlow } satisfies HitState;
     states.set(payload.targetId, entry);
     scheduleDraw();
   };
@@ -294,7 +310,7 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
   const sampleHit = (state: HitState, now: number) => {
     const duration = state.end - state.start;
     if (duration <= 0) {
-      return { offset: { x: 0, y: 0 }, flash: 0 };
+      return { offset: { x: 0, y: 0 }, flash: 0, glow: 0 };
     }
     const elapsed = clamp(now - state.start, 0, duration);
     const progress = clamp(elapsed / duration, 0, 1);
@@ -303,8 +319,24 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
       x: -state.direction.x * recoilStrength,
       y: -state.direction.y * recoilStrength
     } satisfies PixelCoord;
-    const flash = Math.max(0, 0.35 + state.intensity * 0.55) * (1 - progress);
-    return { offset, flash };
+    let flashStrength = Math.max(0, 0.35 + state.intensity * 0.55);
+    if (state.shieldBoost > 0) {
+      flashStrength += 0.25 + state.shieldBoost * 0.7;
+    }
+    if (state.dotBoost > 0) {
+      flashStrength += 0.18 + state.dotBoost * 0.6;
+    }
+    const flash = Math.max(0, flashStrength) * (1 - progress);
+
+    let glow = 0;
+    if (state.shieldGlow > 0) {
+      glow = Math.max(glow, (0.24 + state.shieldGlow * 0.5) * (1 - progress));
+    }
+    if (state.shieldBoost > 0) {
+      glow = Math.max(glow, state.shieldBoost * 0.45 * (1 - progress));
+    }
+
+    return { offset, flash, glow };
   };
 
   const getState = (unitId: string): CombatAnimationSample | null => {
@@ -337,6 +369,7 @@ export function createUnitCombatAnimator(options: AnimatorOptions): UnitCombatAn
         y: offset.y + contribution.offset.y
       } satisfies PixelCoord;
       flash = Math.max(flash, contribution.flash);
+      glow = Math.max(glow, contribution.glow);
     }
 
     if (Math.abs(offset.x) < EPSILON && Math.abs(offset.y) < EPSILON && glow <= EPSILON && flash <= EPSILON) {

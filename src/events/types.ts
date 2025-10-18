@@ -1,4 +1,5 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
+import type { KeywordEffectSummary } from '../keywords/index.ts';
 
 export interface UnitAttackPayload {
   attackerId: string;
@@ -18,6 +19,8 @@ export interface UnitDamagedPayload {
   amount: number;
   remainingHealth: number;
   timestamp?: number;
+  keywordEffects: KeywordEffectSummary;
+  attackerHealing?: number;
 }
 
 export interface UnitHealedPayload {
