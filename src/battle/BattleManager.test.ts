@@ -104,6 +104,22 @@ describe('BattleManager', () => {
       amount: 5,
       remainingHealth: 0
     });
+    expect(damageEvents[0].keywordEffects).toMatchObject({
+      attacker: expect.objectContaining({
+        tickHpDamage: 0,
+        tickShieldDamage: 0,
+        shieldGranted: 0,
+        shieldConsumed: 0,
+        lifesteal: 0
+      }),
+      defender: expect.objectContaining({
+        tickHpDamage: 0,
+        tickShieldDamage: 0,
+        shieldGranted: 0,
+        shieldConsumed: 0,
+        lifesteal: 0
+      })
+    });
     expect(deathEvents[0]).toMatchObject({
       unitId: 'b',
       attackerId: 'a',

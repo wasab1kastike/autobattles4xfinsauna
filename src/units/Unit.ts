@@ -13,6 +13,7 @@ import type {
   CombatKeywordRegistry,
   CombatResolution
 } from '../combat/resolve.ts';
+import type { KeywordEffectSummary } from '../keywords/index.ts';
 import { resolveCombat } from '../combat/resolve.ts';
 import { UNIT_ATTACK_IMPACT_MS, UNIT_ATTACK_TOTAL_MS } from '../combat/timing.ts';
 import type { UnitAttackPayload } from '../events/types.ts';
@@ -32,6 +33,13 @@ function fromKey(key: string): AxialCoord {
 
 function cloneCoord(coord: AxialCoord): AxialCoord {
   return { q: coord.q, r: coord.r };
+}
+
+function cloneKeywordEffects(summary: KeywordEffectSummary): KeywordEffectSummary {
+  return {
+    attacker: { ...summary.attacker },
+    defender: { ...summary.defender }
+  } satisfies KeywordEffectSummary;
 }
 
 function normalizeHealthStat(value: number): number {
@@ -292,13 +300,17 @@ export class Unit {
         (typeof performance !== 'undefined' && typeof performance.now === 'function'
           ? performance.now()
           : Date.now());
+      const keywordEffects = cloneKeywordEffects(finalResult.keywordEffects);
+      const attackerHealing = Math.max(0, finalResult.attackerHealing);
       eventBus.emit('unitDamaged', {
         attackerId: attacker?.id,
         targetId: this.id,
         targetCoord: { q: this.coord.q, r: this.coord.r },
         amount: finalResult.damage,
         remainingHealth: this.stats.health,
-        timestamp: eventTimestamp
+        timestamp: eventTimestamp,
+        keywordEffects,
+        ...(attackerHealing > 0 ? { attackerHealing } : {})
       });
     }
 

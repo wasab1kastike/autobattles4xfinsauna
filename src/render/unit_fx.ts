@@ -74,6 +74,10 @@ function clamp(value: number, min: number, max: number): number {
 
 const DAMAGE_COLOR = 'var(--color-danger)';
 const HEAL_COLOR = 'color-mix(in srgb, #34d399 88%, white 12%)';
+const DOT_DAMAGE_COLOR = 'color-mix(in srgb, #fb7185 86%, white 14%)';
+const SHIELD_LOSS_COLOR = 'color-mix(in srgb, #60a5fa 82%, white 18%)';
+const SHIELD_GAIN_COLOR = 'color-mix(in srgb, #93c5fd 80%, white 20%)';
+const LIFESTEAL_COLOR = 'color-mix(in srgb, #f472b6 80%, white 20%)';
 const FADE_DURATION_DESKTOP = 720;
 const FADE_DURATION_MOBILE = 540;
 const SHAKE_DURATION = 220;
@@ -167,7 +171,7 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const coarsePointer = Boolean(coarsePointerQuery?.matches);
   const fadeDuration = coarsePointer ? FADE_DURATION_MOBILE : FADE_DURATION_DESKTOP;
   const shakeDuration = coarsePointer ? SHAKE_DURATION_MOBILE : SHAKE_DURATION;
-  const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_DESKTOP;
+const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_DESKTOP;
 
   const scheduleDraw = () => {
     if (!requestDraw) {
@@ -210,12 +214,71 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     });
   };
 
+  const formatCombatValue = (value: number) => {
+    if (!Number.isFinite(value)) {
+      return '0';
+    }
+    const safe = Math.max(0, value);
+    if (safe >= 1) {
+      return damageFormatter.format(Math.round(safe));
+    }
+    const rounded = Math.round(safe * 10) / 10;
+    if (rounded <= 0) {
+      return '0';
+    }
+    return healFormatter.format(rounded);
+  };
+
   const onDamaged = (payload: UnitDamagedPayload) => {
     if (!payload || payload.amount <= 0) {
       return;
     }
     const amount = damageFormatter.format(Math.max(1, Math.round(payload.amount)));
     spawnFloater(payload.targetId, `-${amount}`, DAMAGE_COLOR, 'up');
+
+    const effects = payload.keywordEffects;
+    if (effects) {
+      const defenderEffects = effects.defender;
+      const tickHp = Math.max(0, defenderEffects.tickHpDamage ?? 0);
+      if (tickHp > 0) {
+        const formatted = formatCombatValue(tickHp);
+        spawnFloater(payload.targetId, `✶-${formatted}`, DOT_DAMAGE_COLOR, 'right');
+      }
+
+      const shieldAbsorb = Math.max(
+        0,
+        (defenderEffects.shieldConsumed ?? 0) + (defenderEffects.tickShieldDamage ?? 0)
+      );
+      if (shieldAbsorb > 0) {
+        const formatted = formatCombatValue(shieldAbsorb);
+        spawnFloater(payload.targetId, `🛡-${formatted}`, SHIELD_LOSS_COLOR, 'left');
+      }
+
+      const shieldGain = Math.max(0, defenderEffects.shieldGranted ?? 0);
+      if (shieldGain > 0) {
+        const formatted = formatCombatValue(shieldGain);
+        spawnFloater(payload.targetId, `🛡+${formatted}`, SHIELD_GAIN_COLOR, 'down');
+      }
+
+      if (payload.attackerId) {
+        const attackerEffects = effects.attacker;
+        const attackerHealing = Math.max(
+          0,
+          payload.attackerHealing ?? attackerEffects.lifesteal ?? 0
+        );
+        if (attackerHealing > 0) {
+          const formatted = formatCombatValue(attackerHealing);
+          spawnFloater(payload.attackerId, `❤+${formatted}`, LIFESTEAL_COLOR, 'up');
+        }
+
+        const attackerShieldGain = Math.max(0, attackerEffects.shieldGranted ?? 0);
+        if (attackerShieldGain > 0) {
+          const formatted = formatCombatValue(attackerShieldGain);
+          spawnFloater(payload.attackerId, `🛡+${formatted}`, SHIELD_GAIN_COLOR, 'right');
+        }
+      }
+    }
+
     if (!prefersReducedMotion) {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       shakes.push({
