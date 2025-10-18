@@ -983,6 +983,64 @@ describe('saunoja persistence', () => {
     expect(stored.behavior).toBe('defend');
   });
 
+  it('preserves Saunoja classes through storage cycles', async () => {
+    window.localStorage?.setItem(
+      'autobattles:saunojas',
+      JSON.stringify([
+        {
+          id: 'classy-sage',
+          name: 'Classy Sage',
+          coord: { q: 0, r: 0 },
+          maxHp: 18,
+          hp: 18,
+          steam: 0.2,
+          traits: ['Steam Scholar'],
+          upkeep: 2,
+          xp: 42,
+          selected: true,
+          klass: 'wizard'
+        },
+        {
+          id: 'undaunted-novice',
+          name: 'Undaunted Novice',
+          coord: { q: 1, r: -1 },
+          maxHp: 18,
+          hp: 16,
+          steam: 0.1,
+          traits: ['Rust-Prone Gear'],
+          upkeep: 1,
+          xp: 0,
+          selected: false,
+          klass: 'bard'
+        }
+      ])
+    );
+
+    const { loadUnits, saveUnits } = await import('./game/rosterStorage.ts');
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(2);
+    const wizard = restored.find((unit) => unit.id === 'classy-sage');
+    expect(wizard?.klass).toBe('wizard');
+    const novice = restored.find((unit) => unit.id === 'undaunted-novice');
+    expect(novice?.klass).toBeUndefined();
+
+    saveUnits(restored);
+
+    const storedPayload = window.localStorage?.getItem('autobattles:saunojas') ?? '[]';
+    const serialized = JSON.parse(storedPayload) as Array<{ id: string; klass?: string | null }>;
+    const storedWizard = serialized.find((entry) => entry.id === 'classy-sage');
+    expect(storedWizard?.klass).toBe('wizard');
+    const storedNovice = serialized.find((entry) => entry.id === 'undaunted-novice');
+    expect(storedNovice?.klass).toBeUndefined();
+
+    const rehydrated = loadUnits();
+    const refreshedWizard = rehydrated.find((unit) => unit.id === 'classy-sage');
+    expect(refreshedWizard?.klass).toBe('wizard');
+    const refreshedNovice = rehydrated.find((unit) => unit.id === 'undaunted-novice');
+    expect(refreshedNovice?.klass).toBeUndefined();
+  });
+
   it('preserves stored Saunoja personas across reloads', async () => {
     const mockSpawnUnit = () =>
       vi.doMock('./unit/index.ts', async () => {
