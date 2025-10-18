@@ -49,6 +49,7 @@ import { getAssets } from '../../game/assets.ts';
 import { resetGamePause } from '../pause.ts';
 import type { RosterService } from './rosterService.ts';
 import { createUiAdapters, type InventoryHudController } from './uiAdapters.ts';
+import { isReloadInProgress } from './reloadState.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
 
 export interface GameRuntimeContext {
@@ -706,7 +707,9 @@ export class GameRuntime {
     }
 
     this.ctx.persistState();
-    this.ctx.persistUnits();
+    if (!isReloadInProgress()) {
+      this.ctx.persistUnits();
+    }
 
     this.unitFx?.dispose();
     this.unitFx = null;

@@ -11,6 +11,7 @@ import type { SaunaTierContext, SaunaTierId } from '../../sauna/tiers.ts';
 import type { GameClock } from '../../core/GameClock.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { RosterEntry } from '../../ui/rightPanel.tsx';
+import { setReloadInProgress } from './reloadState.ts';
 
 const unitFxResults: Array<{
   dispose: ReturnType<typeof vi.fn>;
@@ -159,6 +160,10 @@ vi.mock('../../progression/saunaShop.ts', () => ({
 vi.mock('../../audio/sfx.ts', () => ({
   playSafe: vi.fn(),
 }));
+
+afterEach(() => {
+  setReloadInProgress(false);
+});
 
 const useSisuBurstMock = vi.fn(() => true);
 const torilleMock = vi.fn(() => true);
@@ -417,5 +422,17 @@ describe('GameRuntime', () => {
     expect(latestHud?.saunaUiController.dispose).toHaveBeenCalled();
     expect(latestHud?.topbarControls.dispose).toHaveBeenCalled();
     expect(latestHud?.actionBarController.destroy).toHaveBeenCalled();
+  });
+
+  it('skips roster persistence when a reload is in progress', () => {
+    let runtime!: GameRuntime;
+    const context = createContext(() => runtime);
+    runtime = new GameRuntime(context, createRosterService());
+
+    setReloadInProgress(true);
+    runtime.cleanup();
+
+    expect(context.persistState).toHaveBeenCalled();
+    expect(context.persistUnits).not.toHaveBeenCalled();
   });
 });
