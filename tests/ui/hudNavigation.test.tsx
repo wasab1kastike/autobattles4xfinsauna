@@ -1,10 +1,58 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+vi.mock('../../src/ui/hooks/useIsMobile.ts', () => {
+  let matches = false;
+  const listeners = new Set<(value: boolean) => void>();
+  const notify = (value: boolean) => {
+    matches = value;
+    for (const listener of Array.from(listeners)) {
+      try {
+        listener(matches);
+      } catch (error) {
+        console.error('Failed to notify mobile listener mock', error);
+      }
+    }
+  };
+  return {
+    useIsMobile: ({ onChange, immediate = true }: { onChange?: (value: boolean) => void; immediate?: boolean } = {}) => {
+      if (onChange) {
+        listeners.add(onChange);
+        if (immediate) {
+          onChange(matches);
+        }
+      }
+      return {
+        matches: () => matches,
+        dispose: () => {
+          if (onChange) {
+            listeners.delete(onChange);
+          }
+        }
+      } satisfies { matches(): boolean; dispose(): void };
+    },
+    subscribeToIsMobile: (
+      listener: (value: boolean) => void,
+      { immediate = true }: { immediate?: boolean } = {}
+    ) => {
+      listeners.add(listener);
+      if (immediate) {
+        listener(matches);
+      }
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    getIsMobile: () => matches,
+    __setIsMobile: notify
+  };
+});
 import { GameState } from '../../src/core/GameState.ts';
 import { setupHudNavigation } from '../../src/ui/hudNavigation.tsx';
 import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
 import { setupPoliciesWindow } from '../../src/ui/policies/setupPoliciesWindow.ts';
-import { useIsMobile } from '../../src/ui/hooks/useIsMobile.ts';
+import * as isMobileModule from '../../src/ui/hooks/useIsMobile.ts';
 import { HUD_OVERLAY_COLLAPSED_CLASS } from '../../src/ui/layout.ts';
+
+const { useIsMobile } = isMobileModule;
 
 describe('HUD navigation', () => {
   let overlay: HTMLDivElement;
@@ -107,9 +155,19 @@ describe('HUD navigation', () => {
   });
 
   it('coordinates the right panel console with the dedicated policies window', () => {
+    vi.useFakeTimers();
+    const raf = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 0;
+      });
+
     const state = new GameState(1000);
     const panelController = setupRightPanel(state);
     const policiesWindow = setupPoliciesWindow(state, { overlay });
+    const showViewSpy = vi.spyOn(panelController, 'showView');
+    const openViewSpy = vi.spyOn(panelController, 'openView');
 
     const nav = setupHudNavigation(overlay, {
       onNavigate: (view) => {
@@ -149,13 +207,26 @@ describe('HUD navigation', () => {
     policiesButton?.click();
 
     expect(policiesWindow.isOpen()).toBe(true);
+    expect(showViewSpy).not.toHaveBeenCalled();
+    expect(openViewSpy).not.toHaveBeenCalled();
     expect(rosterView?.dataset.active).toBe('true');
     expect(navToolbarActiveValue()).toBe('policies');
+
+    const policiesSheet = policiesRoot?.querySelector<HTMLElement>('.policies-window__sheet');
+    expect(policiesRoot?.classList.contains('policies-window--open')).toBe(true);
+    expect(policiesRoot?.hidden).toBe(false);
+    expect(policiesSheet?.getAttribute('aria-hidden')).toBe('false');
 
     policiesWindow.close();
 
     expect(policiesWindow.isOpen()).toBe(false);
     expect(navToolbarActiveValue()).toBe('roster');
+    expect(policiesRoot?.classList.contains('policies-window--open')).toBe(false);
+
+    vi.advanceTimersByTime(320);
+
+    expect(policiesRoot?.hidden).toBe(true);
+    expect(policiesSheet?.getAttribute('aria-hidden')).toBe('true');
 
     panelController.showView('events');
 
@@ -166,6 +237,10 @@ describe('HUD navigation', () => {
     detachView();
     nav.dispose();
     policiesWindow.destroy();
+    showViewSpy.mockRestore();
+    openViewSpy.mockRestore();
+    raf.mockRestore();
+    vi.useRealTimers();
     panelController.dispose();
   });
 
@@ -212,26 +287,7 @@ describe('HUD navigation', () => {
   });
 
   it('opens the console in mobile mode for mid-width viewports without overflowing the overlay', () => {
-    const matchMediaMock = vi.fn((query: string) => {
-      const normalized = query.replace(/\s+/g, '');
-      const matchesMidViewport =
-        normalized.includes('(max-width:959px)') || normalized.includes('(max-width:960px)');
-      const mediaQuery: MediaQueryList = {
-        matches: matchesMidViewport,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(() => false)
-      } as unknown as MediaQueryList;
-      return mediaQuery;
-    });
-    window.matchMedia = matchMediaMock as unknown as typeof window.matchMedia;
-
-    const resetHandle = useIsMobile({ immediate: true });
-    resetHandle.dispose();
+    const setIsMobile = (isMobileModule as unknown as { __setIsMobile?: (value: boolean) => void }).__setIsMobile;
     const mobileHandle = useIsMobile({ immediate: true });
 
     const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback: FrameRequestCallback) => {
@@ -243,6 +299,7 @@ describe('HUD navigation', () => {
     const controller = setupRightPanel(state);
     setupHudNavigation(overlay, { onNavigate: controller.openView });
 
+    setIsMobile?.(true);
     controller.openRosterView();
 
     expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(false);

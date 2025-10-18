@@ -2,6 +2,10 @@
 - Restore the policies HUD view so the right-panel tab toggle switches into
   the policy grid, keeping the council controls visible again.
 ## Unreleased
+- Refresh HUD navigation regression coverage so the Policies tab now exercises
+  the dedicated sheet controller, add focused Vitest specs for
+  `setupPoliciesWindow`, and update the docs/site guidance to reflect the
+  relocated policies console.
 
 - Extract the policies console into a dedicated responsive HUD sheet, retire the
   bottom-tab wiring, and sync navigation so the right panel now focuses on roster
