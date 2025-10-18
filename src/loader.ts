@@ -95,7 +95,11 @@ export async function loadAssets(paths: AssetPaths): Promise<AssetLoadResult> {
         const msg = `Failed to load image: ${resolvedSrc}`;
         console.error(msg);
         failures.push(msg);
-        images[key] = getPlaceholderImage();
+        if (key === 'placeholder') {
+          images[key] = getPlaceholderImage();
+        } else {
+          delete images[key];
+        }
         resolve();
       };
       img.src = resolvedSrc;

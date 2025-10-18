@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GameState } from '../../src/core/GameState.ts';
 import { setupHudNavigation } from '../../src/ui/hudNavigation.tsx';
 import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
+import { setupPoliciesWindow } from '../../src/ui/policies/setupPoliciesWindow.ts';
 import { useIsMobile } from '../../src/ui/hooks/useIsMobile.ts';
 import { HUD_OVERLAY_COLLAPSED_CLASS } from '../../src/ui/layout.ts';
 
 describe('HUD navigation', () => {
   let overlay: HTMLDivElement;
+
+  const navToolbarActiveValue = (): string | null =>
+    overlay.querySelector<HTMLElement>('[data-hud-navigation]')?.dataset.activeView ?? null;
 
   beforeEach(() => {
     Object.defineProperty(window, 'matchMedia', {
@@ -102,41 +106,67 @@ describe('HUD navigation', () => {
     nav.dispose();
   });
 
-  it('coordinates with the right panel view controller', () => {
+  it('coordinates the right panel console with the dedicated policies window', () => {
     const state = new GameState(1000);
-    const controller = setupRightPanel(state);
-    const nav = setupHudNavigation(overlay, { onNavigate: controller.showView });
-    const detach = controller.onViewChange((view) => nav.setActive(view));
+    const panelController = setupRightPanel(state);
+    const policiesWindow = setupPoliciesWindow(state, { overlay });
 
-    const panel = overlay.querySelector('#right-panel');
-    expect(panel?.querySelector('.panel-tabs')).toBeNull();
+    const nav = setupHudNavigation(overlay, {
+      onNavigate: (view) => {
+        if (view === 'policies') {
+          if (policiesWindow.isOpen()) {
+            policiesWindow.close();
+          } else {
+            policiesWindow.open();
+          }
+          return;
+        }
+        policiesWindow.close({ restoreFocus: false });
+        panelController.showView(view);
+      }
+    });
+
+    const detachView = panelController.onViewChange((view) => {
+      if (!policiesWindow.isOpen()) {
+        nav.setActive(view);
+      }
+    });
+    const detachPolicies = policiesWindow.onOpenChange((open) => {
+      nav.setActive(open ? 'policies' : panelController.getActiveView());
+    });
 
     const rosterView = overlay.querySelector<HTMLElement>('#right-panel-roster');
-    const policiesView = overlay.querySelector<HTMLElement>('#right-panel-policies');
     const eventsView = overlay.querySelector<HTMLElement>('#right-panel-events');
+    const policiesRoot = document.querySelector<HTMLElement>('[data-policies-window]');
 
     expect(rosterView?.dataset.active).toBe('true');
-    expect(policiesView?.dataset.active).toBe('false');
     expect(eventsView?.dataset.active).toBe('false');
-    expect(overlay.querySelector('#right-panel-enemy-scaling')).toBeNull();
+    expect(policiesRoot?.classList.contains('policies-window--open')).toBe(false);
 
     const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
+    expect(policiesButton).not.toBeNull();
+
     policiesButton?.click();
 
-    expect(policiesView?.dataset.active).toBe('true');
-    expect(rosterView?.dataset.active).toBe('false');
-    expect(policiesButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(policiesWindow.isOpen()).toBe(true);
+    expect(rosterView?.dataset.active).toBe('true');
+    expect(navToolbarActiveValue()).toBe('policies');
 
-    controller.showView('events');
+    policiesWindow.close();
+
+    expect(policiesWindow.isOpen()).toBe(false);
+    expect(navToolbarActiveValue()).toBe('roster');
+
+    panelController.showView('events');
 
     expect(eventsView?.dataset.active).toBe('true');
-    const eventsButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="events"]');
-    expect(eventsButton?.dataset.active).toBe('true');
-    expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
+    expect(navToolbarActiveValue()).toBe('events');
 
-    detach();
+    detachPolicies();
+    detachView();
     nav.dispose();
-    controller.dispose();
+    policiesWindow.destroy();
+    panelController.dispose();
   });
 
   it('keeps the right panel collapsed on narrow layouts until navigation expands it', () => {
@@ -165,11 +195,13 @@ describe('HUD navigation', () => {
     expect(panel?.getAttribute('aria-hidden')).toBe('true');
     expect(overlay.classList.contains(HUD_OVERLAY_COLLAPSED_CLASS)).toBe(true);
 
-    const nav = setupHudNavigation(overlay, { onNavigate: controller.openView });
-    const policiesButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="policies"]');
-    expect(policiesButton).not.toBeNull();
+    const nav = setupHudNavigation(overlay, { initialView: 'events', onNavigate: controller.openView });
+    controller.showView('events');
 
-    policiesButton?.click();
+    const rosterButton = overlay.querySelector<HTMLButtonElement>('[data-hud-nav-item="roster"]');
+    expect(rosterButton).not.toBeNull();
+
+    rosterButton?.click();
 
     expect(panel?.classList.contains('right-panel--collapsed')).toBe(false);
     expect(panel?.getAttribute('aria-hidden')).toBe('false');

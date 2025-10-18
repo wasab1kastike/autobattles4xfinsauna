@@ -205,12 +205,14 @@ describe('rosterHUD', () => {
 
       hud.connectPanelBridge(bridge);
 
-      layout.tabs.setActive('policies');
-      expect(layout.tabs.getActive()).toBe('policies');
-
       bridge.openRosterView();
 
       expect(layout.tabs.getActive()).toBe('roster');
+      expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(true);
+
+      bridge.closeRosterView();
+
+      expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(false);
 
       hud.destroy();
     } finally {

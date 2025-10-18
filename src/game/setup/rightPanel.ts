@@ -2,12 +2,18 @@ import type { GameState } from '../../core/GameState.ts';
 import type { Sauna } from '../../sim/sauna.ts';
 import type { Saunoja } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
-import { setupRightPanel, type GameEvent, type RosterEntry } from '../../ui/rightPanel.tsx';
+import {
+  setupRightPanel,
+  type GameEvent,
+  type RosterEntry,
+  type RightPanelView
+} from '../../ui/rightPanel.tsx';
 import { setupHudNavigation, type HudNavigationView } from '../../ui/hudNavigation.tsx';
 import { getHudOverlayElement } from '../../ui/layout.ts';
 import type { EquipmentSlotId } from '../../items/types.ts';
 import type { RosterService } from '../runtime/rosterService.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
+import { setupPoliciesWindow } from '../../ui/policies/setupPoliciesWindow.ts';
 
 export interface RightPanelDependencies {
   state: GameState;
@@ -26,7 +32,10 @@ export interface RightPanelDependencies {
 export interface RightPanelBridge {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
-  openView: (view: HudNavigationView) => void;
+  openView: (view: RightPanelView) => void;
+  openPoliciesWindow: (options?: { focus?: boolean }) => void;
+  closePoliciesWindow: (options?: { restoreFocus?: boolean }) => void;
+  onPoliciesVisibilityChange: (listener: (open: boolean) => void) => () => void;
   openRosterView: () => void;
   closeRosterView: () => void;
   onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
@@ -78,14 +87,54 @@ export function initializeRightPanel(
   });
 
   const overlay = getHudOverlayElement();
+  const policiesWindow = setupPoliciesWindow(deps.state, { overlay });
+
+  let lastConsoleView: RightPanelView = rightPanel.getActiveView();
+  const policiesListeners = new Set<(open: boolean) => void>();
+
+  const notifyPolicies = (open: boolean): void => {
+    for (const listener of policiesListeners) {
+      try {
+        listener(open);
+      } catch (error) {
+        console.warn('Failed to notify policies visibility listener', error);
+      }
+    }
+  };
+
   const navigation = setupHudNavigation(overlay, {
     initialView: 'roster',
     onNavigate: (view) => {
+      if (view === 'policies') {
+        if (policiesWindow.isOpen()) {
+          policiesWindow.close();
+        } else {
+          policiesWindow.open();
+        }
+        return;
+      }
+      lastConsoleView = view;
+      if (policiesWindow.isOpen()) {
+        policiesWindow.close({ restoreFocus: false });
+      }
       rightPanel.openView(view);
     }
   });
-  const detachViewSync = rightPanel.onViewChange((view: HudNavigationView) => {
-    navigation.setActive(view);
+
+  const detachViewSync = rightPanel.onViewChange((view: RightPanelView) => {
+    lastConsoleView = view;
+    if (!policiesWindow.isOpen()) {
+      navigation.setActive(view);
+    }
+  });
+
+  const detachPoliciesSync = policiesWindow.onOpenChange((open) => {
+    if (open) {
+      navigation.setActive('policies');
+    } else {
+      navigation.setActive(lastConsoleView);
+    }
+    notifyPolicies(open);
   });
 
   navigation.setActive('roster');
@@ -94,13 +143,52 @@ export function initializeRightPanel(
   return {
     addEvent: rightPanel.addEvent,
     changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
-    openView: (view) => rightPanel.openView(view),
-    openRosterView: () => rightPanel.openRosterView(),
-    closeRosterView: () => rightPanel.closeRosterView(),
+    openView: (view) => {
+      lastConsoleView = view;
+      if (policiesWindow.isOpen()) {
+        policiesWindow.close({ restoreFocus: false });
+      }
+      rightPanel.openView(view);
+      navigation.setActive(view);
+    },
+    openPoliciesWindow: (options) => {
+      policiesWindow.open(options);
+    },
+    closePoliciesWindow: (options) => {
+      policiesWindow.close(options);
+    },
+    onPoliciesVisibilityChange: (listener) => {
+      policiesListeners.add(listener);
+      try {
+        listener(policiesWindow.isOpen());
+      } catch (error) {
+        console.warn('Failed to notify policies visibility listener', error);
+      }
+      return () => {
+        policiesListeners.delete(listener);
+      };
+    },
+    openRosterView: () => {
+      lastConsoleView = 'roster';
+      if (policiesWindow.isOpen()) {
+        policiesWindow.close({ restoreFocus: false });
+      }
+      rightPanel.openRosterView();
+      navigation.setActive('roster');
+    },
+    closeRosterView: () => {
+      if (policiesWindow.isOpen()) {
+        policiesWindow.close({ restoreFocus: false });
+      }
+      rightPanel.closeRosterView();
+    },
     onRosterVisibilityChange: (listener) => rightPanel.onRosterVisibilityChange(listener),
     dispose: () => {
       detachViewSync();
+      detachPoliciesSync();
       navigation.dispose();
+      policiesWindow.destroy();
+      policiesListeners.clear();
       rightPanel.dispose();
     }
   } satisfies RightPanelBridge;

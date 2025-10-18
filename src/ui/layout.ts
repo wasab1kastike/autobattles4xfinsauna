@@ -22,7 +22,7 @@ export type HudLayoutDock = {
   actions: HTMLDivElement;
 };
 
-export type HudBottomTabId = 'roster' | 'policies';
+export type HudBottomTabId = 'roster';
 
 export type HudBottomTabs = {
   container: HTMLDivElement;
@@ -86,11 +86,10 @@ const ANCHOR_DATASET_NAMES: Record<keyof HudLayoutAnchors, string> = {
   commandDock: 'command-dock',
 };
 
-const BOTTOM_TAB_ORDER: HudBottomTabId[] = ['roster', 'policies'];
+const BOTTOM_TAB_ORDER: HudBottomTabId[] = ['roster'];
 
 const BOTTOM_TAB_LABELS: Record<HudBottomTabId, string> = {
   roster: 'Roster',
-  policies: 'Policies',
 };
 
 type BottomTabState = {

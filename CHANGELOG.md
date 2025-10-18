@@ -3,6 +3,9 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Extract the policies console into a dedicated responsive HUD sheet, retire the
+  bottom-tab wiring, and sync navigation so the right panel now focuses on roster
+  and events while the new policies window delivers a polished overlay.
 - Tune combat attack animations to honor the synced profile payload, storing
   the profile on the animator state, branching easing/glow tables for cleave
   versus volley swings, and covering the variants with rendering tests.
