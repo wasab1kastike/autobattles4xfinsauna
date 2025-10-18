@@ -280,11 +280,11 @@ function sanitizeItem(entry: unknown): SaunojaItem | null {
   return {
     id: idSource,
     name: nameSource,
-    description,
-    icon,
-    attackAnimation,
-    rarity,
-    quantity
+    quantity,
+    ...(description ? { description } : {}),
+    ...(icon ? { icon } : {}),
+    ...(attackAnimation ? { attackAnimation } : {}),
+    ...(rarity ? { rarity } : {})
   } satisfies SaunojaItem;
 }
 
@@ -446,7 +446,26 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const resolvedBehavior = sanitizeBehavior(behaviorInput);
 
   const equipment = sanitizeEquipment(init.equipment, sanitizedItems);
-  const normalizedItems = loadoutToItems(equipment);
+  const normalizedItemsRaw = loadoutToItems(equipment);
+  const sanitizedById = new Map(sanitizedItems.map((item) => [item.id, item]));
+  const normalizedItems = normalizedItemsRaw.map((item) => {
+    const source = sanitizedById.get(item.id);
+    const description = source?.description ?? item.description;
+    const icon = source?.icon ?? item.icon;
+    const rarity = source?.rarity ?? item.rarity;
+    const attackAnimation = source
+      ? source.attackAnimation
+      : item.attackAnimation;
+    return {
+      id: item.id,
+      name: source?.name ?? item.name,
+      quantity: item.quantity,
+      ...(description ? { description } : {}),
+      ...(icon ? { icon } : {}),
+      ...(rarity ? { rarity } : {}),
+      ...(attackAnimation ? { attackAnimation } : {})
+    } satisfies SaunojaItem;
+  });
 
   const baseFallback: SaunojaStatBlock = {
     ...DEFAULT_STATS,

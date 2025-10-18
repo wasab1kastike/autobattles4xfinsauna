@@ -12,6 +12,8 @@ type HudNavigationOptions = {
 
 type HudNavigationController = {
   setActive(view: HudNavigationView): void;
+  getActive(): HudNavigationView;
+  focus(view: HudNavigationView): void;
   dispose(): void;
 };
 
@@ -46,7 +48,12 @@ export function setupHudNavigation(
   options: HudNavigationOptions = {}
 ): HudNavigationController {
   if (!overlay) {
-    return { setActive: () => {}, dispose: () => {} } satisfies HudNavigationController;
+    return {
+      setActive: () => {},
+      getActive: () => 'roster',
+      focus: () => {},
+      dispose: () => {}
+    } satisfies HudNavigationController;
   }
 
   const layout = ensureHudLayout(overlay);
@@ -194,6 +201,12 @@ export function setupHudNavigation(
         return;
       }
       applyActive(view);
+    },
+    getActive() {
+      return activeView;
+    },
+    focus(view) {
+      focusView(view);
     },
     dispose() {
       for (const cleanup of listeners) {

@@ -31,7 +31,6 @@ import {
   type LogEventType,
   writeLogPreferences
 } from './logging.ts';
-import { createPolicyPanel } from './policies/PolicyPanel.ts';
 import type { HudNavigationView } from './hudNavigation.tsx';
 
 export type {
@@ -57,7 +56,7 @@ type RightPanelOptions = {
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
 };
 
-type RightPanelView = HudNavigationView;
+export type RightPanelView = Exclude<HudNavigationView, 'policies'>;
 
 export function setupRightPanel(
   state: GameState,
@@ -72,6 +71,7 @@ export function setupRightPanel(
   closeRosterView: () => void;
   onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
   onViewChange: (listener: (view: RightPanelView) => void) => () => void;
+  getActiveView: () => RightPanelView;
   dispose: () => void;
 } {
   const overlay = getHudOverlayElement();
@@ -86,6 +86,7 @@ export function setupRightPanel(
       closeRosterView: () => {},
       onRosterVisibilityChange: () => () => {},
       onViewChange: () => () => {},
+      getActiveView: () => 'roster',
       dispose: () => {}
     };
   }
@@ -95,8 +96,6 @@ export function setupRightPanel(
   const doc = overlay.ownerDocument ?? document;
   const rightRegion = regions.right;
   const commandDock = dock.actions;
-  const policyHudPanel = bottomTabs.panels.policies;
-
   const existingPanel = overlay.querySelector<HTMLDivElement>('#right-panel');
   if (existingPanel) {
     existingPanel.remove();
@@ -646,23 +645,6 @@ export function setupRightPanel(
   rosterContainer.dataset.hudTabPanel = 'roster';
   rosterView.appendChild(rosterContainer);
 
-  const policiesView = doc.createElement('section');
-  policiesView.id = 'right-panel-policies';
-  policiesView.classList.add('panel-view', 'panel-view--policies');
-  policiesView.setAttribute('role', 'region');
-  policiesView.setAttribute('aria-live', 'polite');
-  policiesView.setAttribute('aria-label', 'Sauna policies');
-
-  const policiesContainer = policyHudPanel ?? doc.createElement('div');
-  if (policiesContainer.parentElement) {
-    policiesContainer.parentElement.removeChild(policiesContainer);
-  }
-  policiesContainer.innerHTML = '';
-  policiesContainer.className = 'panel-section panel-section--scroll panel-section--policies';
-  policiesContainer.dataset.hudTabPanel = 'policies';
-  policiesView.appendChild(policiesContainer);
-  bottomTabs.panels.policies = policiesContainer;
-
   const eventsView = doc.createElement('section');
   eventsView.id = 'right-panel-events';
   eventsView.classList.add('panel-view', 'panel-view--events');
@@ -675,7 +657,7 @@ export function setupRightPanel(
   eventsContainer.dataset.hudTabPanel = 'events';
   eventsView.appendChild(eventsContainer);
 
-  viewRoot.append(rosterView, policiesView, eventsView);
+  viewRoot.append(rosterView, eventsView);
 
   const logPreferences = readLogPreferences();
 
@@ -736,24 +718,18 @@ export function setupRightPanel(
 
   const viewContainers: Record<RightPanelView, HTMLElement> = {
     roster: rosterView,
-    policies: policiesView,
     events: eventsView
   };
 
   const syncBottomTabForView = (view: RightPanelView): void => {
-    let targetTab: HudBottomTabId | null = null;
-    if (view === 'roster') {
-      targetTab = 'roster';
-    } else if (view === 'policies') {
-      targetTab = 'policies';
-    }
-
-    if (!targetTab || syncingBottomTabs || bottomTabs.getActive() === targetTab) {
+    if (view !== 'roster') {
       return;
     }
-
+    if (syncingBottomTabs || bottomTabs.getActive() === 'roster') {
+      return;
+    }
     syncingBottomTabs = true;
-    bottomTabs.setActive(targetTab);
+    bottomTabs.setActive('roster');
     syncingBottomTabs = false;
   };
 
@@ -763,7 +739,7 @@ export function setupRightPanel(
 
     syncBottomTabForView(view);
 
-    if ((view === 'roster' || view === 'policies') && !shouldSkipExpand) {
+    if (view === 'roster' && !shouldSkipExpand) {
       openPanelForViewport();
     }
 
@@ -833,10 +809,6 @@ export function setupRightPanel(
   if (typeof onRosterRendererReady === 'function') {
     onRosterRendererReady(renderRoster);
   }
-
-  // --- Policies ---
-  const policyPanel = createPolicyPanel(policiesContainer, state);
-  disposers.push(() => policyPanel.destroy());
 
   // --- Events ---
   function createChoiceButton(event: ActiveSchedulerEvent, choice: SchedulerEventContent['choices'][number]): HTMLButtonElement {
@@ -1391,6 +1363,7 @@ export function setupRightPanel(
       };
     },
     onViewChange,
+    getActiveView: () => activeView,
     dispose
   };
 }
