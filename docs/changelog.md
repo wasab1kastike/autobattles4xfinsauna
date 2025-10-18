@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh HUD navigation coverage so the Policies button drives the new
+  dedicated sheet, add targeted specs for `setupPoliciesWindow`, and update the
+  GitHub Pages guidance to highlight the relocated console experience.
+
 - Fix NG+ carryover persistence so only the chosen loadout gear survives resets,
   clear any stale equipment from roster storage, and extend coverage to ensure
   the three-item storage cap remains enforced after a run restart.

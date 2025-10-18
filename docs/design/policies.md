@@ -1,5 +1,9 @@
 # Policy Arsenal
 
+## Access & Layout
+
+Open the policies console from the HUD navigation toolbar’s Policies badge. The nav button now launches a dedicated glassmorphic sheet that slides in over the command console while dimming and inerting the underlying HUD. The window carries its own close control in the header, locks keyboard focus inside the sheet, and restores focus to the toolbar trigger when dismissed so players can fluidly bounce between roster management and doctrine planning. A live status badge in the header surfaces council alerts or policy updates without returning to the right-panel views.
+
 ## Battle Rhythm Doctrine
 - **Prerequisite:** Aurora Temperance Treaty
 - **Effect:** Multiplies attack damage by 1.15, slightly extends movement range, and grants a modest +5% hit bonus while nudging upkeep 10% higher.
