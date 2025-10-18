@@ -925,6 +925,28 @@ describe('saunoja persistence', () => {
     }
   });
 
+  it('does not repersist the old roster when NG+ triggers a reload', async () => {
+    const { cleanup, loadUnits, start } = await initGame();
+    await start();
+
+    const roster = loadUnits();
+    expect(roster).not.toHaveLength(0);
+
+    window.localStorage?.setItem('autobattles:saunojas', '[]');
+
+    const { setReloadInProgress } = await import('./game/runtime/reloadState.ts');
+
+    setReloadInProgress(true);
+    try {
+      cleanup();
+    } finally {
+      setReloadInProgress(false);
+    }
+
+    const stored = window.localStorage?.getItem('autobattles:saunojas');
+    expect(stored).toBe('[]');
+  });
+
   it('normalizes and persists extended attendant fields', async () => {
     window.localStorage?.setItem(
       'autobattles:saunojas',

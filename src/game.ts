@@ -49,6 +49,7 @@ import {
   getRosterCapLimit as getRosterCapLimitImpl,
   setRosterCapValue as setRosterCapValueImpl
 } from './game/runtime/index.ts';
+import { setReloadInProgress } from './game/runtime/reloadState.ts';
 import { createHudCoordinator } from './game/runtime/hudCoordinator.ts';
 import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import { GameController } from './game/GameController.ts';
@@ -338,7 +339,7 @@ const {
   clearSaunojaSelection,
   focusSaunoja,
   focusSaunojaById,
-  setupGame,
+  setupGame: setupGameImpl,
   handleCanvasClick
 } = createInputHandlers({
   rosterService,
@@ -348,6 +349,11 @@ const {
   invalidateFrame: () => invalidateFrame(),
   getGameController: () => requireGameController()
 });
+
+function setupGame(canvas: HTMLCanvasElement, resourceBar: HTMLElement, overlay: HTMLElement): void {
+  setReloadInProgress(false);
+  setupGameImpl(canvas, resourceBar, overlay);
+}
 
 export {
   setSelectedCoord,
@@ -1673,6 +1679,7 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
         console.warn('Failed to reset saved game state for NG+', error);
       }
       if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+        setReloadInProgress(true);
         window.setTimeout(() => window.location.reload(), 75);
       }
     },
