@@ -2,9 +2,6 @@
 - Restore the policies HUD view so the right-panel tab toggle switches into
   the policy grid, keeping the council controls visible again.
 ## Unreleased
-- Unlock roster promotions for level 12 Saunojas, spend 150 Saunakunnia to reset
-  XP, assign Tank/Rogue/Wizard/Speedster specializations, sync battlefield XP,
-  and document the flow with fresh progression notes and tests.
 
 - Refresh HUD navigation regression coverage so the Policies tab now exercises
   the dedicated sheet controller, add focused Vitest specs for

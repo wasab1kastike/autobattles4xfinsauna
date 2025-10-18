@@ -127,14 +127,10 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
   {
     id: 'temperance',
     name: 'Aurora Temperance Treaty',
-    description: 'Boost night shift work speed by 5% once the eco initiative is live.',
+    description: 'Boost night shift work speed by 5% with aurora-guided discipline across every crew.',
     cost: 25,
     resource: Resource.SAUNAKUNNIA,
     prerequisites: [
-      {
-        description: 'Enact the Evergreen Eco Mandate.',
-        isSatisfied: (state) => state.hasPolicy('eco')
-      },
       {
         description: 'Stockpile at least 30 Sauna Beer bottles to brief the midnight crews.',
         isSatisfied: (state) => state.getResource(Resource.SAUNA_BEER) >= 30
@@ -166,10 +162,6 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
     resource: Resource.SAUNAKUNNIA,
     prerequisites: [
       {
-        description: 'Secure the Aurora Temperance Treaty for your envoys.',
-        isSatisfied: (state) => state.hasPolicy('temperance')
-      },
-      {
         description: 'Hold a reserve of 50 Sauna Beer bottles to fund the embassy festivities.',
         isSatisfied: (state) => state.getResource(Resource.SAUNA_BEER) >= 50
       }
@@ -200,10 +192,6 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
     cost: 55,
     resource: Resource.SAUNAKUNNIA,
     prerequisites: [
-      {
-        description: 'Formalise the Steam Diplomats Accord to tap the sovereign vaults.',
-        isSatisfied: (state) => state.hasPolicy('steam-diplomats')
-      },
       {
         description: 'Maintain a collateral reserve of at least 90 Sauna Beer bottles.',
         isSatisfied: (state) => state.getResource(Resource.SAUNA_BEER) >= 90
@@ -262,10 +250,6 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
     cost: 90,
     resource: Resource.SAUNAKUNNIA,
     prerequisites: [
-      {
-        description: 'Maintain the Steam Debt Protocol to collateralise the levy bonds.',
-        isSatisfied: (state) => state.hasPolicy('steam-debt-protocol')
-      },
       {
         description: 'Project at least 200 Saunakunnia to impress the imperial auditors.',
         isSatisfied: (state) => state.getResource(Resource.SAUNAKUNNIA) >= 200
@@ -329,12 +313,7 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       'Concerted training regimens raise attack tempo and accuracy, but the drills strain supply lines.',
     cost: 40,
     resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Secure the Aurora Temperance Treaty to synchronise the night shift cadence.',
-        isSatisfied: (state) => state.hasPolicy('temperance')
-      }
-    ],
+    prerequisites: [],
     visuals: {
       icon: saunaRosterIcon,
       gradient: 'linear-gradient(160deg, rgba(252, 211, 77, 0.95), rgba(248, 113, 113, 0.88))',
@@ -361,12 +340,7 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       'Ignite berserker war chants that double striking power at the expense of precision and lavish ration surcharges.',
     cost: 60,
     resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Drill squads through the Battle Rhythm Doctrine until the cadence lives in their bones.',
-        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
-      }
-    ],
+    prerequisites: [],
     visuals: {
       icon: saunaBeerIcon,
       gradient: 'linear-gradient(162deg, rgba(254, 226, 226, 0.96), rgba(248, 113, 113, 0.92), rgba(79, 70, 229, 0.88))',
@@ -390,16 +364,7 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       'Deploy aurora-traced targeting crystals that extend volley range and sharpen accuracy while leaving exposed marksmen brittle to counter-fire.',
     cost: 70,
     resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Drill squads through the Battle Rhythm Doctrine for synchronized firing windows.',
-        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
-      },
-      {
-        description: 'Broker the Steam Diplomats Accord to finance the frost-glass optics.',
-        isSatisfied: (state) => state.hasPolicy('steam-diplomats')
-      }
-    ],
+    prerequisites: [],
     visuals: {
       icon: saunaRosterIcon,
       gradient: 'linear-gradient(164deg, rgba(59, 130, 246, 0.95), rgba(191, 219, 254, 0.92), rgba(30, 64, 175, 0.88))',
@@ -427,12 +392,7 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       'Layered steam shields harden the vanguard, absorbing blows at the cost of heartier rations.',
     cost: 55,
     resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Adopt the Battle Rhythm Doctrine to coordinate defensive stances.',
-        isSatisfied: (state) => state.hasPolicy('battle-rhythm')
-      }
-    ],
+    prerequisites: [],
     visuals: {
       icon: resourceIcon,
       gradient: 'linear-gradient(170deg, rgba(96, 165, 250, 0.92), rgba(59, 130, 246, 0.88))',
@@ -458,12 +418,7 @@ const POLICY_DEFINITIONS: PolicyDefinition[] = [
       'Wrap elite defenders in shimmering sauna bark plating that halves incoming damage while tripling upkeep.',
     cost: 85,
     resource: Resource.SAUNAKUNNIA,
-    prerequisites: [
-      {
-        description: 'Fortify the Shieldwall Doctrine to insulate the front line.',
-        isSatisfied: (state) => state.hasPolicy('shieldwall-doctrine')
-      }
-    ],
+    prerequisites: [],
     visuals: {
       icon: saunaBeerIcon,
       gradient: 'linear-gradient(178deg, rgba(253, 186, 116, 0.96), rgba(14, 165, 233, 0.9))',
