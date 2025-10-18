@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Surface Saunoja class specializations across the roster panel and compact HUD,
+  add polished promotion choosers for mastery-ready attendants, and cover the
+  new badges/buttons with unit tests.
+
 - Refresh HUD navigation regression coverage so the Policies tab now exercises
   the dedicated sheet controller, add focused Vitest specs for
   `setupPoliciesWindow`, and update the docs/site guidance to reflect the

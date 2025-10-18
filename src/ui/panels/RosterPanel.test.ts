@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createRosterPanel, type RosterEntry } from './RosterPanel.tsx';
 
 function buildEntry(
@@ -368,5 +368,56 @@ describe('createRosterPanel', () => {
     attackButton?.click();
 
     expect(calls).toEqual([{ id: entry.id, behavior: 'attack' }]);
+  });
+
+  it('renders the class badge when an attendant is specialized', () => {
+    const container = document.createElement('div');
+    const panel = createRosterPanel(container);
+    const base = buildEntry();
+    const entry = buildEntry({ klass: 'wizard', progression: { ...base.progression, klass: 'wizard' } });
+    panel.render([entry]);
+
+    const badge = container.querySelector<HTMLElement>('.panel-roster__class');
+    expect(badge?.textContent).toBe('Aurora Sage');
+    expect(badge?.dataset.klass).toBe('wizard');
+    expect(badge?.title).toContain('Aurora Sage');
+  });
+
+  it('offers promotion choices when a mastery-ready attendant has a handler', () => {
+    const container = document.createElement('div');
+    const onPromote = vi.fn();
+    const panel = createRosterPanel(container, { onPromote });
+
+    const base = buildEntry();
+    const entry = buildEntry({
+      progression: {
+        ...base.progression,
+        level: 7,
+        xp: 1200,
+        xpIntoLevel: 0,
+        xpForNext: null,
+        progress: 1,
+        statBonuses: { vigor: 14, focus: 9, resolve: 6 },
+        klass: null
+      }
+    });
+    panel.render([entry]);
+
+    const promoteButton = container.querySelector<HTMLButtonElement>('.panel-roster__promote');
+    expect(promoteButton).not.toBeNull();
+    expect(promoteButton?.disabled).toBe(false);
+
+    promoteButton?.click();
+
+    const options = container.querySelectorAll<HTMLButtonElement>('.panel-roster__promote-option');
+    expect(options).toHaveLength(4);
+
+    const wizardOption = Array.from(options).find((button) => button.dataset.klass === 'wizard');
+    expect(wizardOption).toBeTruthy();
+    wizardOption?.click();
+
+    expect(onPromote).toHaveBeenCalledWith(entry.id, 'wizard');
+    const optionsPanel = container.querySelector<HTMLElement>('.panel-roster__promote-options');
+    expect(optionsPanel?.hidden).toBe(true);
   });
 });

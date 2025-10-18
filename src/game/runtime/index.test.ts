@@ -76,6 +76,7 @@ const createStubContext = (
   syncSelectionOverlay: noop,
   setBehaviorPreference: (_unitId: string, _behavior: UnitBehavior) => true,
   updateRosterDisplay: noop,
+  promoteSaunoja: () => true,
   getSelectedInventoryContext: () => null as InventoryComparisonContext | null,
   equipItemToSaunoja: (_unitId: string, _item: SaunojaItem) => ({
     success: true

@@ -1,6 +1,6 @@
 import type { GameState } from '../../core/GameState.ts';
 import type { Sauna } from '../../sim/sauna.ts';
-import type { Saunoja } from '../../units/saunoja.ts';
+import type { Saunoja, SaunojaClass } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import {
   setupRightPanel,
@@ -27,11 +27,13 @@ export interface RightPanelDependencies {
   updateRosterDisplay: () => void;
   getActiveTierLimit: () => number;
   updateRosterCap: (value: number, options?: { persist?: boolean }) => number;
+  promoteSaunoja: (unitId: string, klass: SaunojaClass) => boolean;
 }
 
 export interface RightPanelBridge {
   addEvent: (event: GameEvent) => void;
   changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
+  promote: (unitId: string, klass: SaunojaClass) => void;
   openView: (view: RightPanelView) => void;
   openPoliciesWindow: (options?: { focus?: boolean }) => void;
   closePoliciesWindow: (options?: { restoreFocus?: boolean }) => void;
@@ -74,6 +76,12 @@ export function initializeRightPanel(
     onRosterUnequipSlot: deps.unequipSlotToStash,
     onRosterBehaviorChange: (unitId, nextBehavior) => {
       handleBehaviorChange(deps, unitId, nextBehavior);
+    },
+    onRosterPromote: (unitId, klass) => {
+      const promoted = deps.promoteSaunoja(unitId, klass);
+      if (promoted) {
+        deps.updateRosterDisplay();
+      }
     },
     getRosterCap: () => Math.max(0, Math.floor(deps.sauna.maxRosterSize)),
     getRosterCapLimit: () => deps.getActiveTierLimit(),
@@ -143,6 +151,12 @@ export function initializeRightPanel(
   return {
     addEvent: rightPanel.addEvent,
     changeBehavior: (unitId, behavior) => handleBehaviorChange(deps, unitId, behavior),
+    promote: (unitId, klass) => {
+      const promoted = deps.promoteSaunoja(unitId, klass);
+      if (promoted) {
+        deps.updateRosterDisplay();
+      }
+    },
     openView: (view) => {
       lastConsoleView = view;
       if (policiesWindow.isOpen()) {

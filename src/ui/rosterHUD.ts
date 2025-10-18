@@ -5,6 +5,7 @@ import {
   ROSTER_HUD_OPEN_CLASS,
 } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
+import type { SaunojaClass } from '../units/saunoja.ts';
 import type { UnitBehavior } from '../unit/types.ts';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -16,10 +17,30 @@ const behaviorLabels: Record<UnitBehavior, string> = {
 };
 const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
 
+const saunojaClassLabels: Record<SaunojaClass, string> = {
+  tank: 'Aegis Vanguard',
+  rogue: 'Veilstrider',
+  wizard: 'Aurora Sage',
+  speedster: 'Gale Dancer'
+};
+
+const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
+
+function resolveSaunojaClass(
+  card: Pick<RosterCardViewModel, 'klass' | 'progression'>
+): SaunojaClass | null {
+  return card.klass ?? card.progression.klass ?? null;
+}
+
+function formatSaunojaClassLabel(klass: SaunojaClass): string {
+  return saunojaClassLabels[klass] ?? klass;
+}
+
 type RosterHudOptions = {
   rosterIcon: string;
   summaryLabel?: string;
   onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
+  onPromote?: (unitId: string, klass: SaunojaClass) => void;
 };
 
 export type RosterCardViewModel = {
@@ -29,6 +50,7 @@ export type RosterCardViewModel = {
   upkeep: number;
   progression: RosterProgression;
   behavior: UnitBehavior;
+  klass?: SaunojaClass | null;
 };
 
 export type RosterHudSummary = {
@@ -213,6 +235,10 @@ export function setupRosterHUD(
   rosterCardName.classList.add('saunoja-card__name');
   rosterCardName.textContent = 'Saunoja';
 
+  const rosterCardClass = document.createElement('span');
+  rosterCardClass.classList.add('saunoja-card__class');
+  rosterCardClass.hidden = true;
+
   const rosterCardXp = document.createElement('div');
   rosterCardXp.classList.add('saunoja-card__xp');
   rosterCardXp.textContent = '0 / 0 XP • 0%';
@@ -240,6 +266,7 @@ export function setupRosterHUD(
 
   const behaviorButtons = new Map<UnitBehavior, HTMLButtonElement>();
   const behaviorClickHandlers = new Map<HTMLButtonElement, () => void>();
+  const promotionClickHandlers = new Map<HTMLButtonElement, () => void>();
 
   for (const behavior of behaviorOrder) {
     const button = document.createElement('button');
@@ -279,8 +306,89 @@ export function setupRosterHUD(
 
   rosterCardBehavior.append(rosterCardBehaviorHeader, rosterCardBehaviorOptions);
 
-  rosterCardIdentity.append(rosterCardName, rosterCardXp);
+  rosterCardIdentity.append(rosterCardName, rosterCardClass, rosterCardXp);
   rosterCardHeader.append(rosterCardLevel, rosterCardIdentity);
+
+  const rosterCardPromotion = document.createElement('div');
+  rosterCardPromotion.classList.add('saunoja-card__promotion');
+  rosterCardPromotion.hidden = true;
+
+  const rosterCardPromotionHeader = document.createElement('div');
+  rosterCardPromotionHeader.classList.add('saunoja-card__promotion-header');
+
+  const rosterCardPromotionTitle = document.createElement('span');
+  rosterCardPromotionTitle.classList.add('saunoja-card__promotion-title');
+  rosterCardPromotionTitle.textContent = 'Choose a calling';
+  rosterCardPromotionHeader.appendChild(rosterCardPromotionTitle);
+
+  const rosterCardPromotionSubtitle = document.createElement('span');
+  rosterCardPromotionSubtitle.classList.add('saunoja-card__promotion-subtitle');
+  rosterCardPromotionSubtitle.textContent = 'Unlock a signature combat role';
+  rosterCardPromotionHeader.appendChild(rosterCardPromotionSubtitle);
+
+  const rosterCardPromotionActions = document.createElement('div');
+  rosterCardPromotionActions.classList.add('saunoja-card__promotion-actions');
+
+  const rosterCardPromotionButton = document.createElement('button');
+  rosterCardPromotionButton.type = 'button';
+  rosterCardPromotionButton.classList.add('saunoja-card__promote');
+  rosterCardPromotionButton.textContent = 'Select specialization';
+  rosterCardPromotionButton.setAttribute('aria-expanded', 'false');
+
+  const rosterCardPromotionOptions = document.createElement('div');
+  rosterCardPromotionOptions.classList.add('saunoja-card__promote-options');
+  rosterCardPromotionOptions.hidden = true;
+  rosterCardPromotionOptions.setAttribute('role', 'list');
+  rosterCardPromotionOptions.setAttribute('aria-hidden', 'true');
+
+  rosterCardPromotionActions.append(rosterCardPromotionButton, rosterCardPromotionOptions);
+  rosterCardPromotion.append(rosterCardPromotionHeader, rosterCardPromotionActions);
+
+  const closePromotionOptions = () => {
+    rosterCardPromotionOptions.hidden = true;
+    rosterCardPromotionOptions.setAttribute('aria-hidden', 'true');
+    rosterCardPromotionButton.setAttribute('aria-expanded', 'false');
+    rosterCardPromotionButton.dataset.open = 'false';
+  };
+
+  const promotionToggleHandler = (event: MouseEvent) => {
+    event.stopPropagation();
+    if (rosterCardPromotionOptions.hidden) {
+      rosterCardPromotionOptions.hidden = false;
+      rosterCardPromotionOptions.setAttribute('aria-hidden', 'false');
+      rosterCardPromotionButton.setAttribute('aria-expanded', 'true');
+      rosterCardPromotionButton.dataset.open = 'true';
+    } else {
+      closePromotionOptions();
+    }
+  };
+
+  rosterCardPromotionButton.addEventListener('click', promotionToggleHandler);
+
+  for (const klass of allSaunojaClasses) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.classList.add('saunoja-card__promote-option');
+    option.dataset.klass = klass;
+    const label = formatSaunojaClassLabel(klass);
+    option.textContent = label;
+    option.title = `Promote to ${label}`;
+    option.setAttribute('role', 'listitem');
+    const handler = () => {
+      const unitId = rosterCard.dataset.unitId;
+      if (!unitId) {
+        return;
+      }
+      if (!options.onPromote) {
+        return;
+      }
+      closePromotionOptions();
+      options.onPromote(unitId, klass);
+    };
+    option.addEventListener('click', handler);
+    promotionClickHandlers.set(option, handler);
+    rosterCardPromotionOptions.appendChild(option);
+  }
 
   const rosterCardTraits = document.createElement('p');
   rosterCardTraits.classList.add('saunoja-card__traits');
@@ -295,6 +403,7 @@ export function setupRosterHUD(
   rosterCard.append(
     rosterCardHeader,
     rosterCardBehavior,
+    rosterCardPromotion,
     rosterCardTraits,
     rosterCardStats,
     rosterCardUpkeep
@@ -412,6 +521,20 @@ export function setupRosterHUD(
 
     rosterCardName.textContent = card.name || 'Saunoja';
 
+    const resolvedClass = resolveSaunojaClass(card);
+    if (resolvedClass) {
+      const label = formatSaunojaClassLabel(resolvedClass);
+      rosterCardClass.hidden = false;
+      rosterCardClass.dataset.klass = resolvedClass;
+      rosterCardClass.textContent = label;
+      rosterCardClass.title = `${card.name || 'Saunoja'} specializes as ${label}`;
+    } else {
+      rosterCardClass.hidden = true;
+      rosterCardClass.textContent = '';
+      rosterCardClass.title = '';
+      delete rosterCardClass.dataset.klass;
+    }
+
     const traitList = card.traits.filter((trait) => trait.length > 0);
     const traitLabel = traitList.length > 0 ? traitList.join(', ') : 'No notable traits yet';
     rosterCardTraits.textContent = traitLabel;
@@ -458,6 +581,14 @@ export function setupRosterHUD(
     const upkeepLabel = `Upkeep: ${rosterUpkeepFormatter.format(upkeepValue)} Beer`;
     rosterCardUpkeep.textContent = upkeepLabel;
     rosterCardUpkeep.title = upkeepLabel;
+
+    const canPromote =
+      card.progression.xpForNext === null && !resolvedClass && typeof options.onPromote === 'function';
+    rosterCardPromotion.hidden = !canPromote;
+    rosterCardPromotionButton.disabled = !canPromote;
+    if (!canPromote) {
+      closePromotionOptions();
+    }
 
     applyDetailVisibility();
   }
@@ -507,6 +638,7 @@ export function setupRosterHUD(
       entry.upkeep,
       entry.status,
       entry.behavior,
+      entry.klass ?? entry.progression.klass ?? '',
       entry.selected ? 1 : 0,
       entry.progression.level,
       entry.progression.xp,
@@ -563,6 +695,10 @@ export function setupRosterHUD(
       rosterSignature = null;
       toggle.removeEventListener('click', handleToggleClick);
       for (const [button, handler] of behaviorClickHandlers.entries()) {
+        button.removeEventListener('click', handler);
+      }
+      rosterCardPromotionButton.removeEventListener('click', promotionToggleHandler);
+      for (const [button, handler] of promotionClickHandlers.entries()) {
         button.removeEventListener('click', handler);
       }
       detachRosterVisibility?.();

@@ -277,6 +277,7 @@ describe('GameRuntime', () => {
       syncSelectionOverlay: vi.fn(),
       setBehaviorPreference: vi.fn(() => true),
       updateRosterDisplay: vi.fn(),
+      promoteSaunoja: vi.fn(() => true),
       getSelectedInventoryContext: vi.fn(() => null as InventoryComparisonContext | null),
       equipItemToSaunoja: vi.fn(() => ({ result: 'ok' } as EquipAttemptResult)),
       equipSlotFromStash: vi.fn(() => true),

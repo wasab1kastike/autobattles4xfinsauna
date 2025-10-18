@@ -18,6 +18,7 @@ import { createRosterPanel } from './panels/RosterPanel.tsx';
 import type { RosterEntry } from './panels/RosterPanel.tsx';
 import type { EquipmentSlotId } from '../items/types.ts';
 import type { UnitBehavior } from '../unit/types.ts';
+import type { SaunojaClass } from '../units/saunoja.ts';
 import {
   getLogHistory,
   LOG_EVENT_META,
@@ -51,6 +52,7 @@ type RightPanelOptions = {
   onRosterEquipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   onRosterUnequipSlot?: (unitId: string, slot: EquipmentSlotId) => void;
   onRosterBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
+  onRosterPromote?: (unitId: string, klass: SaunojaClass) => void;
   getRosterCap?: () => number;
   getRosterCapLimit?: () => number;
   updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
@@ -795,6 +797,7 @@ export function setupRightPanel(
     onEquipSlot: onRosterEquipSlot,
     onUnequipSlot: onRosterUnequipSlot,
     onBehaviorChange: options.onRosterBehaviorChange,
+    onPromote: options.onRosterPromote,
     getRosterCap: options.getRosterCap,
     getRosterCapLimit: options.getRosterCapLimit,
     updateMaxRosterSize: options.updateMaxRosterSize

@@ -14,21 +14,10 @@ import type { TopbarControls } from '../../ui/topbar.ts';
 import type { Resource } from '../../core/GameState.ts';
 import type { SaunaTierContext, SaunaTierId } from '../../sauna/tiers.ts';
 import type { EnemyRampSummary } from '../../ui/topbar.ts';
+import type { RightPanelBridge } from './rightPanel.ts';
+import type { SaunojaClass } from '../../units/saunoja.ts';
 
 type InventoryHudController = { destroy(): void };
-
-type RightPanelBridge = {
-  addEvent: (event: GameEvent) => void;
-  changeBehavior: (unitId: string, behavior: UnitBehavior) => void;
-  openView: (view: 'roster' | 'events') => void;
-  openPoliciesWindow: (options?: { focus?: boolean }) => void;
-  closePoliciesWindow: (options?: { restoreFocus?: boolean }) => void;
-  onPoliciesVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
-  openRosterView: () => void;
-  closeRosterView: () => void;
-  onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => () => void;
-  dispose: () => void;
-};
 
 type SaunaUiFactory = (sauna: Sauna, options: SaunaUIOptions) => SaunaUIController;
 
@@ -52,7 +41,11 @@ type ClassicHudDependencies = {
   pendingRosterSummary: RosterHudSummary | null;
   setupRosterHUD: (
     resourceBar: HTMLElement,
-    options: { rosterIcon: string; onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void }
+    options: {
+      rosterIcon: string;
+      onBehaviorChange?: (unitId: string, behavior: UnitBehavior) => void;
+      onPromote?: (unitId: string, klass: SaunojaClass) => void;
+    }
   ) => RosterHudController;
   setupSaunaUi: SaunaUiFactory;
   getActiveTierId: () => SaunaTierId;
@@ -87,11 +80,15 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
   deps.previousDisposeRightPanel?.();
 
   let rightPanelBehaviorHandler: ((unitId: string, behavior: UnitBehavior) => void) | null = null;
+  let rightPanelPromoteHandler: ((unitId: string, klass: SaunojaClass) => void) | null = null;
 
   const rosterHud = deps.setupRosterHUD(deps.resourceBarEl, {
     rosterIcon: deps.rosterIcon,
     onBehaviorChange: (unitId, behavior) => {
       rightPanelBehaviorHandler?.(unitId, behavior);
+    },
+    onPromote: (unitId, klass) => {
+      rightPanelPromoteHandler?.(unitId, klass);
     }
   });
 
@@ -140,6 +137,9 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
   };
 
   const rightPanel = deps.createRightPanel(handleRosterRendererReady);
+  rightPanelPromoteHandler = (unitId, klass) => {
+    rightPanel.promote(unitId, klass);
+  };
   const changeBehavior = (unitId: string, behavior: UnitBehavior) => {
     rightPanel.changeBehavior(unitId, behavior);
   };

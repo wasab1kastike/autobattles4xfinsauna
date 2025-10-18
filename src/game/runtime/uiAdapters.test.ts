@@ -21,6 +21,7 @@ const {
   initializeRightPanelMock: vi.fn(() => ({
     addEvent: vi.fn(),
     changeBehavior: vi.fn(),
+    promote: vi.fn(),
     openView: vi.fn(),
     openPoliciesWindow: vi.fn(),
     closePoliciesWindow: vi.fn(),
@@ -99,6 +100,7 @@ describe('createUiAdapters', () => {
       updateRosterDisplay: vi.fn(),
       getActiveTierLimit: vi.fn(() => 6),
       updateRosterCap: vi.fn(() => 6),
+      promoteSaunoja: vi.fn(() => true),
     } satisfies UiAdapterDependencies;
   };
 
@@ -168,6 +170,7 @@ describe('createUiAdapters', () => {
     expect(config.updateRosterDisplay).toBe(deps.updateRosterDisplay);
     expect(config.getActiveTierLimit()).toBe(6);
     expect(config.updateRosterCap(8)).toBe(6);
+    expect(config.promoteSaunoja).toBe(deps.promoteSaunoja);
     expect(callback).toBe(onRendererReady);
     expect(bridge).toBe(initializeRightPanelMock.mock.results[0]?.value);
 
