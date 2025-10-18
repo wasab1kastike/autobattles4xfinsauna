@@ -20,8 +20,8 @@ Each tooltip card is fully keyboard navigable (`←`, `→`, `Esc`, or the on-sc
 
 - **Evergreen Eco Mandate** highlights how the passive brewery feed stacks during
   the upkeep tutorial beat.
-- **Aurora Temperance Treaty** showcases the night-shift buff once the eco
-  policy is active so leaders connect the combo.
+- **Aurora Temperance Treaty** showcases the night-shift buff so leaders grasp
+  how it elevates nocturnal production on its own.
 - **Steam Diplomats Accord** reinforces the premium trade lanes that unlock the
   late-run treasury tutorial tooltips.
 - **Steam Debt Protocol** now caps the sequence with a luxe toggle card,
