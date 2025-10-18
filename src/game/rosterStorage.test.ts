@@ -229,4 +229,53 @@ describe('rosterStorage', () => {
     ]);
     expect(unit.equipment.relic).toBeNull();
   });
+
+  it('retains the selected attendant loadout when keepItems mirrors the current gear', () => {
+    const roster = [
+      makeSaunoja({
+        id: 'saunoja-1',
+        name: 'Ilona',
+        xp: 720,
+        upkeep: 3,
+        items: [
+          {
+            id: 'steamed-bandages',
+            name: 'Steamed Bandages',
+            description: 'Fresh wraps warmed in the sauna for rapid mending.',
+            icon: '/assets/items/bandages.svg',
+            rarity: 'uncommon',
+            quantity: 2
+          },
+          {
+            id: 'emberglass-arrow',
+            name: 'Emberglass Arrow',
+            description: 'Ignites targets on hit',
+            icon: '/assets/items/emberglass.svg',
+            rarity: 'rare',
+            quantity: 1
+          }
+        ]
+      })
+    ];
+
+    const keepItems = roster[0].items.map((item) => ({ ...item }));
+
+    persistRosterSelection(roster, 'saunoja-1', {
+      keepItems
+    });
+
+    const restored = loadUnits();
+    expect(restored).toHaveLength(1);
+    const [unit] = restored;
+    expect(unit.items).toHaveLength(2);
+    expect(unit.items.map((item) => item.id)).toEqual([
+      'steamed-bandages',
+      'emberglass-arrow'
+    ]);
+    expect(unit.items.map((item) => item.quantity)).toEqual([2, 1]);
+    expect(unit.equipment.supply?.id).toBe('steamed-bandages');
+    expect(unit.equipment.supply?.quantity).toBe(2);
+    expect(unit.equipment.weapon?.id).toBe('emberglass-arrow');
+    expect(unit.equipment.weapon?.quantity).toBe(1);
+  });
 });

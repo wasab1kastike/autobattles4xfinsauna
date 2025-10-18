@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Preserve NG+ carryover loadouts by forwarding the selected attendant's
+  equipment and inventory into roster storage and expand persistence tests to
+  lock in the behavior.
+
 - Surface Saunoja class specializations across the roster panel and compact HUD,
   add polished promotion choosers for mastery-ready attendants, and cover the
   new badges/buttons with unit tests.

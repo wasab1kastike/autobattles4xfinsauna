@@ -1667,7 +1667,75 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
         }
       }
       try {
-        persistRosterSelection(saunojas, carryForwardId);
+        let keepItems: SaunojaItem[] | undefined;
+        if (carryForwardId) {
+          const selectedUnit = saunojas.find((unit) => unit.id === carryForwardId);
+          if (selectedUnit) {
+            const nextKeep: SaunojaItem[] = [];
+            const seenIds = new Set<string>();
+            const appendItem = (entry: unknown) => {
+              if (!entry || typeof entry !== 'object') {
+                return;
+              }
+              const data = entry as Record<string, unknown>;
+              const id = typeof data.id === 'string' ? data.id.trim() : '';
+              if (!id || seenIds.has(id)) {
+                return;
+              }
+              const name = typeof data.name === 'string' ? data.name.trim() : '';
+              if (!name) {
+                return;
+              }
+              const description =
+                typeof data.description === 'string' && data.description.trim().length > 0
+                  ? data.description.trim()
+                  : undefined;
+              const icon =
+                typeof data.icon === 'string' && data.icon.trim().length > 0
+                  ? data.icon.trim()
+                  : undefined;
+              const rarity =
+                typeof data.rarity === 'string' && data.rarity.trim().length > 0
+                  ? data.rarity.trim()
+                  : undefined;
+              const attackAnimation =
+                typeof data.attackAnimation === 'string' && data.attackAnimation.trim().length > 0
+                  ? data.attackAnimation.trim()
+                  : undefined;
+              const quantitySource =
+                typeof data.quantity === 'number' ? data.quantity : Number(data.quantity);
+              const quantity = Number.isFinite(quantitySource)
+                ? Math.max(1, Math.round(quantitySource as number))
+                : 1;
+              nextKeep.push({
+                id,
+                name,
+                quantity,
+                ...(description ? { description } : {}),
+                ...(icon ? { icon } : {}),
+                ...(rarity ? { rarity } : {}),
+                ...(attackAnimation ? { attackAnimation } : {})
+              });
+              seenIds.add(id);
+            };
+            for (const item of selectedUnit.items) {
+              appendItem(item);
+            }
+            if (selectedUnit.equipment) {
+              for (const equipped of Object.values(selectedUnit.equipment)) {
+                appendItem(equipped ?? undefined);
+              }
+            }
+            if (nextKeep.length > 0) {
+              keepItems = nextKeep;
+            }
+          }
+        }
+        persistRosterSelection(
+          saunojas,
+          carryForwardId,
+          keepItems && keepItems.length > 0 ? { keepItems } : undefined
+        );
       } catch (error) {
         console.warn('Failed to persist selected attendant for NG+', error);
       }
