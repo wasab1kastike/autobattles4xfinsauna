@@ -60,6 +60,7 @@ export function loadUnits(): Saunoja[] {
         makeSaunoja({
           id: idValue,
           name: typeof data.name === 'string' ? data.name : undefined,
+          klass: typeof data.klass === 'string' ? data.klass : undefined,
           appearanceId: data.appearanceId,
           coord,
           maxHp: typeof data.maxHp === 'number' ? data.maxHp : undefined,
@@ -96,6 +97,7 @@ export function saveUnits(units: readonly Saunoja[]): void {
     const payload = units.map((unit) => ({
       id: unit.id,
       name: unit.name,
+      klass: unit.klass ?? null,
       coord: { q: unit.coord.q, r: unit.coord.r },
       appearanceId: unit.appearanceId,
       maxHp: unit.maxHp,

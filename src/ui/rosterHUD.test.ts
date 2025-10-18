@@ -30,6 +30,7 @@ describe('rosterHUD', () => {
         card: {
           id: 'saunoja-7',
           name: 'Aurora Kallio',
+          klass: 'Storm Herald',
           traits: ['Brave', 'Sage'],
           upkeep: 17,
           behavior: 'attack',
@@ -74,6 +75,10 @@ describe('rosterHUD', () => {
 
       const levelBadge = root?.querySelector('.saunoja-card__level-value');
       expect(levelBadge?.textContent).toBe('4');
+
+      const klass = root?.querySelector('.saunoja-card__class');
+      expect(klass?.textContent).toBe('Storm Herald');
+      expect(klass?.title).toBe('Storm Herald');
 
       const xpRow = root?.querySelector('.saunoja-card__xp');
       expect(xpRow?.textContent).toContain('40 / 320');
@@ -134,6 +139,7 @@ describe('rosterHUD', () => {
       const baseEntry: RosterEntry = {
         id: 'saunoja-1',
         name: 'Watcher',
+        klass: 'Warden',
         upkeep: 12,
         status: 'reserve',
         selected: false,
@@ -392,6 +398,7 @@ describe('rosterHUD', () => {
         card: {
           id: 'saunoja-9',
           name: 'Veikko',
+          klass: 'Pathfinder',
           traits: [],
           upkeep: 12,
           behavior: 'defend',

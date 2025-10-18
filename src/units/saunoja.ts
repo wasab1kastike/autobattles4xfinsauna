@@ -66,6 +66,8 @@ export interface Saunoja {
   id: string;
   /** Display name shown in UI panels and tooltips. */
   name: string;
+  /** Optional heroic class label surfaced in roster UIs. */
+  klass: string | null;
   /** Chosen sprite appearance for battlefield and HUD rendering. */
   appearanceId: UnitAppearanceId;
   /** Axial hex coordinate locating the unit on the map. */
@@ -111,6 +113,7 @@ export interface Saunoja {
 export interface SaunojaInit {
   id: string;
   name?: string;
+  klass?: unknown;
   appearanceId?: unknown;
   appearanceRandom?: () => number;
   coord?: AxialCoord;
@@ -394,6 +397,16 @@ function resolveSaunojaName(source: unknown): string {
   }
 }
 
+function sanitizeKlass(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
 export function makeSaunoja(init: SaunojaInit): Saunoja {
   const {
     id,
@@ -415,7 +428,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     combatKeywords = null,
     combatHooks = null,
     appearanceId,
-    appearanceRandom
+    appearanceRandom,
+    klass: klassInput
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -516,10 +530,12 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const appearanceSampler =
     typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
   const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
+  const resolvedKlass = sanitizeKlass(klassInput);
 
   return {
     id,
     name: resolvedName,
+    klass: resolvedKlass,
     appearanceId: resolvedAppearance,
     coord: { q: coord.q, r: coord.r },
     maxHp: resolvedMaxHp,

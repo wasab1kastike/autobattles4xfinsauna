@@ -41,6 +41,7 @@ export interface RosterEquipmentSlot {
 export interface RosterEntry {
   readonly id: string;
   readonly name: string;
+  readonly klass: string | null;
   readonly upkeep: number;
   readonly status: RosterStatus;
   readonly selected: boolean;
@@ -187,6 +188,10 @@ function buildMetaLine(entry: RosterEntry): string {
 function buildAriaLabel(entry: RosterEntry): string {
   const { stats } = entry;
   const segments: string[] = [entry.name, rosterStatusLabels[entry.status]];
+  const klassLabel = typeof entry.klass === 'string' && entry.klass.trim().length > 0 ? entry.klass.trim() : null;
+  if (klassLabel) {
+    segments.push(klassLabel);
+  }
   segments.push(`level ${entry.progression.level}`);
   segments.push(`health ${integerFormatter.format(stats.health)} of ${integerFormatter.format(stats.maxHealth)}`);
   if (stats.shield && stats.shield > 0) {
@@ -522,7 +527,17 @@ export function createRosterPanel(
       button.dataset.status = entry.status;
       button.setAttribute('aria-pressed', entry.selected ? 'true' : 'false');
       button.setAttribute('aria-label', buildAriaLabel(entry));
-      button.title = `${entry.name} • ${rosterStatusLabels[entry.status]}`;
+      const statusLabel = rosterStatusLabels[entry.status];
+      const klassTitle =
+        typeof entry.klass === 'string' && entry.klass.trim().length > 0
+          ? entry.klass.trim()
+          : null;
+      const titleSegments = [entry.name];
+      if (klassTitle) {
+        titleSegments.push(klassTitle);
+      }
+      titleSegments.push(statusLabel);
+      button.title = titleSegments.join(' • ');
       if (entry.selected) {
         button.classList.add('is-selected');
       }
@@ -559,7 +574,19 @@ export function createRosterPanel(
       name.textContent = entry.name;
       name.title = entry.name;
 
-      identity.append(level, name);
+      const persona = document.createElement('div');
+      persona.classList.add('panel-roster__persona');
+
+      const klass = document.createElement('span');
+      klass.classList.add('panel-roster__class');
+      const klassLabel =
+        typeof entry.klass === 'string' && entry.klass.trim().length > 0 ? entry.klass.trim() : 'Saunoja';
+      klass.textContent = klassLabel;
+      klass.title = klassLabel;
+
+      persona.append(name, klass);
+
+      identity.append(level, persona);
       nameRow.appendChild(identity);
 
       const badge = document.createElement('span');

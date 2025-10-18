@@ -25,6 +25,7 @@ type RosterHudOptions = {
 export type RosterCardViewModel = {
   id: string;
   name: string;
+  klass: string | null;
   traits: readonly string[];
   upkeep: number;
   progression: RosterProgression;
@@ -213,6 +214,10 @@ export function setupRosterHUD(
   rosterCardName.classList.add('saunoja-card__name');
   rosterCardName.textContent = 'Saunoja';
 
+  const rosterCardClass = document.createElement('p');
+  rosterCardClass.classList.add('saunoja-card__class');
+  rosterCardClass.textContent = 'Saunoja';
+
   const rosterCardXp = document.createElement('div');
   rosterCardXp.classList.add('saunoja-card__xp');
   rosterCardXp.textContent = '0 / 0 XP • 0%';
@@ -279,7 +284,7 @@ export function setupRosterHUD(
 
   rosterCardBehavior.append(rosterCardBehaviorHeader, rosterCardBehaviorOptions);
 
-  rosterCardIdentity.append(rosterCardName, rosterCardXp);
+  rosterCardIdentity.append(rosterCardName, rosterCardClass, rosterCardXp);
   rosterCardHeader.append(rosterCardLevel, rosterCardIdentity);
 
   const rosterCardTraits = document.createElement('p');
@@ -412,6 +417,11 @@ export function setupRosterHUD(
 
     rosterCardName.textContent = card.name || 'Saunoja';
 
+    const classLabel =
+      typeof card.klass === 'string' && card.klass.trim().length > 0 ? card.klass.trim() : 'Saunoja';
+    rosterCardClass.textContent = classLabel;
+    rosterCardClass.title = classLabel;
+
     const traitList = card.traits.filter((trait) => trait.length > 0);
     const traitLabel = traitList.length > 0 ? traitList.join(', ') : 'No notable traits yet';
     rosterCardTraits.textContent = traitLabel;
@@ -437,10 +447,11 @@ export function setupRosterHUD(
     const behaviorLabel = behaviorLabels[card.behavior] ?? card.behavior;
     rosterCardBehaviorValue.textContent = behaviorLabel;
     rosterCardBehaviorValue.title = `Behavior: ${behaviorLabel}`;
-    rosterCardBehaviorOptions.setAttribute(
-      'aria-label',
-      `${card.name || 'Saunoja'} behavior`
-    );
+    const behaviorSubject =
+      classLabel && (card.name || 'Saunoja')
+        ? `${card.name || 'Saunoja'} (${classLabel})`
+        : card.name || 'Saunoja';
+    rosterCardBehaviorOptions.setAttribute('aria-label', `${behaviorSubject} behavior`);
     const hasBehaviorHandler = Boolean(options.onBehaviorChange);
     if (hasBehaviorHandler) {
       rosterCardBehaviorOptions.setAttribute('aria-disabled', 'false');
@@ -504,6 +515,7 @@ export function setupRosterHUD(
     return [
       entry.id,
       entry.name,
+      entry.klass ?? '',
       entry.upkeep,
       entry.status,
       entry.behavior,

@@ -39,6 +39,7 @@ describe('rosterStorage', () => {
       makeSaunoja({
         id: 'saunoja-1',
         name: 'Vapauttaja',
+        klass: 'Mistbinder',
         coord: { q: 3, r: -1 },
         behavior: 'explore',
         traits: ['Bold', 'Veteran'],
@@ -74,11 +75,13 @@ describe('rosterStorage', () => {
     expect(stored).toBeTypeOf('string');
     const serialized = JSON.parse(stored ?? '[]');
     expect(serialized[0]?.behavior).toBe('explore');
+    expect(serialized[0]?.klass).toBe('Mistbinder');
 
     const restored = loadUnits();
     expect(restored).toHaveLength(1);
     const [unit] = restored;
     expect(unit.id).toBe('saunoja-1');
+    expect(unit.klass).toBe('Mistbinder');
     expect(unit.coord).toEqual({ q: 3, r: -1 });
     expect(unit.traits).toEqual(expect.arrayContaining(['Bold', 'Veteran']));
     expect(unit.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
@@ -108,7 +111,7 @@ describe('rosterStorage', () => {
   it('persists only the chosen attendant when preparing the next run', () => {
     const roster = [
       makeSaunoja({ id: 'saunoja-1', name: 'Aava', xp: 360, upkeep: 2 }),
-      makeSaunoja({ id: 'saunoja-2', name: 'Kalle', xp: 120, upkeep: 1 })
+      makeSaunoja({ id: 'saunoja-2', name: 'Kalle', xp: 120, upkeep: 1, klass: 'Wayfinder' })
     ];
 
     saveUnits(roster);
@@ -124,6 +127,7 @@ describe('rosterStorage', () => {
     expect(restored).toHaveLength(1);
     expect(restored[0]?.id).toBe('saunoja-2');
     expect(restored[0]?.selected).toBe(true);
+    expect(restored[0]?.klass).toBe('Wayfinder');
   });
 
   it('only retains explicitly selected loadout items when preparing the next run', () => {

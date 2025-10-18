@@ -39,6 +39,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.effectiveStats.health).toBe(20);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
+    expect(saunoja.klass).toBeNull();
   });
 
   it('falls back to safe defaults for invalid data', () => {
@@ -68,6 +69,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(saunoja.appearanceId).toBe('saunoja');
+    expect(saunoja.klass).toBeNull();
     randomSpy.mockRestore();
   });
 
@@ -167,6 +169,13 @@ describe('makeSaunoja', () => {
         source: 'Sauna Core'
       }
     ]);
+  });
+
+  it('trims and preserves provided class labels', () => {
+    const saunoja = makeSaunoja({ id: 's5', klass: '  Storm Herald  ' });
+    expect(saunoja.klass).toBe('Storm Herald');
+    const fallback = makeSaunoja({ id: 's6', klass: '   ' });
+    expect(fallback.klass).toBeNull();
   });
 });
 

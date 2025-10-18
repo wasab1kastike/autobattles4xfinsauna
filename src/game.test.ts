@@ -58,7 +58,7 @@ beforeEach(() => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     value: vi.fn(() => null)
-  });
+  }, 20000);
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     writable: true,
@@ -942,6 +942,7 @@ describe('saunoja persistence', () => {
     const storedPersona = {
       id: 'saunoja-legacy',
       name: 'Legacy Guardian',
+      klass: 'Wayfinder',
       coord: { q: 2, r: -1 },
       maxHp: 18,
       hp: 18,
@@ -967,6 +968,7 @@ describe('saunoja persistence', () => {
       expect(first?.upkeep).toBe(storedPersona.upkeep);
       expect(first?.xp).toBe(storedPersona.xp);
       expect(first?.behavior).toBe('explore');
+      expect(first?.klass).toBe('Wayfinder');
 
       const { Unit } = await import('./units/Unit.ts');
       const baseStats = { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 };
@@ -982,6 +984,7 @@ describe('saunoja persistence', () => {
       expect(attached?.upkeep).toBe(storedPersona.upkeep);
       expect(attached?.xp).toBe(storedPersona.xp);
       expect(attached?.behavior).toBe('explore');
+      expect(attached?.klass).toBe('Wayfinder');
 
       vi.resetModules();
       renderGameShell();
@@ -995,6 +998,7 @@ describe('saunoja persistence', () => {
       expect(rehydrated?.upkeep).toBe(storedPersona.upkeep);
       expect(rehydrated?.xp).toBe(storedPersona.xp);
       expect(rehydrated?.behavior).toBe('explore');
+      expect(rehydrated?.klass).toBe('Wayfinder');
 
       const { Unit: UnitReloaded } = await import('./units/Unit.ts');
       const reloadAlly = new UnitReloaded('legacy-ally-2', 'soldier', { q: 1, r: 0 }, 'player', {
@@ -1009,6 +1013,7 @@ describe('saunoja persistence', () => {
       expect(final?.upkeep).toBe(storedPersona.upkeep);
       expect(final?.xp).toBe(storedPersona.xp);
       expect(final?.behavior).toBe('explore');
+      expect(final?.klass).toBe('Wayfinder');
     } finally {
       vi.doUnmock('./unit/index.ts');
     }

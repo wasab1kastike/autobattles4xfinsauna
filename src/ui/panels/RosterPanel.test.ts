@@ -79,6 +79,7 @@ function buildEntry(
   return {
     id: 'roster-entry',
     name: 'Aava "Emberguard" Aalto',
+    klass: 'Saunoja',
     upkeep: 3,
     status: 'reserve',
     selected: false,
@@ -99,7 +100,7 @@ describe('createRosterPanel', () => {
     const container = document.createElement('div');
     const panel = createRosterPanel(container);
 
-    const baseEntry = buildEntry();
+    const baseEntry = buildEntry({ klass: 'Mistbinder' });
     panel.render([baseEntry]);
 
     expect(container.dataset.count).toBe('1');
@@ -118,6 +119,9 @@ describe('createRosterPanel', () => {
     expect(xpRowInitial?.textContent).toContain('20 / 260');
     const calloutsInitial = container.querySelector('.panel-roster__callouts');
     expect(calloutsInitial?.textContent).toContain('+9 Vigor');
+
+    const classLabel = container.querySelector('.panel-roster__class');
+    expect(classLabel?.textContent).toBe('Mistbinder');
     expect(calloutsInitial?.textContent).toContain('+5 Focus');
     expect(calloutsInitial?.textContent).toContain('+3 Resolve');
 

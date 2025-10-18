@@ -209,6 +209,7 @@ export function buildRosterEntries(): RosterEntry[] {
     return {
       id: attendant.id,
       name: attendant.name,
+      klass: attendant.klass ?? null,
       upkeep,
       status,
       selected: Boolean(attendant.selected),
@@ -263,6 +264,7 @@ export function buildRosterSummary(): RosterHudSummary {
     card = {
       id: featured.id,
       name: featured.name || 'Saunoja',
+      klass: featured.klass ?? null,
       traits: [...featured.traits],
       upkeep: Math.max(0, Math.round(featured.upkeep)),
       progression: buildProgression(featured),

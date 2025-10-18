@@ -2,6 +2,9 @@
 - Restore the policies HUD view so the right-panel tab toggle switches into
   the policy grid, keeping the council controls visible again.
 ## Unreleased
+- Sanitize Saunoja class labels when creating units, persist the optional
+  `klass` metadata through roster storage and HUD view models, and extend
+  persistence tests to ensure classes survive save/load cycles.
 - Remove cross-policy prerequisites so every doctrine is unlocked through
   resource thresholds alone, and refresh policy docs to detail the new access
   flow.
