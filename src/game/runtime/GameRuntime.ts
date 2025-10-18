@@ -2,7 +2,7 @@ import type { GameState } from '../../core/GameState.ts';
 import type { HexMap } from '../../hexmap.ts';
 import type { PixelCoord } from '../../hex/HexUtils.ts';
 import type { Unit } from '../../unit/index.ts';
-import type { Saunoja, SaunojaItem } from '../../units/saunoja.ts';
+import type { Saunoja, SaunojaClass, SaunojaItem } from '../../units/saunoja.ts';
 import type { Sauna } from '../../sim/sauna.ts';
 import type { EnemyRampSummary, TopbarControls } from '../../ui/topbar.ts';
 import type { SaunaUIController } from '../../ui/sauna.tsx';
@@ -66,6 +66,7 @@ export interface GameRuntimeContext {
   syncSelectionOverlay(): void;
   setBehaviorPreference(unitId: string, behavior: UnitBehavior): boolean;
   updateRosterDisplay(): void;
+  promoteSaunoja(unitId: string, klass: SaunojaClass): boolean;
   getSelectedInventoryContext(): InventoryComparisonContext | null;
   equipItemToSaunoja(unitId: string, item: SaunojaItem): EquipAttemptResult;
   equipSlotFromStash(unitId: string, slot: EquipmentSlotId): boolean;
@@ -572,7 +573,8 @@ export class GameRuntime {
       rosterService: this.rosterService,
       updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
       getActiveTierLimit: () => this.ctx.getActiveTierLimit(),
-      updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts)
+      updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts),
+      promoteSaunoja: (unitId, klass) => this.ctx.promoteSaunoja(unitId, klass)
     });
 
     const hudResult = initializeClassicHud({

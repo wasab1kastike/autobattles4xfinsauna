@@ -1,6 +1,6 @@
 import { renderItemIcon } from '../components/ItemIcon.tsx';
 import { renderModPill } from '../components/ModPill.tsx';
-import type { SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
+import type { SaunojaClass, SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
 import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
 import type { StatAwards } from '../../progression/experiencePlan.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
@@ -27,6 +27,7 @@ export interface RosterProgression {
   readonly xpForNext: number | null;
   readonly progress: number;
   readonly statBonuses: StatAwards;
+  readonly klass?: SaunojaClass | null;
 }
 
 export interface RosterEquipmentSlot {
@@ -52,6 +53,7 @@ export interface RosterEntry {
   readonly equipment: readonly RosterEquipmentSlot[];
   readonly items: readonly RosterItem[];
   readonly modifiers: readonly RosterModifier[];
+  readonly klass?: SaunojaClass | null;
 }
 
 export interface RosterPanelOptions {
@@ -62,6 +64,7 @@ export interface RosterPanelOptions {
   readonly getRosterCap?: () => number;
   readonly getRosterCapLimit?: () => number;
   readonly updateMaxRosterSize?: (value: number, options?: { persist?: boolean }) => number;
+  readonly onPromote?: (unitId: string, klass: SaunojaClass) => void;
 }
 
 const rosterStatusLabels: Record<RosterStatus, string> = {
@@ -83,6 +86,24 @@ const behaviorLabels: Record<UnitBehavior, string> = {
   attack: 'Attack',
   explore: 'Explore'
 };
+
+const saunojaClassLabels: Record<SaunojaClass, string> = {
+  tank: 'Aegis Vanguard',
+  rogue: 'Veilstrider',
+  wizard: 'Aurora Sage',
+  speedster: 'Gale Dancer'
+};
+
+const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
+
+function resolveSaunojaClass(entry: RosterEntry): SaunojaClass | null {
+  const klass = entry.klass ?? entry.progression.klass ?? null;
+  return klass ?? null;
+}
+
+function formatSaunojaClassLabel(klass: SaunojaClass): string {
+  return saunojaClassLabels[klass] ?? klass;
+}
 
 function formatTraits(traits: readonly string[]): string {
   if (traits.length === 0) {
@@ -158,9 +179,13 @@ function formatModifierSummary(modifiers: EquipmentModifier | null): string {
 
 function buildMetaLine(entry: RosterEntry): string {
   const { stats, baseStats } = entry;
+  const klass = resolveSaunojaClass(entry);
   const segments: string[] = [
     `HP ${integerFormatter.format(stats.health)}/${integerFormatter.format(stats.maxHealth)}${formatDelta(stats.maxHealth, baseStats.maxHealth)}`
   ];
+  if (klass) {
+    segments.push(`Class ${formatSaunojaClassLabel(klass)}`);
+  }
   if (stats.shield && stats.shield > 0) {
     segments.push(
       `Shield ${integerFormatter.format(stats.shield)}${formatDelta(stats.shield, baseStats.shield)}`
@@ -188,6 +213,10 @@ function buildAriaLabel(entry: RosterEntry): string {
   const { stats } = entry;
   const segments: string[] = [entry.name, rosterStatusLabels[entry.status]];
   segments.push(`level ${entry.progression.level}`);
+  const klass = resolveSaunojaClass(entry);
+  if (klass) {
+    segments.push(`class ${formatSaunojaClassLabel(klass)}`);
+  }
   segments.push(`health ${integerFormatter.format(stats.health)} of ${integerFormatter.format(stats.maxHealth)}`);
   if (stats.shield && stats.shield > 0) {
     segments.push(`shield ${integerFormatter.format(stats.shield)}`);
@@ -560,6 +589,17 @@ export function createRosterPanel(
       name.title = entry.name;
 
       identity.append(level, name);
+      const resolvedClass = resolveSaunojaClass(entry);
+      if (resolvedClass) {
+        const classBadge = document.createElement('span');
+        classBadge.classList.add('panel-roster__class');
+        classBadge.dataset.klass = resolvedClass;
+        const label = formatSaunojaClassLabel(resolvedClass);
+        classBadge.textContent = label;
+        classBadge.title = `${entry.name} specializes as ${label}`;
+        classBadge.setAttribute('aria-label', `Class ${label}`);
+        identity.appendChild(classBadge);
+      }
       nameRow.appendChild(identity);
 
       const badge = document.createElement('span');
@@ -629,6 +669,85 @@ export function createRosterPanel(
       xpRow.textContent = xpLabel;
       xpRow.title = xpLabel;
 
+      let promotionRow: HTMLDivElement | null = null;
+      const canPromote =
+        entry.progression.xpForNext === null && !resolvedClass && typeof options.onPromote === 'function';
+      if (canPromote) {
+        promotionRow = document.createElement('div');
+        promotionRow.classList.add('panel-roster__promotion');
+
+        const promotionHeader = document.createElement('div');
+        promotionHeader.classList.add('panel-roster__promotion-header');
+
+        const promotionTitle = document.createElement('span');
+        promotionTitle.classList.add('panel-roster__promotion-title');
+        promotionTitle.textContent = 'Choose a calling';
+        promotionHeader.appendChild(promotionTitle);
+
+        const promotionSubtitle = document.createElement('span');
+        promotionSubtitle.classList.add('panel-roster__promotion-subtitle');
+        promotionSubtitle.textContent = 'Unlock a signature combat role';
+        promotionHeader.appendChild(promotionSubtitle);
+
+        const promotionActions = document.createElement('div');
+        promotionActions.classList.add('panel-roster__promotion-actions');
+
+        const promoteButton = document.createElement('button');
+        promoteButton.type = 'button';
+        promoteButton.classList.add('panel-roster__promote');
+        promoteButton.textContent = 'Select specialization';
+        promoteButton.setAttribute('aria-expanded', 'false');
+        const optionsId = `panel-roster-promote-${entry.id}`;
+        promoteButton.setAttribute('aria-controls', optionsId);
+
+        const optionList = document.createElement('div');
+        optionList.id = optionsId;
+        optionList.classList.add('panel-roster__promote-options');
+        optionList.hidden = true;
+        optionList.setAttribute('role', 'list');
+        optionList.setAttribute('aria-hidden', 'true');
+
+        const closeOptions = () => {
+          optionList.hidden = true;
+          optionList.setAttribute('aria-hidden', 'true');
+          promoteButton.setAttribute('aria-expanded', 'false');
+          promoteButton.dataset.open = 'false';
+        };
+
+        promoteButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          const nextHidden = !optionList.hidden;
+          if (nextHidden) {
+            closeOptions();
+            return;
+          }
+          optionList.hidden = false;
+          optionList.setAttribute('aria-hidden', 'false');
+          promoteButton.setAttribute('aria-expanded', 'true');
+          promoteButton.dataset.open = 'true';
+        });
+
+        for (const klass of allSaunojaClasses) {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.classList.add('panel-roster__promote-option');
+          option.dataset.klass = klass;
+          const label = formatSaunojaClassLabel(klass);
+          option.textContent = label;
+          option.title = `Promote ${entry.name} to ${label}`;
+          option.setAttribute('role', 'listitem');
+          option.addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeOptions();
+            options.onPromote?.(entry.id, klass);
+          });
+          optionList.appendChild(option);
+        }
+
+        promotionActions.append(promoteButton, optionList);
+        promotionRow.append(promotionHeader, promotionActions);
+      }
+
       const callouts = document.createElement('div');
       callouts.classList.add('panel-roster__callouts');
       const calloutLabel = formatStatBonuses(entry.progression.statBonuses);
@@ -653,7 +772,11 @@ export function createRosterPanel(
       traits.textContent = traitLabel;
       traits.title = traitLabel;
 
-      button.append(nameRow, behaviorRow, xpRow, meta, callouts, healthBar, traits);
+      button.append(nameRow, behaviorRow, xpRow);
+      if (promotionRow) {
+        button.appendChild(promotionRow);
+      }
+      button.append(meta, callouts, healthBar, traits);
       renderLoadout(button, entry, options);
 
       if (typeof options.onSelect === 'function') {

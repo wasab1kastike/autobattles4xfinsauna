@@ -1327,6 +1327,7 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     setBehaviorPreference: (unitId, behavior) =>
       setSaunojaBehaviorPreference(unitId, behavior),
     updateRosterDisplay: () => updateRosterDisplay(),
+    promoteSaunoja: (unitId, klass) => promoteRosterSaunoja(unitId, klass),
     getSelectedInventoryContext: () => getSelectedInventoryContext(),
     equipItemToSaunoja: (unitId, item) => equipItemToSaunoja(unitId, item),
     equipSlotFromStash: (unitId, slot) => equipSlotFromStash(unitId, slot),
@@ -2122,7 +2123,8 @@ export function __rebuildRightPanelForTest(): void {
       rosterService,
       updateRosterDisplay,
       getActiveTierLimit: () => getActiveTierLimitRef(),
-      updateRosterCap: (value, opts) => updateRosterCapRef(value, opts)
+      updateRosterCap: (value, opts) => updateRosterCapRef(value, opts),
+      promoteSaunoja: (unitId, klass) => promoteRosterSaunoja(unitId, klass)
     },
     (renderer) => hudCoordinator.installRosterRenderer(renderer)
   );

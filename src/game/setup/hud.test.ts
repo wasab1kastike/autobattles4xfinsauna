@@ -51,6 +51,7 @@ describe('initializeClassicHud', () => {
       return {
         addEvent: addEventSpy,
         changeBehavior,
+        promote: vi.fn(),
         openView: vi.fn(),
         openRosterView: vi.fn(),
         closeRosterView: vi.fn(),
@@ -105,6 +106,13 @@ describe('initializeClassicHud', () => {
     expect(typeof hudOptions?.onBehaviorChange).toBe('function');
     hudOptions?.onBehaviorChange?.('alpha', 'attack');
     expect(changeBehavior).toHaveBeenCalledWith('alpha', 'attack');
+
+    const promoteHandler = createRightPanel.mock.results[0]?.value.promote as
+      | ((unitId: string, klass: string) => void)
+      | undefined;
+    expect(typeof hudOptions?.onPromote).toBe('function');
+    hudOptions?.onPromote?.('alpha', 'wizard');
+    expect(promoteHandler).toHaveBeenCalledWith('alpha', 'wizard');
 
     changeBehavior.mockClear();
     expect(typeof result.changeBehavior).toBe('function');

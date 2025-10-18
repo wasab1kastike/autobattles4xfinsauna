@@ -33,6 +33,7 @@ describe('rosterHUD', () => {
           traits: ['Brave', 'Sage'],
           upkeep: 17,
           behavior: 'attack',
+          klass: 'wizard',
           progression: {
             level: 4,
             xp: 700,
@@ -75,6 +76,10 @@ describe('rosterHUD', () => {
       const levelBadge = root?.querySelector('.saunoja-card__level-value');
       expect(levelBadge?.textContent).toBe('4');
 
+      const classBadge = root?.querySelector('.saunoja-card__class');
+      expect(classBadge?.textContent).toBe('Aurora Sage');
+      expect(classBadge?.dataset.klass).toBe('wizard');
+
       const xpRow = root?.querySelector('.saunoja-card__xp');
       expect(xpRow?.textContent).toContain('40 / 320');
 
@@ -102,6 +107,57 @@ describe('rosterHUD', () => {
       const upkeep = root?.querySelector('.saunoja-card__upkeep');
       expect(upkeep?.textContent).toBe('Upkeep: 17 Beer');
       expect(upkeep?.title).toBe('Upkeep: 17 Beer');
+
+      const promotion = root?.querySelector('.saunoja-card__promotion');
+      expect(promotion?.hidden).toBe(true);
+    } finally {
+      destroyContainer(container);
+    }
+  });
+
+  it('provides promotion choices for mastery-ready Saunojas', () => {
+    const container = makeContainer();
+    try {
+      const onPromote = vi.fn();
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg', onPromote });
+
+      hud.updateSummary({
+        count: 1,
+        card: {
+          id: 'saunoja-12',
+          name: 'Marja Stormsong',
+          traits: ['Bold'],
+          upkeep: 9,
+          behavior: 'defend',
+          progression: {
+            level: 6,
+            xp: 1800,
+            xpIntoLevel: 0,
+            xpForNext: null,
+            progress: 1,
+            statBonuses: { vigor: 18, focus: 12, resolve: 9 },
+            klass: null
+          }
+        }
+      });
+
+      const toggle = container.querySelector<HTMLButtonElement>('.sauna-roster__toggle');
+      toggle?.click();
+
+      const promoteButton = container.querySelector<HTMLButtonElement>('.saunoja-card__promote');
+      expect(promoteButton?.disabled).toBe(false);
+      promoteButton?.click();
+
+      const options = container.querySelectorAll<HTMLButtonElement>('.saunoja-card__promote-option');
+      expect(options).toHaveLength(4);
+
+      const rogueOption = Array.from(options).find((option) => option.dataset.klass === 'rogue');
+      expect(rogueOption).toBeTruthy();
+      rogueOption?.click();
+
+      expect(onPromote).toHaveBeenCalledWith('saunoja-12', 'rogue');
+      const optionPanel = container.querySelector<HTMLElement>('.saunoja-card__promote-options');
+      expect(optionPanel?.hidden).toBe(true);
     } finally {
       destroyContainer(container);
     }

@@ -123,7 +123,8 @@ export function buildProgression(attendant: Saunoja): RosterEntry['progression']
     xpIntoLevel: progress.xpIntoLevel,
     xpForNext: progress.xpForNext,
     progress: progress.progressToNext,
-    statBonuses: getTotalStatAwards(progress.level)
+    statBonuses: getTotalStatAwards(progress.level),
+    klass: attendant.klass ?? null
   } satisfies RosterEntry['progression'];
 }
 
@@ -237,7 +238,8 @@ export function buildRosterEntries(): RosterEntry[] {
       progression,
       equipment: equipmentSlots,
       items,
-      modifiers
+      modifiers,
+      klass: attendant.klass ?? null
     } satisfies RosterEntry;
   });
 
@@ -276,7 +278,8 @@ export function buildRosterSummary(): RosterHudSummary {
       traits: [...featured.traits],
       upkeep: Math.max(0, Math.round(featured.upkeep)),
       progression: buildProgression(featured),
-      behavior
+      behavior,
+      klass: featured.klass ?? null
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

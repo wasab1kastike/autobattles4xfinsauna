@@ -14,7 +14,7 @@ import type { Sauna } from '../../sim/sauna.ts';
 import type { SaunaShopListener } from '../saunaShopState.ts';
 import type { SaunaShopViewModel } from '../../ui/shop/SaunaShopPanel.tsx';
 import type { SaunaTierId } from '../../sauna/tiers.ts';
-import type { Saunoja, SaunojaItem } from '../../units/saunoja.ts';
+import type { Saunoja, SaunojaClass, SaunojaItem } from '../../units/saunoja.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { RosterService } from './rosterService.ts';
 import type { SaunaUIController, SaunaUIOptions } from '../../ui/sauna.tsx';
@@ -60,6 +60,7 @@ export interface UiAdapterDependencies {
   readonly updateRosterDisplay: () => void;
   readonly getActiveTierLimit: () => number;
   readonly updateRosterCap: (value: number, options?: { persist?: boolean }) => number;
+  readonly promoteSaunoja: (unitId: string, klass: SaunojaClass) => boolean;
 }
 
 export interface HudUiAdapters {
@@ -128,7 +129,8 @@ export function createUiAdapters(deps: UiAdapterDependencies): HudUiAdapters {
         rosterService: deps.rosterService,
         updateRosterDisplay: deps.updateRosterDisplay,
         getActiveTierLimit: deps.getActiveTierLimit,
-        updateRosterCap: deps.updateRosterCap
+        updateRosterCap: deps.updateRosterCap,
+        promoteSaunoja: deps.promoteSaunoja
       },
       onRosterRendererReady
     );
