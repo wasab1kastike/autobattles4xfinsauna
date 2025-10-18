@@ -7,6 +7,8 @@ import type { UnitBehavior } from '../unit/types.ts';
 import { resolveSaunojaAppearance } from '../unit/appearance.ts';
 import type { UnitAppearanceId } from '../unit/appearance.ts';
 
+export type SaunojaClass = 'tank' | 'rogue' | 'wizard' | 'speedster';
+
 export type SaunojaItemRarity =
   | 'common'
   | 'uncommon'
@@ -106,6 +108,8 @@ export interface Saunoja {
   combatKeywords?: CombatKeywordRegistry | null;
   /** Optional direct combat hook bindings. */
   combatHooks?: CombatHookMap | null;
+  /** Optional promoted class that unlocks advanced perks. */
+  klass?: SaunojaClass;
 }
 
 export interface SaunojaInit {
@@ -132,6 +136,7 @@ export interface SaunojaInit {
   modifiers?: ReadonlyArray<unknown>;
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
+  klass?: unknown;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
@@ -180,6 +185,7 @@ const DEFAULT_STATS: SaunojaStatBlock = {
 };
 
 const VALID_BEHAVIORS: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
+const VALID_SAUNOJA_CLASSES: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -202,6 +208,14 @@ function resolveOptionalStat(
     return Math.max(min, fallback);
   }
   return undefined;
+}
+
+function sanitizeSaunojaClass(source: unknown): SaunojaClass | undefined {
+  if (typeof source !== 'string') {
+    return undefined;
+  }
+  const normalized = source.trim().toLowerCase();
+  return VALID_SAUNOJA_CLASSES.find((value) => value === normalized) ?? undefined;
 }
 
 function sanitizeStatBlock(source: unknown, fallback: SaunojaStatBlock): SaunojaStatBlock {
@@ -415,7 +429,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     combatKeywords = null,
     combatHooks = null,
     appearanceId,
-    appearanceRandom
+    appearanceRandom,
+    klass
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -516,6 +531,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const appearanceSampler =
     typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
   const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
+  const resolvedClass = sanitizeSaunojaClass(klass);
 
   return {
     id,
@@ -539,6 +555,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     equipment,
     modifiers: sanitizedModifiers,
     combatKeywords,
-    combatHooks
+    combatHooks,
+    ...(resolvedClass ? { klass: resolvedClass } : {})
   };
 }

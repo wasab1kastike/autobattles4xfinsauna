@@ -68,7 +68,8 @@ import {
   unitToSaunoja,
   buildProgression,
   refreshRosterPanel,
-  updateRosterDisplay
+  updateRosterDisplay,
+  promoteSaunoja as promoteRosterSaunoja
 } from './game/orchestrators/roster.ts';
 import { setupTopbar, type EnemyRampSummary, type TopbarControls } from './ui/topbar.ts';
 import {
@@ -86,7 +87,7 @@ import { createUnitCombatAnimator, type UnitCombatAnimator } from './render/comb
 import { Animator } from './render/Animator.ts';
 import { createUnitFxManager, type UnitFxManager } from './render/unit_fx.ts';
 import { HexMapRenderer } from './render/HexMapRenderer.ts';
-import type { Saunoja, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
+import type { Saunoja, SaunojaClass, SaunojaItem, SaunojaStatBlock } from './units/saunoja.ts';
 import {
   makeSaunoja,
   rollSaunojaUpkeep,
@@ -128,6 +129,7 @@ import { assetPaths, getAssets, uiIcons } from './game/assets.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
 import {
+  getExperienceForLevel,
   getLevelProgress,
   getTotalStatAwards,
   getStatAwardsForLevel,
@@ -229,6 +231,8 @@ const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
 const XP_OBJECTIVE_COMPLETION = 200;
 const MAX_LEVEL = getLevelForExperience(Number.MAX_SAFE_INTEGER);
+const SAUNOJA_PROMOTION_LEVEL = 12;
+const SAUNAKUNNIA_PROMOTION_COST = 150;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -316,7 +320,8 @@ configureRosterOrchestrator({
   getUnitById: (id) => unitsById.get(id),
   getAttachedUnitFor: (attendant) => getAttachedUnitFor(attendant),
   getActiveRosterCount: () => getActiveRosterCount(),
-  syncSelectionOverlay: () => syncSelectionOverlay()
+  syncSelectionOverlay: () => syncSelectionOverlay(),
+  promote: (attendant, klass) => promoteSaunojaInternal(attendant, klass)
 });
 let gameController: GameController | null = null;
 
@@ -737,6 +742,45 @@ function withSaunojaBaseline<T>(attendant: Saunoja, mutate: (baseline: SaunojaPo
   return result;
 }
 
+function promoteSaunojaInternal(attendant: Saunoja, klass: SaunojaClass): boolean {
+  const progress = getLevelProgress(attendant.xp);
+  if (progress.level < SAUNOJA_PROMOTION_LEVEL) {
+    return false;
+  }
+
+  if (!state.spendResource(SAUNAKUNNIA_PROMOTION_COST, Resource.SAUNAKUNNIA)) {
+    return false;
+  }
+
+  const totalAwards = getTotalStatAwards(progress.level);
+  withSaunojaBaseline(attendant, (baseline) => {
+    const base = baseline.base;
+    if (totalAwards.vigor > 0) {
+      const adjustedHealth = Math.max(1, Math.round(base.health - totalAwards.vigor));
+      base.health = adjustedHealth;
+    }
+    if (totalAwards.focus > 0) {
+      const adjustedAttack = Math.max(0, Math.round(base.attackDamage - totalAwards.focus));
+      base.attackDamage = adjustedAttack;
+    }
+    if (totalAwards.resolve > 0) {
+      const defenseSource = typeof base.defense === 'number' ? base.defense : 0;
+      const adjustedDefense = Math.max(0, Math.round(defenseSource - totalAwards.resolve));
+      base.defense = adjustedDefense > 0 ? adjustedDefense : undefined;
+    }
+  });
+
+  const resetXp = getExperienceForLevel(1);
+  attendant.xp = resetXp;
+  const attachedUnit = getAttachedUnitFor(attendant);
+  attachedUnit?.setExperience(resetXp);
+  attendant.klass = klass;
+
+  saveUnits();
+  updateRosterDisplay();
+  return true;
+}
+
 function recomputeEffectiveStats(attendant: Saunoja, loadout?: readonly EquippedItem[]): SaunojaStatBlock {
   const resolvedLoadout = loadout ?? loadoutItems(attendant.equipment);
   const effective = applyEquipment(attendant.baseStats, resolvedLoadout);
@@ -1057,6 +1101,10 @@ export function saveUnits(): void {
 
 export function loadUnits(): Saunoja[] {
   return loadUnitsImpl();
+}
+
+export function promoteSaunoja(unitId: string, klass: SaunojaClass): boolean {
+  return promoteRosterSaunoja(unitId, klass);
 }
 
 function claimSaunoja(unit: Unit): ClaimSaunojaResult {
