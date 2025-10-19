@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Empower rogues with a 25% attack boost, an ambush teleport that snaps them
+  adjacent to nearby foes, and a one-time first-strike damage surge, covering
+  the modifiers with fresh combat and scenario tests.
+
 - Preserve NG+ carryover loadouts by forwarding the selected attendant's
   equipment and inventory into roster storage and expand persistence tests to
   lock in the behavior.

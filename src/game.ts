@@ -619,6 +619,7 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   const attackProfile = deriveUnitAttackProfile(loadout);
   const unit = getAttachedUnitFor(attendant);
   if (unit) {
+    const isRogue = attendant.klass === 'rogue';
     applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
     const nextStats: UnitStats = {
       health: attendant.effectiveStats.health,
@@ -632,7 +633,11 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
     if (typeof attendant.effectiveStats.visionRange === 'number') {
       nextStats.visionRange = attendant.effectiveStats.visionRange;
     }
+    if (isRogue) {
+      nextStats.damageDealtMultiplier = 1.25;
+    }
     unit.updateStats(nextStats);
+    unit.setRogueAmbush(isRogue ? { teleportRange: 5, burstMultiplier: 2 } : undefined);
     unit.setAttackProfile(attackProfile);
     if (typeof attendant.effectiveStats.shield === 'number') {
       unit.setShield(attendant.effectiveStats.shield);

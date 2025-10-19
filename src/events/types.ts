@@ -12,6 +12,12 @@ export interface UnitAttackPayload {
   attackProfile?: string;
 }
 
+export interface UnitTeleportedPayload {
+  unitId: string;
+  from: AxialCoord;
+  to: AxialCoord;
+}
+
 export interface UnitDamagedPayload {
   attackerId?: string;
   targetId: string;
