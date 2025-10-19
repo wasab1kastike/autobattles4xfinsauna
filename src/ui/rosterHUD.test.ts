@@ -80,6 +80,12 @@ describe('rosterHUD', () => {
       expect(classBadge?.textContent).toBe('Aurora Sage');
       expect(classBadge?.dataset.klass).toBe('wizard');
 
+      const perks = root?.querySelector<HTMLElement>('.saunoja-card__perks');
+      expect(perks?.hidden).toBe(false);
+      expect(perks?.textContent).toContain('Arcane Nova');
+      expect(perks?.textContent).toContain('+10% damage');
+      expect(perks?.textContent).toContain('40% splash');
+
       const xpRow = root?.querySelector('.saunoja-card__xp');
       expect(xpRow?.textContent).toContain('40 / 320');
 

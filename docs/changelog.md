@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Promote wizards with the Arcane Nova specialization, delivering a 10%
+  damage boost and 40% splash damage within a two-hex radius, with persistence
+  across save/load, HUD copy, and new combat tests.
+
 - Empower promoted tanks with a 50% damage-taken multiplier, battlefield taunt
   aura, polished HUD/tooltips, and accompanying combat/AI tests to ensure the
   mitigation persists through save/load cycles.

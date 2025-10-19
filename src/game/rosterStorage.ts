@@ -76,9 +76,19 @@ export function loadUnits(): Saunoja[] {
           equipment: data.equipment,
           modifiers: Array.isArray(data.modifiers) ? data.modifiers : undefined,
           klass: data.klass,
+          damageDealtMultiplier:
+            typeof data.damageDealtMultiplier === 'number'
+              ? data.damageDealtMultiplier
+              : undefined,
           damageTakenMultiplier:
             typeof data.damageTakenMultiplier === 'number'
               ? data.damageTakenMultiplier
+              : undefined,
+          arcaneNovaRadius:
+            typeof data.arcaneNovaRadius === 'number' ? data.arcaneNovaRadius : undefined,
+          arcaneNovaMultiplier:
+            typeof data.arcaneNovaMultiplier === 'number'
+              ? data.arcaneNovaMultiplier
               : undefined,
           tauntActive: typeof data.tauntActive === 'boolean' ? data.tauntActive : undefined
         })
@@ -113,8 +123,17 @@ export function saveUnits(units: readonly Saunoja[]): void {
       xp: unit.xp,
       selected: unit.selected,
       ...(unit.klass ? { klass: unit.klass } : {}),
+      ...(typeof unit.damageDealtMultiplier === 'number'
+        ? { damageDealtMultiplier: unit.damageDealtMultiplier }
+        : {}),
       ...(typeof unit.damageTakenMultiplier === 'number'
         ? { damageTakenMultiplier: unit.damageTakenMultiplier }
+        : {}),
+      ...(typeof unit.arcaneNovaRadius === 'number'
+        ? { arcaneNovaRadius: unit.arcaneNovaRadius }
+        : {}),
+      ...(typeof unit.arcaneNovaMultiplier === 'number'
+        ? { arcaneNovaMultiplier: unit.arcaneNovaMultiplier }
         : {}),
       tauntActive: Boolean(unit.tauntActive),
       baseStats: {

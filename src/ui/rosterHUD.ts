@@ -51,7 +51,10 @@ export type RosterCardViewModel = {
   progression: RosterProgression;
   behavior: UnitBehavior;
   klass?: SaunojaClass | null;
+  damageDealtMultiplier?: number;
   damageTakenMultiplier?: number;
+  arcaneNovaRadius?: number;
+  arcaneNovaMultiplier?: number;
   tauntActive?: boolean;
 };
 
@@ -580,6 +583,19 @@ export function setupRosterHUD(
       const tauntLabel = card.tauntActive ? 'Taunt engaged' : 'Taunt ready';
       rosterCardPerks.hidden = false;
       rosterCardPerks.textContent = `Aegis Ward • ${mitigationLabel} • ${tauntLabel}`;
+      rosterCardPerks.title = rosterCardPerks.textContent;
+    } else if (resolvedClass === 'wizard') {
+      const damageMultiplier =
+        typeof card.damageDealtMultiplier === 'number' && Number.isFinite(card.damageDealtMultiplier)
+          ? card.damageDealtMultiplier
+          : 1.1;
+      const damageBonus = Math.round((damageMultiplier - 1) * 100);
+      const damageLabel = damageBonus >= 0 ? `+${damageBonus}% damage` : `${damageBonus}% damage`;
+      const radius = Math.max(1, Math.floor(card.arcaneNovaRadius ?? 2));
+      const splashPercent = Math.round((card.arcaneNovaMultiplier ?? 0.4) * 100);
+      const radiusLabel = `${radius}-hex radius`;
+      rosterCardPerks.hidden = false;
+      rosterCardPerks.textContent = `Arcane Nova • ${damageLabel} • ${Math.max(0, splashPercent)}% splash within ${radiusLabel}`;
       rosterCardPerks.title = rosterCardPerks.textContent;
     } else {
       rosterCardPerks.hidden = true;

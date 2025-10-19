@@ -54,7 +54,10 @@ export interface RosterEntry {
   readonly items: readonly RosterItem[];
   readonly modifiers: readonly RosterModifier[];
   readonly klass?: SaunojaClass | null;
+  readonly damageDealtMultiplier?: number;
   readonly damageTakenMultiplier?: number;
+  readonly arcaneNovaRadius?: number;
+  readonly arcaneNovaMultiplier?: number;
   readonly tauntActive?: boolean;
 }
 
@@ -207,6 +210,13 @@ function buildMetaLine(entry: RosterEntry): string {
   segments.push(
     `MOV ${integerFormatter.format(stats.movementRange)}${formatDelta(stats.movementRange, baseStats.movementRange)}`
   );
+  if (typeof entry.damageDealtMultiplier === 'number') {
+    const bonus = Math.round((entry.damageDealtMultiplier - 1) * 100);
+    if (bonus !== 0) {
+      const label = bonus > 0 ? `Power +${bonus}%` : `Power ${bonus}%`;
+      segments.push(label);
+    }
+  }
   if (typeof entry.damageTakenMultiplier === 'number') {
     const mitigation = Math.round((1 - entry.damageTakenMultiplier) * 100);
     if (mitigation > 0) {
@@ -217,6 +227,16 @@ function buildMetaLine(entry: RosterEntry): string {
   }
   if ((entry.klass ?? entry.progression.klass) === 'tank') {
     segments.push(`Taunt ${entry.tauntActive ? 'Engaged' : 'Ready'}`);
+  }
+  if ((entry.klass ?? entry.progression.klass) === 'wizard') {
+    if (typeof entry.arcaneNovaRadius === 'number' && entry.arcaneNovaRadius > 0) {
+      const radius = Math.floor(entry.arcaneNovaRadius);
+      const radiusLabel = `${integerFormatter.format(radius)} hex${radius === 1 ? '' : 'es'}`;
+      segments.push(`Nova Radius ${radiusLabel}`);
+    }
+    if (typeof entry.arcaneNovaMultiplier === 'number' && entry.arcaneNovaMultiplier > 0) {
+      segments.push(`Nova Splash ${Math.round(entry.arcaneNovaMultiplier * 100)}%`);
+    }
   }
   segments.push(`Upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   return segments.join(' • ');
@@ -252,6 +272,26 @@ function buildAriaLabel(entry: RosterEntry): string {
   }
   if ((entry.klass ?? entry.progression.klass) === 'tank') {
     segments.push(entry.tauntActive ? 'taunt engaged' : 'taunt ready');
+  }
+  if (typeof entry.damageDealtMultiplier === 'number') {
+    const bonus = Math.round((entry.damageDealtMultiplier - 1) * 100);
+    if (bonus !== 0) {
+      segments.push(
+        bonus > 0
+          ? `${bonus}% increased attack damage`
+          : `${Math.abs(bonus)}% reduced attack damage`
+      );
+    }
+  }
+  if ((entry.klass ?? entry.progression.klass) === 'wizard') {
+    if (typeof entry.arcaneNovaRadius === 'number' && entry.arcaneNovaRadius > 0) {
+      const radius = Math.floor(entry.arcaneNovaRadius);
+      const radiusLabel = `${integerFormatter.format(radius)} hex${radius === 1 ? '' : 'es'}`;
+      segments.push(`arcane nova radius ${radiusLabel}`);
+    }
+    if (typeof entry.arcaneNovaMultiplier === 'number' && entry.arcaneNovaMultiplier > 0) {
+      segments.push(`arcane nova splash ${Math.round(entry.arcaneNovaMultiplier * 100)}%`);
+    }
   }
   segments.push(`upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   if (entry.progression.xpForNext === null) {
