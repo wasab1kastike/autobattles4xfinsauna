@@ -19,6 +19,7 @@ import { UNIT_ATTACK_IMPACT_MS, UNIT_ATTACK_TOTAL_MS } from '../combat/timing.ts
 import type { UnitAttackPayload } from '../events/types.ts';
 
 export const UNIT_MOVEMENT_STEP_SECONDS = 5;
+export const UNIT_ATTACK_STEP_SECONDS = UNIT_ATTACK_TOTAL_MS / 1000;
 
 type Listener = () => void;
 
@@ -71,6 +72,9 @@ export class Unit {
   private cachedStartKey?: string;
   private cachedPath?: AxialCoord[];
   private movementCooldownSeconds = 0;
+  private movementStepCostSeconds = UNIT_MOVEMENT_STEP_SECONDS;
+  private attackCooldownSeconds = UNIT_ATTACK_STEP_SECONDS;
+  private attackStepCostSeconds = UNIT_ATTACK_STEP_SECONDS;
   private shield = 0;
   private immortal = false;
   private experience = 0;
@@ -119,6 +123,7 @@ export class Unit {
     }
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
     this.appearanceId = this.sanitizeAppearanceId(appearanceId);
+    this.attackCooldownSeconds = this.attackStepCostSeconds;
   }
 
   setCoord(coord: AxialCoord, options?: { snapRender?: boolean }): void {
@@ -633,16 +638,63 @@ export class Unit {
     this.movementCooldownSeconds += delta;
   }
 
-  canStep(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
+  canStep(stepCost = this.movementStepCostSeconds): boolean {
     return this.movementCooldownSeconds >= stepCost;
   }
 
-  consumeMovementCooldown(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
+  consumeMovementCooldown(stepCost = this.movementStepCostSeconds): boolean {
     if (!this.canStep(stepCost)) {
       return false;
     }
     this.movementCooldownSeconds -= stepCost;
     return true;
+  }
+
+  setMovementStepCost(seconds: number): void {
+    const normalized = Number.isFinite(seconds) && seconds > 0 ? seconds : UNIT_MOVEMENT_STEP_SECONDS;
+    if (normalized === this.movementStepCostSeconds) {
+      return;
+    }
+    const previousCost = this.movementStepCostSeconds;
+    this.movementStepCostSeconds = normalized;
+    if (previousCost > 0) {
+      const progressRatio = normalized / previousCost;
+      this.movementCooldownSeconds *= progressRatio;
+    }
+  }
+
+  addAttackTime(delta: number): void {
+    if (!Number.isFinite(delta) || delta <= 0) {
+      return;
+    }
+    this.attackCooldownSeconds += delta;
+  }
+
+  canAttack(stepCost = this.attackStepCostSeconds): boolean {
+    return this.attackCooldownSeconds >= stepCost;
+  }
+
+  consumeAttackCooldown(stepCost = this.attackStepCostSeconds): boolean {
+    if (!this.canAttack(stepCost)) {
+      return false;
+    }
+    this.attackCooldownSeconds -= stepCost;
+    return true;
+  }
+
+  setAttackStepCost(seconds: number): void {
+    const normalized = Number.isFinite(seconds) && seconds > 0 ? seconds : UNIT_ATTACK_STEP_SECONDS;
+    if (normalized === this.attackStepCostSeconds) {
+      return;
+    }
+    const previous = this.attackStepCostSeconds;
+    this.attackStepCostSeconds = normalized;
+    if (previous > 0) {
+      const progressRatio = normalized / previous;
+      this.attackCooldownSeconds *= progressRatio;
+    } else {
+      this.attackCooldownSeconds = normalized;
+    }
   }
 
   /**
