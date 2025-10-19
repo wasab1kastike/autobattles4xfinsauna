@@ -9,6 +9,15 @@ export interface UnitStats {
   damageTakenMultiplier?: number;
 }
 
+export interface MomentumState {
+  /** Bonus strikes waiting to trigger after momentum movement. */
+  pendingStrikes: number;
+  /** How many tiles the unit has advanced during the current tick. */
+  tilesMovedThisTick: number;
+  /** Maximum number of momentum strikes that can be stored at once. */
+  maxStacks: number;
+}
+
 export type UnitBehavior = 'defend' | 'attack' | 'explore';
 
 export type LevelCurve = 'linear' | 'accelerating' | 'diminishing';

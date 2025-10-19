@@ -1,6 +1,7 @@
 import { renderItemIcon } from '../components/ItemIcon.tsx';
 import { renderModPill } from '../components/ModPill.tsx';
 import type { SaunojaClass, SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
+import type { MomentumState } from '../../unit/types.ts';
 import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
 import type { StatAwards } from '../../progression/experiencePlan.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
@@ -56,6 +57,7 @@ export interface RosterEntry {
   readonly klass?: SaunojaClass | null;
   readonly damageTakenMultiplier?: number;
   readonly tauntActive?: boolean;
+  readonly momentum?: MomentumState | null;
 }
 
 export interface RosterPanelOptions {
@@ -96,6 +98,11 @@ const saunojaClassLabels: Record<SaunojaClass, string> = {
   speedster: 'Gale Dancer'
 };
 
+const classPerkSummaries: Partial<Record<SaunojaClass, string>> = {
+  tank: 'Aegis Ward shrugs damage while projecting a taunt aura.',
+  speedster: 'Momentum Drive quickens steps and stores a follow-up strike.'
+};
+
 const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
 
 function resolveSaunojaClass(entry: RosterEntry): SaunojaClass | null {
@@ -105,6 +112,13 @@ function resolveSaunojaClass(entry: RosterEntry): SaunojaClass | null {
 
 function formatSaunojaClassLabel(klass: SaunojaClass): string {
   return saunojaClassLabels[klass] ?? klass;
+}
+
+function resolveClassPerkSummary(klass: SaunojaClass | null): string | null {
+  if (!klass) {
+    return null;
+  }
+  return classPerkSummaries[klass] ?? null;
 }
 
 function formatTraits(traits: readonly string[]): string {
@@ -620,8 +634,11 @@ export function createRosterPanel(
         classBadge.dataset.klass = resolvedClass;
         const label = formatSaunojaClassLabel(resolvedClass);
         classBadge.textContent = label;
-        classBadge.title = `${entry.name} specializes as ${label}`;
-        classBadge.setAttribute('aria-label', `Class ${label}`);
+        const perkSummary = resolveClassPerkSummary(resolvedClass);
+        const baseTitle = `${entry.name} specializes as ${label}`;
+        const enrichedTitle = perkSummary ? `${baseTitle} • ${perkSummary}` : baseTitle;
+        classBadge.title = enrichedTitle;
+        classBadge.setAttribute('aria-label', perkSummary ? `${baseTitle}; ${perkSummary}` : `Class ${label}`);
         identity.appendChild(classBadge);
       }
       nameRow.appendChild(identity);
@@ -681,6 +698,10 @@ export function createRosterPanel(
 
       behaviorRow.appendChild(behaviorControls);
 
+      const perksRow = document.createElement('div');
+      perksRow.classList.add('panel-roster__perks');
+      perksRow.hidden = true;
+
       const meta = document.createElement('div');
       meta.classList.add('panel-roster__meta');
       const metaLabel = buildMetaLine(entry);
@@ -692,6 +713,24 @@ export function createRosterPanel(
       const xpLabel = formatXpLabel(entry.progression);
       xpRow.textContent = xpLabel;
       xpRow.title = xpLabel;
+
+      const momentum = entry.momentum ?? null;
+      if (resolvedClass === 'speedster') {
+        const pending = Math.max(0, momentum?.pendingStrikes ?? 0);
+        const maxStacks = Math.max(1, momentum?.maxStacks ?? 1);
+        const readyLabel =
+          pending > 0
+            ? `${pending}/${maxStacks} bonus strike${pending > 1 ? 's' : ''} primed`
+            : 'Move at least one tile to charge a bonus strike';
+        const perkHeadline = 'Momentum Drive • Steps recharge 40% faster';
+        perksRow.hidden = false;
+        perksRow.textContent = `${perkHeadline} • ${readyLabel}`;
+        perksRow.title = `${perkHeadline} • ${readyLabel}`;
+      } else {
+        perksRow.hidden = true;
+        perksRow.textContent = '';
+        perksRow.title = '';
+      }
 
       let promotionRow: HTMLDivElement | null = null;
       const canPromote =
@@ -758,7 +797,9 @@ export function createRosterPanel(
           option.dataset.klass = klass;
           const label = formatSaunojaClassLabel(klass);
           option.textContent = label;
-          option.title = `Promote ${entry.name} to ${label}`;
+          const perkSummary = resolveClassPerkSummary(klass);
+          const baseTitle = `Promote ${entry.name} to ${label}`;
+          option.title = perkSummary ? `${baseTitle} — ${perkSummary}` : baseTitle;
           option.setAttribute('role', 'listitem');
           option.addEventListener('click', (event) => {
             event.stopPropagation();
@@ -796,7 +837,7 @@ export function createRosterPanel(
       traits.textContent = traitLabel;
       traits.title = traitLabel;
 
-      button.append(nameRow, behaviorRow, xpRow);
+      button.append(nameRow, behaviorRow, perksRow, xpRow);
       if (promotionRow) {
         button.appendChild(promotionRow);
       }

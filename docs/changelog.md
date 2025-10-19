@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Let promoted speedsters channel Momentum Drive so battlefield units enjoy a
+  +2 movement boost, a 40% quicker step cooldown, and a post-move strike/dash,
+  with the roster HUD and panel celebrating the perk and regression tests
+  locking down the momentum flow.
+
 - Empower promoted tanks with a 50% damage-taken multiplier, battlefield taunt
   aura, polished HUD/tooltips, and accompanying combat/AI tests to ensure the
   mitigation persists through save/load cycles.

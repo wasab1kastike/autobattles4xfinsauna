@@ -6,6 +6,7 @@ import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
+import type { MomentumState } from './unit/types.ts';
 import { resolveSaunojaAppearance } from './unit/appearance.ts';
 import { eventBus, eventScheduler } from './events';
 import {
@@ -237,6 +238,9 @@ const SAUNOJA_PROMOTION_LEVEL = 12;
 const SAUNAKUNNIA_PROMOTION_COST = 150;
 const TANK_DAMAGE_TAKEN_MULTIPLIER = 0.5;
 const TANK_TAUNT_RADIUS = 5;
+const SPEEDSTER_MOVEMENT_BONUS = 2;
+const SPEEDSTER_STEP_COST_SCALAR = 0.6;
+const SPEEDSTER_MOMENTUM_STACKS = 1;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -645,12 +649,20 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   if (unit) {
     const isRogue = attendant.klass === 'rogue';
     const isTank = attendant.klass === 'tank';
+    const isSpeedster = attendant.klass === 'speedster';
+    const baseMovementRange = Math.max(0, Math.round(attendant.effectiveStats.movementRange));
+    const boostedMovementRange = isSpeedster
+      ? Math.max(0, baseMovementRange + SPEEDSTER_MOVEMENT_BONUS)
+      : baseMovementRange;
+    attendant.effectiveStats.movementRange = isSpeedster
+      ? boostedMovementRange
+      : baseMovementRange;
     applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
     const nextStats: UnitStats = {
       health: attendant.effectiveStats.health,
       attackDamage: attendant.effectiveStats.attackDamage,
       attackRange: attendant.effectiveStats.attackRange,
-      movementRange: attendant.effectiveStats.movementRange
+      movementRange: boostedMovementRange
     } satisfies UnitStats;
     if (typeof attendant.effectiveStats.defense === 'number') {
       nextStats.defense = attendant.effectiveStats.defense;
@@ -666,6 +678,27 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
     }
     unit.updateStats(nextStats);
     unit.setRogueAmbush(isRogue ? { teleportRange: 5, burstMultiplier: 2 } : undefined);
+    if (isSpeedster) {
+      unit.setMovementStepScalar(SPEEDSTER_STEP_COST_SCALAR);
+      const momentumSource = attendant.momentum ?? unit.getMomentumState() ?? null;
+      const pendingSource = momentumSource?.pendingStrikes ?? 0;
+      const sanitizedMomentum: MomentumState = {
+        pendingStrikes: Math.max(
+          0,
+          Math.min(Math.floor(pendingSource), SPEEDSTER_MOMENTUM_STACKS)
+        ),
+        tilesMovedThisTick: 0,
+        maxStacks: SPEEDSTER_MOMENTUM_STACKS
+      } satisfies MomentumState;
+      unit.setMomentumState(sanitizedMomentum);
+      attendant.momentum = unit.getMomentumState() ?? sanitizedMomentum;
+    } else {
+      unit.setMovementStepScalar(1);
+      unit.setMomentumState(null);
+      if ('momentum' in attendant) {
+        delete attendant.momentum;
+      }
+    }
     if (isTank) {
       unit.setTauntAura(TANK_TAUNT_RADIUS);
       unit.setTauntActive(attendant.tauntActive);

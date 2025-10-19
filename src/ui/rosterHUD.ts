@@ -6,6 +6,7 @@ import {
 } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 import type { SaunojaClass } from '../units/saunoja.ts';
+import type { MomentumState } from '../unit/types.ts';
 import type { UnitBehavior } from '../unit/types.ts';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -24,6 +25,11 @@ const saunojaClassLabels: Record<SaunojaClass, string> = {
   speedster: 'Gale Dancer'
 };
 
+const classPerkSummaries: Partial<Record<SaunojaClass, string>> = {
+  tank: 'Aegis Ward shrugs damage while projecting a taunt aura.',
+  speedster: 'Momentum Drive quickens steps and banks a follow-up strike.'
+};
+
 const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
 
 function resolveSaunojaClass(
@@ -34,6 +40,13 @@ function resolveSaunojaClass(
 
 function formatSaunojaClassLabel(klass: SaunojaClass): string {
   return saunojaClassLabels[klass] ?? klass;
+}
+
+function resolveClassPerkSummary(klass: SaunojaClass | null): string | null {
+  if (!klass) {
+    return null;
+  }
+  return classPerkSummaries[klass] ?? null;
 }
 
 type RosterHudOptions = {
@@ -53,6 +66,7 @@ export type RosterCardViewModel = {
   klass?: SaunojaClass | null;
   damageTakenMultiplier?: number;
   tauntActive?: boolean;
+  momentum?: MomentumState | null;
 };
 
 export type RosterHudSummary = {
@@ -374,7 +388,9 @@ export function setupRosterHUD(
     option.dataset.klass = klass;
     const label = formatSaunojaClassLabel(klass);
     option.textContent = label;
-    option.title = `Promote to ${label}`;
+    const perkSummary = resolveClassPerkSummary(klass);
+    const baseTitle = `Promote to ${label}`;
+    option.title = perkSummary ? `${baseTitle} — ${perkSummary}` : baseTitle;
     option.setAttribute('role', 'listitem');
     const handler = () => {
       const unitId = rosterCard.dataset.unitId;
@@ -537,7 +553,9 @@ export function setupRosterHUD(
       rosterCardClass.hidden = false;
       rosterCardClass.dataset.klass = resolvedClass;
       rosterCardClass.textContent = label;
-      rosterCardClass.title = `${card.name || 'Saunoja'} specializes as ${label}`;
+      const perkSummary = resolveClassPerkSummary(resolvedClass);
+      const baseTitle = `${card.name || 'Saunoja'} specializes as ${label}`;
+      rosterCardClass.title = perkSummary ? `${baseTitle} • ${perkSummary}` : baseTitle;
     } else {
       rosterCardClass.hidden = true;
       rosterCardClass.textContent = '';
@@ -567,6 +585,7 @@ export function setupRosterHUD(
     rosterCardStats.textContent = bonusLabel;
     rosterCardStats.title = bonusLabel;
 
+    const momentum = card.momentum ?? null;
     if (resolvedClass === 'tank') {
       const mitigationSource =
         typeof card.damageTakenMultiplier === 'number' && Number.isFinite(card.damageTakenMultiplier)
@@ -580,6 +599,16 @@ export function setupRosterHUD(
       const tauntLabel = card.tauntActive ? 'Taunt engaged' : 'Taunt ready';
       rosterCardPerks.hidden = false;
       rosterCardPerks.textContent = `Aegis Ward • ${mitigationLabel} • ${tauntLabel}`;
+      rosterCardPerks.title = rosterCardPerks.textContent;
+    } else if (resolvedClass === 'speedster') {
+      const pending = Math.max(0, momentum?.pendingStrikes ?? 0);
+      const maxStacks = Math.max(1, momentum?.maxStacks ?? 1);
+      const readyLabel =
+        pending > 0
+          ? `${pending}/${maxStacks} bonus strike${pending > 1 ? 's' : ''} primed`
+          : 'Move to charge a bonus strike';
+      rosterCardPerks.hidden = false;
+      rosterCardPerks.textContent = `Momentum Drive • Steps recharge 40% faster • ${readyLabel}`;
       rosterCardPerks.title = rosterCardPerks.textContent;
     } else {
       rosterCardPerks.hidden = true;
@@ -685,7 +714,10 @@ export function setupRosterHUD(
       itemSig,
       modifierSig,
       entry.damageTakenMultiplier ?? '',
-      entry.tauntActive ? 1 : 0
+      entry.tauntActive ? 1 : 0,
+      entry.momentum?.pendingStrikes ?? '',
+      entry.momentum?.tilesMovedThisTick ?? '',
+      entry.momentum?.maxStacks ?? ''
     ].join('~');
   }
 

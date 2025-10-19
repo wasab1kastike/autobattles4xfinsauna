@@ -248,7 +248,8 @@ export function buildRosterEntries(): RosterEntry[] {
       ...(damageTakenMultiplier !== undefined
         ? { damageTakenMultiplier }
         : {}),
-      ...(tauntActive ? { tauntActive } : { tauntActive: false })
+      ...(tauntActive ? { tauntActive } : { tauntActive: false }),
+      momentum: attendant.momentum ?? null
     } satisfies RosterEntry;
   });
 
@@ -293,7 +294,8 @@ export function buildRosterSummary(): RosterHudSummary {
         typeof featured.damageTakenMultiplier === 'number'
           ? Math.max(0, featured.damageTakenMultiplier)
           : undefined,
-      tauntActive: Boolean(featured.tauntActive && featured.klass === 'tank')
+      tauntActive: Boolean(featured.tauntActive && featured.klass === 'tank'),
+      momentum: featured.momentum ?? null
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

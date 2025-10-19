@@ -58,6 +58,7 @@ Every level-up grants focused stat packages aligned with pacing beats. Totals su
 
 ## Saunoja Promotions
 - Reaching level 12 unlocks a roster promotion that costs **150 Saunakunnia** and lets commanders specialize a Saunoja as a **Tank**, **Rogue**, **Wizard**, or **Speedster**.
+- Speedster promotions unlock **Momentum Drive** – +2 movement range, a 40% quicker step cooldown, and a post-move dash/strike that the roster HUD now tracks live.
 - Promotions reset the attendant's XP to level 1, roll back cumulative stat awards, and then immediately reapply policy modifiers so the baseline feels familiar while opening new class perks.
 - Battlefield units linked to the promoted Saunoja inherit the reset XP, keeping combat HUD readouts consistent without manual resyncs.
 

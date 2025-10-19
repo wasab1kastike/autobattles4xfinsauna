@@ -3793,6 +3793,14 @@ button {
   color: color-mix(in srgb, #fcd34d 70%, white 30%);
 }
 
+.panel-roster__perks {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #38bdf8 65%, white 35%);
+}
+
 .panel-roster__traits {
   font-style: italic;
 }

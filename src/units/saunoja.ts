@@ -3,7 +3,7 @@ import { generateSaunojaName } from '../data/names.ts';
 import type { CombatHookMap, CombatKeywordRegistry } from '../combat/resolve.ts';
 import { createLoadoutFromItems, loadoutToItems } from '../items/equip.ts';
 import type { EquipmentMap } from '../items/types.ts';
-import type { UnitBehavior } from '../unit/types.ts';
+import type { MomentumState, UnitBehavior } from '../unit/types.ts';
 import { resolveSaunojaAppearance } from '../unit/appearance.ts';
 import type { UnitAppearanceId } from '../unit/appearance.ts';
 
@@ -114,6 +114,8 @@ export interface Saunoja {
   damageTakenMultiplier?: number;
   /** Whether the Saunoja's taunt aura is actively drawing enemy attention. */
   tauntActive: boolean;
+  /** Optional momentum perks used by mobility-focused classes. */
+  momentum?: MomentumState;
 }
 
 export interface SaunojaInit {
@@ -143,6 +145,7 @@ export interface SaunojaInit {
   klass?: unknown;
   damageTakenMultiplier?: unknown;
   tauntActive?: unknown;
+  momentum?: unknown;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
@@ -213,6 +216,36 @@ function sanitizeDamageTakenMultiplier(source: unknown): number | undefined {
     return undefined;
   }
   return source;
+}
+
+function sanitizeMomentum(source: unknown): MomentumState | undefined {
+  if (!source || typeof source !== 'object') {
+    return undefined;
+  }
+  const data = source as Partial<MomentumState>;
+  const maxStacksSource = data.maxStacks;
+  const maxStacks =
+    typeof maxStacksSource === 'number' && Number.isFinite(maxStacksSource)
+      ? Math.max(0, Math.floor(maxStacksSource))
+      : 0;
+  if (maxStacks <= 0) {
+    return undefined;
+  }
+  const pendingSource = data.pendingStrikes;
+  const pendingStrikes =
+    typeof pendingSource === 'number' && Number.isFinite(pendingSource)
+      ? Math.max(0, Math.min(Math.floor(pendingSource), maxStacks))
+      : 0;
+  const tilesSource = data.tilesMovedThisTick;
+  const tilesMovedThisTick =
+    typeof tilesSource === 'number' && Number.isFinite(tilesSource)
+      ? Math.max(0, Math.floor(tilesSource))
+      : 0;
+  return {
+    pendingStrikes,
+    tilesMovedThisTick,
+    maxStacks
+  } satisfies MomentumState;
 }
 
 function resolveOptionalStat(
@@ -451,7 +484,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     appearanceRandom,
     klass,
     damageTakenMultiplier,
-    tauntActive
+    tauntActive,
+    momentum: momentumInput
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -555,6 +589,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
   const resolvedClass = sanitizeSaunojaClass(klass);
   const resolvedDamageTakenMultiplier = sanitizeDamageTakenMultiplier(damageTakenMultiplier);
   const resolvedTauntActive = typeof tauntActive === 'boolean' ? tauntActive : false;
+  const resolvedMomentum = sanitizeMomentum(momentumInput);
 
   return {
     id,
@@ -583,6 +618,7 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     ...(resolvedDamageTakenMultiplier !== undefined
       ? { damageTakenMultiplier: resolvedDamageTakenMultiplier }
       : {}),
-    tauntActive: resolvedTauntActive
+    tauntActive: resolvedTauntActive,
+    ...(resolvedMomentum ? { momentum: resolvedMomentum } : {})
   };
 }

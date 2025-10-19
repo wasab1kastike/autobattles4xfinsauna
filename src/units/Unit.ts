@@ -4,7 +4,7 @@ import { HexMap } from '../hexmap.ts';
 import { TerrainId } from '../map/terrain.ts';
 import { eventBus } from '../events';
 import type { Sauna } from '../buildings/Sauna.ts';
-import type { UnitBehavior, UnitStats } from '../unit/types.ts';
+import type { MomentumState, UnitBehavior, UnitStats } from '../unit/types.ts';
 import { normalizeAppearanceId } from '../unit/appearance.ts';
 import { PriorityQueue } from './PriorityQueue.ts';
 import type {
@@ -66,6 +66,7 @@ export class Unit {
   private cachedStartKey?: string;
   private cachedPath?: AxialCoord[];
   private movementCooldownSeconds = 0;
+  private movementStepCostScalar = 1;
   private shield = 0;
   private immortal = false;
   private experience = 0;
@@ -75,6 +76,7 @@ export class Unit {
   private rogueAmbush: RogueAmbushState | null = null;
   private tauntAuraRadius = 0;
   private tauntActive = false;
+  private momentumState: MomentumState | null = null;
 
   public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
@@ -522,6 +524,58 @@ export class Unit {
     return this.experience;
   }
 
+  getMovementCooldownSeconds(): number {
+    return this.movementCooldownSeconds;
+  }
+
+  setMovementCooldownSeconds(value: number): void {
+    if (!Number.isFinite(value) || value <= 0) {
+      this.movementCooldownSeconds = 0;
+      return;
+    }
+    this.movementCooldownSeconds = value;
+  }
+
+  getMovementStepScalar(): number {
+    return this.movementStepCostScalar;
+  }
+
+  setMovementStepScalar(value: number): void {
+    const normalized = Number.isFinite(value) && value > 0 ? value : 1;
+    this.movementStepCostScalar = Math.max(0.1, normalized);
+  }
+
+  getMovementStepCost(stepCost = UNIT_MOVEMENT_STEP_SECONDS): number {
+    const base = Number.isFinite(stepCost) && stepCost > 0 ? stepCost : UNIT_MOVEMENT_STEP_SECONDS;
+    return base * this.movementStepCostScalar;
+  }
+
+  getMomentumState(): MomentumState | null {
+    if (!this.momentumState) {
+      return null;
+    }
+    return { ...this.momentumState } satisfies MomentumState;
+  }
+
+  setMomentumState(state: MomentumState | null): void {
+    if (!state) {
+      this.momentumState = null;
+      return;
+    }
+    const maxStacksSource = Number.isFinite(state.maxStacks) ? Math.floor(state.maxStacks) : 0;
+    const maxStacks = Math.max(0, maxStacksSource);
+    const pendingCap = maxStacks > 0 ? maxStacks : 0;
+    const pendingSource = Number.isFinite(state.pendingStrikes) ? Math.floor(state.pendingStrikes) : 0;
+    const pendingStrikes = Math.max(0, Math.min(pendingSource, pendingCap));
+    const tilesSource = Number.isFinite(state.tilesMovedThisTick) ? Math.floor(state.tilesMovedThisTick) : 0;
+    const tilesMovedThisTick = Math.max(0, tilesSource);
+    this.momentumState = {
+      pendingStrikes,
+      tilesMovedThisTick,
+      maxStacks
+    } satisfies MomentumState;
+  }
+
   private toCombatParticipant(): CombatParticipant {
     return {
       id: this.id,
@@ -546,14 +600,16 @@ export class Unit {
   }
 
   canStep(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
-    return this.movementCooldownSeconds >= stepCost;
+    const effectiveCost = this.getMovementStepCost(stepCost);
+    return this.movementCooldownSeconds >= effectiveCost;
   }
 
   consumeMovementCooldown(stepCost = UNIT_MOVEMENT_STEP_SECONDS): boolean {
-    if (!this.canStep(stepCost)) {
+    const effectiveCost = this.getMovementStepCost(stepCost);
+    if (this.movementCooldownSeconds < effectiveCost) {
       return false;
     }
-    this.movementCooldownSeconds -= stepCost;
+    this.movementCooldownSeconds = Math.max(0, this.movementCooldownSeconds - effectiveCost);
     return true;
   }
 

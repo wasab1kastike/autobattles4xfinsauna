@@ -5,7 +5,7 @@ import { HexMap } from '../hexmap.ts';
 import { Targeting } from '../ai/Targeting.ts';
 import { RoundRobinScheduler } from '../ai/scheduler.ts';
 import { PathCache } from '../ai/path_cache.ts';
-import type { UnitBehavior } from '../unit/types.ts';
+import type { MomentumState, UnitBehavior } from '../unit/types.ts';
 import { DEFEND_PERIMETER_RADIUS, resolveUnitBehavior } from './unitBehavior.ts';
 import type { Sauna } from '../sim/sauna.ts';
 import { damageSauna } from '../sim/sauna.ts';
@@ -98,6 +98,11 @@ export class BattleManager {
     const livingUnitIds = new Set<string>();
     for (const unit of units) {
       unit.addMovementTime(deltaSeconds);
+      const momentum = unit.getMomentumState();
+      if (momentum) {
+        momentum.tilesMovedThisTick = 0;
+        unit.setMomentumState(momentum);
+      }
       if (unit.isDead()) {
         unit.clearPathCache();
         this.pathCache.invalidateForUnit(unit.id);
@@ -278,8 +283,14 @@ export class BattleManager {
                 }
                 this.populateChunksIfNeeded(unit, previous);
                 unit.advancePathCache(1);
+                const movedDistance = hexDistance(previous, unit.coord);
+                this.registerMomentumMovement(unit, movedDistance);
+                this.tryResolveMomentum(unit, occupied, {
+                  goal,
+                  now
+                });
                 const currentKey = coordKey(unit.coord);
-                if (currentKey === coordKey(goal)) {
+                if (goal && currentKey === coordKey(goal)) {
                   unit.clearPathCache();
                 }
                 occupied.add(currentKey);
@@ -329,6 +340,13 @@ export class BattleManager {
             }
             this.populateChunksIfNeeded(unit, previous);
             unit.advancePathCache(1);
+            const movedDistance = hexDistance(previous, unit.coord);
+            this.registerMomentumMovement(unit, movedDistance);
+            this.tryResolveMomentum(unit, occupied, {
+              target,
+              goal: target.coord,
+              now
+            });
           }
         } else {
           unit.clearPathCache();
@@ -477,6 +495,99 @@ export class BattleManager {
     predicate?: (enemy: Unit) => boolean
   ): Unit | null {
     return Targeting.selectTarget(unit, units, predicate);
+  }
+
+  private registerMomentumMovement(unit: Unit, distance: number): void {
+    if (!Number.isFinite(distance) || distance <= 0) {
+      return;
+    }
+    const momentum = unit.getMomentumState();
+    if (!momentum) {
+      return;
+    }
+    const maxStacks = Math.max(0, momentum.maxStacks);
+    const hadMovement = momentum.tilesMovedThisTick > 0;
+    const updated: MomentumState = {
+      ...momentum,
+      tilesMovedThisTick: momentum.tilesMovedThisTick + Math.max(0, Math.round(distance))
+    } satisfies MomentumState;
+    if (!hadMovement && updated.tilesMovedThisTick > 0 && maxStacks > 0) {
+      if (momentum.pendingStrikes < maxStacks) {
+        updated.pendingStrikes = Math.min(maxStacks, momentum.pendingStrikes + 1);
+      }
+    }
+    unit.setMomentumState(updated);
+  }
+
+  private tryResolveMomentum(
+    unit: Unit,
+    occupied: Set<string>,
+    options: { target?: Unit | null; goal?: AxialCoord | null; now: number }
+  ): void {
+    const momentum = unit.getMomentumState();
+    if (!momentum || momentum.pendingStrikes <= 0 || momentum.maxStacks <= 0) {
+      return;
+    }
+    if (momentum.tilesMovedThisTick <= 0) {
+      return;
+    }
+
+    const target = options.target ?? null;
+    const updated: MomentumState = { ...momentum } satisfies MomentumState;
+
+    if (target && !target.isDead()) {
+      const distance = unit.distanceTo(target.coord);
+      if (distance <= unit.stats.attackRange) {
+        const resolution = unit.attack(target);
+        updated.pendingStrikes = Math.max(0, updated.pendingStrikes - 1);
+        unit.setMomentumState(updated);
+        if ((resolution?.lethal ?? false) || target.isDead()) {
+          const targetKey = coordKey(target.coord);
+          occupied.delete(targetKey);
+          unit.clearPathCache();
+          this.pathCache.invalidateForUnit(target.id);
+          this.animator?.clear(target);
+        }
+        return;
+      }
+    }
+
+    const chaseGoal = options.goal ?? (target && !target.isDead() ? target.coord : null);
+    if (!chaseGoal) {
+      return;
+    }
+
+    const path = this.pathCache.getPath(unit, chaseGoal, this.map, occupied, {
+      now: options.now,
+      ...(target ? { targetId: target.id } : {})
+    });
+    if (path.length < 2) {
+      return;
+    }
+    const nextCoord = path[1];
+    const stepKey = coordKey(nextCoord);
+    const steppingIntoTarget = target ? stepKey === coordKey(target.coord) : false;
+    if (occupied.has(stepKey) && !steppingIntoTarget) {
+      return;
+    }
+
+    const previous = { q: unit.coord.q, r: unit.coord.r };
+    const previousKey = coordKey(previous);
+    occupied.delete(previousKey);
+    if (this.animator) {
+      unit.setCoord(nextCoord, { snapRender: false });
+      this.animator.enqueue(unit, [previous, nextCoord]);
+    } else {
+      unit.setCoord(nextCoord);
+    }
+    this.populateChunksIfNeeded(unit, previous);
+    unit.advancePathCache(1);
+    updated.pendingStrikes = Math.max(0, updated.pendingStrikes - 1);
+    updated.tilesMovedThisTick += Math.max(0, Math.round(hexDistance(previous, nextCoord)));
+    unit.setMomentumState(updated);
+    const currentKey = coordKey(unit.coord);
+    occupied.add(currentKey);
+    this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
   }
 
   private computeMovementPath(

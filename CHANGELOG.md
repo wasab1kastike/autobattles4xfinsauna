@@ -3,6 +3,11 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Let promoted speedsters channel Momentum Drive: their battlefield units gain
+  +2 movement range, a 40% faster step cooldown, and a momentum strike/dash
+  after moving while the roster HUD and panel highlight the perk with live
+  momentum readouts, backed by fresh movement and combat regression tests.
+
 
 
 - Empower rogues with a 25% attack boost, an ambush teleport that snaps them
