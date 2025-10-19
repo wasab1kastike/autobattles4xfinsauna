@@ -61,6 +61,7 @@ describe('processPlayerSpawns', () => {
       rosterCap: 2,
       description: 'test tier',
       art: { badge: 'badge.svg' },
+      spawnSpeedMultiplier: 1,
       unlock: { type: 'default', label: 'Always ready' }
     } as const;
 

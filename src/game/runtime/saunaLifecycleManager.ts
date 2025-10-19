@@ -53,6 +53,7 @@ let lifecycle: SaunaLifecycleResult | null = null;
 let tierContextRef: () => SaunaTierContext = () => EMPTY_CONTEXT;
 let activeTierIdRef: () => SaunaTierId = () => DEFAULT_SAUNA_TIER_ID;
 let activeTierLimitRef: () => number = () => 0;
+let activeSpawnSpeedMultiplierRef: () => number = () => 1;
 let updateRosterCapRef: (value: number, options?: { persist?: boolean }) => number = (value) => value;
 let resolveSpawnLimitRef: () => number = () => 0;
 let setActiveTierRef: (
@@ -86,6 +87,7 @@ export function initSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifecyc
   tierContextRef = lifecycle.getTierContext;
   activeTierIdRef = lifecycle.getActiveTierId;
   activeTierLimitRef = lifecycle.getActiveTierLimit;
+  activeSpawnSpeedMultiplierRef = lifecycle.getActiveSpawnSpeedMultiplier;
   updateRosterCapRef = lifecycle.updateRosterCap;
   resolveSpawnLimitRef = lifecycle.resolveSpawnLimit;
   setActiveTierRef = lifecycle.setActiveTier;
@@ -117,6 +119,10 @@ export function getActiveTierIdRef(): () => SaunaTierId {
 
 export function getActiveTierLimitRef(): () => number {
   return activeTierLimitRef;
+}
+
+export function getActiveSpawnSpeedMultiplierRef(): () => number {
+  return activeSpawnSpeedMultiplierRef;
 }
 
 export function getUpdateRosterCapRef(): (value: number, options?: { persist?: boolean }) => number {

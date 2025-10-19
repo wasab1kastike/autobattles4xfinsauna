@@ -119,7 +119,7 @@ describe('artocoin progression helpers', () => {
       difficultyScalar: 1,
       rampStageIndex: 1
     });
-    expect(result.artocoins).toBe(17);
+    expect(result.artocoins).toBe(16);
     expect(result.breakdown.lossPenalty).toBe(1);
   });
 

@@ -5,6 +5,15 @@ import type { SaunaTier } from '../sauna/tiers.ts';
 
 const DEFAULT_SAUNA_MAX_HEALTH = 500;
 const DEFAULT_SAUNA_VISION_RANGE = 4;
+const DEFAULT_SAUNA_SPAWN_SPEED = 1;
+
+function sanitizeSpawnSpeedMultiplier(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SAUNA_SPAWN_SPEED;
+  }
+  const multiplier = Number(value);
+  return multiplier > 0 ? multiplier : DEFAULT_SAUNA_SPAWN_SPEED;
+}
 
 export function pickFreeTileAround(
   origin: AxialCoord,
@@ -52,6 +61,7 @@ export interface Sauna {
   destroyed: boolean;
   heat: number;
   heatPerTick: number;
+  spawnSpeedMultiplier: number;
   playerSpawnThreshold: number;
   playerSpawnCooldown: number;
   playerSpawnTimer: number;
@@ -70,9 +80,11 @@ export interface SaunaInitOptions {
   maxHealth?: number;
   /** Starting health for the structure. Defaults to the configured max health. */
   health?: number;
-  /** Optional tier descriptor to seed sauna properties such as vision. */
-  tier?: Pick<SaunaTier, 'visionRange'> | null;
-  /** Override the tier-driven vision radius if needed for tests. */
+  /** Optional tier descriptor to seed sauna spawn speed. */
+  tier?: Pick<SaunaTier, 'spawnSpeedMultiplier'> | null;
+  /** Override the tier-driven spawn speed if needed for tests. */
+  spawnSpeedMultiplier?: number;
+  /** Override the default vision radius if needed for tests. */
   visionRange?: number;
 }
 
@@ -94,9 +106,14 @@ export function createSauna(
   const resolvedHealth = Number.isFinite(options.health)
     ? Math.max(0, Math.min(resolvedMaxHealth, Math.floor(options.health ?? resolvedMaxHealth)))
     : resolvedMaxHealth;
+  const resolvedSpawnSpeed = sanitizeSpawnSpeedMultiplier(
+    typeof options.spawnSpeedMultiplier === 'number'
+      ? options.spawnSpeedMultiplier
+      : options.tier?.spawnSpeedMultiplier
+  );
   const resolvedVisionRange = Number.isFinite(options.visionRange)
     ? Math.max(0, Math.floor(options.visionRange ?? 0))
-    : Math.max(0, Math.floor(options.tier?.visionRange ?? DEFAULT_SAUNA_VISION_RANGE));
+    : DEFAULT_SAUNA_VISION_RANGE;
 
   return {
     id: 'sauna',
@@ -110,10 +127,11 @@ export function createSauna(
     health: resolvedHealth,
     destroyed: resolvedHealth <= 0,
     heat: tracker.getHeat(),
-    heatPerTick,
+    heatPerTick: heatPerTick * resolvedSpawnSpeed,
+    spawnSpeedMultiplier: resolvedSpawnSpeed,
     playerSpawnThreshold: tracker.getThreshold(),
-    playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown : 0,
-    playerSpawnTimer: Number.isFinite(timer) ? timer : 0,
+    playerSpawnCooldown: Number.isFinite(cooldown) ? cooldown / resolvedSpawnSpeed : 0,
+    playerSpawnTimer: Number.isFinite(timer) ? timer / resolvedSpawnSpeed : 0,
     beerUpkeepAccumulator: 0,
     heatTracker: tracker
   };

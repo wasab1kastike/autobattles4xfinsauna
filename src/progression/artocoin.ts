@@ -44,8 +44,8 @@ interface DifficultyModifier {
 const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   'ember-circuit': {
     tierId: 'ember-circuit',
-    nextUnlockLabel: 'Modern Wooden Sauna commission',
-    unlockCost: 60,
+    nextUnlockLabel: 'Aurora Ward Gallery expansion',
+    unlockCost: 70,
     baselinePayout: 60,
     baselineDurationMinutes: 12.5,
     baselineKills: 150,
@@ -53,21 +53,48 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
   },
   'aurora-ward': {
     tierId: 'aurora-ward',
-    nextUnlockLabel: 'Futuristic Fission Sauna ignition',
-    unlockCost: 130,
-    baselinePayout: 84,
+    nextUnlockLabel: 'Glacial Rhythm Retreat tuning',
+    unlockCost: 110,
+    baselinePayout: 82,
     baselineDurationMinutes: 12,
-    baselineKills: 190,
-    baselineTiles: 100
+    baselineKills: 185,
+    baselineTiles: 98
+  },
+  'glacial-rhythm': {
+    tierId: 'glacial-rhythm',
+    nextUnlockLabel: 'Mythic Conclave Vault endowment',
+    unlockCost: 160,
+    baselinePayout: 96,
+    baselineDurationMinutes: 11.6,
+    baselineKills: 210,
+    baselineTiles: 108
   },
   'mythic-conclave': {
     tierId: 'mythic-conclave',
-    nextUnlockLabel: 'Futuristic Fission Sauna prestige rotation',
-    unlockCost: 130,
-    baselinePayout: 110,
-    baselineDurationMinutes: 11.5,
-    baselineKills: 230,
-    baselineTiles: 115
+    nextUnlockLabel: 'Solstice Cadence Atelier score',
+    unlockCost: 210,
+    baselinePayout: 118,
+    baselineDurationMinutes: 11.2,
+    baselineKills: 240,
+    baselineTiles: 122
+  },
+  'solstice-cadence': {
+    tierId: 'solstice-cadence',
+    nextUnlockLabel: 'Celestial Reserve Sanctum coronation',
+    unlockCost: 280,
+    baselinePayout: 138,
+    baselineDurationMinutes: 10.8,
+    baselineKills: 270,
+    baselineTiles: 135
+  },
+  'celestial-reserve': {
+    tierId: 'celestial-reserve',
+    nextUnlockLabel: 'Celestial Reserve Sanctum prestige rotation',
+    unlockCost: 280,
+    baselinePayout: 160,
+    baselineDurationMinutes: 10.4,
+    baselineKills: 305,
+    baselineTiles: 150
   }
 });
 

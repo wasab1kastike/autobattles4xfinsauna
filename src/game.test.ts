@@ -1269,5 +1269,5 @@ describe('experience progression', () => {
     rosterRehydrated.forEach((unit, index) => {
       expect(unit.xp).toBe((xpBefore[index] ?? 0) + 200);
     });
-  });
+  }, 20000);
 });

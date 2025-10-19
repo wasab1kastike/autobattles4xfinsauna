@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { getSaunaTier } from './tiers.ts';
+import { getSaunaTier, listSaunaTiers } from './tiers.ts';
 
 describe('sauna tiers', () => {
-  it('exposes tier-driven sauna vision ranges', () => {
-    expect(getSaunaTier('ember-circuit').visionRange).toBe(4);
-    expect(getSaunaTier('aurora-ward').visionRange).toBe(10);
-    expect(getSaunaTier('mythic-conclave').visionRange).toBe(20);
+  it('tracks spawn cadence progression across tiers', () => {
+    expect(getSaunaTier('ember-circuit').spawnSpeedMultiplier ?? 1).toBe(1);
+    expect(getSaunaTier('glacial-rhythm').spawnSpeedMultiplier ?? 0).toBeCloseTo(1.15, 2);
+    expect(getSaunaTier('solstice-cadence').spawnSpeedMultiplier ?? 0).toBeCloseTo(1.3, 2);
+  });
+
+  it('alternates roster growth with cadence upgrades', () => {
+    const tiers = listSaunaTiers();
+    const caps = tiers.map((tier) => tier.rosterCap);
+    expect(caps).toEqual([3, 4, 4, 5, 5, 6]);
   });
 });
