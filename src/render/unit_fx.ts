@@ -110,8 +110,22 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
 
   type RectCache = { canvas: DOMRectReadOnly; overlay: DOMRectReadOnly } | null;
   let rectCache: RectCache = null;
+  const layoutObserverCleanups: Array<() => void> = [];
+
+  function scheduleDraw(): void {
+    if (!requestDraw) {
+      return;
+    }
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => requestDraw());
+    } else {
+      requestDraw();
+    }
+  }
+
   const invalidateRectCache = () => {
     rectCache = null;
+    scheduleDraw();
   };
   const readRectCache = (): RectCache => {
     if (rectCache) {
@@ -123,9 +137,49 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
     return rectCache;
   };
 
+  const collectLayoutElements = (): HTMLElement[] => {
+    const elements: HTMLElement[] = [];
+    const seen = new Set<HTMLElement>();
+    const add = (element: Element | null | undefined) => {
+      if (element instanceof HTMLElement && !seen.has(element)) {
+        seen.add(element);
+        elements.push(element);
+      }
+    };
+    add(canvas);
+    add(overlay);
+    add(canvas.parentElement);
+    add(overlay.parentElement);
+    return elements;
+  };
+
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', invalidateRectCache);
     window.addEventListener('scroll', invalidateRectCache, true);
+
+    const layoutElements = collectLayoutElements();
+
+    if (typeof ResizeObserver !== 'undefined') {
+      const resizeObserver = new ResizeObserver(() => {
+        invalidateRectCache();
+      });
+      for (const element of layoutElements) {
+        resizeObserver.observe(element);
+      }
+      layoutObserverCleanups.push(() => resizeObserver.disconnect());
+    }
+
+    if (typeof MutationObserver !== 'undefined') {
+      const mutationObserver = new MutationObserver(() => {
+        invalidateRectCache();
+      });
+      for (const element of layoutElements) {
+        mutationObserver.observe(element, {
+          attributes: true
+        });
+      }
+      layoutObserverCleanups.push(() => mutationObserver.disconnect());
+    }
   }
 
   const projectWorld = (point: PixelCoord, offsetY = 0): PixelCoord | null => {
@@ -172,17 +226,6 @@ export function createUnitFxManager(options: UnitFxOptions): UnitFxManager {
   const fadeDuration = coarsePointer ? FADE_DURATION_MOBILE : FADE_DURATION_DESKTOP;
   const shakeDuration = coarsePointer ? SHAKE_DURATION_MOBILE : SHAKE_DURATION;
 const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_DESKTOP;
-
-  const scheduleDraw = () => {
-    if (!requestDraw) {
-      return;
-    }
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(() => requestDraw());
-    } else {
-      requestDraw();
-    }
-  };
 
   const project = (coord: AxialCoord): { x: number; y: number } | null => {
     const { x, y } = axialToPixel(coord, mapRenderer.hexSize);
@@ -375,6 +418,10 @@ const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_
       window.removeEventListener('resize', invalidateRectCache);
       window.removeEventListener('scroll', invalidateRectCache, true);
     }
+    for (const cleanup of layoutObserverCleanups) {
+      cleanup();
+    }
+    layoutObserverCleanups.length = 0;
     shakes.length = 0;
     fades.clear();
     alphas.clear();
@@ -397,7 +444,6 @@ const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_
   const beginStatusFrame = () => {
     frameUnitStatuses = new Map<string, UnitStatusPayload>();
     frameSaunaStatus = null;
-    invalidateRectCache();
   };
 
   const pushUnitStatus = (status: UnitStatusPayload) => {
