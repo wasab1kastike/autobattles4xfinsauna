@@ -1230,3 +1230,7 @@
   retune the overlay clip/scale/tint pipeline so the refreshed artwork renders
   cleanly across zoom levels, extend the renderer tests for the new budgets,
   and confirm the asset loads through the build pipeline.
+- Align terrain and fog chunk caches to world coordinates, drop origin-change
+  invalidations to prevent exploration hitches, subtract the camera origin when
+  drawing cached canvases, and refresh the render/fog Vitest coverage to lock
+  in the math.

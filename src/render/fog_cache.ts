@@ -43,7 +43,6 @@ export class FogCache {
   private readonly chunkCanvases = new Map<ChunkKey, Map<string, FogChunkCanvas>>();
   private readonly dirtyChunks = new Set<ChunkKey>();
   private readonly unsubscribe: () => void;
-  private lastOrigin?: PixelCoord;
   private lastBounds?: { minQ: number; maxQ: number; minR: number; maxR: number };
 
   constructor(private readonly map: HexMap) {
@@ -63,14 +62,12 @@ export class FogCache {
     this.unsubscribe();
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
-    this.lastOrigin = undefined;
     this.lastBounds = undefined;
   }
 
   invalidate(): void {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
-    this.lastOrigin = undefined;
     this.lastBounds = undefined;
   }
 
@@ -84,12 +81,7 @@ export class FogCache {
     }
   }
 
-  getRenderableChunks(
-    range: ChunkRange,
-    hexSize: number,
-    zoom: number,
-    origin: PixelCoord
-  ): FogChunkCanvas[] {
+  getRenderableChunks(range: ChunkRange, hexSize: number, zoom: number): FogChunkCanvas[] {
     const currentBounds = {
       minQ: this.map.minQ,
       maxQ: this.map.maxQ,
@@ -108,14 +100,6 @@ export class FogCache {
       this.lastBounds = { ...currentBounds };
     }
 
-    if (
-      !this.lastOrigin ||
-      this.lastOrigin.x !== origin.x ||
-      this.lastOrigin.y !== origin.y
-    ) {
-      this.markAllChunksDirty();
-      this.lastOrigin = { ...origin };
-    }
     const chunks: FogChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);
     const keyForZoom = zoomKey(zoom);
@@ -129,8 +113,7 @@ export class FogCache {
         hexWidth,
         hexHeight,
         zoom,
-        keyForZoom,
-        origin
+        keyForZoom
       );
       if (chunk) {
         chunks.push(chunk);
@@ -147,8 +130,7 @@ export class FogCache {
     hexWidth: number,
     hexHeight: number,
     zoom: number,
-    zoomKeyValue: string,
-    origin: PixelCoord
+    zoomKeyValue: string
   ): FogChunkCanvas | null {
     let zoomVariants = this.chunkCanvases.get(key);
     const isDirty = this.dirtyChunks.has(key);
@@ -171,7 +153,6 @@ export class FogCache {
       hexWidth,
       hexHeight,
       zoom,
-      origin,
       reuse ?? null
     );
 
@@ -194,7 +175,6 @@ export class FogCache {
     hexWidth: number,
     hexHeight: number,
     zoom: number,
-    origin: PixelCoord,
     existing: FogChunkCanvas | null
   ): FogChunkCanvas | null {
     if (typeof document === 'undefined') {
@@ -223,8 +203,8 @@ export class FogCache {
         }
 
         const { x, y } = axialToPixel({ q, r }, hexSize);
-        const drawX = x - origin.x - halfHexWidth;
-        const drawY = y - origin.y - halfHexHeight;
+        const drawX = x - halfHexWidth;
+        const drawY = y - halfHexHeight;
         const centerX = drawX + hexWidth / 2;
         const centerY = drawY + hexHeight / 2;
 

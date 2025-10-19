@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { HexMap } from '../hexmap.ts';
 import { ensureChunksPopulated } from '../map/hex/chunking.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
+import { getHexDimensions } from '../hex/HexDimensions.ts';
 import { FogCache } from './fog_cache.ts';
 
 vi.mock('./fog.ts', () => ({
@@ -72,28 +73,36 @@ describe('FogCache', () => {
     const cache = new FogCache(map);
     const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
     ensureChunksPopulated(map, range);
-    const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
-
     const zoom = 1;
     const tile = map.getTile(0, 0);
     expect(tile?.isFogged).toBe(true);
 
-    const first = cache.getRenderableChunks(range, map.hexSize, zoom, origin);
+    const first = cache.getRenderableChunks(range, map.hexSize, zoom);
     expect(first.length).toBeGreaterThan(0);
     expect(drawFogHexMock.mock.calls.length).toBeGreaterThan(0);
 
+    const chunk = first.find((entry) => entry.key === '0,0');
+    expect(chunk).toBeDefined();
+    if (chunk) {
+      const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
+      const center = axialToPixel({ q: 0, r: 0 }, map.hexSize);
+      expect(chunk.origin.x).toBeCloseTo(center.x - hexWidth / 2, 5);
+      expect(chunk.origin.y).toBeCloseTo(center.y - hexHeight / 2, 5);
+    }
+
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, zoom, origin);
+    const cached = cache.getRenderableChunks(range, map.hexSize, zoom);
     expect(drawFogHexMock).not.toHaveBeenCalled();
+    expect(cached.find((entry) => entry.key === '0,0')).toBe(chunk);
 
     tile?.reveal();
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, zoom, origin);
+    cache.getRenderableChunks(range, map.hexSize, zoom);
     expect(drawFogHexMock.mock.calls.length).toBeGreaterThan(0);
 
     tile?.setFogged(true);
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, zoom, origin);
+    cache.getRenderableChunks(range, map.hexSize, zoom);
     expect(drawFogHexMock.mock.calls.length).toBeGreaterThan(0);
 
     cache.dispose();
@@ -104,21 +113,19 @@ describe('FogCache', () => {
     const cache = new FogCache(map);
     const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
     ensureChunksPopulated(map, range);
-    const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
-
-    cache.getRenderableChunks(range, map.hexSize, 1, origin);
+    cache.getRenderableChunks(range, map.hexSize, 1);
     expect(drawFogHexMock.mock.calls.length).toBeGreaterThan(0);
 
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, 1, origin);
+    cache.getRenderableChunks(range, map.hexSize, 1);
     expect(drawFogHexMock).not.toHaveBeenCalled();
 
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, 1.5, origin);
+    cache.getRenderableChunks(range, map.hexSize, 1.5);
     expect(drawFogHexMock.mock.calls.length).toBeGreaterThan(0);
 
     drawFogHexMock.mockClear();
-    cache.getRenderableChunks(range, map.hexSize, 1.5, origin);
+    cache.getRenderableChunks(range, map.hexSize, 1.5);
     expect(drawFogHexMock).not.toHaveBeenCalled();
 
     cache.dispose();
