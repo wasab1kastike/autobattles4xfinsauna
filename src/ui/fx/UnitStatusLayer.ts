@@ -20,6 +20,8 @@ interface UnitStatusElements {
   hpFill: HTMLElement;
   shield: HTMLElement;
   buffs: HTMLElement;
+  buffElements: Map<string, HTMLElement>;
+  buffOrder: string[];
 }
 
 let styleElement: HTMLStyleElement | null = null;
@@ -411,7 +413,14 @@ export function createUnitStatusLayer(options: UnitStatusLayerOptions): UnitStat
       element.append(anchor);
       host.appendChild(element);
 
-      elements = { host: element, hpFill: fill, shield, buffs: buffsContainer };
+      elements = {
+        host: element,
+        hpFill: fill,
+        shield,
+        buffs: buffsContainer,
+        buffElements: new Map(),
+        buffOrder: []
+      } satisfies UnitStatusElements;
       unitElements.set(status.id, elements);
     }
 
@@ -427,24 +436,74 @@ export function createUnitStatusLayer(options: UnitStatusLayerOptions): UnitStat
     }
 
     const container = elements.buffs;
-    container.textContent = '';
+    const { buffElements } = elements;
+    const nextOrder: string[] = [];
+    let nextSibling: ChildNode | null = container.firstChild;
+
     for (const buff of buffs) {
-      const pip = document.createElement('span');
-      pip.className = 'ui-unit-status__pip';
-      pip.style.setProperty('--pip-progress', buff.infinite ? '1' : buff.ratio.toFixed(3));
-      pip.dataset.buffId = buff.id;
-      if (buff.infinite) {
-        pip.dataset.infinite = 'true';
-      } else {
-        pip.dataset.infinite = 'false';
+      nextOrder.push(buff.id);
+
+      let pip = buffElements.get(buff.id);
+      if (!pip) {
+        pip = document.createElement('span');
+        pip.className = 'ui-unit-status__pip';
+        pip.dataset.buffId = buff.id;
+        buffElements.set(buff.id, pip);
       }
+
+      const progressValue = buff.infinite ? '1' : buff.ratio.toFixed(3);
+      if (pip.style.getPropertyValue('--pip-progress') !== progressValue) {
+        pip.style.setProperty('--pip-progress', progressValue);
+      }
+      pip.dataset.infinite = buff.infinite ? 'true' : 'false';
+
       if (buff.stacks && buff.stacks > 1) {
-        const label = document.createElement('span');
-        label.textContent = String(buff.stacks);
-        pip.append(label);
+        let label = pip.querySelector('span');
+        if (!label) {
+          label = document.createElement('span');
+          pip.append(label);
+        }
+        if (label.textContent !== String(buff.stacks)) {
+          label.textContent = String(buff.stacks);
+        }
+      } else {
+        const label = pip.querySelector('span');
+        if (label) {
+          label.remove();
+        }
       }
-      container.appendChild(pip);
+
+      if (pip.parentElement !== container) {
+        container.insertBefore(pip, nextSibling);
+      } else if (pip !== nextSibling) {
+        container.insertBefore(pip, nextSibling);
+      }
+      nextSibling = pip.nextSibling;
     }
+
+    if (nextSibling) {
+      while (nextSibling) {
+        const current = nextSibling;
+        nextSibling = current.nextSibling;
+        if (current instanceof HTMLElement && current.dataset.buffId) {
+          buffElements.delete(current.dataset.buffId);
+        }
+        current.remove();
+      }
+    }
+
+    const nextOrderSet = new Set(nextOrder);
+    for (const buffId of Array.from(buffElements.keys())) {
+      if (!nextOrderSet.has(buffId)) {
+        const pip = buffElements.get(buffId);
+        if (pip) {
+          pip.remove();
+        }
+        buffElements.delete(buffId);
+      }
+    }
+
+    elements.buffOrder = nextOrder;
   };
 
   const renderSauna = (status: SaunaStatusPayload | null): void => {
