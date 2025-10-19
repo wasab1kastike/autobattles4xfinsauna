@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Unit } from './Unit.ts';
+import { Unit, UNIT_ATTACK_STEP_SECONDS, UNIT_MOVEMENT_STEP_SECONDS } from './Unit.ts';
 import { makeKeyword } from '../keywords/index.ts';
 
 const BASE_COORD = { q: 0, r: 0 } as const;
@@ -89,6 +89,33 @@ describe('Unit behavior', () => {
     expect(explorer.getBehavior()).toBe('explore');
     explorer.setBehavior('attack');
     expect(explorer.getBehavior()).toBe('attack');
+  });
+});
+
+describe('Unit cadence adjustments', () => {
+  it('scales movement cooldown progress when the step cost changes', () => {
+    const unit = makeUnit('sprinter');
+    unit.addMovementTime(UNIT_MOVEMENT_STEP_SECONDS);
+    expect(unit.consumeMovementCooldown()).toBe(true);
+
+    unit.addMovementTime(UNIT_MOVEMENT_STEP_SECONDS);
+    unit.setMovementStepCost(UNIT_MOVEMENT_STEP_SECONDS / 2);
+    expect(unit.canStep()).toBe(true);
+    expect(unit.consumeMovementCooldown()).toBe(true);
+  });
+
+  it('enforces attack cadence and honours faster swing timings', () => {
+    const attacker = makeUnit('cadence-tester');
+
+    expect(attacker.consumeAttackCooldown()).toBe(true);
+    expect(attacker.consumeAttackCooldown()).toBe(false);
+
+    attacker.addAttackTime(UNIT_ATTACK_STEP_SECONDS);
+    expect(attacker.consumeAttackCooldown()).toBe(true);
+
+    attacker.setAttackStepCost(UNIT_ATTACK_STEP_SECONDS / 2);
+    attacker.addAttackTime(UNIT_ATTACK_STEP_SECONDS / 2);
+    expect(attacker.consumeAttackCooldown()).toBe(true);
   });
 });
 

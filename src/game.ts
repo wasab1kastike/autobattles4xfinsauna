@@ -4,7 +4,7 @@ import { HexMap } from './hexmap.ts';
 import { BattleManager } from './battle/BattleManager.ts';
 import { pixelToAxial } from './hex/HexUtils.ts';
 import type { AxialCoord } from './hex/HexUtils.ts';
-import { Unit, spawnUnit } from './unit/index.ts';
+import { Unit, spawnUnit, UNIT_ATTACK_STEP_SECONDS, UNIT_MOVEMENT_STEP_SECONDS } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { resolveSaunojaAppearance } from './unit/appearance.ts';
 import { eventBus, eventScheduler } from './events';
@@ -241,6 +241,8 @@ const ROGUE_DAMAGE_DEALT_MULTIPLIER = 1.25;
 const WIZARD_DAMAGE_DEALT_MULTIPLIER = 1.1;
 const WIZARD_ARCANE_NOVA_RADIUS = 2;
 const WIZARD_ARCANE_NOVA_MULTIPLIER = 0.4;
+const SPEEDSTER_MOVEMENT_SPEED_MULTIPLIER = 2;
+const SPEEDSTER_ATTACK_SPEED_MULTIPLIER = 1.5;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -632,6 +634,7 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   const isTank = attendant.klass === 'tank';
   const isRogue = attendant.klass === 'rogue';
   const isWizard = attendant.klass === 'wizard';
+  const isSpeedster = attendant.klass === 'speedster';
   const normalizedTaunt = Boolean(attendant.tauntActive && isTank);
   attendant.tauntActive = normalizedTaunt;
   let tankMitigation: number | undefined;
@@ -686,6 +689,14 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
         ? { radius: WIZARD_ARCANE_NOVA_RADIUS, multiplier: WIZARD_ARCANE_NOVA_MULTIPLIER }
         : undefined
     );
+    const movementStepSeconds = isSpeedster
+      ? UNIT_MOVEMENT_STEP_SECONDS / SPEEDSTER_MOVEMENT_SPEED_MULTIPLIER
+      : UNIT_MOVEMENT_STEP_SECONDS;
+    const attackStepSeconds = isSpeedster
+      ? UNIT_ATTACK_STEP_SECONDS / SPEEDSTER_ATTACK_SPEED_MULTIPLIER
+      : UNIT_ATTACK_STEP_SECONDS;
+    unit.setMovementStepCost(movementStepSeconds);
+    unit.setAttackStepCost(attackStepSeconds);
     if (isTankClass) {
       unit.setTauntAura(TANK_TAUNT_RADIUS);
       unit.setTauntActive(attendant.tauntActive);

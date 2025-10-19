@@ -6,6 +6,10 @@
   damage boost and 40% splash damage within a two-hex radius, with persistence
   across save/load, HUD copy, and new combat tests.
 
+- Enable Gale Dancer promotions to grant double movement cadence and 50%
+  faster attacks by adjusting the underlying movement/attack timers, updating
+  the runtime hooks, and extending unit tests to lock in the pacing.
+
 - Align terrain and fog chunk caches to world coordinates, eliminating
   origin-change invalidations so exploration stays smooth, subtracting the
   camera origin during draw calls, and updating Vitest coverage to confirm the

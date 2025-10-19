@@ -98,6 +98,7 @@ export class BattleManager {
     const livingUnitIds = new Set<string>();
     for (const unit of units) {
       unit.addMovementTime(deltaSeconds);
+      unit.addAttackTime(deltaSeconds);
       if (unit.isDead()) {
         unit.clearPathCache();
         this.pathCache.invalidateForUnit(unit.id);
@@ -349,6 +350,10 @@ export class BattleManager {
 
       const distanceToTarget = unit.distanceTo(target.coord);
       if (distanceToTarget <= unit.stats.attackRange && !target.isDead()) {
+        if (!unit.consumeAttackCooldown()) {
+          occupied.add(currentKey);
+          continue;
+        }
         const resolution = unit.attack(target, { units });
         if ((resolution?.lethal ?? false) || target.isDead()) {
           occupied.delete(currentTargetKey);
