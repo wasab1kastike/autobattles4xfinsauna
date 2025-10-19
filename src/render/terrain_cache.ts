@@ -156,6 +156,7 @@ function chunkBounds(chunk: ChunkCoord, map: HexMap): { qStart: number; qEnd: nu
 export class TerrainCache {
   private readonly chunkCanvases = new Map<ChunkKey, ChunkCanvas>();
   private readonly dirtyChunks = new Set<ChunkKey>();
+  private readonly emptyChunks = new Set<ChunkKey>();
   private cachedImages?: Record<string, HTMLImageElement>;
   private readonly iconChunks = new Map<string, Set<ChunkKey>>();
   private readonly chunkIcons = new Map<ChunkKey, Set<string>>();
@@ -174,6 +175,7 @@ export class TerrainCache {
     this.unsubscribe();
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
+    this.emptyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
     this.lastBounds = undefined;
@@ -182,6 +184,7 @@ export class TerrainCache {
   invalidate(): void {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
+    this.emptyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
     this.lastBounds = undefined;
@@ -189,15 +192,16 @@ export class TerrainCache {
 
   markChunkDirty(key: ChunkKey): void {
     this.dirtyChunks.add(key);
+    this.emptyChunks.delete(key);
   }
 
   markTileDirty(q: number, r: number): void {
-    this.dirtyChunks.add(chunkKeyFromAxial(q, r));
+    this.markChunkDirty(chunkKeyFromAxial(q, r));
   }
 
   private markAllChunksDirty(): void {
     for (const key of this.chunkCanvases.keys()) {
-      this.dirtyChunks.add(key);
+      this.markChunkDirty(key);
     }
   }
 
@@ -263,14 +267,19 @@ export class TerrainCache {
     images: LoadedAssets['images']
   ): ChunkCanvas | null {
     const existing = this.chunkCanvases.get(key);
+    if (!this.dirtyChunks.has(key) && this.emptyChunks.has(key)) {
+      return null;
+    }
     if (!existing || this.dirtyChunks.has(key)) {
       const updated = this.renderChunk(key, chunkCoord, hexSize, hexWidth, hexHeight, images, existing);
       this.dirtyChunks.delete(key);
       if (!updated) {
+        this.emptyChunks.add(key);
         this.chunkCanvases.delete(key);
         this.trackChunkIcons(key, new Set());
         return null;
       }
+      this.emptyChunks.delete(key);
       this.chunkCanvases.set(key, updated);
       return updated;
     }

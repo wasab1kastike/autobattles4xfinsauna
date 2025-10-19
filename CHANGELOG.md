@@ -7,6 +7,9 @@
   output and 40% splash damage within a two-hex radius while keeping the effect
   persistent through saves, combat resolution, and automated coverage.
 
+- Skip re-rendering fogged terrain chunks by tracking empty chunk markers,
+  clear them when chunks go dirty, and cover the terrain cache optimization
+  with Vitest.
 - Wire up speedster promotions so Gale Dancers sprint twice as often and swing
   50% faster by scaling movement/attack cadences, updating the runtime hooks,
   and covering the pacing adjustments with fresh unit tests.

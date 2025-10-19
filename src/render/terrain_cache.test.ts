@@ -87,6 +87,62 @@ describe('TerrainCache', () => {
     }
   });
 
+  it('skips re-rendering persistently fogged chunks until they are revealed', () => {
+    const map = new HexMap(1, 1);
+    const tile = map.ensureTile(0, 0);
+
+    const drawImage = vi.fn();
+    const ctx = createStubContext(drawImage);
+    const originalCreateElement = document.createElement;
+    const offscreenCanvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => ctx),
+    } as unknown as HTMLCanvasElement;
+
+    const createElementSpy = vi
+      .spyOn(document, 'createElement')
+      .mockImplementation((tagName: string) => {
+        if (tagName === 'canvas') {
+          offscreenCanvas.width = 0;
+          offscreenCanvas.height = 0;
+          return offscreenCanvas;
+        }
+        return originalCreateElement.call(document, tagName);
+      });
+
+    const cache = new TerrainCache(map);
+    const renderSpy = vi.spyOn(cache as unknown as { renderChunk: TerrainCache['renderChunk'] }, 'renderChunk');
+
+    try {
+      const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
+      ensureChunksPopulated(map, range);
+      const images = {
+        'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
+        placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
+      };
+
+      let chunks = cache.getRenderableChunks(range, map.hexSize, images);
+      expect(chunks).toHaveLength(0);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+
+      renderSpy.mockClear();
+      chunks = cache.getRenderableChunks(range, map.hexSize, images);
+      expect(chunks).toHaveLength(0);
+      expect(renderSpy).not.toHaveBeenCalled();
+
+      tile.reveal();
+
+      chunks = cache.getRenderableChunks(range, map.hexSize, images);
+      expect(chunks).toHaveLength(1);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      renderSpy.mockRestore();
+      createElementSpy.mockRestore();
+    }
+  });
+
   it('exposes world-aligned chunk origins and keeps cached tiles when the map origin shifts', () => {
     const map = new HexMap(2, 2);
     const tile = map.ensureTile(0, 0);
