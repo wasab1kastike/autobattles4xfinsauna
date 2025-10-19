@@ -28,6 +28,11 @@ interface RogueAmbushState {
   firstStrikeReady: boolean;
 }
 
+interface ArcaneNovaState {
+  radius: number;
+  multiplier: number;
+}
+
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
 }
@@ -73,6 +78,7 @@ export class Unit {
   private appearanceId: string;
   private attackProfile: string | null = null;
   private rogueAmbush: RogueAmbushState | null = null;
+  private arcaneNova: ArcaneNovaState | null = null;
   private tauntAuraRadius = 0;
   private tauntActive = false;
 
@@ -226,6 +232,39 @@ export class Unit {
     }
   }
 
+  hasArcaneNova(): boolean {
+    return this.arcaneNova !== null;
+  }
+
+  getArcaneNovaRadius(): number {
+    return this.arcaneNova?.radius ?? 0;
+  }
+
+  getArcaneNovaMultiplier(): number {
+    return this.arcaneNova?.multiplier ?? 0;
+  }
+
+  setArcaneNova(options?: { radius: number; multiplier: number }): void {
+    if (!options) {
+      this.arcaneNova = null;
+      return;
+    }
+    const normalizedRadius = Number.isFinite(options.radius)
+      ? Math.max(0, Math.floor(options.radius))
+      : 0;
+    const normalizedMultiplier = Number.isFinite(options.multiplier)
+      ? Math.max(0, options.multiplier)
+      : 0;
+    if (normalizedRadius <= 0 || normalizedMultiplier <= 0) {
+      this.arcaneNova = null;
+      return;
+    }
+    this.arcaneNova = {
+      radius: normalizedRadius,
+      multiplier: normalizedMultiplier
+    } satisfies ArcaneNovaState;
+  }
+
   hasTauntAura(): boolean {
     return this.tauntAuraRadius > 0;
   }
@@ -269,7 +308,7 @@ export class Unit {
     return this.type;
   }
 
-  attack(target: Unit): CombatResolution | null {
+  attack(target: Unit, context?: { units?: readonly Unit[] }): CombatResolution | null {
     if (this.distanceTo(target.coord) > this.stats.attackRange) {
       return null;
     }
@@ -308,6 +347,20 @@ export class Unit {
     eventBus.emit('unitAttack', payload);
     try {
       const resolution = target.takeDamage(this.stats.attackDamage, this, { impactAt });
+      if (
+        resolution &&
+        resolution.hit &&
+        resolution.damage > 0 &&
+        this.arcaneNova &&
+        context?.units
+      ) {
+        this.applyArcaneNovaSplash({
+          primaryTarget: target,
+          units: context.units,
+          impactAt,
+          baseDamage: this.stats.attackDamage
+        });
+      }
       return resolution;
     } finally {
       if (boosted) {
@@ -363,6 +416,41 @@ export class Unit {
     }
     this.healAmountBuffer = 0;
     this.healMarkerElapsed = 0;
+  }
+
+  private applyArcaneNovaSplash(args: {
+    primaryTarget: Unit;
+    units: readonly Unit[];
+    impactAt: number;
+    baseDamage: number;
+  }): void {
+    if (!this.arcaneNova) {
+      return;
+    }
+    const { radius, multiplier } = this.arcaneNova;
+    if (radius <= 0 || multiplier <= 0) {
+      return;
+    }
+    const splashBase = args.baseDamage * multiplier;
+    if (!Number.isFinite(splashBase) || splashBase <= 0) {
+      return;
+    }
+    const targetCoord = args.primaryTarget.coord;
+    for (const candidate of args.units) {
+      if (candidate.id === this.id || candidate.id === args.primaryTarget.id) {
+        continue;
+      }
+      if (candidate.faction === this.faction) {
+        continue;
+      }
+      if (candidate.isDead()) {
+        continue;
+      }
+      if (hexDistance(candidate.coord, targetCoord) > radius) {
+        continue;
+      }
+      candidate.takeDamage(splashBase, this, { impactAt: args.impactAt });
+    }
   }
 
   takeDamage(

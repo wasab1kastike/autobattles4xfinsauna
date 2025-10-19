@@ -237,6 +237,10 @@ const SAUNOJA_PROMOTION_LEVEL = 12;
 const SAUNAKUNNIA_PROMOTION_COST = 150;
 const TANK_DAMAGE_TAKEN_MULTIPLIER = 0.5;
 const TANK_TAUNT_RADIUS = 5;
+const ROGUE_DAMAGE_DEALT_MULTIPLIER = 1.25;
+const WIZARD_DAMAGE_DEALT_MULTIPLIER = 1.1;
+const WIZARD_ARCANE_NOVA_RADIUS = 2;
+const WIZARD_ARCANE_NOVA_MULTIPLIER = 0.4;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -626,6 +630,8 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   attendant.shield = typeof stats.shield === 'number' ? Math.max(0, stats.shield) : 0;
 
   const isTank = attendant.klass === 'tank';
+  const isRogue = attendant.klass === 'rogue';
+  const isWizard = attendant.klass === 'wizard';
   const normalizedTaunt = Boolean(attendant.tauntActive && isTank);
   attendant.tauntActive = normalizedTaunt;
   let tankMitigation: number | undefined;
@@ -639,12 +645,19 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
     attendant.damageTakenMultiplier = undefined;
   }
 
+  attendant.damageDealtMultiplier = isRogue
+    ? ROGUE_DAMAGE_DEALT_MULTIPLIER
+    : isWizard
+      ? WIZARD_DAMAGE_DEALT_MULTIPLIER
+      : undefined;
+  attendant.arcaneNovaRadius = isWizard ? WIZARD_ARCANE_NOVA_RADIUS : undefined;
+  attendant.arcaneNovaMultiplier = isWizard ? WIZARD_ARCANE_NOVA_MULTIPLIER : undefined;
+
   const loadout = loadoutItems(attendant.equipment);
   const attackProfile = deriveUnitAttackProfile(loadout);
   const unit = getAttachedUnitFor(attendant);
   if (unit) {
-    const isRogue = attendant.klass === 'rogue';
-    const isTank = attendant.klass === 'tank';
+    const isTankClass = isTank;
     applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
     const nextStats: UnitStats = {
       health: attendant.effectiveStats.health,
@@ -659,14 +672,21 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
       nextStats.visionRange = attendant.effectiveStats.visionRange;
     }
     if (isRogue) {
-      nextStats.damageDealtMultiplier = 1.25;
+      nextStats.damageDealtMultiplier = ROGUE_DAMAGE_DEALT_MULTIPLIER;
+    } else if (isWizard) {
+      nextStats.damageDealtMultiplier = WIZARD_DAMAGE_DEALT_MULTIPLIER;
     }
-    if (isTank && tankMitigation !== undefined) {
+    if (isTankClass && tankMitigation !== undefined) {
       nextStats.damageTakenMultiplier = tankMitigation;
     }
     unit.updateStats(nextStats);
     unit.setRogueAmbush(isRogue ? { teleportRange: 5, burstMultiplier: 2 } : undefined);
-    if (isTank) {
+    unit.setArcaneNova(
+      isWizard
+        ? { radius: WIZARD_ARCANE_NOVA_RADIUS, multiplier: WIZARD_ARCANE_NOVA_MULTIPLIER }
+        : undefined
+    );
+    if (isTankClass) {
       unit.setTauntAura(TANK_TAUNT_RADIUS);
       unit.setTauntActive(attendant.tauntActive);
     } else {

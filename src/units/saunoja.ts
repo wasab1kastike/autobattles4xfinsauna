@@ -110,8 +110,14 @@ export interface Saunoja {
   combatHooks?: CombatHookMap | null;
   /** Optional promoted class that unlocks advanced perks. */
   klass?: SaunojaClass;
+  /** Optional outgoing damage multiplier applied before keywords. */
+  damageDealtMultiplier?: number;
   /** Optional incoming damage multiplier applied before shields. */
   damageTakenMultiplier?: number;
+  /** Wizard splash radius in hexes when Arcane Nova is active. */
+  arcaneNovaRadius?: number;
+  /** Wizard splash multiplier relative to base damage when Arcane Nova triggers. */
+  arcaneNovaMultiplier?: number;
   /** Whether the Saunoja's taunt aura is actively drawing enemy attention. */
   tauntActive: boolean;
 }
@@ -141,7 +147,10 @@ export interface SaunojaInit {
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
   klass?: unknown;
+  damageDealtMultiplier?: unknown;
   damageTakenMultiplier?: unknown;
+  arcaneNovaRadius?: unknown;
+  arcaneNovaMultiplier?: unknown;
   tauntActive?: unknown;
 }
 
@@ -213,6 +222,35 @@ function sanitizeDamageTakenMultiplier(source: unknown): number | undefined {
     return undefined;
   }
   return source;
+}
+
+function sanitizeDamageDealtMultiplier(source: unknown): number | undefined {
+  if (typeof source !== 'number' || !Number.isFinite(source)) {
+    return undefined;
+  }
+  if (source <= 0) {
+    return undefined;
+  }
+  if (source === 1) {
+    return undefined;
+  }
+  return source;
+}
+
+function sanitizeArcaneNovaRadius(source: unknown): number | undefined {
+  if (typeof source !== 'number' || !Number.isFinite(source)) {
+    return undefined;
+  }
+  const normalized = Math.max(0, Math.floor(source));
+  return normalized > 0 ? normalized : undefined;
+}
+
+function sanitizeArcaneNovaMultiplier(source: unknown): number | undefined {
+  if (typeof source !== 'number' || !Number.isFinite(source)) {
+    return undefined;
+  }
+  const normalized = Math.max(0, source);
+  return normalized > 0 ? normalized : undefined;
 }
 
 function resolveOptionalStat(
@@ -450,7 +488,10 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     appearanceId,
     appearanceRandom,
     klass,
+    damageDealtMultiplier,
     damageTakenMultiplier,
+    arcaneNovaRadius,
+    arcaneNovaMultiplier,
     tauntActive
   } = init;
 
@@ -553,7 +594,10 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
   const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
   const resolvedClass = sanitizeSaunojaClass(klass);
+  const resolvedDamageDealtMultiplier = sanitizeDamageDealtMultiplier(damageDealtMultiplier);
   const resolvedDamageTakenMultiplier = sanitizeDamageTakenMultiplier(damageTakenMultiplier);
+  const resolvedArcaneNovaRadius = sanitizeArcaneNovaRadius(arcaneNovaRadius);
+  const resolvedArcaneNovaMultiplier = sanitizeArcaneNovaMultiplier(arcaneNovaMultiplier);
   const resolvedTauntActive = typeof tauntActive === 'boolean' ? tauntActive : false;
 
   return {
@@ -580,8 +624,17 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     combatKeywords,
     combatHooks,
     ...(resolvedClass ? { klass: resolvedClass } : {}),
+    ...(resolvedDamageDealtMultiplier !== undefined
+      ? { damageDealtMultiplier: resolvedDamageDealtMultiplier }
+      : {}),
     ...(resolvedDamageTakenMultiplier !== undefined
       ? { damageTakenMultiplier: resolvedDamageTakenMultiplier }
+      : {}),
+    ...(resolvedArcaneNovaRadius !== undefined
+      ? { arcaneNovaRadius: resolvedArcaneNovaRadius }
+      : {}),
+    ...(resolvedArcaneNovaMultiplier !== undefined
+      ? { arcaneNovaMultiplier: resolvedArcaneNovaMultiplier }
       : {}),
     tauntActive: resolvedTauntActive
   };

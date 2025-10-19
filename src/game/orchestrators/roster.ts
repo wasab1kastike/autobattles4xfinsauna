@@ -220,6 +220,18 @@ export function buildRosterEntries(): RosterEntry[] {
       typeof attendant.damageTakenMultiplier === 'number'
         ? Math.max(0, attendant.damageTakenMultiplier)
         : undefined;
+    const damageDealtMultiplier =
+      typeof attendant.damageDealtMultiplier === 'number'
+        ? Math.max(0, attendant.damageDealtMultiplier)
+        : undefined;
+    const arcaneNovaRadius =
+      typeof attendant.arcaneNovaRadius === 'number'
+        ? Math.max(0, Math.floor(attendant.arcaneNovaRadius))
+        : undefined;
+    const arcaneNovaMultiplier =
+      typeof attendant.arcaneNovaMultiplier === 'number'
+        ? Math.max(0, attendant.arcaneNovaMultiplier)
+        : undefined;
     const tauntActive = Boolean(attendant.tauntActive && attendant.klass === 'tank');
 
     return {
@@ -245,9 +257,14 @@ export function buildRosterEntries(): RosterEntry[] {
       items,
       modifiers,
       klass: attendant.klass ?? null,
+      ...(damageDealtMultiplier !== undefined
+        ? { damageDealtMultiplier }
+        : {}),
       ...(damageTakenMultiplier !== undefined
         ? { damageTakenMultiplier }
         : {}),
+      ...(arcaneNovaRadius !== undefined ? { arcaneNovaRadius } : {}),
+      ...(arcaneNovaMultiplier !== undefined ? { arcaneNovaMultiplier } : {}),
       ...(tauntActive ? { tauntActive } : { tauntActive: false })
     } satisfies RosterEntry;
   });
@@ -289,9 +306,21 @@ export function buildRosterSummary(): RosterHudSummary {
       progression: buildProgression(featured),
       behavior,
       klass: featured.klass ?? null,
+      damageDealtMultiplier:
+        typeof featured.damageDealtMultiplier === 'number'
+          ? Math.max(0, featured.damageDealtMultiplier)
+          : undefined,
       damageTakenMultiplier:
         typeof featured.damageTakenMultiplier === 'number'
           ? Math.max(0, featured.damageTakenMultiplier)
+          : undefined,
+      arcaneNovaRadius:
+        typeof featured.arcaneNovaRadius === 'number'
+          ? Math.max(0, Math.floor(featured.arcaneNovaRadius))
+          : undefined,
+      arcaneNovaMultiplier:
+        typeof featured.arcaneNovaMultiplier === 'number'
+          ? Math.max(0, featured.arcaneNovaMultiplier)
           : undefined,
       tauntActive: Boolean(featured.tauntActive && featured.klass === 'tank')
     } satisfies RosterCardViewModel;

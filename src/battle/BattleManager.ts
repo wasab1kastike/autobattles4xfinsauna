@@ -349,7 +349,7 @@ export class BattleManager {
 
       const distanceToTarget = unit.distanceTo(target.coord);
       if (distanceToTarget <= unit.stats.attackRange && !target.isDead()) {
-        const resolution = unit.attack(target);
+        const resolution = unit.attack(target, { units });
         if ((resolution?.lethal ?? false) || target.isDead()) {
           occupied.delete(currentTargetKey);
           unit.clearPathCache();

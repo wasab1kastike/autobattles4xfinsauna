@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Promote wizards with the Arcane Nova specialization, granting +10% damage
+  output and 40% splash damage within a two-hex radius while keeping the effect
+  persistent through saves, combat resolution, and automated coverage.
+
 
 
 - Empower rogues with a 25% attack boost, an ambush teleport that snaps them
