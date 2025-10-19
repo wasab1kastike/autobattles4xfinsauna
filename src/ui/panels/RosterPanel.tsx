@@ -54,6 +54,8 @@ export interface RosterEntry {
   readonly items: readonly RosterItem[];
   readonly modifiers: readonly RosterModifier[];
   readonly klass?: SaunojaClass | null;
+  readonly damageTakenMultiplier?: number;
+  readonly tauntActive?: boolean;
 }
 
 export interface RosterPanelOptions {
@@ -205,6 +207,17 @@ function buildMetaLine(entry: RosterEntry): string {
   segments.push(
     `MOV ${integerFormatter.format(stats.movementRange)}${formatDelta(stats.movementRange, baseStats.movementRange)}`
   );
+  if (typeof entry.damageTakenMultiplier === 'number') {
+    const mitigation = Math.round((1 - entry.damageTakenMultiplier) * 100);
+    if (mitigation > 0) {
+      segments.push(`Mitigation ${mitigation}%`);
+    } else if (mitigation < 0) {
+      segments.push(`Vulnerability ${Math.abs(mitigation)}%`);
+    }
+  }
+  if ((entry.klass ?? entry.progression.klass) === 'tank') {
+    segments.push(`Taunt ${entry.tauntActive ? 'Engaged' : 'Ready'}`);
+  }
   segments.push(`Upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   return segments.join(' • ');
 }
@@ -229,6 +242,17 @@ function buildAriaLabel(entry: RosterEntry): string {
     segments.push(`attack range ${integerFormatter.format(stats.attackRange)}`);
   }
   segments.push(`movement ${integerFormatter.format(stats.movementRange)}`);
+  if (typeof entry.damageTakenMultiplier === 'number') {
+    const mitigation = Math.round((1 - entry.damageTakenMultiplier) * 100);
+    if (mitigation > 0) {
+      segments.push(`${mitigation}% damage reduction`);
+    } else if (mitigation < 0) {
+      segments.push(`${Math.abs(mitigation)}% increased damage taken`);
+    }
+  }
+  if ((entry.klass ?? entry.progression.klass) === 'tank') {
+    segments.push(entry.tauntActive ? 'taunt engaged' : 'taunt ready');
+  }
   segments.push(`upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   if (entry.progression.xpForNext === null) {
     segments.push(`${integerFormatter.format(entry.progression.xp)} total experience`);

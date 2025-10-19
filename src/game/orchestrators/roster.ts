@@ -216,6 +216,11 @@ export function buildRosterEntries(): RosterEntry[] {
     } satisfies RosterStats;
 
     const behavior: UnitBehavior = attendant.behavior ?? 'defend';
+    const damageTakenMultiplier =
+      typeof attendant.damageTakenMultiplier === 'number'
+        ? Math.max(0, attendant.damageTakenMultiplier)
+        : undefined;
+    const tauntActive = Boolean(attendant.tauntActive && attendant.klass === 'tank');
 
     return {
       id: attendant.id,
@@ -239,7 +244,11 @@ export function buildRosterEntries(): RosterEntry[] {
       equipment: equipmentSlots,
       items,
       modifiers,
-      klass: attendant.klass ?? null
+      klass: attendant.klass ?? null,
+      ...(damageTakenMultiplier !== undefined
+        ? { damageTakenMultiplier }
+        : {}),
+      ...(tauntActive ? { tauntActive } : { tauntActive: false })
     } satisfies RosterEntry;
   });
 
@@ -279,7 +288,12 @@ export function buildRosterSummary(): RosterHudSummary {
       upkeep: Math.max(0, Math.round(featured.upkeep)),
       progression: buildProgression(featured),
       behavior,
-      klass: featured.klass ?? null
+      klass: featured.klass ?? null,
+      damageTakenMultiplier:
+        typeof featured.damageTakenMultiplier === 'number'
+          ? Math.max(0, featured.damageTakenMultiplier)
+          : undefined,
+      tauntActive: Boolean(featured.tauntActive && featured.klass === 'tank')
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

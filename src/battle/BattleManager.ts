@@ -125,6 +125,23 @@ export class BattleManager {
       livingUnitIds.add(unit.id);
     }
 
+    if (activeUnits.length > 0) {
+      for (const unit of activeUnits) {
+        if (!unit.hasTauntAura()) {
+          continue;
+        }
+        const radius = unit.getTauntAuraRadius();
+        const tauntActive = activeUnits.some(
+          (candidate) =>
+            candidate.id !== unit.id &&
+            candidate.faction !== unit.faction &&
+            !candidate.isDead() &&
+            unit.distanceTo(candidate.coord) <= radius
+        );
+        unit.setTauntActive(tauntActive);
+      }
+    }
+
     for (const id of [...this.lastKnownCoords.keys()]) {
       if (!livingUnitIds.has(id)) {
         this.lastKnownCoords.delete(id);

@@ -3,8 +3,7 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
-- Diff unit status buff pips in place so progress, stacks, and visuals update
-  smoothly without clearing and rebuilding the elements every frame.
+
 
 - Empower rogues with a 25% attack boost, an ambush teleport that snaps them
   adjacent to nearby foes, and a one-time first-strike damage surge, covering
