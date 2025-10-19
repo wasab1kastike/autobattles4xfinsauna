@@ -7,7 +7,10 @@ import { camera } from '../camera/autoFrame.ts';
 import {
   computeVisibleBounds,
   chunkRangeFromBounds,
-  ensureChunksPopulated,
+  chunkKeyFromCoord,
+  ensureChunkPopulated,
+  type ChunkKey,
+  type ChunkRange,
 } from '../map/hex/chunking.ts';
 import { TerrainCache, type ChunkCanvas } from './terrain_cache.ts';
 import { FogCache, type FogChunkCanvas } from './fog_cache.ts';
@@ -22,6 +25,9 @@ export class HexMapRenderer {
   private readonly terrainCache: TerrainCache;
   private readonly fogCache: FogCache;
   private cachedHexSize: number;
+  private readonly populatedChunkKeys = new Set<ChunkKey>();
+  private lastTrackedBounds: { minQ: number; maxQ: number; minR: number; maxR: number } | null = null;
+  private lastOrigin: PixelCoord | null = null;
 
   constructor(private readonly mapRef: HexMap) {
     this.terrainCache = new TerrainCache(mapRef);
@@ -40,6 +46,7 @@ export class HexMapRenderer {
   invalidateCache(): void {
     this.terrainCache.invalidate();
     this.fogCache.invalidate();
+    this.clearChunkTracking();
   }
 
   dispose(): void {
@@ -60,9 +67,9 @@ export class HexMapRenderer {
     }
 
     const chunkRange = chunkRangeFromBounds(bounds);
-    ensureChunksPopulated(this.mapRef, chunkRange);
-
     const origin = this.getOrigin();
+    this.syncChunkTracking(origin);
+    this.populateVisibleChunks(chunkRange);
     const chunks = this.terrainCache.getRenderableChunks(chunkRange, this.hexSize, images, origin);
     this.drawChunks(ctx, chunks);
     const fogChunks = this.fogCache.getRenderableChunks(chunkRange, this.hexSize, camera.zoom, origin);
@@ -90,7 +97,54 @@ export class HexMapRenderer {
       this.cachedHexSize = this.hexSize;
       this.terrainCache.invalidate();
       this.fogCache.invalidate();
+      this.clearChunkTracking();
     }
+  }
+
+  private populateVisibleChunks(range: ChunkRange): void {
+    for (let r = range.rMin; r <= range.rMax; r++) {
+      for (let q = range.qMin; q <= range.qMax; q++) {
+        const chunkCoord = { q, r };
+        const key = chunkKeyFromCoord(chunkCoord);
+        if (this.populatedChunkKeys.has(key)) {
+          continue;
+        }
+        ensureChunkPopulated(this.mapRef, chunkCoord);
+        this.populatedChunkKeys.add(key);
+      }
+    }
+  }
+
+  private syncChunkTracking(origin: PixelCoord): void {
+    const currentBounds = {
+      minQ: this.mapRef.minQ,
+      maxQ: this.mapRef.maxQ,
+      minR: this.mapRef.minR,
+      maxR: this.mapRef.maxR,
+    };
+
+    const boundsChanged =
+      !this.lastTrackedBounds ||
+      this.lastTrackedBounds.minQ !== currentBounds.minQ ||
+      this.lastTrackedBounds.maxQ !== currentBounds.maxQ ||
+      this.lastTrackedBounds.minR !== currentBounds.minR ||
+      this.lastTrackedBounds.maxR !== currentBounds.maxR;
+
+    const originChanged =
+      !this.lastOrigin || this.lastOrigin.x !== origin.x || this.lastOrigin.y !== origin.y;
+
+    if (boundsChanged || originChanged) {
+      this.populatedChunkKeys.clear();
+    }
+
+    this.lastTrackedBounds = { ...currentBounds };
+    this.lastOrigin = { ...origin };
+  }
+
+  private clearChunkTracking(): void {
+    this.populatedChunkKeys.clear();
+    this.lastTrackedBounds = null;
+    this.lastOrigin = null;
   }
 
   private drawChunks(ctx: CanvasRenderingContext2D, chunks: ChunkCanvas[]): void {
