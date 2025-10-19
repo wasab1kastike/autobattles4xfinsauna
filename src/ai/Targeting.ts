@@ -20,6 +20,11 @@ export class Targeting {
       return null;
     }
 
+    const taunting = enemies.filter((enemy) => enemy.isTaunting());
+    if (taunting.length > 0) {
+      enemies = taunting;
+    }
+
     const movementRange = Number.isFinite(unit.stats.movementRange)
       ? unit.stats.movementRange
       : 0;

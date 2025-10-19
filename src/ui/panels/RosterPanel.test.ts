@@ -24,7 +24,8 @@ function buildEntry(
     attackRange: 1,
     movementRange: 3,
     defense: 0,
-    shield: 0
+    shield: 0,
+    damageTakenMultiplier: 1
   };
   const statsDefault: RosterEntry['stats'] = {
     health: 18,
@@ -33,7 +34,10 @@ function buildEntry(
     attackRange: 2,
     movementRange: 3,
     defense: 1,
-    shield: undefined
+    shield: undefined,
+    damageTakenMultiplier: 1,
+    tauntRadius: undefined,
+    tauntActive: undefined
   };
 
   const stats = { ...statsDefault, ...overrides.stats } as RosterEntry['stats'];
@@ -109,6 +113,7 @@ describe('createRosterPanel', () => {
     expect(metaInitial?.textContent).toContain('RNG 2 (+1)');
     expect(metaInitial?.textContent).toContain('MOV 3');
     expect(metaInitial?.textContent).toContain('Upkeep 3 beer');
+    expect(container.querySelector('.panel-roster__perks')).toBeNull();
     expect(container.querySelectorAll('.panel-roster__slot')).toHaveLength(2);
     expect(container.querySelector('.panel-roster__mods')).toBeNull();
 
@@ -146,7 +151,10 @@ describe('createRosterPanel', () => {
         attackRange: 4,
         movementRange: 5,
         defense: 3,
-        shield: 6
+        shield: 6,
+        damageTakenMultiplier: 0.5,
+        tauntRadius: 5,
+        tauntActive: true
       },
       baseStats: {
         health: 18,
@@ -155,7 +163,8 @@ describe('createRosterPanel', () => {
         attackRange: 1,
         movementRange: 3,
         defense: 0,
-        shield: 0
+        shield: 0,
+        damageTakenMultiplier: 1
       },
       equipment: [
         {
@@ -242,6 +251,9 @@ describe('createRosterPanel', () => {
     expect(metaUpdated?.textContent).toContain('DEF 3');
     expect(metaUpdated?.textContent).toContain('MOV 5');
     expect(metaUpdated?.textContent).toContain('Upkeep 5 beer');
+    const perksUpdated = container.querySelector('.panel-roster__perks');
+    expect(perksUpdated?.textContent).toContain('Damage taken −50%');
+    expect(perksUpdated?.textContent).toContain('Taunt active');
 
     const loadout = container.querySelector('.panel-roster__loadout');
     expect(loadout).not.toBeNull();

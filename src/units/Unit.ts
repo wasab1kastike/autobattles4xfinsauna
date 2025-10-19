@@ -61,6 +61,9 @@ export class Unit {
   private cachedPath?: AxialCoord[];
   private movementCooldownSeconds = 0;
   private shield = 0;
+  private damageTakenMultiplier = 1;
+  private tauntRadius = 0;
+  private tauntActive = false;
   private immortal = false;
   private experience = 0;
   private behavior: UnitBehavior;
@@ -90,6 +93,7 @@ export class Unit {
     this.stats = { ...stats };
     this.maxHealth = normalizeHealthStat(this.stats.health);
     this.stats.health = this.maxHealth;
+    this.setDamageTakenMultiplier(stats.damageTakenMultiplier);
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
     this.appearanceId = this.sanitizeAppearanceId(appearanceId);
   }
@@ -342,6 +346,43 @@ export class Unit {
     this.shield = value;
   }
 
+  getDamageTakenMultiplier(): number {
+    return this.damageTakenMultiplier;
+  }
+
+  setDamageTakenMultiplier(value?: number): void {
+    const normalized =
+      typeof value === 'number' && Number.isFinite(value)
+        ? Math.min(Math.max(value, 0.01), 10)
+        : 1;
+    this.damageTakenMultiplier = normalized;
+    if (normalized === 1) {
+      delete this.stats.damageTakenMultiplier;
+    } else {
+      this.stats.damageTakenMultiplier = normalized;
+    }
+  }
+
+  getTauntRadius(): number {
+    return this.tauntRadius;
+  }
+
+  setTauntRadius(value: number): void {
+    const normalized = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+    this.tauntRadius = normalized;
+    if (normalized <= 0) {
+      this.tauntActive = false;
+    }
+  }
+
+  setTauntActive(active: boolean): void {
+    this.tauntActive = Boolean(active) && this.tauntRadius > 0;
+  }
+
+  isTaunting(): boolean {
+    return this.tauntActive && this.tauntRadius > 0;
+  }
+
   updateStats(stats: UnitStats): void {
     this.stats.attackDamage = stats.attackDamage;
     this.stats.attackRange = stats.attackRange;
@@ -354,6 +395,7 @@ export class Unit {
     if (typeof stats.visionRange === 'number' && Number.isFinite(stats.visionRange)) {
       this.stats.visionRange = stats.visionRange;
     }
+    this.setDamageTakenMultiplier(stats.damageTakenMultiplier);
     const newMax = Math.max(1, Math.round(stats.health));
     this.maxHealth = newMax;
     this.stats.health = Math.min(newMax, Math.max(0, this.stats.health));
@@ -398,6 +440,7 @@ export class Unit {
       health: this.stats.health,
       maxHealth: this.maxHealth,
       shield: this.shield,
+      damageTakenMultiplier: this.damageTakenMultiplier,
       hooks: this.combatHooks,
       keywords: this.combatKeywords
     };

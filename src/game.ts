@@ -94,7 +94,9 @@ import {
   rollSaunojaUpkeep,
   SAUNOJA_DEFAULT_UPKEEP,
   SAUNOJA_UPKEEP_MAX,
-  SAUNOJA_UPKEEP_MIN
+  SAUNOJA_UPKEEP_MIN,
+  PROMOTED_TANK_DAMAGE_MULTIPLIER,
+  PROMOTED_TANK_TAUNT_RADIUS
 } from './units/saunoja.ts';
 import { drawSaunojas } from './units/renderSaunoja.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
@@ -608,6 +610,23 @@ function deriveUnitAttackProfile(loadout: readonly EquippedItem[]): string | nul
   return fallback;
 }
 
+function applySaunojaClassPerks(attendant: Saunoja): void {
+  if (attendant.klass === 'tank') {
+    const active = attendant.taunt?.active ?? false;
+    attendant.damageTakenMultiplier = PROMOTED_TANK_DAMAGE_MULTIPLIER;
+    attendant.taunt = {
+      radius: PROMOTED_TANK_TAUNT_RADIUS,
+      active
+    };
+    return;
+  }
+
+  attendant.damageTakenMultiplier = 1;
+  if (attendant.taunt) {
+    attendant.taunt = undefined;
+  }
+}
+
 function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void {
   attendant.effectiveStats = { ...stats };
   attendant.maxHp = Math.max(1, Math.round(stats.health));
@@ -633,6 +652,9 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
       nextStats.visionRange = attendant.effectiveStats.visionRange;
     }
     unit.updateStats(nextStats);
+    unit.setDamageTakenMultiplier(attendant.damageTakenMultiplier);
+    unit.setTauntRadius(attendant.taunt?.radius ?? 0);
+    unit.setTauntActive(attendant.taunt?.active ?? false);
     unit.setAttackProfile(attackProfile);
     if (typeof attendant.effectiveStats.shield === 'number') {
       unit.setShield(attendant.effectiveStats.shield);
@@ -701,6 +723,7 @@ function applyPolicyModifiersToSaunoja(
   const effective = applyEquipment(adjustedBase, loadout);
 
   attendant.baseStats = adjustedBase;
+  applySaunojaClassPerks(attendant);
   applyEffectiveStats(attendant, effective);
 
   const upkeepBase = baseline.upkeep;
@@ -781,6 +804,8 @@ function promoteSaunojaInternal(attendant: Saunoja, klass: SaunojaClass): boolea
   const attachedUnit = getAttachedUnitFor(attendant);
   attachedUnit?.setExperience(resetXp);
   attendant.klass = klass;
+  applySaunojaClassPerks(attendant);
+  refreshSaunojaPolicyAdjustments(attendant);
 
   saveUnits();
   updateRosterDisplay();

@@ -18,6 +18,9 @@ export interface RosterStats {
   readonly movementRange: number;
   readonly defense?: number;
   readonly shield?: number;
+  readonly damageTakenMultiplier?: number;
+  readonly tauntRadius?: number;
+  readonly tauntActive?: boolean;
 }
 
 export interface RosterProgression {
@@ -186,6 +189,10 @@ function buildMetaLine(entry: RosterEntry): string {
   if (klass) {
     segments.push(`Class ${formatSaunojaClassLabel(klass)}`);
   }
+  const mitigation = formatDamageMitigation(stats.damageTakenMultiplier);
+  if (mitigation) {
+    segments.push(mitigation);
+  }
   if (stats.shield && stats.shield > 0) {
     segments.push(
       `Shield ${integerFormatter.format(stats.shield)}${formatDelta(stats.shield, baseStats.shield)}`
@@ -205,8 +212,38 @@ function buildMetaLine(entry: RosterEntry): string {
   segments.push(
     `MOV ${integerFormatter.format(stats.movementRange)}${formatDelta(stats.movementRange, baseStats.movementRange)}`
   );
+  if (typeof stats.tauntRadius === 'number' && stats.tauntRadius > 0) {
+    const aura = integerFormatter.format(stats.tauntRadius);
+    segments.push(`${stats.tauntActive ? 'Taunt active' : 'Taunt ready'} • ${aura}-hex aura`);
+  }
   segments.push(`Upkeep ${integerFormatter.format(entry.upkeep)} beer`);
   return segments.join(' • ');
+}
+
+function formatDamageMitigation(multiplier?: number): string | null {
+  if (typeof multiplier !== 'number' || !Number.isFinite(multiplier)) {
+    return null;
+  }
+  const percent = Math.round((1 - multiplier) * 100);
+  if (percent === 0) {
+    return null;
+  }
+  const sign = percent > 0 ? '−' : '+';
+  return `Damage taken ${sign}${integerFormatter.format(Math.abs(percent))}%`;
+}
+
+function buildPerkLine(entry: RosterEntry): string | null {
+  const perks: string[] = [];
+  const mitigation = formatDamageMitigation(entry.stats.damageTakenMultiplier);
+  if (mitigation) {
+    perks.push(mitigation);
+  }
+  if (typeof entry.stats.tauntRadius === 'number' && entry.stats.tauntRadius > 0) {
+    const radius = integerFormatter.format(entry.stats.tauntRadius);
+    const state = entry.stats.tauntActive ? 'Taunt active' : 'Taunt ready';
+    perks.push(`${state} • ${radius}-hex aura`);
+  }
+  return perks.length > 0 ? perks.join(' • ') : null;
 }
 
 function buildAriaLabel(entry: RosterEntry): string {
@@ -663,6 +700,15 @@ export function createRosterPanel(
       meta.textContent = metaLabel;
       meta.title = metaLabel;
 
+      const perkLine = buildPerkLine(entry);
+      let perks: HTMLDivElement | null = null;
+      if (perkLine) {
+        perks = document.createElement('div');
+        perks.classList.add('panel-roster__perks');
+        perks.textContent = perkLine;
+        perks.title = perkLine;
+      }
+
       const xpRow = document.createElement('div');
       xpRow.classList.add('panel-roster__xp');
       const xpLabel = formatXpLabel(entry.progression);
@@ -776,7 +822,11 @@ export function createRosterPanel(
       if (promotionRow) {
         button.appendChild(promotionRow);
       }
-      button.append(meta, callouts, healthBar, traits);
+      if (perks) {
+        button.append(meta, perks, callouts, healthBar, traits);
+      } else {
+        button.append(meta, callouts, healthBar, traits);
+      }
       renderLoadout(button, entry, options);
 
       if (typeof options.onSelect === 'function') {

@@ -13,6 +13,10 @@
 - Let commanders secure up to three carryover items from squad loadouts or the
   shared stash via the end-of-run overlay, trimming the rest before the next
   NG+ reload and covering the inventory cap with automated tests.
+- Give the Aegis Vanguard promotion its intended 50% damage mitigation and
+  five-hex taunt aura, update the roster HUD/tooltip copy to highlight the
+  perk, and extend AI/unit tests so targeting and combat resolution respect the
+  new behaviour.
 
 - Guard stronghold encounter unit registration so early seeding no longer
   triggers the "Game runtime has not been configured" crash, letting the GitHub

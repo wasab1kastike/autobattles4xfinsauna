@@ -27,6 +27,7 @@ export function applyDamage(
       health: target.hp,
       maxHealth: target.maxHp,
       shield: target.shield ?? 0,
+      damageTakenMultiplier: target.damageTakenMultiplier,
       hooks: target.combatHooks ?? null,
       keywords: target.combatKeywords ?? null
     },

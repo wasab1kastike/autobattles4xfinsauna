@@ -39,6 +39,8 @@ describe('makeSaunoja', () => {
     expect(saunoja.effectiveStats.health).toBe(20);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
+    expect(saunoja.damageTakenMultiplier).toBe(1);
+    expect(saunoja.taunt).toBeUndefined();
   });
 
   it('falls back to safe defaults for invalid data', () => {
@@ -68,6 +70,8 @@ describe('makeSaunoja', () => {
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(saunoja.appearanceId).toBe('saunoja');
+    expect(saunoja.damageTakenMultiplier).toBe(1);
+    expect(saunoja.taunt).toBeUndefined();
     randomSpy.mockRestore();
   });
 
@@ -81,6 +85,7 @@ describe('makeSaunoja', () => {
     expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(0);
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
+    expect(saunoja.damageTakenMultiplier).toBe(1);
   });
 
   it('generates a flavorful name when none is provided', () => {
@@ -93,6 +98,12 @@ describe('makeSaunoja', () => {
     expect(saunoja.name).toBe('Noora "Steamcaller" Tuomi');
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
     randomSpy.mockRestore();
+  });
+
+  it('applies tank promotion perks during initialization', () => {
+    const saunoja = makeSaunoja({ id: 'tank-hero', klass: 'tank' });
+    expect(saunoja.damageTakenMultiplier).toBeCloseTo(0.5, 5);
+    expect(saunoja.taunt).toEqual({ radius: 5, active: false });
   });
 
   it('sanitises loadout items and active modifiers', () => {
@@ -201,5 +212,14 @@ describe('applyDamage', () => {
     expect(nowSpy).not.toHaveBeenCalled();
 
     nowSpy.mockRestore();
+  });
+
+  it('honors the damage mitigation multiplier when resolving damage', () => {
+    const saunoja = makeSaunoja({ id: 'mitigation', maxHp: 20, klass: 'tank' });
+    saunoja.hp = 20;
+    const result = applyDamage(saunoja, 10);
+    expect(result).toBe(false);
+    expect(saunoja.hp).toBe(15);
+    expect(saunoja.damageTakenMultiplier).toBeCloseTo(0.5, 5);
   });
 });

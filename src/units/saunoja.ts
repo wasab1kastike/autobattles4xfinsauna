@@ -17,6 +17,14 @@ export type SaunojaItemRarity =
   | 'legendary'
   | 'mythic';
 
+export const PROMOTED_TANK_DAMAGE_MULTIPLIER = 0.5;
+export const PROMOTED_TANK_TAUNT_RADIUS = 5;
+
+export interface SaunojaTauntState {
+  radius: number;
+  active: boolean;
+}
+
 export interface SaunojaItem {
   /** Stable identifier for the equipped item. */
   readonly id: string;
@@ -80,6 +88,8 @@ export interface Saunoja {
   defense?: number;
   /** Temporary damage buffer that absorbs hits before health. */
   shield: number;
+  /** Mitigation multiplier applied to incoming damage. */
+  damageTakenMultiplier: number;
   /** Steam intensity from 0 (idle) to 1 (billowing). */
   steam: number;
   /** Preferred battlefield routine. */
@@ -110,6 +120,8 @@ export interface Saunoja {
   combatHooks?: CombatHookMap | null;
   /** Optional promoted class that unlocks advanced perks. */
   klass?: SaunojaClass;
+  /** Optional taunt state applied by class perks. */
+  taunt?: SaunojaTauntState;
 }
 
 export interface SaunojaInit {
@@ -137,6 +149,8 @@ export interface SaunojaInit {
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
   klass?: unknown;
+  damageTakenMultiplier?: unknown;
+  taunt?: unknown;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
@@ -189,6 +203,34 @@ const VALID_SAUNOJA_CLASSES: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function sanitizeDamageTakenMultiplier(source: unknown, fallback = 1): number {
+  const value =
+    typeof source === 'number' && Number.isFinite(source)
+      ? (source as number)
+      : fallback;
+  const clamped = Math.min(Math.max(value, 0.01), 10);
+  return Number.isFinite(clamped) ? clamped : fallback;
+}
+
+function sanitizeTauntState(source: unknown): SaunojaTauntState | undefined {
+  if (!source || typeof source !== 'object') {
+    return undefined;
+  }
+  const data = source as Record<string, unknown>;
+  const radiusSource =
+    typeof data.radius === 'number' && Number.isFinite(data.radius)
+      ? data.radius
+      : Number.isFinite(Number(data.radius))
+        ? Number(data.radius)
+        : 0;
+  const radius = Math.max(0, Math.round(radiusSource));
+  if (radius <= 0) {
+    return undefined;
+  }
+  const active = Boolean(data.active);
+  return { radius, active } satisfies SaunojaTauntState;
 }
 
 function resolveStatValue(source: unknown, fallback: number, min: number): number {
@@ -430,7 +472,9 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     combatHooks = null,
     appearanceId,
     appearanceRandom,
-    klass
+    klass,
+    damageTakenMultiplier: damageTakenMultiplierInput,
+    taunt: tauntInput
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -532,6 +576,20 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
   const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
   const resolvedClass = sanitizeSaunojaClass(klass);
+  const sanitizedMultiplier = sanitizeDamageTakenMultiplier(damageTakenMultiplierInput, 1);
+  let resolvedDamageTakenMultiplier = sanitizedMultiplier;
+  let resolvedTaunt = sanitizeTauntState(tauntInput);
+
+  if (resolvedClass === 'tank') {
+    const tauntActive = resolvedTaunt?.active ?? false;
+    resolvedDamageTakenMultiplier = PROMOTED_TANK_DAMAGE_MULTIPLIER;
+    resolvedTaunt = {
+      radius: PROMOTED_TANK_TAUNT_RADIUS,
+      active: tauntActive
+    } satisfies SaunojaTauntState;
+  } else {
+    resolvedTaunt = undefined;
+  }
 
   return {
     id,
@@ -556,6 +614,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     modifiers: sanitizedModifiers,
     combatKeywords,
     combatHooks,
-    ...(resolvedClass ? { klass: resolvedClass } : {})
+    damageTakenMultiplier: resolvedDamageTakenMultiplier,
+    ...(resolvedClass ? { klass: resolvedClass } : {}),
+    ...(resolvedTaunt ? { taunt: resolvedTaunt } : {})
   };
 }

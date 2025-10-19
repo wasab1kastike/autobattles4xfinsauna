@@ -92,6 +92,7 @@ export class BattleManager {
     const occupied = new Set<string>();
     const activeUnits: Unit[] = [];
     const livingUnitIds = new Set<string>();
+    const tauntCandidates: Unit[] = [];
     for (const unit of units) {
       unit.addMovementTime(deltaSeconds);
       if (unit.isDead()) {
@@ -119,11 +120,32 @@ export class BattleManager {
       activeUnits.push(unit);
       occupied.add(coordKey(unit.coord));
       livingUnitIds.add(unit.id);
+      if (unit.getTauntRadius() > 0) {
+        tauntCandidates.push(unit);
+      }
     }
 
     for (const id of [...this.lastKnownCoords.keys()]) {
       if (!livingUnitIds.has(id)) {
         this.lastKnownCoords.delete(id);
+      }
+    }
+
+    if (tauntCandidates.length > 0) {
+      for (const candidate of tauntCandidates) {
+        const radius = candidate.getTauntRadius();
+        if (radius <= 0) {
+          candidate.setTauntActive(false);
+          continue;
+        }
+        const hasEnemyNearby = activeUnits.some(
+          (other) =>
+            other !== candidate &&
+            other.faction !== candidate.faction &&
+            !other.isDead() &&
+            candidate.distanceTo(other.coord) <= radius
+        );
+        candidate.setTauntActive(hasEnemyNearby);
       }
     }
 

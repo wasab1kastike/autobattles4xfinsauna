@@ -51,6 +51,9 @@ export type RosterCardViewModel = {
   progression: RosterProgression;
   behavior: UnitBehavior;
   klass?: SaunojaClass | null;
+  damageTakenMultiplier?: number;
+  tauntRadius?: number;
+  tauntActive?: boolean;
 };
 
 export type RosterHudSummary = {
@@ -86,6 +89,26 @@ function formatXpLabel(progression: RosterProgression): string {
   }
   const percent = formatProgressPercent(progression.progress);
   return `${formatter.format(progression.xpIntoLevel)} / ${formatter.format(progression.xpForNext)} XP • ${percent}%`;
+}
+
+function formatPerkSummary(card: RosterCardViewModel): { text: string; active: boolean } | null {
+  const parts: string[] = [];
+  if (typeof card.damageTakenMultiplier === 'number' && Number.isFinite(card.damageTakenMultiplier)) {
+    const percent = Math.round((1 - card.damageTakenMultiplier) * 100);
+    if (percent !== 0) {
+      const sign = percent > 0 ? '−' : '+';
+      parts.push(`Damage taken ${sign}${rosterUpkeepFormatter.format(Math.abs(percent))}%`);
+    }
+  }
+  if (typeof card.tauntRadius === 'number' && card.tauntRadius > 0) {
+    const radius = rosterUpkeepFormatter.format(card.tauntRadius);
+    const state = card.tauntActive ? 'Taunt active' : 'Taunt ready';
+    parts.push(`${state} • ${radius}-hex aura`);
+  }
+  if (parts.length === 0) {
+    return null;
+  }
+  return { text: parts.join(' • '), active: Boolean(card.tauntActive) };
 }
 
 function formatStatBonuses(bonuses: RosterProgression['statBonuses']): string {
@@ -397,6 +420,10 @@ export function setupRosterHUD(
   rosterCardStats.classList.add('saunoja-card__callouts');
   rosterCardStats.textContent = 'No level bonuses yet';
 
+  const rosterCardPerks = document.createElement('div');
+  rosterCardPerks.classList.add('saunoja-card__perks');
+  rosterCardPerks.hidden = true;
+
   const rosterCardUpkeep = document.createElement('p');
   rosterCardUpkeep.classList.add('saunoja-card__upkeep');
 
@@ -406,6 +433,7 @@ export function setupRosterHUD(
     rosterCardPromotion,
     rosterCardTraits,
     rosterCardStats,
+    rosterCardPerks,
     rosterCardUpkeep
   );
   details.appendChild(rosterCard);
@@ -512,6 +540,9 @@ export function setupRosterHUD(
     hasFeaturedCard = Boolean(card);
     if (!card) {
       delete rosterCard.dataset.unitId;
+      rosterCardPerks.hidden = true;
+      rosterCardPerks.textContent = '';
+      delete rosterCardPerks.dataset.active;
       setExpanded(false);
       return;
     }
@@ -556,6 +587,19 @@ export function setupRosterHUD(
     const bonusLabel = formatStatBonuses(card.progression.statBonuses);
     rosterCardStats.textContent = bonusLabel;
     rosterCardStats.title = bonusLabel;
+
+    const perkSummary = formatPerkSummary(card);
+    if (perkSummary) {
+      rosterCardPerks.hidden = false;
+      rosterCardPerks.textContent = perkSummary.text;
+      rosterCardPerks.title = perkSummary.text;
+      rosterCardPerks.dataset.active = perkSummary.active ? 'true' : 'false';
+    } else {
+      rosterCardPerks.hidden = true;
+      rosterCardPerks.textContent = '';
+      rosterCardPerks.title = '';
+      delete rosterCardPerks.dataset.active;
+    }
 
     const behaviorLabel = behaviorLabels[card.behavior] ?? card.behavior;
     rosterCardBehaviorValue.textContent = behaviorLabel;
@@ -651,6 +695,9 @@ export function setupRosterHUD(
       stats.movementRange,
       stats.defense ?? 0,
       stats.shield ?? 0,
+      stats.damageTakenMultiplier ?? 1,
+      stats.tauntRadius ?? 0,
+      stats.tauntActive ? 1 : 0,
       traitSig,
       itemSig,
       modifierSig

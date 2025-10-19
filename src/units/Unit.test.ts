@@ -92,3 +92,28 @@ describe('Unit behavior', () => {
   });
 });
 
+describe('Unit mitigation and taunt state', () => {
+  it('clamps and exposes the damage taken multiplier', () => {
+    const unit = makeUnit('mitigation');
+    unit.setDamageTakenMultiplier(0.25);
+    expect(unit.getDamageTakenMultiplier()).toBeCloseTo(0.25, 5);
+    unit.setDamageTakenMultiplier(Number.POSITIVE_INFINITY);
+    expect(unit.getDamageTakenMultiplier()).toBe(1);
+    unit.updateStats({ ...unit.stats, damageTakenMultiplier: 1.5 });
+    expect(unit.getDamageTakenMultiplier()).toBeCloseTo(1.5, 5);
+  });
+
+  it('tracks taunt radius and active state', () => {
+    const unit = makeUnit('taunt');
+    expect(unit.getTauntRadius()).toBe(0);
+    expect(unit.isTaunting()).toBe(false);
+    unit.setTauntRadius(5);
+    unit.setTauntActive(true);
+    expect(unit.getTauntRadius()).toBe(5);
+    expect(unit.isTaunting()).toBe(true);
+    unit.setTauntRadius(0);
+    expect(unit.getTauntRadius()).toBe(0);
+    expect(unit.isTaunting()).toBe(false);
+  });
+});
+

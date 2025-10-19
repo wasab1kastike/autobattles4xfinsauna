@@ -15,6 +15,10 @@
   the dedicated sheet controller, add focused Vitest specs for
   `setupPoliciesWindow`, and update the docs/site guidance to reflect the
   relocated policies console.
+- Empower promoted tanks with a 50% damage mitigation perk and a five-hex taunt
+  aura, propagate the multiplier through combat resolution, prioritise
+  taunting guardians in AI targeting, surface the perk across roster HUDs, and
+  cover the behaviour with new battle, targeting, and UI tests.
 
 - Extract the policies console into a dedicated responsive HUD sheet, retire the
   bottom-tab wiring, and sync navigation so the right panel now focuses on roster

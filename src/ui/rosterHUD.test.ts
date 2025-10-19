@@ -200,7 +200,8 @@ describe('rosterHUD', () => {
           maxHealth: 10,
           attackDamage: 3,
           attackRange: 1,
-          movementRange: 2
+          movementRange: 2,
+          damageTakenMultiplier: 1
         },
         progression: {
           level: 2,
@@ -221,6 +222,44 @@ describe('rosterHUD', () => {
       const promoted = { ...baseEntry, name: 'Watcher Prime' } satisfies RosterEntry;
       hud.renderRoster([promoted]);
       expect(renderer).toHaveBeenCalledTimes(2);
+    } finally {
+      destroyContainer(container);
+    }
+  });
+
+  it('shows perk summaries for promoted tanks', () => {
+    const container = makeContainer();
+    try {
+      const hud = setupRosterHUD(container, { rosterIcon: '/icon.svg' });
+      hud.updateSummary({
+        count: 1,
+        card: {
+          id: 'tank-1',
+          name: 'Shieldbearer',
+          traits: ['Resolute'],
+          upkeep: 3,
+          behavior: 'defend',
+          progression: {
+            level: 5,
+            xp: 1200,
+            xpIntoLevel: 0,
+            xpForNext: 380,
+            progress: 0,
+            statBonuses: { vigor: 12, focus: 6, resolve: 5 },
+            klass: 'tank'
+          },
+          klass: 'tank',
+          damageTakenMultiplier: 0.5,
+          tauntRadius: 5,
+          tauntActive: true
+        }
+      });
+
+      const perks = container.querySelector<HTMLDivElement>('.saunoja-card__perks');
+      expect(perks).not.toBeNull();
+      expect(perks?.hidden).toBe(false);
+      expect(perks?.textContent).toContain('Damage taken −50%');
+      expect(perks?.dataset.active).toBe('true');
     } finally {
       destroyContainer(container);
     }

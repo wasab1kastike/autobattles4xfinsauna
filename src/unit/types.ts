@@ -5,6 +5,7 @@ export interface UnitStats {
   movementRange: number;
   visionRange?: number;
   defense?: number;
+  damageTakenMultiplier?: number;
 }
 
 export type UnitBehavior = 'defend' | 'attack' | 'explore';

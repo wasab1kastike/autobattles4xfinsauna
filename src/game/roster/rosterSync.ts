@@ -26,6 +26,15 @@ export function cloneStatBlock(stats: SaunojaStatBlock): SaunojaStatBlock {
   if (typeof stats.visionRange === 'number') {
     clone.visionRange = stats.visionRange;
   }
+  if (typeof stats.damageTakenMultiplier === 'number') {
+    clone.damageTakenMultiplier = stats.damageTakenMultiplier;
+  }
+  if (typeof stats.tauntRadius === 'number') {
+    clone.tauntRadius = stats.tauntRadius;
+  }
+  if (typeof stats.tauntActive === 'boolean') {
+    clone.tauntActive = stats.tauntActive;
+  }
 
   return clone;
 }
@@ -172,6 +181,28 @@ export function createRosterSyncService({
       const normalizedShield = Number.isFinite(shieldValue) ? Math.max(0, shieldValue) : 0;
       if (saunoja.shield !== normalizedShield) {
         saunoja.shield = normalizedShield;
+        changed = true;
+      }
+
+      const damageMultiplier = unit.getDamageTakenMultiplier();
+      const normalizedMultiplier = Number.isFinite(damageMultiplier)
+        ? Math.max(0.01, damageMultiplier)
+        : 1;
+      if (Math.abs(saunoja.damageTakenMultiplier - normalizedMultiplier) > 0.0001) {
+        saunoja.damageTakenMultiplier = normalizedMultiplier;
+        changed = true;
+      }
+
+      const tauntRadius = unit.getTauntRadius();
+      const tauntActive = unit.isTaunting();
+      if (tauntRadius > 0) {
+        const previousTaunt = saunoja.taunt;
+        if (!previousTaunt || previousTaunt.radius !== tauntRadius || previousTaunt.active !== tauntActive) {
+          saunoja.taunt = { radius: tauntRadius, active: tauntActive };
+          changed = true;
+        }
+      } else if (saunoja.taunt) {
+        saunoja.taunt = undefined;
         changed = true;
       }
 

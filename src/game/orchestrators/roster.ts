@@ -166,6 +166,17 @@ export function buildRosterEntries(): RosterEntry[] {
     const shieldSource = unit ? unit.getShield() : effectiveStats.shield ?? attendant.shield;
     const shield = Math.round(Math.max(0, shieldSource));
     const upkeep = Math.max(0, Math.round(attendant.upkeep));
+    const damageTakenMultiplier = Number.isFinite(attendant.damageTakenMultiplier)
+      ? Math.max(0.01, attendant.damageTakenMultiplier)
+      : 1;
+    const tauntRadiusSource = unit ? unit.getTauntRadius() : attendant.taunt?.radius ?? 0;
+    const tauntRadius = Math.max(0, Math.round(tauntRadiusSource));
+    const tauntActive =
+      tauntRadius > 0
+        ? unit
+          ? unit.isTaunting()
+          : attendant.taunt?.active ?? false
+        : false;
     const status: RosterEntry['status'] =
       currentHealth <= 0 ? 'downed' : unitAlive ? 'engaged' : 'reserve';
 
@@ -212,7 +223,8 @@ export function buildRosterEntries(): RosterEntry[] {
       shield:
         typeof baseStats.shield === 'number' && baseStats.shield > 0
           ? Math.round(baseStats.shield)
-          : undefined
+          : undefined,
+      damageTakenMultiplier
     } satisfies RosterStats;
 
     const behavior: UnitBehavior = attendant.behavior ?? 'defend';
@@ -232,7 +244,11 @@ export function buildRosterEntries(): RosterEntry[] {
         attackRange,
         movementRange,
         defense: defense > 0 ? defense : undefined,
-        shield: shield > 0 ? shield : undefined
+        shield: shield > 0 ? shield : undefined,
+        damageTakenMultiplier,
+        ...(tauntRadius > 0
+          ? { tauntRadius, tauntActive }
+          : { tauntRadius: undefined, tauntActive: undefined })
       },
       baseStats: rosterBase,
       progression,
@@ -272,6 +288,11 @@ export function buildRosterSummary(): RosterHudSummary {
   let card: RosterCardViewModel | null = null;
   if (featured) {
     const behavior: UnitBehavior = featured.behavior ?? 'defend';
+    const damageTakenMultiplier = Number.isFinite(featured.damageTakenMultiplier)
+      ? Math.max(0.01, featured.damageTakenMultiplier)
+      : undefined;
+    const tauntRadius = featured.taunt?.radius ?? 0;
+    const tauntActive = tauntRadius > 0 ? featured.taunt?.active ?? false : undefined;
     card = {
       id: featured.id,
       name: featured.name || 'Saunoja',
@@ -279,7 +300,11 @@ export function buildRosterSummary(): RosterHudSummary {
       upkeep: Math.max(0, Math.round(featured.upkeep)),
       progression: buildProgression(featured),
       behavior,
-      klass: featured.klass ?? null
+      klass: featured.klass ?? null,
+      ...(damageTakenMultiplier ? { damageTakenMultiplier } : {}),
+      ...(tauntRadius > 0
+        ? { tauntRadius, tauntActive: Boolean(tauntActive) }
+        : {})
     } satisfies RosterCardViewModel;
   }
   return { count: total, card } satisfies RosterHudSummary;

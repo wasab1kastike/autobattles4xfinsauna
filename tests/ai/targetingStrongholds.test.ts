@@ -62,4 +62,22 @@ describe('Targeting stronghold structures', () => {
 
     expect(target).toBe(nearbyStronghold);
   });
+
+  it('prioritises enemies with an active taunt aura', () => {
+    const attacker = new Unit('raider', 'raider', { q: 0, r: 0 }, 'enemy', {
+      ...baseStats
+    });
+    const tauntingTank = new Unit('tank', 'soldier', { q: 4, r: 0 }, 'player', {
+      ...baseStats
+    });
+    tauntingTank.setTauntRadius(5);
+    tauntingTank.setTauntActive(true);
+    const nearbyAlly = new Unit('archer', 'soldier', { q: 1, r: 0 }, 'player', {
+      ...baseStats
+    });
+
+    const target = Targeting.selectTarget(attacker, [tauntingTank, nearbyAlly]);
+
+    expect(target).toBe(tauntingTank);
+  });
 });
