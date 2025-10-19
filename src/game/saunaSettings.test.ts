@@ -32,7 +32,7 @@ describe('saunaSettings', () => {
     const raw = window.localStorage?.getItem(SAUNA_SETTINGS_STORAGE_KEY);
     expect(raw).toBeTypeOf('string');
     const parsed = raw ? JSON.parse(raw) : null;
-    expect(parsed).toEqual({ maxRosterSize: 6, activeTierId: 'mythic-conclave' });
+    expect(parsed).toEqual({ maxRosterSize: 5, activeTierId: 'mythic-conclave' });
   });
 
   it('handles malformed payloads gracefully', () => {

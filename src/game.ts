@@ -201,6 +201,7 @@ import {
   applyNgPlusState as applyRuntimeNgPlusState,
   getActiveTierIdRef as getActiveTierIdAccessor,
   getActiveTierLimitRef as getActiveTierLimitAccessor,
+  getActiveSpawnSpeedMultiplierRef as getActiveSpawnSpeedMultiplierAccessor,
   getEnemyRandom,
   getLootRandom,
   getNgPlusState,
@@ -395,6 +396,7 @@ function getSaunaStrongholdExclusionZone(): StrongholdSpawnExclusionZone | null 
 let getTierContextRef: () => SaunaTierContext = getTierContextRefAccessor();
 let getActiveTierIdRef: () => SaunaTierId = getActiveTierIdAccessor();
 let getActiveTierLimitRef: () => number = getActiveTierLimitAccessor();
+let getActiveSpawnSpeedMultiplierRef: () => number = getActiveSpawnSpeedMultiplierAccessor();
 let updateRosterCapRef: (value: number, options?: { persist?: boolean }) => number =
   getUpdateRosterCapAccessor();
 let resolveSpawnLimitRef: () => number = getResolveSpawnLimitAccessor();
@@ -1356,6 +1358,7 @@ sauna = saunaLifecycle.sauna;
 getTierContextRef = getTierContextRefAccessor();
 getActiveTierIdRef = getActiveTierIdAccessor();
 getActiveTierLimitRef = getActiveTierLimitAccessor();
+getActiveSpawnSpeedMultiplierRef = getActiveSpawnSpeedMultiplierAccessor();
 updateRosterCapRef = getUpdateRosterCapAccessor();
 resolveSpawnLimitRef = getResolveSpawnLimitAccessor();
 setActiveTierRef = getSetActiveTierAccessor();
@@ -1554,7 +1557,8 @@ const clock = new GameClock(1000, (deltaMs) => {
     maxSpawns: resolveSpawnLimitRef(),
     rosterCap,
     getRosterCount: getActiveRosterCount,
-    tierHelpers: spawnTierQueue
+    tierHelpers: spawnTierQueue,
+    spawnSpeedMultiplier: getActiveSpawnSpeedMultiplierRef()
   });
   const runtimeModifiers: EnemySpawnerRuntimeModifiers = {
     aggressionMultiplier: rampModifiers.aggression,

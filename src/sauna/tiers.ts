@@ -1,10 +1,18 @@
 import rosterBadgeUrl from '../../assets/ui/saunoja-roster.svg';
 import saunaBeerUrl from '../../assets/ui/sauna-beer.svg';
 import resourceBadgeUrl from '../../assets/ui/resource.svg';
+import soundBadgeUrl from '../../assets/ui/sound.svg';
+import cadenceBadgeUrl from '../../assets/ui/hud-scaling.svg';
 
 const integerFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
-export type SaunaTierId = 'ember-circuit' | 'aurora-ward' | 'mythic-conclave';
+export type SaunaTierId =
+  | 'ember-circuit'
+  | 'aurora-ward'
+  | 'glacial-rhythm'
+  | 'mythic-conclave'
+  | 'solstice-cadence'
+  | 'celestial-reserve';
 
 export interface SaunaTierArt {
   /** Inline badge art for the tier chip. */
@@ -24,8 +32,8 @@ export interface SaunaTier {
   description: string;
   art: SaunaTierArt;
   unlock: SaunaTierUnlock;
-  /** Hex radius revealed around the sauna when this tier is active. */
-  visionRange: number;
+  /** Multiplier applied to the attendant spawn cadence. */
+  spawnSpeedMultiplier?: number;
 }
 
 export interface SaunaTierContext {
@@ -53,60 +61,160 @@ const DEFAULT_UNLOCK_LABELS: Record<SaunaTierUnlock['type'], string> = {
   artocoin: 'Invest artocoins'
 };
 
+function sanitizeSpawnSpeedMultiplier(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) {
+    return 1;
+  }
+  const multiplier = Number(value);
+  return multiplier > 0 ? multiplier : 1;
+}
+
+function formatSpawnSpeedLabel(multiplier: number | null | undefined): string | null {
+  const sanitized = sanitizeSpawnSpeedMultiplier(multiplier);
+  if (Math.abs(sanitized - 1) < 1e-6) {
+    return null;
+  }
+  const percent = Math.round((sanitized - 1) * 100);
+  if (percent === 0) {
+    return 'Spawn cadence stabilized';
+  }
+  return percent > 0 ? `Spawn speed +${percent}%` : `Spawn speed ${percent}%`;
+}
+
 export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
   {
     id: 'ember-circuit',
-    name: 'Primitive Smoke Sauna',
+    name: 'Ember Circuit Sauna',
     rosterCap: 3,
     description:
-      'Soot-softened benches inside the Primitive Smoke Sauna shelter a loyal trio of attendants.',
+      'Charcoal-warmed benches and ember-glow lanterns cradle a trio of loyal guardians awaiting battle.',
     art: {
       badge: rosterBadgeUrl,
       glow: 'linear-gradient(145deg, rgba(255,161,76,0.65), rgba(255,226,173,0.18))'
     },
-    visionRange: 4,
     unlock: {
       type: 'default',
-      label: 'Included with the Primitive Smoke Sauna key'
-    }
+      label: 'Included with the Ember Circuit sauna key'
+    },
+    spawnSpeedMultiplier: 1
   },
   {
     id: 'aurora-ward',
-    name: 'Modern Wooden Sauna',
+    name: 'Aurora Ward Gallery',
     rosterCap: 4,
     description:
-      'Polished timber and copper buckets in the Modern Wooden Sauna rally a quartet ready for sieges.',
+      'Prismatic timberwork expands the benches, inviting a fourth attendant to stand guard beneath auroral light.',
     art: {
-      badge: saunaBeerUrl,
+      badge: rosterBadgeUrl,
       glow: 'linear-gradient(140deg, rgba(128,208,255,0.7), rgba(61,184,255,0.2))'
     },
-    visionRange: 10,
     unlock: {
       type: 'artocoin',
-      cost: 60,
-      label: 'Commission the Modern Wooden Sauna for 60 artocoins'
-    }
+      cost: 70,
+      label: 'Expand into the Aurora Ward for 70 artocoins'
+    },
+    spawnSpeedMultiplier: 1
+  },
+  {
+    id: 'glacial-rhythm',
+    name: 'Glacial Rhythm Retreat',
+    rosterCap: 4,
+    description:
+      'Crystalline steam vents pulse in measured waves, accelerating attendant call-ups without crowding the benches.',
+    art: {
+      badge: saunaBeerUrl,
+      glow: 'linear-gradient(135deg, rgba(120,215,255,0.65), rgba(167,255,238,0.18))'
+    },
+    unlock: {
+      type: 'artocoin',
+      cost: 110,
+      label: 'Tune the Glacial Rhythm for 110 artocoins'
+    },
+    spawnSpeedMultiplier: 1.15
   },
   {
     id: 'mythic-conclave',
-    name: 'Futuristic Fission Sauna',
-    rosterCap: 6,
+    name: 'Mythic Conclave Vault',
+    rosterCap: 5,
     description:
-      'Iridescent shielding and fission-driven löyly crown the Futuristic Fission Sauna with six guardians.',
+      'Runic latticework folds the vault wider, granting a fifth sentinel to watch the sauna’s shimmering core.',
     art: {
       badge: resourceBadgeUrl,
       glow: 'linear-gradient(135deg, rgba(176,106,255,0.72), rgba(245,199,255,0.2))'
     },
-    visionRange: 20,
     unlock: {
       type: 'artocoin',
-      cost: 130,
-      label: 'Fund the Futuristic Fission Sauna with 130 artocoins'
-    }
+      cost: 160,
+      label: 'Endow the Mythic Conclave for 160 artocoins'
+    },
+    spawnSpeedMultiplier: 1.15
+  },
+  {
+    id: 'solstice-cadence',
+    name: 'Solstice Cadence Atelier',
+    rosterCap: 5,
+    description:
+      'Sunstone gongs and mirrored vents quicken the spawn cadence, ushering reinforcements with blazing tempo.',
+    art: {
+      badge: soundBadgeUrl,
+      glow: 'linear-gradient(135deg, rgba(255,209,112,0.72), rgba(255,130,96,0.18))'
+    },
+    unlock: {
+      type: 'artocoin',
+      cost: 210,
+      label: 'Score the Solstice Cadence for 210 artocoins'
+    },
+    spawnSpeedMultiplier: 1.3
+  },
+  {
+    id: 'celestial-reserve',
+    name: 'Celestial Reserve Sanctum',
+    rosterCap: 6,
+    description:
+      'Starlit balustrades unfurl a sixth berth while chronothermic conduits keep the accelerated muster steady.',
+    art: {
+      badge: cadenceBadgeUrl,
+      glow: 'linear-gradient(135deg, rgba(222,199,255,0.76), rgba(152,209,255,0.22))'
+    },
+    unlock: {
+      type: 'artocoin',
+      cost: 280,
+      label: 'Crown the Celestial Reserve for 280 artocoins'
+    },
+    spawnSpeedMultiplier: 1.3
   }
 ] satisfies readonly SaunaTier[]);
 
 export const DEFAULT_SAUNA_TIER_ID: SaunaTierId = SAUNA_TIERS[0]!.id;
+
+const TIER_PERK_LABELS: ReadonlyMap<SaunaTierId, string> = (() => {
+  const entries: [SaunaTierId, string][] = [];
+  let previousRosterCap = 0;
+  let previousSpeed = 1;
+  for (const tier of SAUNA_TIERS) {
+    const rosterCap = Math.max(0, Math.floor(Number.isFinite(tier.rosterCap) ? tier.rosterCap : 0));
+    const speed = sanitizeSpawnSpeedMultiplier(tier.spawnSpeedMultiplier);
+    let perk: string | null = null;
+    if (rosterCap > previousRosterCap) {
+      perk = `Roster cap ${rosterCap}`;
+    }
+    const speedLabel = formatSpawnSpeedLabel(speed);
+    if (!perk && speed > previousSpeed + 1e-6 && speedLabel) {
+      perk = speedLabel;
+    }
+    if (!perk) {
+      perk = speedLabel ?? `Roster cap ${rosterCap}`;
+    }
+    entries.push([tier.id, perk]);
+    previousRosterCap = rosterCap;
+    previousSpeed = speed;
+  }
+  return new Map(entries);
+})();
+
+function getTierPerkLabel(tier: SaunaTier): string {
+  return TIER_PERK_LABELS.get(tier.id) ?? `Roster cap ${tier.rosterCap}`;
+}
 
 const TIERS_BY_ID = new Map<SaunaTierId, SaunaTier>(SAUNA_TIERS.map((tier) => [tier.id, tier]));
 
@@ -185,17 +293,19 @@ export function evaluateSaunaTier(
     const deficit = Math.max(0, cost - balance);
     const formattedCost = integerFormatter.format(cost);
     const shortfall = deficit > 0 ? integerFormatter.format(deficit) : null;
+    const perkLabel = getTierPerkLabel(tier);
     let requirementLabel: string;
     if (owned) {
-      requirementLabel = `Roster cap ${tier.rosterCap}`;
+      requirementLabel = perkLabel;
     } else {
       const baseLabel = tier.unlock.label ?? `Invest ${formattedCost} artocoins`;
+      const augmentedLabel = perkLabel ? `${baseLabel} (${perkLabel})` : baseLabel;
       if (shortfall) {
-        requirementLabel = `${baseLabel} — Need ${shortfall} more`;
+        requirementLabel = `${augmentedLabel} — Need ${shortfall} more`;
       } else if (cost > 0) {
-        requirementLabel = `${baseLabel} — Ready to unlock`;
+        requirementLabel = `${augmentedLabel} — Ready to unlock`;
       } else {
-        requirementLabel = baseLabel;
+        requirementLabel = augmentedLabel;
       }
     }
 

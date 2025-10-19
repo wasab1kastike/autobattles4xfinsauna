@@ -267,9 +267,7 @@ export function setupSaunaUI(
       entry.progressLabel.textContent = status.unlocked
         ? 'Unlocked'
         : `${progressPercent}% ready`;
-      entry.requirement.textContent = status.unlocked
-        ? `Roster cap ${entry.tier.rosterCap}`
-        : status.requirementLabel;
+      entry.requirement.textContent = status.requirementLabel;
       entry.button.dataset.state = status.unlocked
         ? entry.tier.id === activeId
           ? 'active'

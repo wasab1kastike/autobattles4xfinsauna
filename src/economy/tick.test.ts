@@ -255,6 +255,7 @@ describe('runEconomyTick', () => {
       rosterCap: 2,
       description: 'test tier',
       art: { badge: 'badge.svg' },
+      spawnSpeedMultiplier: 1,
       unlock: { type: 'default', label: 'Always ready' }
     } as const;
 
@@ -318,5 +319,31 @@ describe('runEconomyTick', () => {
     expect(second.spawn.spawned).toBe(1);
     expect(tierHelpers.hasQueuedSpawn()).toBe(false);
     expect(units).toHaveLength(1);
+  });
+
+  it('accelerates spawn preparation when a cadence bonus is supplied', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 100);
+    const sauna = createSauna(
+      { q: 0, r: 0 },
+      { baseThreshold: 20, heatPerSecond: 4, initialHeat: 0 }
+    );
+
+    const result = runEconomyTick({
+      dt: 1,
+      state,
+      sauna,
+      heat: sauna.heatTracker,
+      units: [],
+      getUnitUpkeep: () => 0,
+      pickSpawnTile: () => null,
+      spawnBaseUnit: () => null,
+      spawnSpeedMultiplier: 1.5
+    });
+
+    expect(result.addedHeat).toBeGreaterThan(0);
+    expect(sauna.spawnSpeedMultiplier).toBeCloseTo(1.5, 5);
+    expect(sauna.heatPerTick).toBeCloseTo(6, 5);
+    expect(sauna.playerSpawnCooldown).toBeCloseTo(20 / 4 / 1.5, 5);
   });
 });

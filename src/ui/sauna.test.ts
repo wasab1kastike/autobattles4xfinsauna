@@ -125,6 +125,7 @@ describe('setupSaunaUI', () => {
     const ownedTierIds = new Set<SaunaTierId>([
       'ember-circuit',
       'aurora-ward',
+      'glacial-rhythm',
       'mythic-conclave'
     ]);
     const controller = setupSaunaUI(sauna, {

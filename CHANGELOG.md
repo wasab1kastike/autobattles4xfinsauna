@@ -1238,3 +1238,6 @@
   invalidations to prevent exploration hitches, subtract the camera origin when
   drawing cached canvases, and refresh the render/fog Vitest coverage to lock
   in the math.
+- Replace sauna vision perks with an expanded tier ladder that alternates roster
+  cap unlocks and spawn-speed boosts, complete with refreshed art, copy, and
+  UI requirement messaging for the new cadence bonuses.
