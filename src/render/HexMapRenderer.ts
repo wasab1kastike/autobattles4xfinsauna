@@ -70,10 +70,10 @@ export class HexMapRenderer {
     const origin = this.getOrigin();
     this.syncChunkTracking(origin);
     this.populateVisibleChunks(chunkRange);
-    const chunks = this.terrainCache.getRenderableChunks(chunkRange, this.hexSize, images, origin);
-    this.drawChunks(ctx, chunks);
-    const fogChunks = this.fogCache.getRenderableChunks(chunkRange, this.hexSize, camera.zoom, origin);
-    this.drawFogChunks(ctx, fogChunks);
+    const chunks = this.terrainCache.getRenderableChunks(chunkRange, this.hexSize, images);
+    this.drawChunks(ctx, chunks, origin);
+    const fogChunks = this.fogCache.getRenderableChunks(chunkRange, this.hexSize, camera.zoom);
+    this.drawFogChunks(ctx, fogChunks, origin);
 
     if (selected) {
       this.drawSelection(ctx, origin, selected);
@@ -147,23 +147,27 @@ export class HexMapRenderer {
     this.lastOrigin = null;
   }
 
-  private drawChunks(ctx: CanvasRenderingContext2D, chunks: ChunkCanvas[]): void {
+  private drawChunks(ctx: CanvasRenderingContext2D, chunks: ChunkCanvas[], origin: PixelCoord): void {
     if (chunks.length === 0) {
       return;
     }
 
     for (const chunk of chunks) {
-      ctx.drawImage(chunk.canvas, chunk.origin.x, chunk.origin.y);
+      ctx.drawImage(chunk.canvas, chunk.origin.x - origin.x, chunk.origin.y - origin.y);
     }
   }
 
-  private drawFogChunks(ctx: CanvasRenderingContext2D, chunks: FogChunkCanvas[]): void {
+  private drawFogChunks(
+    ctx: CanvasRenderingContext2D,
+    chunks: FogChunkCanvas[],
+    origin: PixelCoord
+  ): void {
     if (chunks.length === 0) {
       return;
     }
 
     for (const chunk of chunks) {
-      ctx.drawImage(chunk.canvas, chunk.origin.x, chunk.origin.y);
+      ctx.drawImage(chunk.canvas, chunk.origin.x - origin.x, chunk.origin.y - origin.y);
     }
   }
 

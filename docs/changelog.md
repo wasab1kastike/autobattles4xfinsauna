@@ -6,6 +6,11 @@
   damage boost and 40% splash damage within a two-hex radius, with persistence
   across save/load, HUD copy, and new combat tests.
 
+- Align terrain and fog chunk caches to world coordinates, eliminating
+  origin-change invalidations so exploration stays smooth, subtracting the
+  camera origin during draw calls, and updating Vitest coverage to confirm the
+  math.
+
 - Empower promoted tanks with a 50% damage-taken multiplier, battlefield taunt
   aura, polished HUD/tooltips, and accompanying combat/AI tests to ensure the
   mitigation persists through save/load cycles.

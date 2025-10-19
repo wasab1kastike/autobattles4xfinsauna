@@ -162,7 +162,6 @@ export class TerrainCache {
   private readonly iconSubscriptions = new Map<string, () => void>();
   private readonly readyIconPaths = new Set<string>();
   private readonly unsubscribe: () => void;
-  private lastOrigin?: PixelCoord;
   private lastBounds?: { minQ: number; maxQ: number; minR: number; maxR: number };
 
   constructor(private readonly map: HexMap) {
@@ -177,7 +176,6 @@ export class TerrainCache {
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
-    this.lastOrigin = undefined;
     this.lastBounds = undefined;
   }
 
@@ -186,7 +184,6 @@ export class TerrainCache {
     this.dirtyChunks.clear();
     this.cachedImages = undefined;
     this.clearIconTracking();
-    this.lastOrigin = undefined;
     this.lastBounds = undefined;
   }
 
@@ -207,8 +204,7 @@ export class TerrainCache {
   getRenderableChunks(
     range: ChunkRange,
     hexSize: number,
-    images: LoadedAssets['images'],
-    origin: PixelCoord
+    images: LoadedAssets['images']
   ): ChunkCanvas[] {
     const currentBounds = {
       minQ: this.map.minQ,
@@ -228,21 +224,13 @@ export class TerrainCache {
       this.lastBounds = { ...currentBounds };
     }
 
-    if (
-      !this.lastOrigin ||
-      this.lastOrigin.x !== origin.x ||
-      this.lastOrigin.y !== origin.y
-    ) {
-      this.markAllChunksDirty();
-      this.lastOrigin = { ...origin };
-    }
     this.refreshAssets(images);
     const renderable: ChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);
 
     for (const chunkCoord of enumerateChunks(range)) {
       const key = chunkKeyFromCoord(chunkCoord);
-      const chunkCanvas = this.ensureChunk(key, chunkCoord, hexSize, hexWidth, hexHeight, images, origin);
+      const chunkCanvas = this.ensureChunk(key, chunkCoord, hexSize, hexWidth, hexHeight, images);
       if (chunkCanvas) {
         renderable.push(chunkCanvas);
       }
@@ -272,12 +260,11 @@ export class TerrainCache {
     hexSize: number,
     hexWidth: number,
     hexHeight: number,
-    images: LoadedAssets['images'],
-    origin: PixelCoord
+    images: LoadedAssets['images']
   ): ChunkCanvas | null {
     const existing = this.chunkCanvases.get(key);
     if (!existing || this.dirtyChunks.has(key)) {
-      const updated = this.renderChunk(key, chunkCoord, hexSize, hexWidth, hexHeight, images, origin, existing);
+      const updated = this.renderChunk(key, chunkCoord, hexSize, hexWidth, hexHeight, images, existing);
       this.dirtyChunks.delete(key);
       if (!updated) {
         this.chunkCanvases.delete(key);
@@ -298,7 +285,6 @@ export class TerrainCache {
     hexWidth: number,
     hexHeight: number,
     images: LoadedAssets['images'],
-    origin: PixelCoord,
     existing?: ChunkCanvas
   ): ChunkCanvas | null {
     if (typeof document === 'undefined') {
@@ -333,8 +319,8 @@ export class TerrainCache {
         }
 
         const { x, y } = axialToPixel({ q, r }, hexSize);
-        const drawX = x - origin.x - halfHexWidth;
-        const drawY = y - origin.y - halfHexHeight;
+        const drawX = x - halfHexWidth;
+        const drawY = y - halfHexHeight;
         minX = Math.min(minX, drawX);
         minY = Math.min(minY, drawY);
         maxX = Math.max(maxX, drawX + hexWidth);

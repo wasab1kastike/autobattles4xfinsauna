@@ -68,27 +68,26 @@ describe('TerrainCache', () => {
       const cache = new TerrainCache(map);
       const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
       ensureChunksPopulated(map, range);
-      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
       const images = {
         'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
         'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
         placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
       };
 
-      cache.getRenderableChunks(range, map.hexSize, images, origin);
+      cache.getRenderableChunks(range, map.hexSize, images);
       const initialCalls = offscreenDrawImage.mock.calls.length;
       expect(initialCalls).toBeGreaterThan(0);
 
       offscreenDrawImage.mockClear();
       tile.placeBuilding('barracks');
-      cache.getRenderableChunks(range, map.hexSize, images, origin);
+      cache.getRenderableChunks(range, map.hexSize, images);
       expect(offscreenDrawImage).toHaveBeenCalled();
     } finally {
       createElementSpy.mockRestore();
     }
   });
 
-  it('re-renders chunks when the map origin shifts after expanding bounds', () => {
+  it('exposes world-aligned chunk origins and keeps cached tiles when the map origin shifts', () => {
     const map = new HexMap(2, 2);
     const tile = map.ensureTile(0, 0);
     tile.reveal();
@@ -117,42 +116,40 @@ describe('TerrainCache', () => {
       const cache = new TerrainCache(map);
       const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
       ensureChunksPopulated(map, range);
-      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
       const images = {
         'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
         'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
         placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
       };
 
-      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images);
       expect(initialChunks).toHaveLength(1);
       const initialChunk = initialChunks.find((chunk) => chunk.key === '0,0');
       expect(initialChunk).toBeDefined();
 
-      const { width: hexWidth } = getHexDimensions(map.hexSize);
+      const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
       const centerPixel = axialToPixel({ q: 0, r: 0 }, map.hexSize);
-      const expectedInitialX = centerPixel.x - origin.x - hexWidth / 2;
+      const expectedInitialX = centerPixel.x - hexWidth / 2;
       expect(initialChunk!.origin.x).toBeCloseTo(expectedInitialX, 5);
+      const expectedInitialY = centerPixel.y - hexHeight / 2;
+      expect(initialChunk!.origin.y).toBeCloseTo(expectedInitialY, 5);
 
       const newTile = map.ensureTile(-1, 0);
       newTile.reveal();
-      const shiftedOrigin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
 
-      const rerenderedChunks = cache.getRenderableChunks(range, map.hexSize, images, shiftedOrigin);
+      const rerenderedChunks = cache.getRenderableChunks(range, map.hexSize, images);
       expect(rerenderedChunks).toHaveLength(1);
       const rerenderedChunk = rerenderedChunks.find((chunk) => chunk.key === '0,0');
       expect(rerenderedChunk).toBeDefined();
       expect(rerenderedChunk).not.toBe(initialChunk);
-
-      const expectedShiftedX = centerPixel.x - shiftedOrigin.x - hexWidth / 2;
-      expect(rerenderedChunk!.origin.x).toBeCloseTo(expectedShiftedX, 5);
-      expect(rerenderedChunk!.origin.x).not.toBeCloseTo(initialChunk!.origin.x, 5);
+      expect(rerenderedChunk!.origin.x).toBeCloseTo(expectedInitialX, 5);
+      expect(rerenderedChunk!.origin.y).toBeCloseTo(expectedInitialY, 5);
     } finally {
       createElementSpy.mockRestore();
     }
   });
 
-  it('recomputes cached chunk offsets when the map expands into negative axial coordinates', () => {
+  it('computes world-aligned chunk origins for negative axial coordinates', () => {
     const map = new HexMap(2, 2);
     const originTile = map.ensureTile(0, 0);
     originTile.reveal();
@@ -181,35 +178,34 @@ describe('TerrainCache', () => {
       const cache = new TerrainCache(map);
       const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
       ensureChunksPopulated(map, range);
-      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
       const images = {
         'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
         'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
         placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
       };
 
-      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      const initialChunks = cache.getRenderableChunks(range, map.hexSize, images);
       const initialChunk = initialChunks.find((chunk) => chunk.key === '0,0');
       expect(initialChunk).toBeDefined();
 
       const { width: hexWidth, height: hexHeight } = getHexDimensions(map.hexSize);
       const centerPixel = axialToPixel({ q: 0, r: 0 }, map.hexSize);
-      expect(initialChunk!.origin.x).toBeCloseTo(centerPixel.x - origin.x - hexWidth / 2, 5);
-      expect(initialChunk!.origin.y).toBeCloseTo(centerPixel.y - origin.y - hexHeight / 2, 5);
+      expect(initialChunk!.origin.x).toBeCloseTo(centerPixel.x - hexWidth / 2, 5);
+      expect(initialChunk!.origin.y).toBeCloseTo(centerPixel.y - hexHeight / 2, 5);
 
       const diagonalTile = map.ensureTile(-1, -1);
       diagonalTile.reveal();
-      const shiftedOrigin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
 
-      const rerenderedChunks = cache.getRenderableChunks(range, map.hexSize, images, shiftedOrigin);
-      const rerenderedChunk = rerenderedChunks.find((chunk) => chunk.key === '0,0');
-      expect(rerenderedChunk).toBeDefined();
-      expect(rerenderedChunk).not.toBe(initialChunk);
-
-      expect(rerenderedChunk!.origin.x).toBeCloseTo(centerPixel.x - shiftedOrigin.x - hexWidth / 2, 5);
-      expect(rerenderedChunk!.origin.y).toBeCloseTo(centerPixel.y - shiftedOrigin.y - hexHeight / 2, 5);
-      expect(rerenderedChunk!.origin.x).not.toBeCloseTo(initialChunk!.origin.x, 5);
-      expect(rerenderedChunk!.origin.y).not.toBeCloseTo(initialChunk!.origin.y, 5);
+      const extendedRange = { qMin: -1, qMax: 0, rMin: -1, rMax: 0 };
+      ensureChunksPopulated(map, extendedRange);
+      const rerenderedChunks = cache.getRenderableChunks(extendedRange, map.hexSize, images);
+      const negativeChunk = rerenderedChunks.find((chunk) => chunk.key === '-1,-1');
+      expect(negativeChunk).toBeDefined();
+      if (negativeChunk) {
+        const negativeCenter = axialToPixel({ q: -1, r: -1 }, map.hexSize);
+        expect(negativeChunk.origin.x).toBeCloseTo(negativeCenter.x - hexWidth / 2, 5);
+        expect(negativeChunk.origin.y).toBeCloseTo(negativeCenter.y - hexHeight / 2, 5);
+      }
     } finally {
       createElementSpy.mockRestore();
     }
@@ -251,14 +247,13 @@ describe('TerrainCache', () => {
       cache = new TerrainCache(map);
       const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
       ensureChunksPopulated(map, range);
-      const origin = axialToPixel({ q: map.minQ, r: map.minR }, map.hexSize);
       const images = {
         'building-farm': originalCreateElement.call(document, 'img') as HTMLImageElement,
         'building-barracks': originalCreateElement.call(document, 'img') as HTMLImageElement,
         placeholder: originalCreateElement.call(document, 'img') as HTMLImageElement,
       };
 
-      const chunks = cache.getRenderableChunks(range, map.hexSize, images, origin);
+      const chunks = cache.getRenderableChunks(range, map.hexSize, images);
       expect(chunks).toHaveLength(1);
 
       const chunkKey = chunks[0]!.key;
