@@ -3,6 +3,9 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Retune the leveling curve so the first promotion triggers after 40 XP, keep
+  the cap at 5,500 XP, and sync the progression docs and Vitest coverage with
+  the updated thresholds.
 - Promote wizards with the Arcane Nova specialization, granting +10% damage
   output and 40% splash damage within a two-hex radius while keeping the effect
   persistent through saves, combat resolution, and automated coverage.

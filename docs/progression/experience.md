@@ -24,18 +24,18 @@ The curve targets a smooth start, a motivating mid-run ramp, and a decisive fini
 
 | Level | XP to Next | Cumulative XP | Key Beat |
 | --- | --- | --- | --- |
-| 1 | 180 | 0 | Baseline kit.
-| 2 | 220 | 180 | Introduce passive trait picker.
-| 3 | 260 | 400 | Unlock minor sauna buff slot.
-| 4 | 320 | 660 | First talent reroll.
-| 5 | 380 | 980 | Equip slot upgrade cinematic.
-| 6 | 460 | 1,360 | Mid-run toast + elite callout.
-| 7 | 540 | 1,820 | Second sauna slot, announce late-wave elites.
-| 8 | 640 | 2,360 | Stat spike preview bar animation.
-| 9 | 760 | 3,000 | Boss intro overlay.
-| 10 | 900 | 3,760 | Ultimate ability refresher.
-| 11 | 1,060 | 4,660 | Final talent roll + audio sting.
-| 12 | — | 5,720 | End-run mastery banner.
+| 1 | 40 | 0 | Baseline kit.
+| 2 | 212 | 40 | Introduce passive trait picker.
+| 3 | 252 | 252 | Unlock minor sauna buff slot.
+| 4 | 312 | 504 | First talent reroll.
+| 5 | 372 | 816 | Equip slot upgrade cinematic.
+| 6 | 452 | 1,188 | Mid-run toast + elite callout.
+| 7 | 532 | 1,640 | Second sauna slot, announce late-wave elites.
+| 8 | 632 | 2,172 | Stat spike preview bar animation.
+| 9 | 752 | 2,804 | Boss intro overlay.
+| 10 | 892 | 3,556 | Ultimate ability refresher.
+| 11 | 1,052 | 4,448 | Final talent roll + audio sting.
+| 12 | — | 5,500 | End-run mastery banner.
 
 Players who fall slightly behind can recover with objectives or perfect waves; overachievers simply hit the stat cap earlier without breaking the run length.
 
