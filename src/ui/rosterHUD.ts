@@ -51,6 +51,8 @@ export type RosterCardViewModel = {
   progression: RosterProgression;
   behavior: UnitBehavior;
   klass?: SaunojaClass | null;
+  damageTakenMultiplier?: number;
+  tauntActive?: boolean;
 };
 
 export type RosterHudSummary = {
@@ -393,6 +395,10 @@ export function setupRosterHUD(
   const rosterCardTraits = document.createElement('p');
   rosterCardTraits.classList.add('saunoja-card__traits');
 
+  const rosterCardPerks = document.createElement('p');
+  rosterCardPerks.classList.add('saunoja-card__perks');
+  rosterCardPerks.hidden = true;
+
   const rosterCardStats = document.createElement('div');
   rosterCardStats.classList.add('saunoja-card__callouts');
   rosterCardStats.textContent = 'No level bonuses yet';
@@ -405,6 +411,7 @@ export function setupRosterHUD(
     rosterCardBehavior,
     rosterCardPromotion,
     rosterCardTraits,
+    rosterCardPerks,
     rosterCardStats,
     rosterCardUpkeep
   );
@@ -513,6 +520,9 @@ export function setupRosterHUD(
     if (!card) {
       delete rosterCard.dataset.unitId;
       setExpanded(false);
+      rosterCardPerks.hidden = true;
+      rosterCardPerks.textContent = '';
+      rosterCardPerks.title = '';
       return;
     }
 
@@ -556,6 +566,26 @@ export function setupRosterHUD(
     const bonusLabel = formatStatBonuses(card.progression.statBonuses);
     rosterCardStats.textContent = bonusLabel;
     rosterCardStats.title = bonusLabel;
+
+    if (resolvedClass === 'tank') {
+      const mitigationSource =
+        typeof card.damageTakenMultiplier === 'number' && Number.isFinite(card.damageTakenMultiplier)
+          ? card.damageTakenMultiplier
+          : 0.5;
+      const mitigationPercent = Math.round((1 - mitigationSource) * 100);
+      const mitigationLabel =
+        mitigationPercent >= 0
+          ? `${Math.max(0, mitigationPercent)}% damage reduction`
+          : `${Math.abs(mitigationPercent)}% vulnerability`;
+      const tauntLabel = card.tauntActive ? 'Taunt engaged' : 'Taunt ready';
+      rosterCardPerks.hidden = false;
+      rosterCardPerks.textContent = `Aegis Ward • ${mitigationLabel} • ${tauntLabel}`;
+      rosterCardPerks.title = rosterCardPerks.textContent;
+    } else {
+      rosterCardPerks.hidden = true;
+      rosterCardPerks.textContent = '';
+      rosterCardPerks.title = '';
+    }
 
     const behaviorLabel = behaviorLabels[card.behavior] ?? card.behavior;
     rosterCardBehaviorValue.textContent = behaviorLabel;
@@ -653,7 +683,9 @@ export function setupRosterHUD(
       stats.shield ?? 0,
       traitSig,
       itemSig,
-      modifierSig
+      modifierSig,
+      entry.damageTakenMultiplier ?? '',
+      entry.tauntActive ? 1 : 0
     ].join('~');
   }
 

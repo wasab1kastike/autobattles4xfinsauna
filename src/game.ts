@@ -25,6 +25,7 @@ import type {
   SelectionStatusChip,
   UnitSelectionPayload
 } from './ui/fx/types.ts';
+import type { UnitTauntChangedPayload } from './events/types.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
@@ -234,6 +235,8 @@ const XP_OBJECTIVE_COMPLETION = 200;
 const MAX_LEVEL = getLevelForExperience(Number.MAX_SAFE_INTEGER);
 const SAUNOJA_PROMOTION_LEVEL = 12;
 const SAUNAKUNNIA_PROMOTION_COST = 150;
+const TANK_DAMAGE_TAKEN_MULTIPLIER = 0.5;
+const TANK_TAUNT_RADIUS = 5;
 
 const RESOURCE_LABELS: Record<Resource, string> = {
   [Resource.SAUNA_BEER]: 'Sauna Beer',
@@ -608,6 +611,13 @@ function deriveUnitAttackProfile(loadout: readonly EquippedItem[]): string | nul
   return fallback;
 }
 
+function resolveDamageTakenMultiplier(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(0, value);
+}
+
 function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void {
   attendant.effectiveStats = { ...stats };
   attendant.maxHp = Math.max(1, Math.round(stats.health));
@@ -615,11 +625,26 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
   attendant.defense = typeof stats.defense === 'number' ? Math.max(0, stats.defense) : undefined;
   attendant.shield = typeof stats.shield === 'number' ? Math.max(0, stats.shield) : 0;
 
+  const isTank = attendant.klass === 'tank';
+  const normalizedTaunt = Boolean(attendant.tauntActive && isTank);
+  attendant.tauntActive = normalizedTaunt;
+  let tankMitigation: number | undefined;
+  if (isTank) {
+    tankMitigation = resolveDamageTakenMultiplier(
+      attendant.damageTakenMultiplier,
+      TANK_DAMAGE_TAKEN_MULTIPLIER
+    );
+    attendant.damageTakenMultiplier = tankMitigation;
+  } else {
+    attendant.damageTakenMultiplier = undefined;
+  }
+
   const loadout = loadoutItems(attendant.equipment);
   const attackProfile = deriveUnitAttackProfile(loadout);
   const unit = getAttachedUnitFor(attendant);
   if (unit) {
     const isRogue = attendant.klass === 'rogue';
+    const isTank = attendant.klass === 'tank';
     applySaunojaBehaviorPreference(attendant, attendant.behavior, unit);
     const nextStats: UnitStats = {
       health: attendant.effectiveStats.health,
@@ -636,8 +661,18 @@ function applyEffectiveStats(attendant: Saunoja, stats: SaunojaStatBlock): void 
     if (isRogue) {
       nextStats.damageDealtMultiplier = 1.25;
     }
+    if (isTank && tankMitigation !== undefined) {
+      nextStats.damageTakenMultiplier = tankMitigation;
+    }
     unit.updateStats(nextStats);
     unit.setRogueAmbush(isRogue ? { teleportRange: 5, burstMultiplier: 2 } : undefined);
+    if (isTank) {
+      unit.setTauntAura(TANK_TAUNT_RADIUS);
+      unit.setTauntActive(attendant.tauntActive);
+    } else {
+      unit.setTauntAura(0);
+      unit.setTauntActive(false);
+    }
     unit.setAttackProfile(attackProfile);
     if (typeof attendant.effectiveStats.shield === 'number') {
       unit.setShield(attendant.effectiveStats.shield);
@@ -786,6 +821,11 @@ function promoteSaunojaInternal(attendant: Saunoja, klass: SaunojaClass): boolea
   const attachedUnit = getAttachedUnitFor(attendant);
   attachedUnit?.setExperience(resetXp);
   attendant.klass = klass;
+  attendant.damageTakenMultiplier =
+    klass === 'tank' ? TANK_DAMAGE_TAKEN_MULTIPLIER : undefined;
+  attendant.tauntActive = false;
+
+  refreshSaunojaPolicyAdjustments(attendant);
 
   saveUnits();
   updateRosterDisplay();
@@ -2169,6 +2209,19 @@ const onUnitDied = ({
 };
 eventBus.on('unitSpawned', onUnitSpawned);
 eventBus.on('unitDied', onUnitDied);
+const onUnitTauntChanged = ({ unitId, active }: UnitTauntChangedPayload): void => {
+  const persona = unitToSaunoja.get(unitId);
+  if (!persona) {
+    return;
+  }
+  const nextActive = Boolean(active);
+  if (persona.tauntActive === nextActive) {
+    return;
+  }
+  persona.tauntActive = nextActive;
+  updateRosterDisplay();
+};
+eventBus.on('unit:tauntChanged', onUnitTauntChanged);
 
 export function cleanup(): void {
   requireGameController().cleanup();

@@ -20,6 +20,19 @@ export class Targeting {
       return null;
     }
 
+    const taunting = enemies.filter(
+      (enemy) =>
+        enemy.isTauntActive() &&
+        enemy.hasTauntAura() &&
+        unit.distanceTo(enemy.coord) <= enemy.getTauntAuraRadius()
+    );
+    if (taunting.length > 0) {
+      taunting.sort(
+        (a, b) => unit.distanceTo(a.coord) - unit.distanceTo(b.coord)
+      );
+      return taunting[0];
+    }
+
     const movementRange = Number.isFinite(unit.stats.movementRange)
       ? unit.stats.movementRange
       : 0;

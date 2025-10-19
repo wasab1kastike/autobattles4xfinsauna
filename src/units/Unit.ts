@@ -73,6 +73,8 @@ export class Unit {
   private appearanceId: string;
   private attackProfile: string | null = null;
   private rogueAmbush: RogueAmbushState | null = null;
+  private tauntAuraRadius = 0;
+  private tauntActive = false;
 
   public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
@@ -102,6 +104,12 @@ export class Unit {
       !Number.isFinite(this.stats.damageDealtMultiplier)
     ) {
       delete this.stats.damageDealtMultiplier;
+    }
+    if (
+      typeof this.stats.damageTakenMultiplier !== 'number' ||
+      !Number.isFinite(this.stats.damageTakenMultiplier)
+    ) {
+      delete this.stats.damageTakenMultiplier;
     }
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
     this.appearanceId = this.sanitizeAppearanceId(appearanceId);
@@ -216,6 +224,41 @@ export class Unit {
     if (this.rogueAmbush) {
       this.rogueAmbush.firstStrikeReady = true;
     }
+  }
+
+  hasTauntAura(): boolean {
+    return this.tauntAuraRadius > 0;
+  }
+
+  getTauntAuraRadius(): number {
+    return this.tauntAuraRadius;
+  }
+
+  setTauntAura(radius?: number | null): void {
+    const normalized = Number.isFinite(radius)
+      ? Math.max(0, Math.floor(radius as number))
+      : 0;
+    this.tauntAuraRadius = normalized;
+    if (normalized <= 0) {
+      this.setTauntActive(false);
+    }
+  }
+
+  isTauntActive(): boolean {
+    return this.tauntActive;
+  }
+
+  setTauntActive(active: boolean): void {
+    const next = this.tauntAuraRadius > 0 && Boolean(active);
+    if (this.tauntActive === next) {
+      return;
+    }
+    this.tauntActive = next;
+    eventBus.emit('unit:tauntChanged', {
+      unitId: this.id,
+      active: this.tauntActive,
+      radius: this.tauntAuraRadius
+    });
   }
 
   private sanitizeAppearanceId(candidate?: string): string {
@@ -434,6 +477,16 @@ export class Unit {
     } else {
       delete this.stats.damageDealtMultiplier;
     }
+    if (
+      typeof stats.damageTakenMultiplier === 'number' &&
+      Number.isFinite(stats.damageTakenMultiplier)
+    ) {
+      this.stats.damageTakenMultiplier = stats.damageTakenMultiplier;
+    } else if (stats.damageTakenMultiplier === 0) {
+      this.stats.damageTakenMultiplier = 0;
+    } else {
+      delete this.stats.damageTakenMultiplier;
+    }
     const newMax = Math.max(1, Math.round(stats.health));
     this.maxHealth = newMax;
     this.stats.health = Math.min(newMax, Math.max(0, this.stats.health));
@@ -480,7 +533,8 @@ export class Unit {
       shield: this.shield,
       hooks: this.combatHooks,
       keywords: this.combatKeywords,
-      damageDealtMultiplier: this.stats.damageDealtMultiplier
+      damageDealtMultiplier: this.stats.damageDealtMultiplier,
+      damageTakenMultiplier: this.stats.damageTakenMultiplier
     };
   }
 

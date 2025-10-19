@@ -39,6 +39,8 @@ describe('makeSaunoja', () => {
     expect(saunoja.effectiveStats.health).toBe(20);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
+    expect(saunoja.damageTakenMultiplier).toBeUndefined();
+    expect(saunoja.tauntActive).toBe(false);
   });
 
   it('falls back to safe defaults for invalid data', () => {
@@ -68,6 +70,8 @@ describe('makeSaunoja', () => {
     expect(saunoja.baseStats.health).toBe(1);
     expect(saunoja.equipment.weapon).toBeNull();
     expect(saunoja.appearanceId).toBe('saunoja');
+    expect(saunoja.damageTakenMultiplier).toBeUndefined();
+    expect(saunoja.tauntActive).toBe(false);
     randomSpy.mockRestore();
   });
 
@@ -81,6 +85,25 @@ describe('makeSaunoja', () => {
     expect(saunoja.upkeep).toBe(SAUNOJA_UPKEEP_MAX);
     expect(saunoja.xp).toBe(0);
     expect(SAUNOJA_APPEARANCES.has(saunoja.appearanceId)).toBe(true);
+    expect(saunoja.tauntActive).toBe(false);
+  });
+
+  it('sanitises mitigation and taunt state inputs', () => {
+    const tank = makeSaunoja({
+      id: 'tank',
+      damageTakenMultiplier: 0.45,
+      tauntActive: true
+    });
+    expect(tank.damageTakenMultiplier).toBeCloseTo(0.45, 5);
+    expect(tank.tauntActive).toBe(true);
+
+    const invalid = makeSaunoja({
+      id: 'invalid',
+      damageTakenMultiplier: 'nope' as unknown as number,
+      tauntActive: 'maybe' as unknown as boolean
+    });
+    expect(invalid.damageTakenMultiplier).toBeUndefined();
+    expect(invalid.tauntActive).toBe(false);
   });
 
   it('generates a flavorful name when none is provided', () => {
@@ -199,6 +222,19 @@ describe('applyDamage', () => {
     expect(saunoja.hp).toBe(3);
     expect(saunoja.lastHitAt).toBe(250);
     expect(nowSpy).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  it('applies damageTakenMultiplier when present', () => {
+    const saunoja = makeSaunoja({ id: 'mitigator', maxHp: 20, damageTakenMultiplier: 0.5 });
+    saunoja.hp = 20;
+    const nowSpy = vi.spyOn(performance, 'now');
+    nowSpy.mockReturnValue(321);
+
+    expect(applyDamage(saunoja, 10)).toBe(false);
+    expect(saunoja.hp).toBe(15);
+    expect(saunoja.lastHitAt).toBe(321);
 
     nowSpy.mockRestore();
   });

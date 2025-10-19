@@ -1920,6 +1920,14 @@ button {
   color: color-mix(in srgb, var(--color-muted) 70%, white 30%);
 }
 
+.saunoja-card__perks {
+  margin: 0;
+  font-size: clamp(12px, 1.5vw, 13px);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, #38bdf8 65%, white 35%);
+}
+
 .saunoja-card__callouts {
   margin: 0;
   font-size: clamp(12px, 1.5vw, 13px);

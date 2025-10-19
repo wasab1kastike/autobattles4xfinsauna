@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Promote Aegis Vanguard tanks with a 50% damage-taken multiplier, a responsive
+  taunt aura that redirects nearby enemies, persistent save support, polished
+  HUD copy, and new combat/AI regression coverage to lock in the behavior.
+
 - Empower rogues with a 25% attack boost, an ambush teleport that snaps them
   adjacent to nearby foes, and a one-time first-strike damage surge, covering
   the modifiers with fresh combat and scenario tests.

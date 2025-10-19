@@ -28,7 +28,8 @@ export function applyDamage(
       maxHealth: target.maxHp,
       shield: target.shield ?? 0,
       hooks: target.combatHooks ?? null,
-      keywords: target.combatKeywords ?? null
+      keywords: target.combatKeywords ?? null,
+      damageTakenMultiplier: target.damageTakenMultiplier
     },
     baseDamage: amount
   });

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Empower promoted tanks with a 50% damage-taken multiplier, battlefield taunt
+  aura, polished HUD/tooltips, and accompanying combat/AI tests to ensure the
+  mitigation persists through save/load cycles.
+
 - Introduce rogue ambush perks that grant a 25% damage bonus, a pre-attack
   teleport toward nearby enemies, and a one-time first-strike burst backed by
   new combat and scenario tests.

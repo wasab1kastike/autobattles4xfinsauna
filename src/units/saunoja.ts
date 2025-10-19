@@ -110,6 +110,10 @@ export interface Saunoja {
   combatHooks?: CombatHookMap | null;
   /** Optional promoted class that unlocks advanced perks. */
   klass?: SaunojaClass;
+  /** Optional incoming damage multiplier applied before shields. */
+  damageTakenMultiplier?: number;
+  /** Whether the Saunoja's taunt aura is actively drawing enemy attention. */
+  tauntActive: boolean;
 }
 
 export interface SaunojaInit {
@@ -137,6 +141,8 @@ export interface SaunojaInit {
   combatKeywords?: CombatKeywordRegistry | null;
   combatHooks?: CombatHookMap | null;
   klass?: unknown;
+  damageTakenMultiplier?: unknown;
+  tauntActive?: unknown;
 }
 
 const DEFAULT_COORD: AxialCoord = { q: 0, r: 0 };
@@ -194,6 +200,19 @@ function clamp(value: number, min: number, max: number): number {
 function resolveStatValue(source: unknown, fallback: number, min: number): number {
   const value = typeof source === 'number' && Number.isFinite(source) ? source : fallback;
   return Math.max(min, value);
+}
+
+function sanitizeDamageTakenMultiplier(source: unknown): number | undefined {
+  if (typeof source !== 'number' || !Number.isFinite(source)) {
+    return undefined;
+  }
+  if (source < 0) {
+    return 0;
+  }
+  if (source === 1) {
+    return undefined;
+  }
+  return source;
 }
 
 function resolveOptionalStat(
@@ -430,7 +449,9 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     combatHooks = null,
     appearanceId,
     appearanceRandom,
-    klass
+    klass,
+    damageTakenMultiplier,
+    tauntActive
   } = init;
 
   const normalizedMaxHp = Number.isFinite(maxHp) ? Math.max(1, maxHp) : DEFAULT_MAX_HP;
@@ -532,6 +553,8 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     typeof appearanceRandom === 'function' ? appearanceRandom : undefined;
   const resolvedAppearance = resolveSaunojaAppearance(appearanceId, appearanceSampler);
   const resolvedClass = sanitizeSaunojaClass(klass);
+  const resolvedDamageTakenMultiplier = sanitizeDamageTakenMultiplier(damageTakenMultiplier);
+  const resolvedTauntActive = typeof tauntActive === 'boolean' ? tauntActive : false;
 
   return {
     id,
@@ -556,6 +579,10 @@ export function makeSaunoja(init: SaunojaInit): Saunoja {
     modifiers: sanitizedModifiers,
     combatKeywords,
     combatHooks,
-    ...(resolvedClass ? { klass: resolvedClass } : {})
+    ...(resolvedClass ? { klass: resolvedClass } : {}),
+    ...(resolvedDamageTakenMultiplier !== undefined
+      ? { damageTakenMultiplier: resolvedDamageTakenMultiplier }
+      : {}),
+    tauntActive: resolvedTauntActive
   };
 }

@@ -47,6 +47,12 @@ export interface UnitExperienceChangedPayload {
   xp: number;
 }
 
+export interface UnitTauntChangedPayload {
+  unitId: string;
+  active: boolean;
+  radius: number;
+}
+
 export interface SaunaDamagedPayload {
   attackerId?: string;
   attackerFaction?: string;

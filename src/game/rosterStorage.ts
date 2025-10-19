@@ -75,7 +75,12 @@ export function loadUnits(): Saunoja[] {
           effectiveStats: data.effectiveStats,
           equipment: data.equipment,
           modifiers: Array.isArray(data.modifiers) ? data.modifiers : undefined,
-          klass: data.klass
+          klass: data.klass,
+          damageTakenMultiplier:
+            typeof data.damageTakenMultiplier === 'number'
+              ? data.damageTakenMultiplier
+              : undefined,
+          tauntActive: typeof data.tauntActive === 'boolean' ? data.tauntActive : undefined
         })
       );
     }
@@ -108,6 +113,10 @@ export function saveUnits(units: readonly Saunoja[]): void {
       xp: unit.xp,
       selected: unit.selected,
       ...(unit.klass ? { klass: unit.klass } : {}),
+      ...(typeof unit.damageTakenMultiplier === 'number'
+        ? { damageTakenMultiplier: unit.damageTakenMultiplier }
+        : {}),
+      tauntActive: Boolean(unit.tauntActive),
       baseStats: {
         health: unit.baseStats.health,
         attackDamage: unit.baseStats.attackDamage,
