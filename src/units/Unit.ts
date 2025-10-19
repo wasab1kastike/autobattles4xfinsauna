@@ -22,6 +22,12 @@ export const UNIT_MOVEMENT_STEP_SECONDS = 5;
 
 type Listener = () => void;
 
+interface RogueAmbushState {
+  teleportRange: number;
+  burstMultiplier: number;
+  firstStrikeReady: boolean;
+}
+
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
 }
@@ -66,6 +72,7 @@ export class Unit {
   private behavior: UnitBehavior;
   private appearanceId: string;
   private attackProfile: string | null = null;
+  private rogueAmbush: RogueAmbushState | null = null;
 
   public stats: UnitStats;
   public combatHooks: CombatHookMap | null = null;
@@ -90,6 +97,12 @@ export class Unit {
     this.stats = { ...stats };
     this.maxHealth = normalizeHealthStat(this.stats.health);
     this.stats.health = this.maxHealth;
+    if (
+      typeof this.stats.damageDealtMultiplier !== 'number' ||
+      !Number.isFinite(this.stats.damageDealtMultiplier)
+    ) {
+      delete this.stats.damageDealtMultiplier;
+    }
     this.behavior = behavior ?? (faction === 'player' ? 'defend' : 'attack');
     this.appearanceId = this.sanitizeAppearanceId(appearanceId);
   }
@@ -168,6 +181,43 @@ export class Unit {
     this.attackProfile = null;
   }
 
+  hasRogueAmbush(): boolean {
+    return this.rogueAmbush !== null;
+  }
+
+  getRogueAmbushRange(): number {
+    return this.rogueAmbush?.teleportRange ?? 0;
+  }
+
+  setRogueAmbush(options?: { teleportRange: number; burstMultiplier: number }): void {
+    if (!options) {
+      this.rogueAmbush = null;
+      return;
+    }
+    const normalizedRange = Number.isFinite(options.teleportRange)
+      ? Math.max(1, Math.floor(options.teleportRange))
+      : 0;
+    if (normalizedRange <= 0) {
+      this.rogueAmbush = null;
+      return;
+    }
+    const normalizedBurst = Number.isFinite(options.burstMultiplier)
+      ? Math.max(1, options.burstMultiplier)
+      : 1;
+    const firstStrikeReady = this.rogueAmbush?.firstStrikeReady ?? false;
+    this.rogueAmbush = {
+      teleportRange: normalizedRange,
+      burstMultiplier: normalizedBurst,
+      firstStrikeReady
+    } satisfies RogueAmbushState;
+  }
+
+  markRogueAmbushTeleport(): void {
+    if (this.rogueAmbush) {
+      this.rogueAmbush.firstStrikeReady = true;
+    }
+  }
+
   private sanitizeAppearanceId(candidate?: string): string {
     const normalized = normalizeAppearanceId(candidate);
     if (normalized) {
@@ -179,6 +229,18 @@ export class Unit {
   attack(target: Unit): CombatResolution | null {
     if (this.distanceTo(target.coord) > this.stats.attackRange) {
       return null;
+    }
+
+    const originalMultiplier = this.stats.damageDealtMultiplier;
+    let boosted = false;
+    if (this.rogueAmbush?.firstStrikeReady) {
+      const baseMultiplier = Number.isFinite(originalMultiplier)
+        ? (originalMultiplier as number)
+        : 1;
+      const burst = baseMultiplier * this.rogueAmbush.burstMultiplier;
+      this.stats.damageDealtMultiplier = burst;
+      this.rogueAmbush.firstStrikeReady = false;
+      boosted = true;
     }
 
     const now =
@@ -201,8 +263,18 @@ export class Unit {
       attackProfile
     };
     eventBus.emit('unitAttack', payload);
-
-    return target.takeDamage(this.stats.attackDamage, this, { impactAt });
+    try {
+      const resolution = target.takeDamage(this.stats.attackDamage, this, { impactAt });
+      return resolution;
+    } finally {
+      if (boosted) {
+        if (originalMultiplier === undefined) {
+          delete this.stats.damageDealtMultiplier;
+        } else {
+          this.stats.damageDealtMultiplier = originalMultiplier;
+        }
+      }
+    }
   }
 
   update(dt: number, sauna?: Sauna): void {
@@ -354,6 +426,14 @@ export class Unit {
     if (typeof stats.visionRange === 'number' && Number.isFinite(stats.visionRange)) {
       this.stats.visionRange = stats.visionRange;
     }
+    if (
+      typeof stats.damageDealtMultiplier === 'number' &&
+      Number.isFinite(stats.damageDealtMultiplier)
+    ) {
+      this.stats.damageDealtMultiplier = stats.damageDealtMultiplier;
+    } else {
+      delete this.stats.damageDealtMultiplier;
+    }
     const newMax = Math.max(1, Math.round(stats.health));
     this.maxHealth = newMax;
     this.stats.health = Math.min(newMax, Math.max(0, this.stats.health));
@@ -399,7 +479,8 @@ export class Unit {
       maxHealth: this.maxHealth,
       shield: this.shield,
       hooks: this.combatHooks,
-      keywords: this.combatKeywords
+      keywords: this.combatKeywords,
+      damageDealtMultiplier: this.stats.damageDealtMultiplier
     };
   }
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Introduce rogue ambush perks that grant a 25% damage bonus, a pre-attack
+  teleport toward nearby enemies, and a one-time first-strike burst backed by
+  new combat and scenario tests.
+
 - Refresh HUD navigation coverage so the Policies button drives the new
   dedicated sheet, add targeted specs for `setupPoliciesWindow`, and update the
   GitHub Pages guidance to highlight the relocated console experience.

@@ -10,7 +10,11 @@ import { DEFEND_PERIMETER_RADIUS, resolveUnitBehavior } from './unitBehavior.ts'
 import type { Sauna } from '../sim/sauna.ts';
 import { damageSauna } from '../sim/sauna.ts';
 import { eventBus } from '../events';
-import type { SaunaDamagedPayload, SaunaDestroyedPayload } from '../events/types.ts';
+import type {
+  SaunaDamagedPayload,
+  SaunaDestroyedPayload,
+  UnitTeleportedPayload
+} from '../events/types.ts';
 import type { Animator } from '../render/Animator.ts';
 import {
   CHUNK_POPULATION_RADIUS,
@@ -314,7 +318,10 @@ export class BattleManager {
         }
       }
 
-      const currentKey = coordKey(unit.coord);
+      let currentKey = coordKey(unit.coord);
+      occupied.add(currentKey);
+      this.tryRogueAmbushTeleport(unit, target, occupied);
+      currentKey = coordKey(unit.coord);
       occupied.add(currentKey);
       this.lastKnownCoords.set(unit.id, { q: unit.coord.q, r: unit.coord.r });
 
@@ -323,7 +330,8 @@ export class BattleManager {
         unit.clearPathCache();
       }
 
-      if (unit.distanceTo(target.coord) <= unit.stats.attackRange && !target.isDead()) {
+      const distanceToTarget = unit.distanceTo(target.coord);
+      if (distanceToTarget <= unit.stats.attackRange && !target.isDead()) {
         const resolution = unit.attack(target);
         if ((resolution?.lethal ?? false) || target.isDead()) {
           occupied.delete(currentTargetKey);
@@ -333,6 +341,70 @@ export class BattleManager {
         }
       }
     }
+  }
+
+  private tryRogueAmbushTeleport(
+    unit: Unit,
+    target: Unit,
+    occupied: Set<string>
+  ): boolean {
+    if (!unit.hasRogueAmbush()) {
+      return false;
+    }
+    const ambushRange = unit.getRogueAmbushRange();
+    if (ambushRange <= 0) {
+      return false;
+    }
+    const distanceToTarget = hexDistance(unit.coord, target.coord);
+    if (distanceToTarget <= unit.stats.attackRange || distanceToTarget > ambushRange) {
+      return false;
+    }
+
+    const originalKey = coordKey(unit.coord);
+    occupied.delete(originalKey);
+
+    const neighbors = getNeighbors(target.coord);
+    let best: AxialCoord | null = null;
+    let bestDistance = Infinity;
+
+    for (const neighbor of neighbors) {
+      this.map.ensureTile(neighbor.q, neighbor.r);
+      const neighborKey = coordKey(neighbor);
+      if (occupied.has(neighborKey)) {
+        continue;
+      }
+      if (!unit.canTraverse(neighbor, this.map, occupied)) {
+        continue;
+      }
+      const distanceFromUnit = hexDistance(unit.coord, neighbor);
+      if (distanceFromUnit < bestDistance) {
+        bestDistance = distanceFromUnit;
+        best = { q: neighbor.q, r: neighbor.r };
+      }
+    }
+
+    if (!best) {
+      occupied.add(originalKey);
+      return false;
+    }
+
+    const previous = { q: unit.coord.q, r: unit.coord.r };
+    unit.setCoord(best);
+    unit.snapRenderToCoord(best);
+    unit.clearPathCache();
+    unit.markRogueAmbushTeleport();
+    const currentKey = coordKey(unit.coord);
+    occupied.add(currentKey);
+    this.populateChunksIfNeeded(unit, previous);
+    this.pathCache.invalidateForUnit(unit.id);
+    this.animator?.clear(unit, { snap: true });
+    const payload: UnitTeleportedPayload = {
+      unitId: unit.id,
+      from: previous,
+      to: { q: unit.coord.q, r: unit.coord.r }
+    };
+    eventBus.emit('unitTeleported', payload);
+    return true;
   }
 
   private populateChunksIfNeeded(unit: Unit, previous: AxialCoord): void {
