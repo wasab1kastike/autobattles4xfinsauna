@@ -1259,3 +1259,6 @@
 - Replace sauna vision perks with an expanded tier ladder that alternates roster
   cap unlocks and spawn-speed boosts, complete with refreshed art, copy, and
   UI requirement messaging for the new cadence bonuses.
+- Remember empty fog chunks per zoom so fog rendering skips recomputing blank
+  canvases until tiles change, invalidate clears the cache, or the zoom level
+  shifts, and cover the optimization with Vitest.
