@@ -1,4 +1,4 @@
-import { hexDistance, type AxialCoord } from '../hex/HexUtils.ts';
+import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { HexMap } from '../hexmap.ts';
 import type { TileMutation } from '../hex/HexTile.ts';
 import type { UnitArchetypeId } from '../unit/types.ts';
@@ -69,6 +69,10 @@ export interface StrongholdMetadata extends StrongholdDefinition {
 export interface StrongholdSeedOptions {
   readonly encounters?: StrongholdEncounterHooks;
   readonly registerUnit?: (unit: Unit) => void;
+}
+
+export interface StrongholdActivationOptions extends StrongholdSeedOptions {
+  readonly persisted?: StrongholdPersistenceEntry | null;
 }
 
 const STRONGHOLD_STRUCTURE_HEALTH: Record<StrongholdStructureTier, number> = Object.freeze({
@@ -270,6 +274,68 @@ export function resetStrongholdRegistry(): void {
   resetStrongholdEncounters();
 }
 
+export function activateStronghold(
+  strongholdId: string,
+  map: HexMap,
+  options?: StrongholdActivationOptions
+): Unit | null {
+  const metadata = registry.get(strongholdId);
+  if (!metadata || metadata.captured) {
+    return null;
+  }
+
+  const persistedEntry = options?.persisted ?? null;
+  const registerUnit = options?.registerUnit ?? options?.encounters?.registerUnit;
+  const encounterHooks: StrongholdEncounterHooks | undefined = options?.encounters
+    ? { ...options.encounters }
+    : undefined;
+  if (registerUnit && encounterHooks && !encounterHooks.registerUnit) {
+    encounterHooks.registerUnit = registerUnit;
+  }
+
+  const tile = map.ensureTile(metadata.coord.q, metadata.coord.r);
+  tile.placeBuilding('city');
+  if (metadata.seen || persistedEntry?.seen) {
+    metadata.seen = true;
+    tile.setFogged(false);
+  } else {
+    tile.setFogged(true);
+  }
+
+  detachStructureListeners(metadata.id);
+  structureUnits.delete(metadata.id);
+
+  const structureUnit = createUnit(
+    'stronghold-structure',
+    `stronghold-${metadata.id}-structure`,
+    metadata.coord,
+    'enemy',
+    { behavior: 'defend' }
+  );
+  if (!structureUnit) {
+    return null;
+  }
+
+  const maxHealth = Math.max(1, metadata.structureMaxHealth);
+  structureUnit.updateStats({
+    ...structureUnit.stats,
+    health: maxHealth
+  });
+  const normalizedHealth = normalizeStructureHealth(metadata.structureHealth, maxHealth);
+  structureUnit.stats.health = normalizedHealth;
+  metadata.structureHealth = structureUnit.stats.health;
+  metadata.structureMaxHealth = maxHealth;
+  metadata.structureUnitId = structureUnit.id;
+
+  structureUnits.set(metadata.id, structureUnit);
+  attachStructureListeners(metadata, structureUnit, map);
+  registerUnit?.(structureUnit);
+
+  seedStrongholdEncounter(map, metadata, encounterHooks, persistedEntry);
+
+  return structureUnit;
+}
+
 export function seedEnemyStrongholds(
   map: HexMap,
   config: StrongholdConfig,
@@ -289,9 +355,6 @@ export function seedEnemyStrongholds(
   if (registerUnit && encounterHooks && !encounterHooks.registerUnit) {
     encounterHooks.registerUnit = registerUnit;
   }
-  const seededStrongholds: StrongholdMetadata[] = [];
-  let hasVisibleStronghold = false;
-
   for (const spec of config.strongholds) {
     const tile = map.ensureTile(spec.coord.q, spec.coord.r);
     const persistedEntry = persisted?.[spec.id];
@@ -308,87 +371,46 @@ export function seedEnemyStrongholds(
     );
     const captured = Boolean(persistedEntry?.captured || structureWasDestroyed);
     const previouslySeen = Boolean(persistedEntry?.seen);
+    tile.placeBuilding(null);
     if (captured) {
-      tile.placeBuilding(null);
+      tile.setFogged(false);
     } else {
-      tile.placeBuilding('city');
-      if (previouslySeen) {
-        tile.setFogged(false);
-      } else {
-        tile.setFogged(true);
-      }
+      tile.setFogged(true);
     }
     const structureHealth = captured
       ? 0
-      : normalizeStructureHealth(persistedEntry?.structureHealth, persistedMaxHealth);
+      : normalizeStructureHealth(
+          typeof persistedEntry?.structureHealth === 'number'
+            ? persistedEntry.structureHealth
+            : persistedMaxHealth,
+          persistedMaxHealth
+        );
     const metadata: StrongholdMetadata = {
       ...spec,
       captured,
-      seen: captured || previouslySeen || !tile.isFogged,
+      seen: captured || previouslySeen,
       structureHealth,
       structureMaxHealth: persistedMaxHealth,
       structureUnitId: null
     };
     registry.set(spec.id, metadata);
-    seededStrongholds.push(metadata);
-    if (!metadata.captured && metadata.seen) {
-      hasVisibleStronghold = true;
-    }
-    if (!captured) {
-      const structureUnit = createUnit(
-        'stronghold-structure',
-        `stronghold-${spec.id}-structure`,
-        spec.coord,
-        'enemy',
-        { behavior: 'defend' }
-      );
-      if (structureUnit) {
-        structureUnit.updateStats({
-          ...structureUnit.stats,
-          health: metadata.structureMaxHealth
-        });
-        structureUnit.stats.health = metadata.structureHealth;
-        metadata.structureHealth = structureUnit.stats.health;
-        metadata.structureUnitId = structureUnit.id;
-        structureUnits.set(spec.id, structureUnit);
-        attachStructureListeners(metadata, structureUnit, map);
-        registerUnit?.(structureUnit);
-      }
+    const shouldRestore = !captured && Boolean(persistedEntry && !structureWasDestroyed);
+    if (shouldRestore) {
+      metadata.seen = metadata.seen || previouslySeen;
+      metadata.structureHealth = structureHealth;
+      activateStronghold(metadata.id, map, {
+        encounters: encounterHooks,
+        registerUnit,
+        persisted: persistedEntry ?? null
+      });
     } else {
       detachStructureListeners(spec.id);
       structureUnits.delete(spec.id);
-      metadata.structureHealth = 0;
+      metadata.structureHealth = captured ? 0 : structureHealth;
       metadata.structureUnitId = null;
+      seedStrongholdEncounter(map, metadata, encounterHooks, persistedEntry ?? null);
     }
     trackTileCapture(metadata, map);
-    seedStrongholdEncounter(map, metadata, encounterHooks, persistedEntry ?? null);
-  }
-
-  if (!hasVisibleStronghold) {
-    const center: AxialCoord = {
-      q: Math.floor((map.minQ + map.maxQ) / 2),
-      r: Math.floor((map.minR + map.maxR) / 2)
-    };
-    let chosen: StrongholdMetadata | null = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const metadata of seededStrongholds) {
-      if (metadata.captured) {
-        continue;
-      }
-      const distance = hexDistance(center, metadata.coord);
-      if (!Number.isFinite(distance)) {
-        continue;
-      }
-      if (!chosen || distance < bestDistance) {
-        chosen = metadata;
-        bestDistance = distance;
-      }
-    }
-    if (chosen) {
-      const tile = map.ensureTile(chosen.coord.q, chosen.coord.r);
-      tile.reveal();
-      chosen.seen = true;
-    }
   }
 }
 

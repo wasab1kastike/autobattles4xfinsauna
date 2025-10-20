@@ -11,6 +11,7 @@ import type {
 } from '../events/types.ts';
 import type { Unit } from '../units/Unit.ts';
 import { eventBus } from '../events';
+import { listStrongholds } from '../world/strongholds.ts';
 
 export type ObjectiveOutcome = 'win' | 'lose';
 
@@ -261,6 +262,16 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
         this.strongholds.set(key, { alive: true });
       }
     });
+    for (const metadata of listStrongholds()) {
+      const key = this.coordKey(metadata.coord);
+      const entry = this.strongholds.get(key);
+      const alive = !metadata.captured;
+      if (!entry) {
+        this.strongholds.set(key, { alive });
+      } else {
+        entry.alive = alive;
+      }
+    }
     this.updateStrongholdTotals();
   }
 
