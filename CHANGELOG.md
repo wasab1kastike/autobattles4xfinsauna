@@ -6,6 +6,9 @@
 - Extend sauna tiers with Celestial Reserve cadence bonuses, lock the vision
   radius to four hexes across every hall, and expose the spawn multipliers so
   tests, economy ticks, and NG+ upgrades track the 1.0 → 1.3 ramp.
+- Introduce a `StrongholdSpawner` that schedules inactive strongholds on a
+  180-second cadence, persists cooldown progress through reloads, and adds
+  focused Vitest coverage for the activation timer windows.
 - Extend artocoin tier tuning through the Celestial Reserve Sanctum, update
   progression docs, and verify the payout pipeline covers every sauna tier.
 - Keep sauna tier application centralized so NG+ auto-grants unlock every tier at
