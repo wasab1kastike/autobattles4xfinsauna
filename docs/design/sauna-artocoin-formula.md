@@ -26,9 +26,12 @@ Populate the table with:
 
 | tierId | nextUnlockLabel | unlockCost | baselinePayout | baselineDurationMinutes | baselineKills | baselineTiles |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ember-circuit` | "Modern Wooden Sauna commission" | `60` | `60` | `12.5` | `150` | `85` |
-| `aurora-ward` | "Futuristic Fission Sauna ignition" | `130` | `84` | `12.0` | `190` | `100` |
-| `mythic-conclave` | "Futuristic Fission Sauna prestige rotation" | `130` | `110` | `11.5` | `230` | `115` |
+| `ember-circuit` | "Aurora Ward Gallery expansion" | `70` | `60` | `12.5` | `150` | `85` |
+| `aurora-ward` | "Glacial Rhythm Retreat tuning" | `110` | `82` | `12.0` | `185` | `98` |
+| `glacial-rhythm` | "Mythic Conclave Vault endowment" | `160` | `96` | `11.6` | `210` | `108` |
+| `mythic-conclave` | "Solstice Cadence Atelier score" | `210` | `118` | `11.2` | `240` | `122` |
+| `solstice-cadence` | "Celestial Reserve Sanctum coronation" | `280` | `138` | `10.8` | `270` | `135` |
+| `celestial-reserve` | "Celestial Reserve Sanctum prestige rotation" | `0` | `160` | `10.4` | `305` | `150` |
 
 Difficulty modifiers mirror the existing difficulty scalar exposed by the enemy
 ramp system.

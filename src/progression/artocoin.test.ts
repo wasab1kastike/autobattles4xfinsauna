@@ -2,12 +2,15 @@ import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
 import {
   ARTOCOIN_STORAGE_KEY,
   calculateArtocoinPayout,
+  listArtocoinTierSequence,
+  listArtocoinTierTunings,
   loadArtocoinBalance,
   onArtocoinChange,
   resetArtocoinBalance,
   saveArtocoinBalance
 } from './artocoin.ts';
 import { NG_PLUS_STORAGE_KEY } from './ngplus.ts';
+import { listSaunaTiers } from '../sauna/tiers.ts';
 
 class MemoryStorage implements Storage {
   private store = new Map<string, string>();
@@ -58,6 +61,23 @@ describe('artocoin progression helpers', () => {
     expect(loadArtocoinBalance()).toBe(0);
   });
 
+  it('exposes ordered tuning entries for every sauna tier', () => {
+    const tunings = listArtocoinTierTunings();
+    const tierOrder = Array.from(listArtocoinTierSequence());
+    expect(tunings.map((tuning) => tuning.tierId)).toEqual(tierOrder);
+    const saunaTierIds = listSaunaTiers().map((tier) => tier.id);
+    expect(tierOrder).toEqual(saunaTierIds);
+    for (const tuning of tunings) {
+      expect(typeof tuning.nextUnlockLabel).toBe('string');
+      expect(tuning.nextUnlockLabel.length).toBeGreaterThan(0);
+      expect(tuning.unlockCost).toBeGreaterThanOrEqual(0);
+      expect(tuning.baselinePayout).toBeGreaterThan(0);
+      expect(tuning.baselineDurationMinutes).toBeGreaterThan(0);
+      expect(tuning.baselineKills).toBeGreaterThan(0);
+      expect(tuning.baselineTiles).toBeGreaterThan(0);
+    }
+  });
+
   it('persists sanitized artocoin balances', () => {
     saveArtocoinBalance(187.6);
     const stored = window.localStorage?.getItem?.(ARTOCOIN_STORAGE_KEY);
@@ -93,6 +113,21 @@ describe('artocoin progression helpers', () => {
     });
     expect(result.artocoins).toBe(60);
     expect(result.breakdown.lossPenalty).toBe(1);
+  });
+
+  it('matches baseline payouts across every sauna tier', () => {
+    for (const tuning of listArtocoinTierTunings()) {
+      const result = calculateArtocoinPayout('win', {
+        tierId: tuning.tierId,
+        runSeconds: tuning.baselineDurationMinutes * 60,
+        enemyKills: tuning.baselineKills,
+        tilesExplored: tuning.baselineTiles,
+        rosterLosses: 0,
+        difficultyScalar: 1,
+        rampStageIndex: 0
+      });
+      expect(result.artocoins).toBe(tuning.baselinePayout);
+    }
   });
 
   it('caps performance multipliers for exceptional clears', () => {

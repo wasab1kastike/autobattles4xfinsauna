@@ -22,9 +22,12 @@ while keeping unlock pacing near one to one-and-a-half runs per sauna tier.
 
 | Active Sauna Tier | Next Unlock Target | Unlock Cost (Artocoins) | Baseline Run Duration (min) | Baseline Enemy Kills | Baseline Tiles Explored | Baseline Roster Losses | Baseline Payout (Artocoins) | Runs to Unlock (Avg) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Primitive Smoke Sauna | Modern Wooden Sauna commission | 60 | 12.5 | 150 | 85 | 1 | 60 | 1.0 |
-| Modern Wooden Sauna | Futuristic Fission Sauna ignition | 130 | 12.0 | 190 | 100 | 1 | 84 | 1.6 |
-| Futuristic Fission Sauna | Futuristic Fission Sauna prestige rotation | 130 | 11.5 | 230 | 115 | 1 | 110 | 1.2 |
+| Ember Circuit Sauna | Aurora Ward Gallery expansion | 70 | 12.5 | 150 | 85 | 1 | 60 | 1.2 |
+| Aurora Ward Gallery | Glacial Rhythm Retreat tuning | 110 | 12.0 | 185 | 98 | 1 | 82 | 1.3 |
+| Glacial Rhythm Retreat | Mythic Conclave Vault endowment | 160 | 11.6 | 210 | 108 | 1 | 96 | 1.7 |
+| Mythic Conclave Vault | Solstice Cadence Atelier score | 210 | 11.2 | 240 | 122 | 1 | 118 | 1.8 |
+| Solstice Cadence Atelier | Celestial Reserve Sanctum coronation | 280 | 10.8 | 270 | 135 | 1 | 138 | 2.0 |
+| Celestial Reserve Sanctum | Celestial Reserve Sanctum prestige rotation | — | 10.4 | 305 | 150 | 1 | 160 | — |
 
 The baselines establish the "average win" reference used in the payout formula.
 Players who exceed the targets accelerate their unlock cadence, while slower or
@@ -33,8 +36,8 @@ costly victories still award enough artocoins to feel forward momentum.
 ## Step-by-Step Payout Formula
 
 1. **Resolve the base payout for the active tier.** Pull the `baselinePayout`
-   from the table above for the player's current sauna tier. (`60`, `84`, or
-   `110` artocoins.)
+   from the table above for the player's current sauna tier. (`60`, `82`, `96`,
+   `118`, `138`, or `160` artocoins.)
 2. **Normalize the inputs.** With run duration reported in seconds:
    - `tempoTargetMinutes` is the tier baseline duration.
    - `tempoFactor = clamp(0.75, 1.20, 1 + ((tempoTargetMinutes - runSeconds / 60) / tempoTargetMinutes) * 0.35)`
@@ -51,8 +54,8 @@ Loss penalties have been removed. The post-run breakdown continues to surface
 `lossPenalty = 1` to make the change explicit in the UI.
 
 The clamps keep extreme values from running away while still celebrating high
-execution. A perfect, fast Futuristic Fission Sauna clear tops out near ~160
-artocoins, while a scrappy Primitive Smoke Sauna hold that lost two attendants
+execution. A perfect, fast Solstice Cadence Atelier clear lands just under ~200
+artocoins, while a scrappy Ember Circuit Sauna hold that lost two attendants
 still clears ~40.
 
 ## Difficulty Modifiers
@@ -103,17 +106,17 @@ can reconcile their purchases at a glance before diving back into a fresh run.
 
 ## Worked Examples
 
-- **Average Primitive Smoke Sauna win** – 12.6 minute run, 152 kills, 86 tiles, one
+- **Average Ember Circuit Sauna win** – 12.6 minute run, 152 kills, 86 tiles, one
   roster loss on Standard Steam: `tempoFactor ≈ 0.99`, `killFactor ≈ 1.01`,
   `exploreFactor ≈ 1.01`, `performanceMultiplier ≈ 1.00`, `lossPenalty = 1.00`,
   payout `≈ 60 artocoins`.
-- **Fast Futuristic Fission Sauna win** – 10.8 minute run, 250 kills, 128 tiles, zero
-  losses on Mythic Heat: `tempoFactor ≈ 1.06`, `killFactor ≈ 1.09`,
-  `exploreFactor ≈ 1.11`, `performanceMultiplier ≈ 1.08`, `lossPenalty = 1.00`,
-  payout `≈ 110 * 1.08 * 1.32 ≈ 157 artocoins`.
-- **Modern Wooden Sauna defeat** – 9.5 minute wipe before the boss, 140 kills, 72 tiles,
-  two losses on Veteran Sauna: floor `≈ 20`, progress `≈ 0.76`, performance
-  share `≈ 34`, `lossPenalty = 1.00`, payout `≈ 34 artocoins`.
+- **Fast Celestial Reserve Sanctum win** – 10.1 minute run, 320 kills, 158 tiles,
+  zero losses on Mythic Heat: `tempoFactor ≈ 1.09`, `killFactor ≈ 1.05`,
+  `exploreFactor ≈ 1.08`, `performanceMultiplier ≈ 1.06`, `lossPenalty = 1.00`,
+  payout `≈ 160 * 1.06 * 1.32 ≈ 224 artocoins`.
+- **Aurora Ward Gallery defeat** – 9.5 minute wipe before the boss, 140 kills,
+  72 tiles, two losses on Veteran Sauna: floor `≈ 16`, progress `≈ 0.76`,
+  performance share `≈ 32`, `lossPenalty = 1.00`, payout `≈ 32 artocoins`.
 
 These targets keep meta progression brisk without trivialising high-heat clears
 or punishing experimentation.
