@@ -45,6 +45,9 @@
 - Launch the Steam Debt Protocol economic edict, blending deluxe passive Sauna
   Beer bonds with reversible enemy aggression and cadence spikes plus a mild
   upkeep surge while the toggle is active.
+- Tighten stronghold pressure with a three-minute bastion cadence that rallies
+  reinforcements from active bastions until they are destroyed, rewarding quick
+  strikes that relieve the frontline crush.
 
 - Rally enemy reinforcements from surviving strongholds, spawning squads on or
   adjacent to active bastions before falling back to edge entries, and cover the
