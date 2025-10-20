@@ -41,8 +41,8 @@ interface DifficultyModifier {
   readonly maxMultiplier?: number;
 }
 
-const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
-  'ember-circuit': {
+const ORDERED_TIER_TUNING: readonly ArtocoinTierTuning[] = Object.freeze([
+  Object.freeze({
     tierId: 'ember-circuit',
     nextUnlockLabel: 'Aurora Ward Gallery expansion',
     unlockCost: 70,
@@ -50,8 +50,8 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
     baselineDurationMinutes: 12.5,
     baselineKills: 150,
     baselineTiles: 85
-  },
-  'aurora-ward': {
+  }),
+  Object.freeze({
     tierId: 'aurora-ward',
     nextUnlockLabel: 'Glacial Rhythm Retreat tuning',
     unlockCost: 110,
@@ -59,8 +59,8 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
     baselineDurationMinutes: 12,
     baselineKills: 185,
     baselineTiles: 98
-  },
-  'glacial-rhythm': {
+  }),
+  Object.freeze({
     tierId: 'glacial-rhythm',
     nextUnlockLabel: 'Mythic Conclave Vault endowment',
     unlockCost: 160,
@@ -68,8 +68,8 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
     baselineDurationMinutes: 11.6,
     baselineKills: 210,
     baselineTiles: 108
-  },
-  'mythic-conclave': {
+  }),
+  Object.freeze({
     tierId: 'mythic-conclave',
     nextUnlockLabel: 'Solstice Cadence Atelier score',
     unlockCost: 210,
@@ -77,8 +77,8 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
     baselineDurationMinutes: 11.2,
     baselineKills: 240,
     baselineTiles: 122
-  },
-  'solstice-cadence': {
+  }),
+  Object.freeze({
     tierId: 'solstice-cadence',
     nextUnlockLabel: 'Celestial Reserve Sanctum coronation',
     unlockCost: 280,
@@ -86,17 +86,28 @@ const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze({
     baselineDurationMinutes: 10.8,
     baselineKills: 270,
     baselineTiles: 135
-  },
-  'celestial-reserve': {
+  }),
+  Object.freeze({
     tierId: 'celestial-reserve',
     nextUnlockLabel: 'Celestial Reserve Sanctum prestige rotation',
-    unlockCost: 280,
+    unlockCost: 0,
     baselinePayout: 160,
     baselineDurationMinutes: 10.4,
     baselineKills: 305,
     baselineTiles: 150
-  }
-});
+  })
+]);
+
+const TIER_SEQUENCE: ReadonlyArray<SaunaTierId> = Object.freeze(
+  ORDERED_TIER_TUNING.map((tuning) => tuning.tierId) as ReadonlyArray<SaunaTierId>
+);
+
+const TIER_TUNING: Record<SaunaTierId, ArtocoinTierTuning> = Object.freeze(
+  ORDERED_TIER_TUNING.reduce<Record<SaunaTierId, ArtocoinTierTuning>>((acc, tuning) => {
+    acc[tuning.tierId] = tuning;
+    return acc;
+  }, Object.create(null))
+);
 
 const DIFFICULTY_MODIFIERS: readonly DifficultyModifier[] = Object.freeze([
   { minScalar: 0, maxScalar: 0.95, multiplier: 0.85 },
@@ -401,7 +412,7 @@ export interface ArtocoinPayoutResult {
 }
 
 function resolveTierTuning(tierId: SaunaTierId): ArtocoinTierTuning {
-  return TIER_TUNING[tierId] ?? TIER_TUNING['ember-circuit'];
+  return TIER_TUNING[tierId] ?? ORDERED_TIER_TUNING[0]!;
 }
 
 function calculateWinPayout(input: ArtocoinPayoutInputs): ArtocoinPayoutResult {
@@ -469,6 +480,14 @@ export function calculateArtocoinPayout(
     return calculateWinPayout(input);
   }
   return calculateDefeatPayout(input);
+}
+
+export function listArtocoinTierTunings(): readonly ArtocoinTierTuning[] {
+  return ORDERED_TIER_TUNING;
+}
+
+export function listArtocoinTierSequence(): ReadonlyArray<SaunaTierId> {
+  return TIER_SEQUENCE;
 }
 
 export type { ArtocoinTierTuning };

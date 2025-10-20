@@ -3,6 +3,8 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Extend artocoin tier tuning through the Celestial Reserve Sanctum, update
+  progression docs, and verify the payout pipeline covers every sauna tier.
 - Keep sauna tier application centralized so NG+ auto-grants unlock every tier at
   the intended milestone, persist updated selections, and reveal the default
   vision radius while propagating spawn speed changes to the runtime state.
