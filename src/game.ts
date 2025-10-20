@@ -196,6 +196,7 @@ import {
 } from './game/setup/rightPanel.ts';
 import {
   activateStronghold,
+  countActiveStrongholds,
   listStrongholds,
   seedEnemyStrongholds,
   STRONGHOLD_CONFIG
@@ -264,6 +265,7 @@ function sanitizeObjectiveMetric(value: number | null | undefined): number {
 const BASE_ELITE_ODDS = 0.1;
 const MIN_SPAWN_LIMIT = 3;
 const BASE_ENEMY_DIFFICULTY = 1;
+export const STRONGHOLD_PRESSURE_FACTOR = 0.15;
 
 const getGameRuntime = getGameRuntimeImpl;
 
@@ -1611,11 +1613,13 @@ const clock = new GameClock(1000, (deltaMs) => {
     spawnSpeedMultiplier: getActiveSpawnSpeedMultiplierRef(),
     spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
   });
+  const pressureMultiplier = 1 + countActiveStrongholds() * STRONGHOLD_PRESSURE_FACTOR;
   const runtimeModifiers: EnemySpawnerRuntimeModifiers = {
     aggressionMultiplier: rampModifiers.aggression,
     cadenceMultiplier: rampModifiers.cadence,
     strengthMultiplier: rampModifiers.strength,
-    calmSecondsRemaining: rampModifiers.calmSecondsRemaining
+    calmSecondsRemaining: rampModifiers.calmSecondsRemaining,
+    pressureMultiplier
   };
   enemySpawner.update(dtSeconds, units, registerUnit, pickStrongholdSpawnTile, runtimeModifiers);
   state.advanceEnemyCalm(dtSeconds);
