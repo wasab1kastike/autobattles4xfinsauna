@@ -37,12 +37,17 @@ function cloneStrongholdEntry(
   entry?: StrongholdPersistenceEntry | null
 ): StrongholdPersistenceEntry {
   if (!entry) {
-    return {};
+    return { deployed: true, spawnCooldownRemaining: 0 };
   }
   const snapshot: StrongholdPersistenceEntry = {
     captured: Boolean(entry.captured),
-    seen: Boolean(entry.seen)
+    seen: Boolean(entry.seen),
+    deployed: entry.deployed !== false
   };
+  const cooldown = Number(entry.spawnCooldownRemaining);
+  snapshot.spawnCooldownRemaining = Number.isFinite(cooldown)
+    ? Math.max(0, cooldown)
+    : 0;
   if (typeof entry.structureHealth === 'number' && Number.isFinite(entry.structureHealth)) {
     snapshot.structureHealth = Math.max(0, entry.structureHealth);
   }

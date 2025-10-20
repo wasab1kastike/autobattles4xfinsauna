@@ -14,3 +14,4 @@
 
 ### Minor Changes
 - Added a persistence-aware stronghold spawner that tracks cooldown progress, restores queued activations after reloads, and ships with targeted timer regression tests.
+- Recorded stronghold deployment state and spawn cooldown in saves, restoring timers for new sessions while preserving legacy compatibility through dedicated serialization tests.
