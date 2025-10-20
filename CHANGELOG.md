@@ -3,6 +3,9 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Export `DEFAULT_SAUNA_VISION_RANGE`, keep sauna tier vision locked to the base
+  radius while exposing the spawn-speed multiplier on the runtime state, and
+  extend the sauna constructor tests to cover the sanitized overrides.
 - Retune the leveling curve so the first promotion triggers after 40 XP, keep
   the cap at 5,500 XP, and sync the progression docs and Vitest coverage with
   the updated thresholds.

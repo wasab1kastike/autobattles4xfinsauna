@@ -4,7 +4,7 @@ import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/he
 import type { SaunaTier } from '../sauna/tiers.ts';
 
 const DEFAULT_SAUNA_MAX_HEALTH = 500;
-const DEFAULT_SAUNA_VISION_RANGE = 4;
+export const DEFAULT_SAUNA_VISION_RANGE = 4;
 const DEFAULT_SAUNA_SPAWN_SPEED = 1;
 
 function sanitizeSpawnSpeedMultiplier(value: number | null | undefined): number {
@@ -13,6 +13,13 @@ function sanitizeSpawnSpeedMultiplier(value: number | null | undefined): number 
   }
   const multiplier = Number(value);
   return multiplier > 0 ? multiplier : DEFAULT_SAUNA_SPAWN_SPEED;
+}
+
+function sanitizeVisionRange(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SAUNA_VISION_RANGE;
+  }
+  return Math.max(0, Math.floor(value ?? 0));
 }
 
 export function pickFreeTileAround(
@@ -111,9 +118,7 @@ export function createSauna(
       ? options.spawnSpeedMultiplier
       : options.tier?.spawnSpeedMultiplier
   );
-  const resolvedVisionRange = Number.isFinite(options.visionRange)
-    ? Math.max(0, Math.floor(options.visionRange ?? 0))
-    : DEFAULT_SAUNA_VISION_RANGE;
+  const resolvedVisionRange = sanitizeVisionRange(options.visionRange);
 
   return {
     id: 'sauna',

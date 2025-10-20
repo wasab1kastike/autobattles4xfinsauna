@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSauna } from './sauna.ts';
+import { createSauna, DEFAULT_SAUNA_VISION_RANGE } from './sauna.ts';
 
 describe('createSauna', () => {
   it('derives the spawn speed multiplier from the provided tier', () => {
@@ -29,5 +29,21 @@ describe('createSauna', () => {
     });
 
     expect(sauna.visionRange).toBe(7);
+  });
+
+  it('defaults to the base sauna vision range even when a tier is provided', () => {
+    const sauna = createSauna({ q: 0, r: 0 }, undefined, {
+      tier: { spawnSpeedMultiplier: 1.1 }
+    });
+
+    expect(sauna.visionRange).toBe(DEFAULT_SAUNA_VISION_RANGE);
+  });
+
+  it('sanitizes invalid vision overrides for tests', () => {
+    const sauna = createSauna({ q: 0, r: 0 }, undefined, {
+      visionRange: -3
+    });
+
+    expect(sauna.visionRange).toBe(0);
   });
 });
