@@ -377,6 +377,69 @@ describe('rosterHUD', () => {
     }
   });
 
+  it('opens the roster overlay immediately when the roster view starts visible', () => {
+    const overlay = document.createElement('div');
+    overlay.id = 'ui-overlay';
+    document.body.appendChild(overlay);
+
+    const originalMatchMedia = window.matchMedia;
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+
+    let hud: ReturnType<typeof setupRosterHUD> | null = null;
+    let controller: ReturnType<typeof setupRightPanel> | null = null;
+    let detach: (() => void) | null = null;
+
+    try {
+      const layout = ensureHudLayout(overlay);
+      const rosterHudContainer = document.createElement('div');
+      rosterHudContainer.id = 'roster-hud-initial-open';
+      layout.anchors.topLeftCluster.appendChild(rosterHudContainer);
+
+      const state = new GameState(1000);
+      controller = setupRightPanel(state);
+      const notifications: boolean[] = [];
+      detach = controller.onRosterVisibilityChange((open) => {
+        notifications.push(open);
+      });
+
+      hud = setupRosterHUD(rosterHudContainer, { rosterIcon: '/icon.svg' });
+      hud.connectPanelBridge(controller);
+
+      expect(notifications).toEqual([true]);
+      controller.openRosterView();
+      expect(notifications).toEqual([true]);
+
+      expect(overlay.classList.contains(ROSTER_HUD_OPEN_CLASS)).toBe(true);
+      expect(layout.tabs.getActive()).toBe('roster');
+
+      controller.closeRosterView();
+      expect(notifications).toEqual([true, false]);
+    } finally {
+      detach?.();
+      controller?.dispose();
+      hud?.destroy();
+      Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        writable: true,
+        value: originalMatchMedia,
+      });
+      overlay.remove();
+    }
+  });
+
   it('collapses the roster overlay when the right panel close control is clicked', () => {
     const overlay = document.createElement('div');
     overlay.id = 'ui-overlay';
