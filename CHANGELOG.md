@@ -11,3 +11,6 @@
 - Rebuilt the policies console as a dedicated responsive HUD sheet, refreshed navigation to surface roster/events controls, and restored polished promotion choosers.
 - Preserved NG+ carryover loadouts through a refined end-of-run overlay that trims unselected gear, persists survivors, and locks in inventory regression coverage.
 - Restructured the runtime shell so the game canvas and HUD mount in dedicated containers, aligning the GitHub Pages bundle and bootstrap behavior.
+
+### Minor Changes
+- Added a persistence-aware stronghold spawner that tracks cooldown progress, restores queued activations after reloads, and ships with targeted timer regression tests.
