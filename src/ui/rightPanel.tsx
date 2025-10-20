@@ -186,6 +186,7 @@ export function setupRightPanel(
   let skipInitialRosterExpand = true;
 
   const rosterVisibilityListeners = new Set<(isOpen: boolean) => void>();
+  let lastRosterVisibility: boolean | null = null;
   let rosterCloseButton: HTMLButtonElement | null = null;
 
   const updateRosterCloseButtonState = (visible: boolean): void => {
@@ -209,6 +210,10 @@ export function setupRightPanel(
   const emitRosterVisibility = (): void => {
     const visible = activeView === 'roster' && isPanelOpen();
     updateRosterCloseButtonState(visible);
+    if (lastRosterVisibility === visible) {
+      return;
+    }
+    lastRosterVisibility = visible;
     for (const listener of rosterVisibilityListeners) {
       try {
         listener(visible);
@@ -1334,6 +1339,7 @@ export function setupRightPanel(
     overlay.classList.remove(HUD_OVERLAY_COLLAPSED_CLASS);
     viewListeners.clear();
     rosterVisibilityListeners.clear();
+    lastRosterVisibility = null;
   };
 
   return {
@@ -1356,11 +1362,13 @@ export function setupRightPanel(
     },
     onRosterVisibilityChange: (listener: (isOpen: boolean) => void) => {
       rosterVisibilityListeners.add(listener);
+      const visible = activeView === 'roster' && isPanelOpen();
       try {
-        listener(false);
+        listener(visible);
       } catch (error) {
         console.warn('Failed to notify roster visibility listener', error);
       }
+      lastRosterVisibility = visible;
       return () => {
         rosterVisibilityListeners.delete(listener);
       };
