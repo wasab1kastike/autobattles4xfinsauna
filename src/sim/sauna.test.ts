@@ -2,6 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { createSauna, DEFAULT_SAUNA_VISION_RANGE } from './sauna.ts';
 
 describe('createSauna', () => {
+  it('defaults to the constant sauna vision radius', () => {
+    const sauna = createSauna({ q: 0, r: 0 });
+
+    expect(DEFAULT_SAUNA_VISION_RANGE).toBe(4);
+    expect(sauna.visionRange).toBe(DEFAULT_SAUNA_VISION_RANGE);
+  });
+
   it('derives the spawn speed multiplier from the provided tier', () => {
     const sauna = createSauna({ q: 0, r: 0 }, { baseThreshold: 10, heatPerSecond: 2 }, {
       tier: { spawnSpeedMultiplier: 1.25 }
@@ -31,7 +38,7 @@ describe('createSauna', () => {
     expect(sauna.visionRange).toBe(7);
   });
 
-  it('defaults to the base sauna vision range even when a tier is provided', () => {
+  it('locks the sauna vision range to the base radius even when a tier is provided', () => {
     const sauna = createSauna({ q: 0, r: 0 }, undefined, {
       tier: { spawnSpeedMultiplier: 1.1 }
     });

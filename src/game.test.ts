@@ -468,7 +468,7 @@ describe('game logging', () => {
   it('promotes the active sauna tier when NG+ unlocks a higher hall', async () => {
     window.localStorage?.setItem?.(
       'progression:ngPlusState',
-      JSON.stringify({ runSeed: 17, ngPlusLevel: 3, unlockSlots: 4 })
+      JSON.stringify({ runSeed: 17, ngPlusLevel: 5, unlockSlots: 4 })
     );
     window.localStorage?.setItem?.(
       'autobattles:sauna-settings',
@@ -477,13 +477,13 @@ describe('game logging', () => {
 
     const { __getActiveTierIdForTest } = await initGame();
 
-    expect(__getActiveTierIdForTest()).toBe('mythic-conclave');
+    expect(__getActiveTierIdForTest()).toBe('celestial-reserve');
 
     const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
     const parsed = stored
       ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string })
       : null;
-    expect(parsed?.activeTierId).toBe('mythic-conclave');
+    expect(parsed?.activeTierId).toBe('celestial-reserve');
     expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
   });
 
