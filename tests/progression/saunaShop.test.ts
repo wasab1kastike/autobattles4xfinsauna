@@ -65,6 +65,7 @@ describe('purchaseSaunaTier', () => {
     const { getSaunaTier } = await import('../../src/sauna/tiers.ts');
 
     const tier = getSaunaTier('aurora-ward');
+    expect(tier.spawnSpeedMultiplier).toBe(1);
     const runtimeBalance = 120;
     const expectedCost = Math.max(0, Math.floor(tier.unlock.cost));
 

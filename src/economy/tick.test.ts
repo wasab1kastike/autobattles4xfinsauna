@@ -1,6 +1,7 @@
 import { describe, expect, it, afterEach } from 'vitest';
 import { GameState, Resource } from '../core/GameState.ts';
 import { createSauna } from '../sim/sauna.ts';
+import { getSaunaTier } from '../sauna/tiers.ts';
 import { runEconomyTick } from './tick.ts';
 import { createPlayerSpawnTierQueue } from '../world/spawn/tier_helpers.ts';
 import type { Unit } from '../units/Unit.ts';
@@ -338,6 +339,8 @@ describe('runEconomyTick', () => {
   it('accelerates spawn preparation when a cadence bonus is supplied', () => {
     const state = new GameState(1000);
     state.addResource(Resource.SAUNA_BEER, 100);
+    const tier = getSaunaTier('solstice-cadence');
+    const multiplier = tier.spawnSpeedMultiplier ?? 1;
     const sauna = createSauna(
       { q: 0, r: 0 },
       { baseThreshold: 20, heatPerSecond: 4, initialHeat: 0 }
@@ -352,13 +355,13 @@ describe('runEconomyTick', () => {
       getUnitUpkeep: () => 0,
       pickSpawnTile: () => null,
       spawnBaseUnit: () => null,
-      spawnSpeedMultiplier: 1.5,
-      spawnHeatMultiplier: 1.5
+      spawnSpeedMultiplier: multiplier,
+      spawnHeatMultiplier: multiplier
     });
 
     expect(result.addedHeat).toBeGreaterThan(0);
-    expect(sauna.spawnSpeedMultiplier).toBeCloseTo(1.5, 5);
-    expect(sauna.heatPerTick).toBeCloseTo(6, 5);
-    expect(sauna.playerSpawnCooldown).toBeCloseTo(20 / 4 / 1.5, 5);
+    expect(sauna.spawnSpeedMultiplier).toBeCloseTo(multiplier, 5);
+    expect(sauna.heatPerTick).toBeCloseTo(4 * multiplier, 5);
+    expect(sauna.playerSpawnCooldown).toBeCloseTo(20 / 4 / multiplier, 5);
   });
 });
