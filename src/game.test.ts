@@ -301,7 +301,9 @@ describe('game logging', () => {
       minUpkeepReserve: 0,
       maxSpawns: 3,
       rosterCap,
-      getRosterCount: __getActiveRosterCountForTest
+      getRosterCount: __getActiveRosterCountForTest,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(result.spawn.spawned).toBe(2);

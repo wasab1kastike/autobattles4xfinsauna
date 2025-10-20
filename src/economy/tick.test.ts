@@ -49,7 +49,9 @@ describe('runEconomyTick', () => {
         spawned.push(unit);
         return unit;
       },
-      minUpkeepReserve: 1
+      minUpkeepReserve: 1,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(spawned).toHaveLength(1);
@@ -85,7 +87,9 @@ describe('runEconomyTick', () => {
         getUnitUpkeep: () => evaluateUpkeep(),
         pickSpawnTile: () => null,
         spawnBaseUnit: () => null,
-        minUpkeepReserve: 0
+        minUpkeepReserve: 0,
+        spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+        spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
       });
 
     setActivePolicyModifiers(createPolicyModifierSummary());
@@ -145,7 +149,9 @@ describe('runEconomyTick', () => {
           getUnitUpkeep: (unit) => upkeep.get(unit.id) ?? 0,
           pickSpawnTile: () => null,
           spawnBaseUnit: () => null,
-          minUpkeepReserve: 1
+          minUpkeepReserve: 1,
+          spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+          spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
         });
 
       return { state, sauna, runTick };
@@ -210,7 +216,9 @@ describe('runEconomyTick', () => {
       minUpkeepReserve: 0,
       maxSpawns: 3,
       rosterCap: 0,
-      getRosterCount: rosterCount
+      getRosterCount: rosterCount,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(first.spawn.spawned).toBe(0);
@@ -231,7 +239,9 @@ describe('runEconomyTick', () => {
       minUpkeepReserve: 0,
       maxSpawns: 3,
       rosterCap: 2,
-      getRosterCount: rosterCount
+      getRosterCount: rosterCount,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(second.spawn.spawned).toBe(1);
@@ -285,7 +295,9 @@ describe('runEconomyTick', () => {
       maxSpawns: 2,
       rosterCap: 1,
       getRosterCount: () => rosterCount,
-      tierHelpers
+      tierHelpers,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(first.spawn.spawned).toBe(0);
@@ -313,7 +325,9 @@ describe('runEconomyTick', () => {
       maxSpawns: 2,
       rosterCap: 1,
       getRosterCount: () => rosterCount,
-      tierHelpers
+      tierHelpers,
+      spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+      spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
     });
 
     expect(second.spawn.spawned).toBe(1);
@@ -338,7 +352,8 @@ describe('runEconomyTick', () => {
       getUnitUpkeep: () => 0,
       pickSpawnTile: () => null,
       spawnBaseUnit: () => null,
-      spawnSpeedMultiplier: 1.5
+      spawnSpeedMultiplier: 1.5,
+      spawnHeatMultiplier: 1.5
     });
 
     expect(result.addedHeat).toBeGreaterThan(0);
