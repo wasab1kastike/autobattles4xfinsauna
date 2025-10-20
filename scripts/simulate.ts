@@ -200,7 +200,9 @@ function runSeededSimulation(seed: number): SimulationRow[] {
             spawnUnit(state, 'soldier', `p${seed}-${nextPlayerId++}`, coord, 'player')
           ),
         minUpkeepReserve: 1,
-        maxSpawns: 1
+        maxSpawns: 1,
+        spawnSpeedMultiplier: sauna.spawnSpeedMultiplier ?? 1,
+        spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
       });
 
       enemySpawner.update(1, units, addEnemyUnit, pickEdge);

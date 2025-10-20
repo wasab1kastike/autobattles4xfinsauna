@@ -31,6 +31,7 @@ export interface EconomyTickOptions {
   getRosterCount?: () => number;
   tierHelpers?: PlayerSpawnTierHelpers;
   spawnSpeedMultiplier?: number;
+  spawnHeatMultiplier?: number;
 }
 
 export interface EconomyTickResult {
@@ -49,7 +50,13 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
   const rawSpeed = sanitize(options.spawnSpeedMultiplier ?? 1, 1);
   const spawnSpeedMultiplier = rawSpeed > 0 ? rawSpeed : 1;
 
-  const bonusHeat = dt > 0 ? heatRate * dt * Math.max(0, spawnSpeedMultiplier - 1) : 0;
+  const rawHeatMultiplier = sanitize(
+    options.spawnHeatMultiplier ?? spawnSpeedMultiplier ?? 1,
+    1
+  );
+  const spawnHeatMultiplier = rawHeatMultiplier > 0 ? rawHeatMultiplier : 1;
+
+  const bonusHeat = dt > 0 ? heatRate * dt * Math.max(0, spawnHeatMultiplier - 1) : 0;
   const { addedHeat, cooledHeat } = options.heat.advance(dt, { bonusHeat });
 
   let upkeepPerCycle = 0;
@@ -108,7 +115,7 @@ export function runEconomyTick(options: EconomyTickOptions): EconomyTickResult {
     ? cooldown / spawnSpeedMultiplier
     : 0;
   options.sauna.playerSpawnTimer = Number.isFinite(timer) ? timer / spawnSpeedMultiplier : 0;
-  options.sauna.heatPerTick = heatRate * spawnSpeedMultiplier;
+  options.sauna.heatPerTick = heatRate * spawnHeatMultiplier;
   options.sauna.spawnSpeedMultiplier = spawnSpeedMultiplier;
 
   return {

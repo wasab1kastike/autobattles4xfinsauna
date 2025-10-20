@@ -1558,7 +1558,8 @@ const clock = new GameClock(1000, (deltaMs) => {
     rosterCap,
     getRosterCount: getActiveRosterCount,
     tierHelpers: spawnTierQueue,
-    spawnSpeedMultiplier: getActiveSpawnSpeedMultiplierRef()
+    spawnSpeedMultiplier: getActiveSpawnSpeedMultiplierRef(),
+    spawnHeatMultiplier: sauna.spawnSpeedMultiplier ?? 1
   });
   const runtimeModifiers: EnemySpawnerRuntimeModifiers = {
     aggressionMultiplier: rampModifiers.aggression,
