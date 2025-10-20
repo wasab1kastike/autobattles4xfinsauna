@@ -511,6 +511,17 @@ export function listStrongholds(): readonly StrongholdMetadata[] {
   return Array.from(registry.values());
 }
 
+export function countActiveStrongholds(): number {
+  let active = 0;
+  for (const metadata of registry.values()) {
+    const health = Number(metadata.structureHealth);
+    if (!metadata.captured && Number.isFinite(health) && health > 0) {
+      active += 1;
+    }
+  }
+  return active;
+}
+
 export function getStrongholdSnapshot(): StrongholdPersistence {
   const snapshot: StrongholdPersistence = {};
   const encounterSnapshot = getStrongholdEncounterSnapshot();
