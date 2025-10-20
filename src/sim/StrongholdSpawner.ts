@@ -117,6 +117,10 @@ export class StrongholdSpawner {
     }
   }
 
+  getCooldownSeconds(): number {
+    return this.cooldownSeconds;
+  }
+
   peekQueue(): readonly string[] {
     return [...this.queue];
   }

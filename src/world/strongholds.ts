@@ -413,7 +413,8 @@ export function seedEnemyStrongholds(
       metadata.deployed = true;
     }
     registry.set(spec.id, metadata);
-    const shouldRestore = !captured && Boolean(persistedEntry && !structureWasDestroyed);
+    const wasDeployed = Boolean(persistedEntry) && persistedEntry?.deployed !== false;
+    const shouldRestore = !captured && wasDeployed && !structureWasDestroyed;
     if (shouldRestore) {
       metadata.seen = metadata.seen || previouslySeen;
       metadata.structureHealth = structureHealth;

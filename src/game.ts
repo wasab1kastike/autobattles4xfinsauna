@@ -194,9 +194,15 @@ import {
   initializeRightPanel as createRightPanelBridge,
   type RightPanelBridge
 } from './game/setup/rightPanel.ts';
-import { seedEnemyStrongholds, STRONGHOLD_CONFIG } from './world/strongholds.ts';
+import {
+  activateStronghold,
+  listStrongholds,
+  seedEnemyStrongholds,
+  STRONGHOLD_CONFIG
+} from './world/strongholds.ts';
 import { abandonStrongholdEncounters } from './world/strongholdEncounters.ts';
 import type { StrongholdSpawnExclusionZone } from './world/spawn/strongholdSpawn.ts';
+import { StrongholdSpawner } from './sim/StrongholdSpawner.ts';
 import {
   applyNgPlusState as applyRuntimeNgPlusState,
   getActiveTierIdRef as getActiveTierIdAccessor,
@@ -1290,12 +1296,55 @@ restoredSave = loader.restoredSave;
 currentNgPlusState = loader.ngPlusState;
 
 const persistedStrongholds = state.peekPersistedStrongholds();
+const persistedStrongholdSpawner = state.peekStrongholdSpawnerSnapshot();
 seedEnemyStrongholds(map, STRONGHOLD_CONFIG, persistedStrongholds, {
   encounters: {
     registerUnit,
     random: Math.random
   }
 });
+
+function collectDormantStrongholdIds(): string[] {
+  return listStrongholds()
+    .filter((entry) => !entry.captured && !entry.deployed)
+    .map((entry) => entry.id);
+}
+
+const strongholdSpawner = new StrongholdSpawner({
+  initialQueue: collectDormantStrongholdIds(),
+  snapshot: persistedStrongholdSpawner ?? undefined
+});
+
+function syncStrongholdSpawnCooldowns(): void {
+  const queue = strongholdSpawner.peekQueue();
+  const remaining = strongholdSpawner.getCooldownRemaining();
+  const cooldown = Math.max(0, strongholdSpawner.getCooldownSeconds());
+  const offsets = new Map<string, number>();
+  queue.forEach((id, index) => offsets.set(id, index));
+
+  for (const metadata of listStrongholds()) {
+    if (metadata.captured || metadata.deployed) {
+      metadata.spawnCooldownRemaining = 0;
+      continue;
+    }
+
+    const offset = offsets.get(metadata.id);
+    if (offset === undefined) {
+      metadata.spawnCooldownRemaining = 0;
+      continue;
+    }
+
+    if (offset === 0) {
+      metadata.spawnCooldownRemaining = Math.max(0, remaining);
+      continue;
+    }
+
+    metadata.spawnCooldownRemaining = Math.max(0, remaining + cooldown * offset);
+  }
+}
+
+syncStrongholdSpawnCooldowns();
+state.setStrongholdSpawnerSnapshot(strongholdSpawner.getSnapshot());
 
 function coordKey(coord: AxialCoord): string {
   return `${coord.q},${coord.r}`;
@@ -1540,6 +1589,7 @@ const enemySpawner = new EnemySpawner({
 });
 const clock = new GameClock(1000, (deltaMs) => {
   const dtSeconds = deltaMs / 1000;
+  const strongholdActivations = strongholdSpawner.update(dtSeconds);
   state.tick();
   eventScheduler.tick(dtSeconds, { state });
   const rampModifiers: EnemyScalingSnapshot = state.getEnemyScalingSnapshot();
@@ -1600,6 +1650,20 @@ const clock = new GameClock(1000, (deltaMs) => {
   if (syncSaunojaRosterWithUnits()) {
     updateRosterDisplay();
   }
+  if (strongholdActivations.length > 0) {
+    for (const strongholdId of strongholdActivations) {
+      activateStronghold(strongholdId, map, {
+        registerUnit,
+        encounters: {
+          registerUnit,
+          random: Math.random
+        },
+        persisted: persistedStrongholds?.[strongholdId] ?? null
+      });
+    }
+  }
+  syncStrongholdSpawnCooldowns();
+  state.setStrongholdSpawnerSnapshot(strongholdSpawner.getSnapshot());
   state.save();
   const coordsToReveal = new Set<string>();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat

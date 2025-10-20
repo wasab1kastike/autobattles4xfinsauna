@@ -13,5 +13,5 @@
 - Restructured the runtime shell so the game canvas and HUD mount in dedicated containers, aligning the GitHub Pages bundle and bootstrap behavior.
 
 ### Minor Changes
-- Added a persistence-aware stronghold spawner that tracks cooldown progress, restores queued activations after reloads, and ships with targeted timer regression tests.
+- Integrated the persistence-aware stronghold spawner into the main game loop so dormant fortresses awaken on schedule, preserved cooldown progress across reloads, and validated the flow with long-horizon integration tests.
 - Recorded stronghold deployment state and spawn cooldown in saves, restoring timers for new sessions while preserving legacy compatibility through dedicated serialization tests.

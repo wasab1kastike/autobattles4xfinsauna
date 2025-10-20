@@ -28,6 +28,7 @@ import {
   type StrongholdPersistence,
   type StrongholdPersistenceEntry
 } from '../world/strongholds.ts';
+import type { StrongholdSpawnerSnapshot } from '../sim/StrongholdSpawner.ts';
 
 function coordKey(c: AxialCoord): string {
   return `${c.q},${c.r}`;
@@ -67,6 +68,29 @@ function cloneStrongholdEntry(
   return snapshot;
 }
 
+function normalizeSeconds(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.max(0, numeric);
+}
+
+function cloneStrongholdSpawnerSnapshot(
+  snapshot: StrongholdSpawnerSnapshot
+): StrongholdSpawnerSnapshot {
+  const cooldown = normalizeSeconds(snapshot.cooldownSeconds, 180);
+  const remaining = normalizeSeconds(snapshot.cooldownRemaining, cooldown);
+  return {
+    elapsedSeconds: normalizeSeconds(snapshot.elapsedSeconds, 0),
+    cooldownSeconds: cooldown,
+    cooldownRemaining: Math.min(remaining, cooldown),
+    queue: Array.isArray(snapshot.queue)
+      ? snapshot.queue.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+      : []
+  } satisfies StrongholdSpawnerSnapshot;
+}
+
 const BUILDING_FACTORIES: Record<string, () => Building> = {
   farm: () => new Farm(),
   barracks: () => new Barracks()
@@ -97,6 +121,7 @@ type SerializedState = {
   enemyScaling?: EnemyScalingMultipliers;
   ngPlus?: NgPlusState;
   strongholds?: SerializedStrongholds;
+  strongholdSpawner?: StrongholdSpawnerSnapshot | null;
 };
 
 export interface EnemyScalingMultipliers {
@@ -183,6 +208,9 @@ export class GameState {
   /** Snapshot of stronghold capture state for persistence fallbacks. */
   private strongholdStatuses = new Map<string, StrongholdPersistenceEntry>();
 
+  /** Runtime snapshot of stronghold deployment cadence. */
+  private strongholdSpawner: StrongholdSpawnerSnapshot | null = null;
+
   constructor(
     private readonly tickInterval: number,
     private readonly storageKey = 'gameState'
@@ -223,6 +251,10 @@ export class GameState {
       this.strongholdStatuses.set(id, cloneStrongholdEntry(entry));
     });
 
+    const spawnerSnapshot = this.strongholdSpawner
+      ? cloneStrongholdSpawnerSnapshot(this.strongholdSpawner)
+      : null;
+
     const serialized: SerializedState = {
       resources: this.resources,
       lastSaved: this.lastSaved,
@@ -233,7 +265,8 @@ export class GameState {
       nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
       enemyScaling: { ...this.enemyScaling },
       ngPlus: this.ngPlus,
-      strongholds: strongholdSnapshot
+      strongholds: strongholdSnapshot,
+      strongholdSpawner: spawnerSnapshot
     };
     const storage =
       typeof localStorage !== 'undefined' && localStorage ? localStorage : undefined;
@@ -308,6 +341,12 @@ export class GameState {
       Object.entries(persistedStrongholds).forEach(([id, entry]) => {
         this.strongholdStatuses.set(id, cloneStrongholdEntry(entry));
       });
+    }
+
+    if ('strongholdSpawner' in data) {
+      this.setStrongholdSpawnerSnapshot(data.strongholdSpawner ?? null);
+    } else {
+      this.setStrongholdSpawnerSnapshot(null);
     }
 
     // Reset derived policy state and repopulate applied policies from the save.
@@ -386,6 +425,26 @@ export class GameState {
       snapshot[id] = cloneStrongholdEntry(entry as StrongholdPersistenceEntry);
     });
     return snapshot;
+  }
+
+  setStrongholdSpawnerSnapshot(snapshot: StrongholdSpawnerSnapshot | null): void {
+    this.strongholdSpawner = snapshot ? cloneStrongholdSpawnerSnapshot(snapshot) : null;
+  }
+
+  getStrongholdSpawnerSnapshot(): StrongholdSpawnerSnapshot | null {
+    return this.strongholdSpawner ? cloneStrongholdSpawnerSnapshot(this.strongholdSpawner) : null;
+  }
+
+  peekStrongholdSpawnerSnapshot(): StrongholdSpawnerSnapshot | null {
+    const data = safeLoadJSON<Partial<SerializedState>>(this.storageKey);
+    if (!data || !('strongholdSpawner' in data)) {
+      return null;
+    }
+    const snapshot = data.strongholdSpawner;
+    if (!snapshot) {
+      return null;
+    }
+    return cloneStrongholdSpawnerSnapshot(snapshot);
   }
 
   /** Current amount of a resource. */
