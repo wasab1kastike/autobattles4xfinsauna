@@ -7,6 +7,7 @@ import { calculateKillExperience, XP_BOSS_KILL } from '../../src/game/experience
 import type { Unit } from '../../src/units/Unit.ts';
 import { createUnit } from '../../src/units/UnitFactory.ts';
 import {
+  activateStronghold,
   getStrongholdSnapshot,
   listStrongholds,
   resetStrongholdRegistry,
@@ -53,22 +54,16 @@ describe('enemy strongholds integration', () => {
     tracker.dispose();
   });
 
-  it('keeps most strongholds cloaked but guarantees at least one revealed', () => {
+  it('keeps strongholds cloaked until they are activated', () => {
     const map = new HexMap(10, 10);
     seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
-
-    let revealed = 0;
 
     for (const stronghold of STRONGHOLD_CONFIG.strongholds) {
       const tile = map.getTile(stronghold.coord.q, stronghold.coord.r);
       expect(tile).toBeDefined();
-      expect(tile?.building).toBe('city');
-      if (tile && !tile.isFogged) {
-        revealed += 1;
-      }
+      expect(tile?.building).toBeNull();
+      expect(tile?.isFogged).toBe(true);
     }
-
-    expect(revealed).toBe(1);
   });
 
   it('decrements remaining strongholds when a city falls', () => {
@@ -78,6 +73,12 @@ describe('enemy strongholds integration', () => {
 
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
+    const hooks = {
+      registerUnit: (_unit: Unit) => {
+        /* no-op */
+      }
+    };
+    activateStronghold(firstStronghold!.id, map, { encounters: hooks, registerUnit: hooks.registerUnit });
     const tile = map.getTile(firstStronghold.coord.q, firstStronghold.coord.r);
     expect(tile?.building).toBe('city');
 
@@ -101,6 +102,16 @@ describe('enemy strongholds integration', () => {
         random: () => 0.41
       }
     });
+
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, map, {
+        encounters: {
+          registerUnit: (unit) => spawned.push(unit),
+          random: () => 0.41
+        },
+        registerUnit: (unit) => spawned.push(unit)
+      });
+    }
 
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
@@ -164,6 +175,15 @@ describe('enemy strongholds integration', () => {
       }
     });
 
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, map, {
+        encounters: {
+          registerUnit: (unit) => spawned.push(unit)
+        },
+        registerUnit: (unit) => spawned.push(unit)
+      });
+    }
+
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
 
@@ -204,6 +224,16 @@ describe('enemy strongholds integration', () => {
       }
     });
 
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, mapReloaded, {
+        encounters: {
+          registerUnit: (unit) => respawned.push(unit)
+        },
+        registerUnit: (unit) => respawned.push(unit),
+        persisted: snapshot[entry.id] ?? null
+      });
+    }
+
     const reloadedStructure = respawned.find(
       (unit) =>
         unit.type === 'stronghold-structure' &&
@@ -223,6 +253,15 @@ describe('enemy strongholds integration', () => {
         registerUnit: (unit) => spawned.push(unit)
       }
     });
+
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, map, {
+        encounters: {
+          registerUnit: (unit) => spawned.push(unit)
+        },
+        registerUnit: (unit) => spawned.push(unit)
+      });
+    }
 
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
@@ -258,6 +297,16 @@ describe('enemy strongholds integration', () => {
       }
     });
 
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, mapReloaded, {
+        encounters: {
+          registerUnit: (unit) => respawned.push(unit)
+        },
+        registerUnit: (unit) => respawned.push(unit),
+        persisted: snapshot[entry.id] ?? null
+      });
+    }
+
     const reloadedTile = mapReloaded.getTile(firstStronghold!.coord.q, firstStronghold!.coord.r);
     expect(reloadedTile?.building).toBeNull();
     const bosses = respawned.filter((unit) => unit.isBoss);
@@ -280,6 +329,26 @@ describe('enemy strongholds integration', () => {
         random: () => 0.23
       }
     });
+
+    for (const entry of STRONGHOLD_CONFIG.strongholds) {
+      activateStronghold(entry.id, map, {
+        encounters: {
+          registerUnit: (unit) => {
+            activeUnits.set(unit.id, unit);
+            unit.onDeath(() => {
+              activeUnits.delete(unit.id);
+            });
+          },
+          random: () => 0.23
+        },
+        registerUnit: (unit) => {
+          activeUnits.set(unit.id, unit);
+          unit.onDeath(() => {
+            activeUnits.delete(unit.id);
+          });
+        }
+      });
+    }
 
     const [firstStronghold] = listStrongholds();
     expect(firstStronghold).toBeDefined();
