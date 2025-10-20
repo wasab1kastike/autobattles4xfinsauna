@@ -53,6 +53,8 @@ export interface StrongholdPersistenceEntry {
   readonly structureHealth?: number;
   readonly structureMaxHealth?: number;
   readonly structureDestroyed?: boolean;
+  readonly deployed?: boolean;
+  readonly spawnCooldownRemaining?: number;
   readonly boss?: StrongholdBossPersistence;
 }
 
@@ -61,9 +63,11 @@ export type StrongholdPersistence = Record<string, StrongholdPersistenceEntry>;
 export interface StrongholdMetadata extends StrongholdDefinition {
   captured: boolean;
   seen: boolean;
+  deployed: boolean;
   structureHealth: number;
   structureMaxHealth: number;
   structureUnitId: string | null;
+  spawnCooldownRemaining: number;
 }
 
 export interface StrongholdSeedOptions {
@@ -81,6 +85,14 @@ const STRONGHOLD_STRUCTURE_HEALTH: Record<StrongholdStructureTier, number> = Obj
   citadel: 380,
   sanctum: 440
 });
+
+function normalizeSpawnCooldown(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    return 0;
+  }
+  return numeric;
+}
 
 function resolveStructureMaxHealth(spec: StrongholdDefinition): number {
   const base = STRONGHOLD_STRUCTURE_HEALTH[spec.structureTier] ?? STRONGHOLD_STRUCTURE_HEALTH.bastion;
@@ -326,6 +338,8 @@ export function activateStronghold(
   metadata.structureHealth = structureUnit.stats.health;
   metadata.structureMaxHealth = maxHealth;
   metadata.structureUnitId = structureUnit.id;
+  metadata.deployed = true;
+  metadata.spawnCooldownRemaining = 0;
 
   structureUnits.set(metadata.id, structureUnit);
   attachStructureListeners(metadata, structureUnit, map);
@@ -389,10 +403,15 @@ export function seedEnemyStrongholds(
       ...spec,
       captured,
       seen: captured || previouslySeen,
+      deployed: Boolean(persistedEntry?.deployed) || false,
       structureHealth,
       structureMaxHealth: persistedMaxHealth,
-      structureUnitId: null
+      structureUnitId: null,
+      spawnCooldownRemaining: normalizeSpawnCooldown(persistedEntry?.spawnCooldownRemaining)
     };
+    if (captured) {
+      metadata.deployed = true;
+    }
     registry.set(spec.id, metadata);
     const shouldRestore = !captured && Boolean(persistedEntry && !structureWasDestroyed);
     if (shouldRestore) {
@@ -434,6 +453,12 @@ export function mergeStrongholdPersistence(
     const previouslySeen = Boolean(persistedEntry?.seen);
     metadata.captured = captured;
     metadata.seen = metadata.seen || captured || previouslySeen;
+    if (persistedEntry) {
+      metadata.deployed = persistedEntry.deployed !== false;
+      metadata.spawnCooldownRemaining = normalizeSpawnCooldown(
+        persistedEntry.spawnCooldownRemaining
+      );
+    }
     metadata.structureMaxHealth = normalizeStructureMaxHealth(
       persistedEntry?.structureMaxHealth,
       metadata.structureMaxHealth
@@ -494,8 +519,10 @@ export function getStrongholdSnapshot(): StrongholdPersistence {
     snapshot[metadata.id] = {
       captured: metadata.captured,
       seen: metadata.seen,
+      deployed: metadata.deployed,
       structureHealth: metadata.structureHealth,
       structureMaxHealth: metadata.structureMaxHealth,
+      spawnCooldownRemaining: metadata.spawnCooldownRemaining,
       ...(destroyed ? { structureDestroyed: true } : {}),
       ...(encounter ? { boss: encounter } : {})
     };
