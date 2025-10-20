@@ -1,5 +1,5 @@
 import type { HexMap } from '../../hexmap.ts';
-import { createSauna, type Sauna } from '../../sim/sauna.ts';
+import { createSauna, DEFAULT_SAUNA_VISION_RANGE, type Sauna } from '../../sim/sauna.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
   evaluateSaunaTier,
@@ -77,20 +77,17 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
 
   const saunaSettings = loadSaunaSettings();
 
-  if (ngPlusState.unlockSlots >= 2) {
-    setPurchasedTierIds(grantSaunaTier('aurora-ward'));
-  }
-  if (ngPlusState.ngPlusLevel >= 2) {
-    setPurchasedTierIds(grantSaunaTier('glacial-rhythm'));
-  }
-  if (ngPlusState.ngPlusLevel >= 3) {
-    setPurchasedTierIds(grantSaunaTier('mythic-conclave'));
-  }
-  if (ngPlusState.ngPlusLevel >= 4) {
-    setPurchasedTierIds(grantSaunaTier('solstice-cadence'));
-  }
-  if (ngPlusState.ngPlusLevel >= 5) {
-    setPurchasedTierIds(grantSaunaTier('celestial-reserve'));
+  const autoGrantRules: readonly { tierId: SaunaTierId; condition: boolean }[] = [
+    { tierId: 'aurora-ward', condition: ngPlusState.unlockSlots >= 2 },
+    { tierId: 'glacial-rhythm', condition: ngPlusState.ngPlusLevel >= 2 },
+    { tierId: 'mythic-conclave', condition: ngPlusState.ngPlusLevel >= 3 },
+    { tierId: 'solstice-cadence', condition: ngPlusState.ngPlusLevel >= 4 },
+    { tierId: 'celestial-reserve', condition: ngPlusState.ngPlusLevel >= 5 }
+  ];
+  for (const { tierId, condition } of autoGrantRules) {
+    if (condition && !getPurchasedTierIds().has(tierId)) {
+      setPurchasedTierIds(grantSaunaTier(tierId));
+    }
   }
   if (
     saunaSettings.activeTierId !== DEFAULT_SAUNA_TIER_ID &&
@@ -134,26 +131,30 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     { maxRosterSize: initialRosterCap, tier: activeTier }
   );
 
+  let currentSpawnSpeedMultiplier = 1;
+  let hasRevealedVisionRadius = false;
   let lastNotifiedVisionRange = Number.NaN;
-  const notifyVision = (options: { reveal?: boolean } = {}): void => {
-    if (options.reveal) {
-      map.revealAround(sauna.pos, sauna.visionRange);
-    }
-    if (sauna.visionRange !== lastNotifiedVisionRange) {
-      onVisionRangeChanged?.({ center: { ...sauna.pos }, radius: sauna.visionRange });
-      lastNotifiedVisionRange = sauna.visionRange;
-    }
-  };
 
-  notifyVision({ reveal: true });
-
-  let currentSpawnSpeedMultiplier = sanitizeSpawnSpeedMultiplier(activeTier.spawnSpeedMultiplier ?? 1);
-  const updateSaunaSpawnSpeedFromTier = (tier: SaunaTier): void => {
+  const applyActiveTierEffects = (tier: SaunaTier, options: { reveal?: boolean } = {}): void => {
     currentSpawnSpeedMultiplier = sanitizeSpawnSpeedMultiplier(tier.spawnSpeedMultiplier ?? 1);
     sauna.spawnSpeedMultiplier = currentSpawnSpeedMultiplier;
+    sauna.visionRange = DEFAULT_SAUNA_VISION_RANGE;
+
+    if (options.reveal && !hasRevealedVisionRadius) {
+      map.revealAround(sauna.pos, DEFAULT_SAUNA_VISION_RANGE);
+      hasRevealedVisionRadius = true;
+    }
+
+    if (lastNotifiedVisionRange !== DEFAULT_SAUNA_VISION_RANGE) {
+      onVisionRangeChanged?.({
+        center: { ...sauna.pos },
+        radius: DEFAULT_SAUNA_VISION_RANGE
+      });
+      lastNotifiedVisionRange = DEFAULT_SAUNA_VISION_RANGE;
+    }
   };
 
-  updateSaunaSpawnSpeedFromTier(activeTier);
+  applyActiveTierEffects(activeTier, { reveal: true });
 
   const resolveSpawnLimit = (): number => Math.max(minSpawnLimit, sauna.maxRosterSize);
 
@@ -216,8 +217,7 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
       const previousTierId = currentTierId;
       currentTierId = highestUnlockedId;
       const nextTier = getSaunaTier(currentTierId);
-      updateSaunaSpawnSpeedFromTier(nextTier);
-      notifyVision({ reveal: true });
+      applyActiveTierEffects(nextTier, { reveal: true });
       spawnTierQueue.clearQueue?.('tier-change');
       updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
       options.onTierChanged?.({ previousTierId, nextTierId: currentTierId });
@@ -246,8 +246,7 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     }
     const previousTierId = currentTierId;
     currentTierId = tier.id;
-    updateSaunaSpawnSpeedFromTier(tier);
-    notifyVision({ reveal: true });
+    applyActiveTierEffects(tier, { reveal: true });
     spawnTierQueue.clearQueue?.('tier-change');
     updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
     options.onTierChanged?.({ previousTierId, nextTierId: currentTierId });

@@ -3,6 +3,10 @@
   the policy grid, keeping the council controls visible again.
 ## Unreleased
 
+- Keep sauna tier application centralized so NG+ auto-grants unlock every tier at
+  the intended milestone, persist updated selections, and reveal the default
+  vision radius while propagating spawn speed changes to the runtime state.
+
 - Export `DEFAULT_SAUNA_VISION_RANGE`, keep sauna tier vision locked to the base
   radius while exposing the spawn-speed multiplier on the runtime state, and
   extend the sauna constructor tests to cover the sanitized overrides.
