@@ -28,7 +28,11 @@ with cinematic UI flourishes.
   new sauna tiers mid-run with artocoins earned on the frontline.
 - **Scripted enemy strongholds** seed the 10×10 campaign map via
   `src/world/strongholds.ts`, pairing guard tiers with bespoke loot caches so
-  conquest objectives have handcrafted stakes from the first tick.
+  conquest objectives have handcrafted stakes from the first tick while a
+  three-minute assault cadence keeps the front shifting.
+- **Active bastion pressure** routes extra enemy reinforcements from any
+  standing bastion every three minutes until it falls, ratcheting tension and
+  rewarding surgical strikes that collapse their rally network.
 - **Artocoin ledger end screen** tallies liberated strongholds, roster attrition,
   resources, and artocoin earnings/spend so the next commission is always within reach.
 - **NG+ scaling** now seeds each run, escalates upkeep and enemy aggression with
@@ -70,7 +74,9 @@ with cinematic UI flourishes.
    have the gold, acknowledge events to clear the queue, and scan the log for a
    curated history of recent actions.
 7. **Break the siege** to trigger the end screen—inspect stronghold progress,
-   harvest your rewards, and launch straight into the next NG+ run.
+   harvest your rewards, and launch straight into the next NG+ run. Keep an eye
+   on the three-minute cadence that spins up fresh bastions; raze them quickly
+   to relieve the additional pressure they pour onto the map.
 
 ## Local Development
 
