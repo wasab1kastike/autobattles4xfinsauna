@@ -42,8 +42,10 @@ function zoomKey(zoom: number): string {
 export class FogCache {
   private readonly chunkCanvases = new Map<ChunkKey, Map<string, FogChunkCanvas>>();
   private readonly dirtyChunks = new Set<ChunkKey>();
+  private readonly emptyChunksByZoom = new Map<string, Set<ChunkKey>>();
   private readonly unsubscribe: () => void;
   private lastBounds?: { minQ: number; maxQ: number; minR: number; maxR: number };
+  private lastZoomKey?: string;
 
   constructor(private readonly map: HexMap) {
     this.unsubscribe = map.addTileChangeListener((coord, tile, change) => {
@@ -69,15 +71,20 @@ export class FogCache {
     this.chunkCanvases.clear();
     this.dirtyChunks.clear();
     this.lastBounds = undefined;
+    this.emptyChunksByZoom.clear();
+    this.lastZoomKey = undefined;
   }
 
   markTileDirty(q: number, r: number): void {
-    this.dirtyChunks.add(chunkKeyFromAxial(q, r));
+    const key = chunkKeyFromAxial(q, r);
+    this.dirtyChunks.add(key);
+    this.clearChunkEmptyState(key);
   }
 
   private markAllChunksDirty(): void {
     for (const key of this.chunkCanvases.keys()) {
       this.dirtyChunks.add(key);
+      this.clearChunkEmptyState(key);
     }
   }
 
@@ -103,6 +110,11 @@ export class FogCache {
     const chunks: FogChunkCanvas[] = [];
     const { width: hexWidth, height: hexHeight } = getHexDimensions(hexSize);
     const keyForZoom = zoomKey(zoom);
+
+    if (this.lastZoomKey && this.lastZoomKey !== keyForZoom) {
+      this.emptyChunksByZoom.delete(this.lastZoomKey);
+    }
+    this.lastZoomKey = keyForZoom;
 
     for (const chunkCoord of enumerateChunks(range)) {
       const key = chunkKeyFromCoord(chunkCoord);
@@ -145,6 +157,10 @@ export class FogCache {
       return existing;
     }
 
+    if (!isDirty && this.isChunkEmpty(key, zoomKeyValue)) {
+      return null;
+    }
+
     const reuse = isDirty ? undefined : existing;
     const rendered = this.renderChunk(
       key,
@@ -153,6 +169,7 @@ export class FogCache {
       hexWidth,
       hexHeight,
       zoom,
+      zoomKeyValue,
       reuse ?? null
     );
 
@@ -164,6 +181,7 @@ export class FogCache {
       return null;
     }
 
+    this.clearChunkEmptyState(key, zoomKeyValue);
     zoomVariants.set(zoomKeyValue, rendered);
     return rendered;
   }
@@ -175,6 +193,7 @@ export class FogCache {
     hexWidth: number,
     hexHeight: number,
     zoom: number,
+    zoomKeyValue: string,
     existing: FogChunkCanvas | null
   ): FogChunkCanvas | null {
     if (typeof document === 'undefined') {
@@ -183,6 +202,7 @@ export class FogCache {
 
     const { qStart, qEnd, rStart, rEnd } = chunkBounds(chunkCoord, this.map);
     if (qStart > qEnd || rStart > rEnd) {
+      this.markChunkEmpty(key, zoomKeyValue);
       return null;
     }
 
@@ -218,6 +238,7 @@ export class FogCache {
     }
 
     if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {
+      this.markChunkEmpty(key, zoomKeyValue);
       return null;
     }
 
@@ -252,6 +273,39 @@ export class FogCache {
       width,
       height,
     } satisfies FogChunkCanvas;
+  }
+
+  private markChunkEmpty(key: ChunkKey, zoomKeyValue: string): void {
+    let emptySet = this.emptyChunksByZoom.get(zoomKeyValue);
+    if (!emptySet) {
+      emptySet = new Set();
+      this.emptyChunksByZoom.set(zoomKeyValue, emptySet);
+    }
+    emptySet.add(key);
+  }
+
+  private clearChunkEmptyState(key: ChunkKey, zoomKeyValue?: string): void {
+    if (zoomKeyValue) {
+      const emptySet = this.emptyChunksByZoom.get(zoomKeyValue);
+      if (emptySet) {
+        emptySet.delete(key);
+        if (emptySet.size === 0) {
+          this.emptyChunksByZoom.delete(zoomKeyValue);
+        }
+      }
+      return;
+    }
+
+    for (const [zoomKeyValueExisting, emptySet] of this.emptyChunksByZoom) {
+      if (emptySet.delete(key) && emptySet.size === 0) {
+        this.emptyChunksByZoom.delete(zoomKeyValueExisting);
+      }
+    }
+  }
+
+  private isChunkEmpty(key: ChunkKey, zoomKeyValue: string): boolean {
+    const emptySet = this.emptyChunksByZoom.get(zoomKeyValue);
+    return emptySet?.has(key) ?? false;
   }
 }
 

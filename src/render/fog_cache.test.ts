@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { HexMap } from '../hexmap.ts';
-import { ensureChunksPopulated } from '../map/hex/chunking.ts';
+import { ensureChunksPopulated, HEX_CHUNK_SIZE } from '../map/hex/chunking.ts';
 import { axialToPixel } from '../hex/HexUtils.ts';
 import { getHexDimensions } from '../hex/HexDimensions.ts';
 import { FogCache } from './fog_cache.ts';
@@ -129,6 +129,50 @@ describe('FogCache', () => {
     expect(drawFogHexMock).not.toHaveBeenCalled();
 
     cache.dispose();
+  });
+
+  it('caches empty fog chunks until invalidated', () => {
+    const map = new HexMap(HEX_CHUNK_SIZE, HEX_CHUNK_SIZE);
+    const cache = new FogCache(map);
+    const range = { qMin: 0, qMax: 0, rMin: 0, rMax: 0 };
+    ensureChunksPopulated(map, range);
+
+    for (let q = 0; q < HEX_CHUNK_SIZE; q++) {
+      for (let r = 0; r < HEX_CHUNK_SIZE; r++) {
+        map.ensureTile(q, r).reveal();
+      }
+    }
+
+    const cacheWithRender = cache as unknown as { renderChunk: FogCache['renderChunk'] };
+    const renderSpy = vi.spyOn(cacheWithRender, 'renderChunk');
+
+    const zoom = 1;
+
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(1);
+
+    cache.markTileDirty(0, 0);
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(2);
+
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(2);
+
+    cache.invalidate();
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(3);
+
+    expect(cache.getRenderableChunks(range, map.hexSize, 1.5)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(4);
+
+    expect(cache.getRenderableChunks(range, map.hexSize, zoom)).toHaveLength(0);
+    expect(renderSpy).toHaveBeenCalledTimes(5);
+
+    cache.dispose();
+    renderSpy.mockRestore();
   });
 });
 
