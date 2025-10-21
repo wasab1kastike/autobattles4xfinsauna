@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getSaunaTier, listSaunaTiers } from './tiers.ts';
+import { evaluateSaunaTier, getSaunaTier, listSaunaTiers, type SaunaTierId } from './tiers.ts';
 
 describe('sauna tiers', () => {
   it('lists the current progression lineup from Ember Circuit through Celestial Reserve', () => {
@@ -25,5 +25,25 @@ describe('sauna tiers', () => {
     const tiers = listSaunaTiers();
     const caps = tiers.map((tier) => tier.rosterCap);
     expect(caps).toEqual([3, 4, 4, 5, 5, 6]);
+  });
+
+  it('marks every third hall with an extended healing aura', () => {
+    const tiers = listSaunaTiers();
+    const auraTiers = tiers.filter((tier) => tier.healingAura);
+
+    expect(auraTiers.map((tier) => tier.id)).toEqual(['glacial-rhythm', 'celestial-reserve']);
+    for (const tier of auraTiers) {
+      expect(tier.healingAura).toEqual({ radius: 3, regenPerSecond: 1.5 });
+    }
+  });
+
+  it('surfaces the healing aura perk in the upgrade requirement copy', () => {
+    const tier = getSaunaTier('glacial-rhythm');
+    const status = evaluateSaunaTier(tier, {
+      artocoinBalance: 999,
+      ownedTierIds: new Set<SaunaTierId>(['ember-circuit'])
+    });
+
+    expect(status.requirementLabel).toContain('Healing aura 3-hex (1.5 HP/s)');
   });
 });

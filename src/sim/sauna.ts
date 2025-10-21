@@ -1,7 +1,11 @@
 import type { AxialCoord } from '../hex/HexUtils.ts';
 import type { Unit } from '../units/Unit.ts';
 import { createSaunaHeat, type SaunaHeat, type SaunaHeatInit } from '../sauna/heat.ts';
-import type { SaunaTier } from '../sauna/tiers.ts';
+import {
+  sanitizeHealingAuraRadius,
+  sanitizeHealingAuraRegen,
+  type SaunaTier
+} from '../sauna/tiers.ts';
 
 const DEFAULT_SAUNA_MAX_HEALTH = 500;
 export const DEFAULT_SAUNA_VISION_RANGE = 4;
@@ -87,12 +91,16 @@ export interface SaunaInitOptions {
   maxHealth?: number;
   /** Starting health for the structure. Defaults to the configured max health. */
   health?: number;
-  /** Optional tier descriptor to seed sauna spawn speed. */
-  tier?: Pick<SaunaTier, 'spawnSpeedMultiplier'> | null;
+  /** Optional tier descriptor to seed sauna spawn speed and aura values. */
+  tier?: Pick<SaunaTier, 'spawnSpeedMultiplier' | 'healingAura'> | null;
   /** Override the tier-driven spawn speed if needed for tests. */
   spawnSpeedMultiplier?: number;
   /** Override the default vision radius if needed for tests. */
   visionRange?: number;
+  /** Override the default aura radius if needed for tests. */
+  auraRadius?: number;
+  /** Override the default regeneration rate if needed for tests. */
+  regenPerSec?: number;
 }
 
 export function createSauna(
@@ -119,13 +127,20 @@ export function createSauna(
       : options.tier?.spawnSpeedMultiplier
   );
   const resolvedVisionRange = sanitizeVisionRange(options.visionRange);
+  const tierAura = options.tier?.healingAura;
+  const resolvedAuraRadius = sanitizeHealingAuraRadius(
+    typeof options.auraRadius === 'number' ? options.auraRadius : tierAura?.radius
+  );
+  const resolvedRegenPerSec = sanitizeHealingAuraRegen(
+    typeof options.regenPerSec === 'number' ? options.regenPerSec : tierAura?.regenPerSecond
+  );
 
   return {
     id: 'sauna',
     pos,
-    auraRadius: 2,
+    auraRadius: resolvedAuraRadius,
     visionRange: resolvedVisionRange,
-    regenPerSec: 1,
+    regenPerSec: resolvedRegenPerSec,
     rallyToFront: false,
     maxRosterSize: initialRosterCap,
     maxHealth: resolvedMaxHealth,

@@ -46,6 +46,22 @@ describe('createSauna', () => {
     expect(sauna.visionRange).toBe(DEFAULT_SAUNA_VISION_RANGE);
   });
 
+  it('applies tier-provided healing aura metadata', () => {
+    const sauna = createSauna({ q: 0, r: 0 }, undefined, {
+      tier: { spawnSpeedMultiplier: 1, healingAura: { radius: 4, regenPerSecond: 2 } }
+    });
+
+    expect(sauna.auraRadius).toBe(4);
+    expect(sauna.regenPerSec).toBeCloseTo(2, 5);
+  });
+
+  it('falls back to legacy aura values when metadata is absent', () => {
+    const sauna = createSauna({ q: 0, r: 0 });
+
+    expect(sauna.auraRadius).toBe(2);
+    expect(sauna.regenPerSec).toBeCloseTo(1, 5);
+  });
+
   it('sanitizes invalid vision overrides for tests', () => {
     const sauna = createSauna({ q: 0, r: 0 }, undefined, {
       visionRange: -3
