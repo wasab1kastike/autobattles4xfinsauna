@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Make boss encounters pop by expanding their battlefield sprites and layering in a gilded aura so commanders can instantly spot
+  priority threats during clashes and replays.
+
 - Promote wizards with the Arcane Nova specialization, delivering a 10%
   damage boost and 40% splash damage within a two-hex radius, with persistence
   across save/load, HUD copy, and new combat tests.

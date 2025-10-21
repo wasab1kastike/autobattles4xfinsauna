@@ -60,13 +60,19 @@ function createStubContext(): CanvasRenderingContext2D & {
   return ctx;
 }
 
-function createUnit(type: string, faction: string, coord: AxialCoord): Unit {
+function createUnit(
+  type: string,
+  faction: string,
+  coord: AxialCoord,
+  extras: Partial<{ isBoss: boolean }> = {}
+): Unit {
   return {
     id: `${type}-${coord.q}-${coord.r}`,
     type,
     faction,
     coord,
-    renderCoord: coord
+    renderCoord: coord,
+    isBoss: extras.isBoss ?? false
   } as unknown as Unit;
 }
 
@@ -252,5 +258,37 @@ describe('drawUnitSprite', () => {
     const enemyStrokes = (enemyCtx as { __strokes: string[] }).__strokes;
     expect(enemyStrokes[0]).toBe('rgba(255, 255, 255, 0.525)');
     expect(enemyStrokes[1]).toBe('rgba(255, 255, 255, 0.645)');
+  });
+
+  it('enlarges placement and adds an aura for boss units', () => {
+    const bossUnit = createUnit('soldier', 'enemy', coord, { isBoss: true });
+    const placementOptions: DrawUnitSpriteOptions['placement'] = {
+      coord,
+      hexSize: 32,
+      origin,
+      zoom: 1,
+      type: bossUnit.type
+    };
+
+    const basePlacement = getSpritePlacement(placementOptions);
+
+    const result = drawUnitSprite(ctx, bossUnit, {
+      placement: placementOptions,
+      sprite,
+      faction: bossUnit.faction,
+      cameraZoom: 1,
+      motionStrength: 0.35,
+      selection: { isSelected: false }
+    });
+
+    expect(result.placement.width).toBeCloseTo(basePlacement.width * 1.18);
+    expect(result.placement.height).toBeCloseTo(basePlacement.height * 1.18);
+    const expectedBossRadius = Math.round(placementOptions.hexSize * 0.78 * 1.22);
+    expect(result.footprint.radiusX).toBe(expectedBossRadius);
+
+    const gradients = (ctx as { __gradients: GradientStub[] }).__gradients;
+    const auraColors = gradients.flatMap((gradient) => gradient.stops.map(([, color]) => color));
+    expect(auraColors).toContain('rgba(255, 189, 109, 0.42)');
+
   });
 });
