@@ -56,6 +56,11 @@ interface CachedBaseCanvas {
 
 const baseCanvasCache = new Map<string, CachedBaseCanvas>();
 
+const BOSS_SPRITE_SCALE = 1.18;
+const BOSS_BASE_HEX_SCALE = 1.08;
+const BOSS_AURA_RADIUS_SCALE_X = 1.45;
+const BOSS_AURA_RADIUS_SCALE_Y = 1.62;
+
 function createOffscreenCanvas(
   width: number,
   height: number
@@ -369,6 +374,111 @@ function getCachedBaseCanvas(
   return entry;
 }
 
+function applyBossSpriteScale(placement: SpritePlacement): void {
+  const anchor = placement.metadata.anchor;
+  const bottom = placement.drawY + placement.height;
+  const scaledWidth = placement.width * BOSS_SPRITE_SCALE;
+  const scaledHeight = placement.height * BOSS_SPRITE_SCALE;
+  const centerX = placement.centerX;
+
+  placement.width = scaledWidth;
+  placement.height = scaledHeight;
+  placement.drawX = centerX - scaledWidth * anchor.x;
+  placement.drawY = bottom - scaledHeight;
+  placement.centerX = centerX;
+  placement.centerY = placement.drawY + scaledHeight * anchor.y;
+}
+
+function resolveBossAuraPalette(
+  faction: string | undefined,
+  motionStrength: number
+): {
+  core: string;
+  inner: string;
+  halo: string;
+  outer: string;
+  ring: string;
+  shadow: string;
+} {
+  const normalizedFaction = faction?.toLowerCase?.() ?? '';
+  const clampedMotion = Math.min(1, Math.max(0, motionStrength));
+  const emphasis = 0.62 + clampedMotion * 0.34;
+
+  if (normalizedFaction === 'player') {
+    return {
+      core: `rgba(255, 246, 224, ${(0.72 + emphasis * 0.18).toFixed(3)})`,
+      inner: `rgba(255, 210, 140, ${(0.46 + emphasis * 0.26).toFixed(3)})`,
+      halo: `rgba(255, 176, 90, ${(0.22 + emphasis * 0.22).toFixed(3)})`,
+      outer: 'rgba(255, 176, 90, 0)',
+      ring: `rgba(255, 240, 210, ${(0.38 + emphasis * 0.28).toFixed(3)})`,
+      shadow: `rgba(255, 188, 120, ${(0.55 + emphasis * 0.25).toFixed(3)})`
+    } as const;
+  }
+
+  return {
+    core: `rgba(226, 240, 255, ${(0.68 + emphasis * 0.18).toFixed(3)})`,
+    inner: `rgba(156, 198, 255, ${(0.44 + emphasis * 0.26).toFixed(3)})`,
+    halo: `rgba(66, 110, 255, ${(0.20 + emphasis * 0.22).toFixed(3)})`,
+    outer: 'rgba(66, 110, 255, 0)',
+    ring: `rgba(216, 232, 255, ${(0.36 + emphasis * 0.26).toFixed(3)})`,
+    shadow: `rgba(110, 164, 255, ${(0.48 + emphasis * 0.25).toFixed(3)})`
+  } as const;
+}
+
+function drawBossAura(
+  ctx: CanvasRenderingContext2D,
+  footprint: UnitSpriteFootprint,
+  zoom: number,
+  palette: ReturnType<typeof resolveBasePalette>,
+  faction: string | undefined,
+  motionStrength: number
+): void {
+  const auraPalette = resolveBossAuraPalette(faction, motionStrength);
+  const radiusX = snapForZoom(Math.max(footprint.radiusX * BOSS_AURA_RADIUS_SCALE_X, 1), zoom);
+  const radiusY = snapForZoom(Math.max(footprint.radiusY * BOSS_AURA_RADIUS_SCALE_Y, 1), zoom);
+
+  ctx.save();
+  ctx.translate(footprint.centerX, footprint.centerY);
+  ctx.scale(radiusX, radiusY);
+  const [gradient, fallback] = createGradientSafe(
+    () => ctx.createRadialGradient(0, 0, 0, 0, 0, 1),
+    auraPalette.inner
+  );
+  applyStops(gradient, [
+    [0, auraPalette.core],
+    [0.42, auraPalette.inner],
+    [0.84, auraPalette.halo],
+    [1, auraPalette.outer]
+  ]);
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = 0.88;
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, Math.PI * 2);
+  ctx.fillStyle = gradient ?? fallback;
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'screen';
+  ctx.shadowColor = auraPalette.shadow;
+  ctx.shadowBlur = snapForZoom(Math.max(10, zoom * 4.5), zoom);
+  ctx.lineWidth = snapForZoom(Math.max(2.4, zoom * 1.6), zoom);
+  ctx.strokeStyle = auraPalette.ring;
+  ctx.beginPath();
+  ctx.ellipse(
+    footprint.centerX,
+    footprint.centerY,
+    radiusX * 0.78,
+    radiusY * 0.72,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function drawUnitSprite(
   ctx: CanvasRenderingContext2D,
   unit: Unit,
@@ -393,6 +503,12 @@ export function drawUnitSprite(
     ...basePlacement
   };
 
+  const isBossUnit = Boolean(unit.isBoss);
+
+  if (isBossUnit) {
+    applyBossSpriteScale(nextPlacement);
+  }
+
   if (anchorHint) {
     const deltaX = anchorHint.x - nextPlacement.centerX;
     const deltaY = anchorHint.y - nextPlacement.centerY;
@@ -416,14 +532,20 @@ export function drawUnitSprite(
   }
 
   const shouldDrawBase = options.drawBase ?? true;
+  const baseHexSize = options.placement.hexSize;
+  const effectiveHexSize = isBossUnit ? baseHexSize * BOSS_BASE_HEX_SCALE : baseHexSize;
   const footprint = drawBase(
     ctx,
     nextPlacement,
-    options.placement.hexSize,
+    effectiveHexSize,
     zoom,
     palette,
     shouldDrawBase
   );
+
+  if (isBossUnit) {
+    drawBossAura(ctx, footprint, zoom, palette, options.faction ?? unit.faction, motionStrength);
+  }
 
   const shouldRenderSprite = options.renderSprite !== false;
   const atlas = options.atlas ?? null;
