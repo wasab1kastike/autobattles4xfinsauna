@@ -21,6 +21,11 @@ export interface SaunaTierArt {
   glow?: string;
 }
 
+export interface SaunaTierHealingAura {
+  radius: number;
+  regenPerSecond: number;
+}
+
 export type SaunaTierUnlock =
   | { type: 'default'; label: string }
   | { type: 'artocoin'; cost: number; label?: string };
@@ -32,8 +37,28 @@ export interface SaunaTier {
   description: string;
   art: SaunaTierArt;
   unlock: SaunaTierUnlock;
+  healingAura?: SaunaTierHealingAura;
   /** Multiplier applied to the attendant spawn cadence. */
   spawnSpeedMultiplier?: number;
+}
+
+export const DEFAULT_SAUNA_AURA_RADIUS = 2;
+export const DEFAULT_SAUNA_REGEN_PER_SECOND = 1;
+
+export function sanitizeHealingAuraRadius(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SAUNA_AURA_RADIUS;
+  }
+  const radius = Math.floor(Number(value));
+  return radius > 0 ? radius : DEFAULT_SAUNA_AURA_RADIUS;
+}
+
+export function sanitizeHealingAuraRegen(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_SAUNA_REGEN_PER_SECOND;
+  }
+  const regen = Number(value);
+  return regen > 0 ? regen : DEFAULT_SAUNA_REGEN_PER_SECOND;
 }
 
 export interface SaunaTierContext {
@@ -60,6 +85,24 @@ const DEFAULT_UNLOCK_LABELS: Record<SaunaTierUnlock['type'], string> = {
   default: 'Included with the sauna key',
   artocoin: 'Invest artocoins'
 };
+
+const auraRegenFormatter = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1
+});
+
+function formatHealingAuraLabel(tier: SaunaTier): string | null {
+  if (!tier.healingAura) {
+    return null;
+  }
+  const radius = sanitizeHealingAuraRadius(tier.healingAura.radius);
+  const regen = sanitizeHealingAuraRegen(tier.healingAura.regenPerSecond);
+  if (radius <= 0 || regen <= 0) {
+    return null;
+  }
+  const regenLabel = auraRegenFormatter.format(regen);
+  return `Healing aura ${radius}-hex (${regenLabel} HP/s)`;
+}
 
 function sanitizeSpawnSpeedMultiplier(value: number | null | undefined): number {
   if (!Number.isFinite(value)) {
@@ -120,7 +163,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     name: 'Glacial Rhythm Retreat',
     rosterCap: 4,
     description:
-      'Crystalline steam vents pulse in measured waves, accelerating attendant call-ups without crowding the benches.',
+      'Crystalline steam vents pulse in measured waves, accelerating attendant call-ups while frost-mist widens a tri-hex healing aura.',
     art: {
       badge: saunaBeerUrl,
       glow: 'linear-gradient(135deg, rgba(120,215,255,0.65), rgba(167,255,238,0.18))'
@@ -130,6 +173,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       cost: 110,
       label: 'Tune the Glacial Rhythm for 110 artocoins'
     },
+    healingAura: { radius: 3, regenPerSecond: 1.5 },
     spawnSpeedMultiplier: 1.15
   },
   {
@@ -171,7 +215,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
     name: 'Celestial Reserve Sanctum',
     rosterCap: 6,
     description:
-      'Starlit balustrades unfurl a sixth berth while chronothermic conduits keep the accelerated muster steady.',
+      'Starlit balustrades unfurl a sixth berth while chronothermic conduits bathe allies in a tri-hex, high-flux healing halo.',
     art: {
       badge: cadenceBadgeUrl,
       glow: 'linear-gradient(135deg, rgba(222,199,255,0.76), rgba(152,209,255,0.22))'
@@ -181,6 +225,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       cost: 280,
       label: 'Crown the Celestial Reserve for 280 artocoins'
     },
+    healingAura: { radius: 3, regenPerSecond: 1.5 },
     spawnSpeedMultiplier: 1.3
   }
 ] satisfies readonly SaunaTier[]);
@@ -195,7 +240,10 @@ const TIER_PERK_LABELS: ReadonlyMap<SaunaTierId, string> = (() => {
     const rosterCap = Math.max(0, Math.floor(Number.isFinite(tier.rosterCap) ? tier.rosterCap : 0));
     const speed = sanitizeSpawnSpeedMultiplier(tier.spawnSpeedMultiplier);
     let perk: string | null = null;
-    if (rosterCap > previousRosterCap) {
+    const auraLabel = formatHealingAuraLabel(tier);
+    if (auraLabel) {
+      perk = auraLabel;
+    } else if (rosterCap > previousRosterCap) {
       perk = `Roster cap ${rosterCap}`;
     }
     const speedLabel = formatSpawnSpeedLabel(speed);

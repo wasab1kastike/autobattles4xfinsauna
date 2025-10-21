@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Major Changes
+- Empowered Glacial Rhythm and Celestial Reserve with tri-hex sauna healing auras, updating lifecycle logic, UI copy, and tests to surface the 1.5 HP/s passive restoration.
 - Extended sauna tiers through the Celestial Reserve, standardizing vision radius, spawn multipliers, and NG+ unlock behavior across every hall.
 - Empowered rogues with a permanent attack boost, an ambush teleport, and a first-strike damage surge covered by new combat and scenario tests.
 - Launched the Hypersteam Levy Ultimatum prestige doctrine, doubling Sauna Beer production while escalating enemy aggression, cadence, and strength.

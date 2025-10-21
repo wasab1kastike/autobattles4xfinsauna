@@ -5,6 +5,8 @@ import {
   evaluateSaunaTier,
   getSaunaTier,
   listSaunaTiers,
+  sanitizeHealingAuraRadius,
+  sanitizeHealingAuraRegen,
   type SaunaTier,
   type SaunaTierContext,
   type SaunaTierId
@@ -138,6 +140,8 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   const applyActiveTierEffects = (tier: SaunaTier, options: { reveal?: boolean } = {}): void => {
     currentSpawnSpeedMultiplier = sanitizeSpawnSpeedMultiplier(tier.spawnSpeedMultiplier ?? 1);
     sauna.spawnSpeedMultiplier = currentSpawnSpeedMultiplier;
+    sauna.auraRadius = sanitizeHealingAuraRadius(tier.healingAura?.radius);
+    sauna.regenPerSec = sanitizeHealingAuraRegen(tier.healingAura?.regenPerSecond);
     sauna.visionRange = DEFAULT_SAUNA_VISION_RANGE;
 
     if (options.reveal && !hasRevealedVisionRadius) {

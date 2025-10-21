@@ -7,6 +7,7 @@ import {
 } from '../../src/sauna/tiers.ts';
 import type { NgPlusState } from '../../src/progression/ngplus.ts';
 import { createSaunaLifecycle } from '../../src/game/setup/sauna.ts';
+import { Unit } from '../../src/units/Unit.ts';
 
 const {
   loadSaunaSettingsMock,
@@ -116,5 +117,37 @@ describe('createSaunaLifecycle', () => {
     const changed = lifecycle.setActiveTier(tiers[1].id, { persist: true });
     expect(changed).toBe(true);
     expect(queue.hasQueuedSpawn()).toBe(false);
+  });
+
+  it('extends the healing aura to three hexes and restores allies at range', () => {
+    const lifecycle = createLifecycle();
+    const { sauna } = lifecycle;
+
+    purchasedTierIds.add('aurora-ward');
+    purchasedTierIds.add('glacial-rhythm');
+
+    expect(sauna.auraRadius).toBe(2);
+    expect(sauna.regenPerSec).toBeCloseTo(1, 5);
+
+    const healer = new Unit(
+      'healing-target',
+      'soldier',
+      { q: sauna.pos.q + 3, r: sauna.pos.r },
+      'player',
+      { health: 10, attackDamage: 1, attackRange: 1, movementRange: 1 }
+    );
+
+    healer.stats.health = 5;
+    healer.update(1, sauna);
+    expect(healer.stats.health).toBeCloseTo(5, 5);
+
+    const promoted = lifecycle.setActiveTier('glacial-rhythm', { persist: true });
+    expect(promoted).toBe(true);
+    expect(sauna.auraRadius).toBe(3);
+    expect(sauna.regenPerSec).toBeCloseTo(1.5, 5);
+
+    healer.stats.health = 5;
+    healer.update(1, sauna);
+    expect(healer.stats.health).toBeCloseTo(6.5, 5);
   });
 });
