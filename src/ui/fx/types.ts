@@ -86,6 +86,8 @@ export interface UnitSelectionPayload {
   hp: number;
   maxHp: number;
   shield?: number;
+  classId?: string;
+  className?: string;
   behavior?: UnitBehavior;
   items: readonly SelectionItemSlot[];
   statuses: readonly SelectionStatusChip[];
