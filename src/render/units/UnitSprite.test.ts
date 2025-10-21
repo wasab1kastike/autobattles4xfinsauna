@@ -45,6 +45,9 @@ function createStubContext(): CanvasRenderingContext2D & {
     restore: vi.fn(),
     beginPath: vi.fn(),
     ellipse: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    arc: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(() => {
       strokes.push((ctx as CanvasRenderingContext2D & { strokeStyle: string }).strokeStyle as string);
@@ -60,13 +63,20 @@ function createStubContext(): CanvasRenderingContext2D & {
   return ctx;
 }
 
-function createUnit(type: string, faction: string, coord: AxialCoord): Unit {
+function createUnit(
+  type: string,
+  faction: string,
+  coord: AxialCoord,
+  overrides: Partial<Unit> = {}
+): Unit {
   return {
     id: `${type}-${coord.q}-${coord.r}`,
     type,
     faction,
     coord,
-    renderCoord: coord
+    renderCoord: coord,
+    isBoss: false,
+    ...overrides
   } as unknown as Unit;
 }
 
@@ -186,6 +196,52 @@ describe('drawUnitSprite', () => {
       result.placement.width,
       result.placement.height
     );
+  });
+
+  it('enlarges boss sprites and paints a radiant aura around their base', () => {
+    const placementOptions: DrawUnitSpriteOptions['placement'] = {
+      coord,
+      hexSize: 32,
+      origin,
+      zoom: 1,
+      type: 'aurora-warden'
+    };
+
+    const normalCtx = createStubContext();
+    const normalUnit = createUnit('aurora-warden', 'enemy', coord);
+    const normalResult = drawUnitSprite(normalCtx, normalUnit, {
+      placement: placementOptions,
+      sprite,
+      faction: 'enemy',
+      cameraZoom: 1,
+      motionStrength: 0.4,
+      selection: { isSelected: false }
+    });
+
+    const bossCtx = createStubContext();
+    const bossUnit = createUnit('aurora-warden', 'enemy', coord, { isBoss: true });
+    const bossResult = drawUnitSprite(bossCtx, bossUnit, {
+      placement: placementOptions,
+      sprite,
+      faction: 'enemy',
+      cameraZoom: 1,
+      motionStrength: 0.4,
+      selection: { isSelected: false }
+    });
+
+    expect(bossResult.placement.width).toBeGreaterThan(normalResult.placement.width);
+    expect(bossResult.placement.height).toBeGreaterThan(normalResult.placement.height);
+    expect(bossResult.footprint.radiusX).toBeGreaterThan(normalResult.footprint.radiusX);
+    expect(bossResult.footprint.radiusY).toBeGreaterThan(normalResult.footprint.radiusY);
+
+    const bossGradients = (bossCtx as { __gradients: GradientStub[] }).__gradients;
+    const auraGradient = bossGradients.find((gradient) =>
+      gradient.type === 'radial' && gradient.stops.some(([, color]) => color.includes('rgba(66, 110, 255, 0)'))
+    );
+    expect(auraGradient).toBeDefined();
+
+    const bossStrokes = (bossCtx as { __strokes: string[] }).__strokes;
+    expect(bossStrokes.length).toBeGreaterThan((normalCtx as { __strokes: string[] }).__strokes.length);
   });
 
   it('reads faction palette tokens from CSS variables for player and enemy sprites', () => {

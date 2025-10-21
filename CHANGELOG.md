@@ -21,4 +21,5 @@
 - Routed enemy pressure scaling through surviving strongholds so cadence slows once bastions fall, surges while multiple forts endure, and remains protected by renewed integration coverage.
 - Added focused enemy spawner pressure tests that exercise cadence and spawn strength calculations under varying stronghold counts and confirm the multiplier resets once bastions collapse.
 - Polished the roster identity layout so hero names and class badges wrap elegantly on small screens, tightening flex safeguards to prevent horizontal overflow in the HUD.
+- Amplified boss encounters with larger battlefield sprites and a radiant ground aura so they immediately stand out during clashes.
 - Aligned the onboarding tutorial documentation with the live HUD anchors, policy copy, and pause handling so the GitHub Pages mirror reflects the current guided experience.
