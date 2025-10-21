@@ -7,6 +7,7 @@ import type { AxialCoord } from './hex/HexUtils.ts';
 import { Unit, spawnUnit, UNIT_ATTACK_STEP_SECONDS, UNIT_MOVEMENT_STEP_SECONDS } from './unit/index.ts';
 import type { UnitStats, UnitType } from './unit/index.ts';
 import { resolveSaunojaAppearance } from './unit/appearance.ts';
+import { tryGetUnitArchetype } from './unit/archetypes.ts';
 import { eventBus, eventScheduler } from './events';
 import {
   POLICY_EVENTS,
@@ -98,6 +99,7 @@ import {
   SAUNOJA_UPKEEP_MIN
 } from './units/saunoja.ts';
 import { drawSaunojas } from './units/renderSaunoja.ts';
+import { formatSaunojaClassName } from './units/saunojaClass.ts';
 import { SOLDIER_COST } from './units/Soldier.ts';
 import { generateTraits } from './data/traits.ts';
 import { advanceModifiers } from './mods/runtime.ts';
@@ -431,6 +433,25 @@ function getSelectedSaunoja(): Saunoja | null {
   return saunojas.find((unit) => unit.selected) ?? null;
 }
 
+function resolveSelectionClassInfo(
+  klass: SaunojaClass | undefined,
+  fallbackUnitType: string | undefined
+): { classId?: string; className?: string } {
+  if (klass) {
+    return {
+      classId: klass,
+      className: formatSaunojaClassName(klass)
+    } satisfies { classId: SaunojaClass; className: string };
+  }
+  if (typeof fallbackUnitType === 'string' && fallbackUnitType.length > 0) {
+    const fallbackLabel = tryGetUnitArchetype(fallbackUnitType)?.displayName?.trim();
+    if (fallbackLabel) {
+      return { className: fallbackLabel } satisfies { className: string };
+    }
+  }
+  return {};
+}
+
 function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
   const attachedUnit = getAttachedUnitFor(attendant);
   const itemsSource = Array.isArray(attendant.items) ? attendant.items : [];
@@ -467,6 +488,7 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
     typeof attachedUnit?.getBehavior === 'function'
       ? attachedUnit.getBehavior()
       : attendant.behavior;
+  const classInfo = resolveSelectionClassInfo(attendant.klass, attachedUnit?.type);
 
   return {
     id: attachedUnit?.id ?? attendant.id,
@@ -476,6 +498,8 @@ function buildSelectionPayload(attendant: Saunoja): UnitSelectionPayload {
     hp: hpValue,
     maxHp: maxHpValue,
     shield: shieldValue,
+    classId: classInfo.classId,
+    className: classInfo.className,
     behavior: resolvedBehavior,
     items,
     statuses
@@ -508,6 +532,8 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
   const faction = typeof unit.faction === 'string' && unit.faction.trim().length > 0
     ? unit.faction
     : 'enemy';
+  const fallbackType = attachedSaunoja ? getAttachedUnitFor(attachedSaunoja)?.type ?? unit.type : unit.type;
+  const classInfo = resolveSelectionClassInfo(attachedSaunoja?.klass, fallbackType);
   return {
     id: unit.id,
     name,
@@ -516,6 +542,8 @@ function buildSelectionPayloadFromUnit(unit: Unit): UnitSelectionPayload {
     hp: hpValue,
     maxHp: maxHpValue,
     shield: shieldValue,
+    classId: classInfo.classId,
+    className: classInfo.className,
     behavior: typeof unit.getBehavior === 'function' ? unit.getBehavior() : undefined,
     items: [],
     statuses: []

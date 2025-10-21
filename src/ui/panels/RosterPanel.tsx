@@ -1,6 +1,7 @@
 import { renderItemIcon } from '../components/ItemIcon.tsx';
 import { renderModPill } from '../components/ModPill.tsx';
 import type { SaunojaClass, SaunojaItem, SaunojaModifier } from '../../units/saunoja.ts';
+import { formatSaunojaClassName, SAUNOJA_CLASS_IDS } from '../../units/saunojaClass.ts';
 import type { EquipmentSlotId, EquipmentModifier } from '../../items/types.ts';
 import type { StatAwards } from '../../progression/experiencePlan.ts';
 import type { UnitBehavior } from '../../unit/types.ts';
@@ -92,22 +93,11 @@ const behaviorLabels: Record<UnitBehavior, string> = {
   explore: 'Explore'
 };
 
-const saunojaClassLabels: Record<SaunojaClass, string> = {
-  tank: 'Aegis Vanguard',
-  rogue: 'Veilstrider',
-  wizard: 'Aurora Sage',
-  speedster: 'Gale Dancer'
-};
-
-const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
+const allSaunojaClasses: readonly SaunojaClass[] = SAUNOJA_CLASS_IDS;
 
 function resolveSaunojaClass(entry: RosterEntry): SaunojaClass | null {
   const klass = entry.klass ?? entry.progression.klass ?? null;
   return klass ?? null;
-}
-
-function formatSaunojaClassLabel(klass: SaunojaClass): string {
-  return saunojaClassLabels[klass] ?? klass;
 }
 
 function formatTraits(traits: readonly string[]): string {
@@ -189,7 +179,7 @@ function buildMetaLine(entry: RosterEntry): string {
     `HP ${integerFormatter.format(stats.health)}/${integerFormatter.format(stats.maxHealth)}${formatDelta(stats.maxHealth, baseStats.maxHealth)}`
   ];
   if (klass) {
-    segments.push(`Class ${formatSaunojaClassLabel(klass)}`);
+    segments.push(`Class ${formatSaunojaClassName(klass)}`);
   }
   if (stats.shield && stats.shield > 0) {
     segments.push(
@@ -248,7 +238,7 @@ function buildAriaLabel(entry: RosterEntry): string {
   segments.push(`level ${entry.progression.level}`);
   const klass = resolveSaunojaClass(entry);
   if (klass) {
-    segments.push(`class ${formatSaunojaClassLabel(klass)}`);
+    segments.push(`class ${formatSaunojaClassName(klass)}`);
   }
   segments.push(`health ${integerFormatter.format(stats.health)} of ${integerFormatter.format(stats.maxHealth)}`);
   if (stats.shield && stats.shield > 0) {
@@ -658,7 +648,7 @@ export function createRosterPanel(
         const classBadge = document.createElement('span');
         classBadge.classList.add('panel-roster__class');
         classBadge.dataset.klass = resolvedClass;
-        const label = formatSaunojaClassLabel(resolvedClass);
+        const label = formatSaunojaClassName(resolvedClass);
         classBadge.textContent = label;
         classBadge.title = `${entry.name} specializes as ${label}`;
         classBadge.setAttribute('aria-label', `Class ${label}`);
@@ -796,7 +786,7 @@ export function createRosterPanel(
           option.type = 'button';
           option.classList.add('panel-roster__promote-option');
           option.dataset.klass = klass;
-          const label = formatSaunojaClassLabel(klass);
+          const label = formatSaunojaClassName(klass);
           option.textContent = label;
           option.title = `Promote ${entry.name} to ${label}`;
           option.setAttribute('role', 'listitem');

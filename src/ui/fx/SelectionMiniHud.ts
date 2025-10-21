@@ -26,6 +26,7 @@ interface SelectionMiniHudElements {
   anchor: HTMLElement;
   card: HTMLElement;
   name: HTMLElement;
+  subtitle: HTMLElement;
   faction: HTMLElement;
   behaviorRow: HTMLElement;
   behaviorValue: HTMLElement;
@@ -138,9 +139,17 @@ function ensureStyles(): void {
       z-index: 1;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
       margin-bottom: 12px;
+    }
+
+    .ui-selection-mini-hud__title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
     }
 
     .ui-selection-mini-hud__title {
@@ -151,6 +160,31 @@ function ensureStyles(): void {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .ui-selection-mini-hud__subtitle {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgba(203, 213, 225, 0.78);
+      text-shadow: 0 8px 18px rgba(15, 118, 175, 0.38);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0.95;
+    }
+
+    .ui-selection-mini-hud__subtitle::before {
+      content: '';
+      display: block;
+      width: 22px;
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(148, 163, 184, 0.08), rgba(148, 163, 184, 0.52));
     }
 
     .ui-selection-mini-hud__faction {
@@ -469,9 +503,18 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
   header.className = 'ui-selection-mini-hud__header';
   card.appendChild(header);
 
+  const titleBlock = document.createElement('div');
+  titleBlock.className = 'ui-selection-mini-hud__title-block';
+  header.appendChild(titleBlock);
+
   const name = document.createElement('span');
   name.className = 'ui-selection-mini-hud__title';
-  header.appendChild(name);
+  titleBlock.appendChild(name);
+
+  const subtitle = document.createElement('span');
+  subtitle.className = 'ui-selection-mini-hud__subtitle';
+  subtitle.hidden = true;
+  titleBlock.appendChild(subtitle);
 
   const faction = document.createElement('span');
   faction.className = 'ui-selection-mini-hud__faction';
@@ -535,6 +578,7 @@ function createElements(root: HTMLElement): SelectionMiniHudElements {
     card,
     name,
     faction,
+    subtitle,
     behaviorRow,
     behaviorValue,
     behaviorOptions,
@@ -814,10 +858,20 @@ export function createSelectionMiniHud(options: SelectionMiniHudOptions): Select
     if (!payload) {
       hide();
       updateBehaviorDisplay();
+      elements.subtitle.textContent = '';
+      elements.subtitle.hidden = true;
       return;
     }
 
     elements.name.textContent = payload.name ?? '—';
+    const classLabel = typeof payload.className === 'string' ? payload.className.trim() : '';
+    if (classLabel) {
+      elements.subtitle.textContent = classLabel;
+      elements.subtitle.hidden = false;
+    } else {
+      elements.subtitle.textContent = '';
+      elements.subtitle.hidden = true;
+    }
     elements.faction.textContent = payload.faction?.toUpperCase?.() ?? '—';
     applyFactionAccent(payload.faction);
 

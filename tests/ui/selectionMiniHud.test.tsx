@@ -88,6 +88,8 @@ describe('SelectionMiniHud integration', () => {
       maxHp: 18,
       shield: 3,
       behavior: 'defend',
+      classId: 'tank',
+      className: 'Aegis Vanguard',
       items: [
         { id: 'steam-saber', name: 'Steam Saber', icon: '/icons/saber.svg', rarity: 'epic', quantity: 1 },
         { id: 'glacial-ward', name: 'Glacial Ward', rarity: 'legendary', quantity: 1 },
@@ -117,6 +119,9 @@ describe('SelectionMiniHud integration', () => {
     expect(card).toBeTruthy();
     expect(card?.querySelector('.ui-selection-mini-hud__title')?.textContent).toBe(
       'Vellamo Vanguard'
+    );
+    expect(card?.querySelector('.ui-selection-mini-hud__subtitle')?.textContent).toBe(
+      'Aegis Vanguard'
     );
 
     const hpValue = card?.querySelector('.ui-selection-mini-hud__hp-value') as HTMLElement | null;
@@ -148,6 +153,7 @@ describe('SelectionMiniHud integration', () => {
       maxHp: 24,
       shield: 0,
       behavior: 'attack',
+      className: 'Frost Raider Captain',
       items: [],
       statuses: []
     } satisfies UnitSelectionPayload;
@@ -169,6 +175,9 @@ describe('SelectionMiniHud integration', () => {
     const card = overlay.querySelector('.ui-selection-mini-hud__card') as HTMLElement | null;
     expect(card).toBeTruthy();
     expect(card?.querySelector('.ui-selection-mini-hud__faction')?.textContent).toBe('ENEMY');
+    expect(card?.querySelector('.ui-selection-mini-hud__subtitle')?.textContent).toBe(
+      'Frost Raider Captain'
+    );
 
     manager.setSelection(null);
     manager.beginStatusFrame();
@@ -189,6 +198,7 @@ describe('SelectionMiniHud integration', () => {
       maxHp: 14,
       shield: 0,
       behavior: 'explore',
+      className: 'Aurora Sage',
       items: [],
       statuses: []
     } satisfies UnitSelectionPayload;
@@ -212,6 +222,8 @@ describe('SelectionMiniHud integration', () => {
 
     const entry = overlay.querySelector('.ui-selection-mini-hud') as HTMLElement | null;
     expect(entry?.dataset.visible).toBe('false');
+    const subtitle = overlay.querySelector('.ui-selection-mini-hud__subtitle') as HTMLElement | null;
+    expect(subtitle?.hidden).toBe(true);
     const behaviorRow = overlay.querySelector('.ui-selection-mini-hud__behavior') as HTMLElement | null;
     expect(behaviorRow?.hidden).toBe(true);
   });

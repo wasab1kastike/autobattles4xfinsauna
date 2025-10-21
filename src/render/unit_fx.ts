@@ -534,6 +534,14 @@ const shakeIntensity = coarsePointer ? SHAKE_INTENSITY_MOBILE : SHAKE_INTENSITY_
       hp: Number.isFinite(selection.hp) ? selection.hp : 0,
       maxHp: Number.isFinite(selection.maxHp) ? Math.max(1, selection.maxHp) : 1,
       shield: Number.isFinite(selection.shield ?? 0) ? Math.max(0, selection.shield ?? 0) : 0,
+      classId:
+        typeof selection.classId === 'string' && selection.classId.trim().length > 0
+          ? selection.classId.trim()
+          : undefined,
+      className:
+        typeof selection.className === 'string' && selection.className.trim().length > 0
+          ? selection.className.trim()
+          : undefined,
       items: Array.isArray(selection.items) ? [...selection.items] : [],
       statuses: Array.isArray(selection.statuses) ? [...selection.statuses] : [],
       behavior: isValidBehavior(selection.behavior) ? selection.behavior : undefined

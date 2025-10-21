@@ -6,6 +6,7 @@ import {
 } from './layout.ts';
 import type { RosterEntry, RosterProgression } from './rightPanel.tsx';
 import type { SaunojaClass } from '../units/saunoja.ts';
+import { formatSaunojaClassName, SAUNOJA_CLASS_IDS } from '../units/saunojaClass.ts';
 import type { UnitBehavior } from '../unit/types.ts';
 
 const rosterCountFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -17,23 +18,12 @@ const behaviorLabels: Record<UnitBehavior, string> = {
 };
 const behaviorOrder: readonly UnitBehavior[] = ['defend', 'attack', 'explore'];
 
-const saunojaClassLabels: Record<SaunojaClass, string> = {
-  tank: 'Aegis Vanguard',
-  rogue: 'Veilstrider',
-  wizard: 'Aurora Sage',
-  speedster: 'Gale Dancer'
-};
-
-const allSaunojaClasses: readonly SaunojaClass[] = ['tank', 'rogue', 'wizard', 'speedster'];
+const allSaunojaClasses: readonly SaunojaClass[] = SAUNOJA_CLASS_IDS;
 
 function resolveSaunojaClass(
   card: Pick<RosterCardViewModel, 'klass' | 'progression'>
 ): SaunojaClass | null {
   return card.klass ?? card.progression.klass ?? null;
-}
-
-function formatSaunojaClassLabel(klass: SaunojaClass): string {
-  return saunojaClassLabels[klass] ?? klass;
 }
 
 type RosterHudOptions = {
@@ -375,7 +365,7 @@ export function setupRosterHUD(
     option.type = 'button';
     option.classList.add('saunoja-card__promote-option');
     option.dataset.klass = klass;
-    const label = formatSaunojaClassLabel(klass);
+    const label = formatSaunojaClassName(klass);
     option.textContent = label;
     option.title = `Promote to ${label}`;
     option.setAttribute('role', 'listitem');
@@ -536,7 +526,7 @@ export function setupRosterHUD(
 
     const resolvedClass = resolveSaunojaClass(card);
     if (resolvedClass) {
-      const label = formatSaunojaClassLabel(resolvedClass);
+      const label = formatSaunojaClassName(resolvedClass);
       rosterCardClass.hidden = false;
       rosterCardClass.dataset.klass = resolvedClass;
       rosterCardClass.textContent = label;
