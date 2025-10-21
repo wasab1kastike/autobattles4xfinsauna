@@ -20,3 +20,4 @@
 - Recorded stronghold deployment state and spawn cooldown in saves, restoring timers for new sessions while preserving legacy compatibility through dedicated serialization tests.
 - Routed enemy pressure scaling through surviving strongholds so cadence slows once bastions fall, surges while multiple forts endure, and remains protected by renewed integration coverage.
 - Added focused enemy spawner pressure tests that exercise cadence and spawn strength calculations under varying stronghold counts and confirm the multiplier resets once bastions collapse.
+- Polished the roster identity layout so hero names and class badges wrap elegantly on small screens, tightening flex safeguards to prevent horizontal overflow in the HUD.
