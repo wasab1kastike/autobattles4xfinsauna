@@ -122,7 +122,7 @@ describe('main HUD lifecycle', () => {
     const navToolbar = document.querySelector('[data-hud-navigation]');
     expect(navToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
     expect(navToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
-    expect(overlay.classList.contains('roster-hud-open')).toBe(false);
+    expect(overlay.classList.contains('roster-hud-open')).toBe(true);
 
     orchestrator.cleanup();
     await Promise.resolve();
@@ -133,6 +133,7 @@ describe('main HUD lifecycle', () => {
     expect(document.querySelectorAll('#inventory-stash-panel')).toHaveLength(0);
     expect(document.querySelectorAll('#right-panel')).toHaveLength(0);
     expect(document.querySelectorAll('[data-hud-navigation]')).toHaveLength(0);
+    expect(overlay.classList.contains('roster-hud-open')).toBe(false);
 
     orchestrator.setup(canvas, resourceBar, overlay);
     await Promise.resolve();
@@ -146,6 +147,7 @@ describe('main HUD lifecycle', () => {
     const rebuiltToolbar = document.querySelector('[data-hud-navigation]');
     expect(rebuiltToolbar?.classList.contains('hud-nav-toolbar')).toBe(true);
     expect(rebuiltToolbar?.querySelectorAll('[data-hud-nav-item]')).toHaveLength(3);
+    expect(overlay.classList.contains('roster-hud-open')).toBe(true);
   });
 
   it('ignores the legacy HUD v2 flag and renders the classic HUD', async () => {
