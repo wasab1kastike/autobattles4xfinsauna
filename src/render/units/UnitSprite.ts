@@ -56,6 +56,19 @@ interface CachedBaseCanvas {
 
 const baseCanvasCache = new Map<string, CachedBaseCanvas>();
 
+const BOSS_SPRITE_SCALE = 1.18;
+const BOSS_BASE_SCALE = 1.22;
+const BOSS_AURA_SCALE_X = 1.48;
+const BOSS_AURA_SCALE_Y = 1.8;
+const BOSS_AURA_INNER_OPACITY = 0.58;
+const BOSS_AURA_MID_OPACITY = 0.42;
+const BOSS_AURA_OUTER_OPACITY = 0.0;
+
+interface BaseVisualEffects {
+  readonly baseScale?: number;
+  readonly aura?: boolean;
+}
+
 function createOffscreenCanvas(
   width: number,
   height: number
@@ -178,11 +191,13 @@ function drawBase(
   hexSize: number,
   zoom: number,
   palette: ReturnType<typeof resolveBasePalette>,
-  renderBase: boolean
+  renderBase: boolean,
+  effects: BaseVisualEffects | undefined
 ): UnitSpriteFootprint {
-  const radiusX = snapForZoom(hexSize * 0.78, zoom);
-  const radiusY = snapForZoom(hexSize * 0.34, zoom);
-  const bottomOffset = snapForZoom(Math.max(hexSize * 0.18, radiusY * 0.6), zoom);
+  const scale = effects?.baseScale ?? 1;
+  const radiusX = snapForZoom(hexSize * 0.78 * scale, zoom);
+  const radiusY = snapForZoom(hexSize * 0.34 * scale, zoom);
+  const bottomOffset = snapForZoom(Math.max(hexSize * 0.18, radiusY * 0.6) * scale, zoom);
   const bottomY = placement.drawY + placement.height;
   const centerX = placement.centerX;
   const centerY = bottomY - bottomOffset + radiusY * 0.2;
@@ -205,12 +220,68 @@ function drawBase(
     const drawX = centerX - cachedBase.width / 2;
     const drawY = centerY - cachedBase.height / 2;
     ctx.drawImage(cachedBase.canvas, drawX, drawY, cachedBase.width, cachedBase.height);
+    if (effects?.aura) {
+      paintBossAura(ctx, centerX, centerY, radiusX, radiusY, hexSize, zoom);
+    }
     return footprint;
   }
 
   paintUnitBase(ctx, centerX, centerY, radiusX, radiusY, zoom, palette);
+  if (effects?.aura) {
+    paintBossAura(ctx, centerX, centerY, radiusX, radiusY, hexSize, zoom);
+  }
 
   return footprint;
+}
+
+function paintBossAura(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  centerY: number,
+  radiusX: number,
+  radiusY: number,
+  hexSize: number,
+  zoom: number
+): void {
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'screen';
+  const auraRadiusX = radiusX * BOSS_AURA_SCALE_X;
+  const auraRadiusY = radiusY * BOSS_AURA_SCALE_Y;
+  const [auraGradient, auraFallback] = createGradientSafe(
+    () =>
+      ctx.createRadialGradient(
+        centerX,
+        centerY,
+        Math.max(radiusY * 0.25, hexSize * 0.1),
+        centerX,
+        centerY,
+        Math.max(auraRadiusY * 1.05, hexSize * 1.4)
+      ),
+    `rgba(255, 214, 144, ${BOSS_AURA_MID_OPACITY})`
+  );
+  applyStops(auraGradient, [
+    [0, `rgba(255, 239, 206, ${BOSS_AURA_INNER_OPACITY})`],
+    [0.45, `rgba(255, 189, 109, ${BOSS_AURA_MID_OPACITY})`],
+    [1, `rgba(255, 160, 72, ${BOSS_AURA_OUTER_OPACITY})`]
+  ]);
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, auraRadiusX, auraRadiusY, 0, 0, Math.PI * 2);
+  ctx.fillStyle = auraGradient ?? auraFallback;
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.filter = 'none';
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, auraRadiusX * 0.82, auraRadiusY * 0.78, 0, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255, 213, 133, 0.8)';
+  ctx.lineWidth = snapForZoom(Math.max(2.8, zoom * 2.2), zoom);
+  ctx.shadowColor = 'rgba(255, 196, 122, 0.75)';
+  ctx.shadowBlur = snapForZoom(Math.max(12, zoom * 4.2), zoom);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function paintUnitBase(
@@ -415,6 +486,25 @@ export function drawUnitSprite(
     }
   }
 
+  const isBoss = Boolean((unit as { isBoss?: boolean }).isBoss);
+
+  if (isBoss) {
+    const originalWidth = nextPlacement.width;
+    const originalHeight = nextPlacement.height;
+    const scaledWidth = originalWidth * BOSS_SPRITE_SCALE;
+    const scaledHeight = originalHeight * BOSS_SPRITE_SCALE;
+    const deltaWidth = scaledWidth - originalWidth;
+    const deltaHeight = scaledHeight - originalHeight;
+    const anchorX = nextPlacement.metadata.anchor.x;
+    const anchorY = nextPlacement.metadata.anchor.y;
+    nextPlacement.drawX -= deltaWidth * anchorX;
+    nextPlacement.drawY -= deltaHeight * anchorY;
+    nextPlacement.width = scaledWidth;
+    nextPlacement.height = scaledHeight;
+    nextPlacement.centerX = nextPlacement.drawX + scaledWidth * anchorX;
+    nextPlacement.centerY = nextPlacement.drawY + scaledHeight * anchorY;
+  }
+
   const shouldDrawBase = options.drawBase ?? true;
   const footprint = drawBase(
     ctx,
@@ -422,7 +512,8 @@ export function drawUnitSprite(
     options.placement.hexSize,
     zoom,
     palette,
-    shouldDrawBase
+    shouldDrawBase,
+    isBoss ? { baseScale: BOSS_BASE_SCALE, aura: true } : undefined
   );
 
   const shouldRenderSprite = options.renderSprite !== false;
