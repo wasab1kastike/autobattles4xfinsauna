@@ -131,6 +131,7 @@ export class EnemySpawner {
 
     const enemyCount = this.countActiveEnemies(units);
     this.trackClears(enemyCount);
+    let availableSlots = Math.max(0, MAX_ENEMIES - enemyCount);
 
     if (this.calmUntil !== null && this.runSeconds < this.calmUntil) {
       const calmRemaining = this.calmUntil - this.runSeconds;
@@ -143,7 +144,6 @@ export class EnemySpawner {
     this.timer -= dt;
     let spawnsThisTick = 0;
     while (this.timer <= 0 && spawnsThisTick < MAX_SPAWNS_PER_UPDATE) {
-      const availableSlots = this.getAvailableSlots(units);
       if (availableSlots <= 0) {
         this.timer = Math.max(this.timer, 0.5);
         break;
@@ -166,10 +166,14 @@ export class EnemySpawner {
         rampTier: evaluation.stage.bundleTier
       });
 
-      if (result.spawned.length === 0) {
+      const spawnedCount = result.spawned.length;
+
+      if (spawnedCount === 0) {
         this.timer = Math.max(this.timer, 0.5);
         break;
       }
+
+      availableSlots = Math.max(0, availableSlots - spawnedCount);
 
       const spawnTimestamp = this.runSeconds + this.timer;
       this.lastCadence = this.lastSpawnAt === null ? this.interval : Math.max(0.01, spawnTimestamp - this.lastSpawnAt);
@@ -280,11 +284,13 @@ export class EnemySpawner {
   }
 
   private countActiveEnemies(units: Unit[]): number {
-    return units.filter((unit) => unit.faction === this.factionId && !unit.isDead()).length;
-  }
-
-  private getAvailableSlots(units: Unit[]): number {
-    return MAX_ENEMIES - this.countActiveEnemies(units);
+    let count = 0;
+    for (const unit of units) {
+      if (unit.faction === this.factionId && !unit.isDead()) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   private trackClears(enemyCount: number): void {

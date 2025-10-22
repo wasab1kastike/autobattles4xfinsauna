@@ -5,6 +5,7 @@ import * as enemySpawns from '../world/spawn/enemy_spawns.ts';
 import type { FactionBundleDefinition } from '../factions/bundles.ts';
 import { getUnitArchetype } from '../unit/archetypes.ts';
 import { computeUnitStats } from '../unit/calc.ts';
+import { MAX_ENEMIES } from '../battle/BattleManager.ts';
 
 function makeRandomSource(values: number[]): () => number {
   const queue = [...values];
@@ -184,5 +185,82 @@ describe('EnemySpawner', () => {
     expect(captains).not.toHaveLength(0);
     expect(raiders.every((unit) => unit.stats.health >= raiderLevelFour.health)).toBe(true);
     expect(captains.some((unit) => unit.stats.health >= captainLevelSix.health)).toBe(true);
+  });
+
+  it('counts living faction enemies once per update and reuses the slot budget while spawning', () => {
+    const spawner = new EnemySpawner({ factionId: 'enemy', random: () => 0.42 });
+    const makeUnit = (faction: string, dead: boolean): Unit =>
+      ({ faction, isDead: () => dead } as unknown as Unit);
+
+    const livingEnemies = [
+      makeUnit('enemy', false),
+      makeUnit('enemy', false),
+      makeUnit('enemy', false)
+    ];
+    const units: Unit[] = [
+      ...livingEnemies,
+      makeUnit('enemy', true),
+      makeUnit('allies', false)
+    ];
+
+    const internals = spawner as unknown as { timer: number; interval: number };
+    internals.timer = -0.6;
+    internals.interval = 0.01;
+
+    const added: Unit[] = [];
+    const registerUnit = (unit: Unit) => {
+      units.push(unit);
+      added.push(unit);
+    };
+    const pickEdge = () => ({ q: 0, r: 0 });
+
+    const bundle: FactionBundleDefinition = {
+      id: 'slot-budget',
+      label: 'Slot Budget',
+      weight: 1,
+      units: Object.freeze([]),
+      items: Object.freeze([]),
+      modifiers: Object.freeze([])
+    };
+
+    const slotHistory: number[] = [];
+    const spawnCounts: number[] = [];
+
+    const bundleSpy = vi.spyOn(enemySpawns, 'pickRampBundle').mockReturnValue(bundle);
+    const spawnSpy = vi
+      .spyOn(enemySpawns, 'spawnEnemyBundle')
+      .mockImplementation((options) => {
+        slotHistory.push(options.availableSlots);
+        const spawnCount = Math.min(2, Math.max(0, options.availableSlots));
+        spawnCounts.push(spawnCount);
+        const spawned: Unit[] = [];
+        for (let index = 0; index < spawnCount; index += 1) {
+          const unit = makeUnit('enemy', false);
+          options.addUnit(unit);
+          spawned.push(unit);
+        }
+        return {
+          spawned: Object.freeze(spawned),
+          items: Object.freeze([]),
+          modifiers: Object.freeze([])
+        };
+      });
+
+    try {
+      spawner.update(1, units, registerUnit, pickEdge);
+    } finally {
+      bundleSpy.mockRestore();
+      spawnSpy.mockRestore();
+    }
+
+    expect(slotHistory.length).toBeGreaterThan(1);
+    expect(slotHistory[0]).toBe(MAX_ENEMIES - livingEnemies.length);
+    expect(added.length).toBe(spawnCounts.reduce((sum, value) => sum + value, 0));
+
+    let expectedSlots = slotHistory[0];
+    for (let index = 0; index < slotHistory.length; index += 1) {
+      expect(slotHistory[index]).toBe(expectedSlots);
+      expectedSlots = Math.max(0, expectedSlots - spawnCounts[index]);
+    }
   });
 });
