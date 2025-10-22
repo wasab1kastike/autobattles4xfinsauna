@@ -436,12 +436,12 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
   }, [actionDefinitions, handleAction]);
 
   return (
-    <div className="pointer-events-none w-full">
+    <div className="pointer-events-none flex w-full justify-start">
       <div
-        className="pointer-events-auto mx-auto flex w-full max-w-4xl flex-col gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(11,17,30,0.86),rgba(6,10,18,0.92))] p-6 shadow-[0_26px_65px_rgba(6,12,24,0.6),_inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
+        className="pointer-events-auto flex w-full max-w-4xl flex-col gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(162deg,rgba(10,16,28,0.92),rgba(12,20,36,0.78))] p-6 shadow-[0_28px_64px_rgba(6,12,24,0.58),_inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
         aria-label="Combat and systems action bar"
       >
-        <div className="flex flex-wrap items-stretch justify-center gap-4">
+        <div className="flex flex-wrap items-stretch justify-start gap-4">
           {actionDefinitions.map((action) => {
             const isHotkey = hotkey === action.id;
             const hasFeedback = activeFeedback.has(action.id);

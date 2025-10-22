@@ -20,6 +20,8 @@ main
   lock in the new counting behavior.
 - Elevated the combat action bar into the top HUD tray, refreshing layout anchors, styling, and UI tests to match the new
   glassmorphic mount.
+- Repositioned the combat action bar into a bottom-left command dock, refreshing HUD anchors, luxe gradients, and regression
+  coverage so the tray hugs the lower viewport edge across devices.
 - Integrated the persistence-aware stronghold spawner into the main game loop so dormant fortresses awaken on schedule, preserved cooldown progress across reloads, and validated the flow with long-horizon integration tests.
 - Recorded stronghold deployment state and spawn cooldown in saves, restoring timers for new sessions while preserving legacy compatibility through dedicated serialization tests.
 - Routed enemy pressure scaling through surviving strongholds so cadence slows once bastions fall, surges while multiple forts endure, and remains protected by renewed integration coverage.

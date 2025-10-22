@@ -14,6 +14,7 @@ export type HudLayoutAnchors = {
   topLeftCluster: HTMLDivElement;
   topActionTray: HTMLDivElement;
   topRightCluster: HTMLDivElement;
+  bottomActionTray: HTMLDivElement;
   commandDock: HTMLDivElement;
 };
 
@@ -84,6 +85,7 @@ const REGION_GRID_CLASSES: Record<keyof HudLayoutRegions, string[]> = {
 const ANCHOR_DATASET_NAMES: Record<keyof HudLayoutAnchors, string> = {
   topLeftCluster: 'top-left-cluster',
   topActionTray: 'top-action-tray',
+  bottomActionTray: 'bottom-action-tray',
   topRightCluster: 'top-right-cluster',
   commandDock: 'command-dock',
 };
@@ -574,6 +576,9 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     topRightCluster: ensureAnchor(regions.top, doc, 'topRightCluster', [
       'hud-anchor--top-right',
     ]),
+    bottomActionTray: ensureAnchor(regions.bottom, doc, 'bottomActionTray', [
+      'hud-anchor--bottom-action',
+    ]),
     commandDock: ensureAnchor(regions.bottom, doc, 'commandDock', [
       'hud-anchor--command-dock',
       'hud-command-dock',
@@ -590,7 +595,7 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
   const tabs = ensureBottomTabs(regions.bottom, doc, overlay);
 
   regions.top.append(anchors.topLeftCluster, anchors.topActionTray, anchors.topRightCluster);
-  regions.bottom.appendChild(anchors.commandDock);
+  regions.bottom.append(anchors.bottomActionTray, anchors.commandDock);
   anchors.commandDock.append(commandDockTabs, commandDockActions);
 
   if (tabs.container.parentElement !== commandDockTabs) {
@@ -632,8 +637,10 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     '[data-component="action-bar"]',
   );
   for (const mount of actionBarMounts) {
-    if (mount.parentElement !== anchors.topActionTray) {
-      anchors.topActionTray.appendChild(mount);
+    const targetAnchor =
+      anchors.bottomActionTray ?? anchors.topActionTray ?? regions.bottom;
+    if (mount.parentElement !== targetAnchor) {
+      targetAnchor.appendChild(mount);
     }
   }
 

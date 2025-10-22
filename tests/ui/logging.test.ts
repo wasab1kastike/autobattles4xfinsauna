@@ -21,6 +21,7 @@ const renderShell = () => {
         <div class="hud-region hud-content" data-hud-region="content"></div>
         <div class="hud-region hud-right-column" data-hud-region="right"></div>
         <div class="hud-region hud-bottom-row" data-hud-region="bottom">
+          <div class="hud-anchor hud-anchor--bottom-action" data-hud-anchor="bottom-action-tray"></div>
           <div class="hud-anchor hud-anchor--command-dock" data-hud-anchor="command-dock"></div>
         </div>
       </div>
