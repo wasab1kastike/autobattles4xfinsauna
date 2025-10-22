@@ -12,6 +12,7 @@ import type { GameClock } from '../../core/GameClock.ts';
 import type { Unit } from '../../unit/index.ts';
 import type { RosterEntry } from '../../ui/rightPanel.tsx';
 import { setReloadInProgress } from './reloadState.ts';
+import { initializeClassicHud } from '../setup/hud.ts';
 
 const unitFxResults: Array<{
   dispose: ReturnType<typeof vi.fn>;
@@ -349,6 +350,29 @@ describe('GameRuntime', () => {
     const firstUnitFx = unitFxResults[0];
     expect(firstUnitFx.dispose).toHaveBeenCalled();
     expect(unitFxResults[1]).toBeDefined();
+  });
+
+  it('installs a new action bar when HUD setup omits the controller', () => {
+    vi.mocked(initializeClassicHud).mockImplementationOnce(() => {
+      const result = createHudResult();
+      result.actionBarController = null as any;
+      return result;
+    });
+
+    let runtime!: GameRuntime;
+    const context = createContext(() => runtime);
+    const rosterService = createRosterService();
+    runtime = new GameRuntime(context, rosterService);
+
+    const canvas = document.createElement('canvas');
+    const resourceBar = document.createElement('div');
+    const overlay = document.createElement('div');
+
+    runtime.setupGame(canvas, resourceBar, overlay);
+
+    const latestAdapters = uiAdapterCalls.at(-1);
+    expect(latestAdapters?.result.createActionBarController).toHaveBeenCalledTimes(1);
+    expect(runtime.getActionBarController()).not.toBeNull();
   });
 
   it('bridges behavior changes from the mini HUD to the right panel', () => {
