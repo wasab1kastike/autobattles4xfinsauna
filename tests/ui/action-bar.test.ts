@@ -44,7 +44,8 @@ describe('action bar tutorial anchor', () => {
     const tray = overlay.querySelector('[data-component="action-bar"]');
     expect(tray).toBeTruthy();
     expect(tray?.dataset.tutorialTarget).toBe('combat');
-    expect(tray?.parentElement?.dataset.hudAnchor).toBe('bottom-action-tray');
+    expect(tray?.classList.contains('hud-top-action-tray')).toBe(true);
+    expect(tray?.parentElement?.dataset.hudAnchor).toBe('top-left-cluster');
 
     controller.destroy();
   });

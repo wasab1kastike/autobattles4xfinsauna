@@ -638,7 +638,12 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
   );
   for (const mount of actionBarMounts) {
     const targetAnchor =
-      anchors.bottomActionTray ?? anchors.topActionTray ?? regions.bottom;
+      anchors.topLeftCluster ??
+      anchors.topActionTray ??
+      anchors.bottomActionTray ??
+      regions.top;
+    mount.classList.add('hud-top-action-tray');
+    mount.classList.remove('hud-bottom-action-tray');
     if (mount.parentElement !== targetAnchor) {
       targetAnchor.appendChild(mount);
     }
