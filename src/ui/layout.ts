@@ -12,6 +12,7 @@ const DEFAULT_RESOURCE_BAR_TEXT = 'Saunoja Roster: 0';
 
 export type HudLayoutAnchors = {
   topLeftCluster: HTMLDivElement;
+  topActionTray: HTMLDivElement;
   topRightCluster: HTMLDivElement;
   commandDock: HTMLDivElement;
 };
@@ -82,6 +83,7 @@ const REGION_GRID_CLASSES: Record<keyof HudLayoutRegions, string[]> = {
 
 const ANCHOR_DATASET_NAMES: Record<keyof HudLayoutAnchors, string> = {
   topLeftCluster: 'top-left-cluster',
+  topActionTray: 'top-action-tray',
   topRightCluster: 'top-right-cluster',
   commandDock: 'command-dock',
 };
@@ -566,6 +568,9 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     topLeftCluster: ensureAnchor(regions.top, doc, 'topLeftCluster', [
       'hud-anchor--top-left',
     ]),
+    topActionTray: ensureAnchor(regions.top, doc, 'topActionTray', [
+      'hud-anchor--top-action',
+    ]),
     topRightCluster: ensureAnchor(regions.top, doc, 'topRightCluster', [
       'hud-anchor--top-right',
     ]),
@@ -584,7 +589,7 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
 
   const tabs = ensureBottomTabs(regions.bottom, doc, overlay);
 
-  regions.top.append(anchors.topLeftCluster, anchors.topRightCluster);
+  regions.top.append(anchors.topLeftCluster, anchors.topActionTray, anchors.topRightCluster);
   regions.bottom.appendChild(anchors.commandDock);
   anchors.commandDock.append(commandDockTabs, commandDockActions);
 
@@ -627,8 +632,8 @@ export function ensureHudLayout(overlay: HTMLElement): HudLayout {
     '[data-component="action-bar"]',
   );
   for (const mount of actionBarMounts) {
-    if (mount.parentElement !== commandDockActions) {
-      commandDockActions.appendChild(mount);
+    if (mount.parentElement !== anchors.topActionTray) {
+      anchors.topActionTray.appendChild(mount);
     }
   }
 
