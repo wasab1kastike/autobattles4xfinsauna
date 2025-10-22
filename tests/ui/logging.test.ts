@@ -14,6 +14,7 @@ const renderShell = () => {
           <div class="hud-anchor hud-anchor--top-left" data-hud-anchor="top-left-cluster">
             <div id="resource-bar"></div>
           </div>
+          <div class="hud-anchor hud-anchor--top-action" data-hud-anchor="top-action-tray"></div>
           <div class="hud-anchor hud-anchor--top-right" data-hud-anchor="top-right-cluster"></div>
         </div>
         <div class="hud-region hud-actions" data-hud-region="left"></div>

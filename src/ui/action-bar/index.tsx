@@ -16,10 +16,10 @@ export function setupActionBar(
   const container = overlay.ownerDocument.createElement('div');
   container.dataset.component = 'action-bar';
   container.dataset.tutorialTarget = 'combat';
-  container.className = 'hud-command-tray';
+  container.className = 'hud-command-tray hud-top-action-tray';
 
-  const commandDock = layout.dock?.actions ?? layout.anchors.commandDock;
-  commandDock.appendChild(container);
+  const trayAnchor = layout.anchors.topActionTray ?? layout.anchors.topLeftCluster;
+  trayAnchor.appendChild(container);
 
   const root: Root = createRoot(container);
   root.render(<ActionBar state={state} abilities={abilities} />);
