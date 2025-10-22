@@ -17,6 +17,7 @@ function renderOverlay(): HTMLElement {
         <div class="hud-region hud-content" data-hud-region="content"></div>
         <div class="hud-region hud-right-column" data-hud-region="right"></div>
         <div class="hud-region hud-bottom-row" data-hud-region="bottom">
+          <div class="hud-anchor hud-anchor--bottom-action" data-hud-anchor="bottom-action-tray"></div>
           <div class="hud-anchor hud-anchor--command-dock" data-hud-anchor="command-dock"></div>
         </div>
       </div>
@@ -43,7 +44,7 @@ describe('action bar tutorial anchor', () => {
     const tray = overlay.querySelector('[data-component="action-bar"]');
     expect(tray).toBeTruthy();
     expect(tray?.dataset.tutorialTarget).toBe('combat');
-    expect(tray?.parentElement?.dataset.hudAnchor).toBe('top-action-tray');
+    expect(tray?.parentElement?.dataset.hudAnchor).toBe('bottom-action-tray');
 
     controller.destroy();
   });
