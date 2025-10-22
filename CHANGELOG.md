@@ -16,6 +16,7 @@
 
 ### Minor Changes
 main
+- Nested the combat action bar beneath the roster and policy navigation so the command tray follows the primary HUD buttons.
 - Optimized the enemy spawner to reuse a single living-enemy count per tick, tightened slot tracking, and extended tests to
   lock in the new counting behavior.
 - Elevated the combat action bar into the top HUD tray, refreshing layout anchors, styling, and UI tests to match the new
