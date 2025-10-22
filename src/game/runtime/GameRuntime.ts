@@ -607,7 +607,8 @@ export class GameRuntime {
     this.pendingRosterSummary = hudResult.pendingRosterSummary;
     this.saunaUiController = hudResult.saunaUiController;
     this.topbarControls = hudResult.topbarControls;
-    this.actionBarController = hudResult.actionBarController;
+    this.actionBarController =
+      hudResult.actionBarController ?? uiAdapters.createActionBarController(actionBarAbilities);
     this.inventoryHudController = hudResult.inventoryHudController;
     const changeBehaviorHandler = (
       unitId: string,
