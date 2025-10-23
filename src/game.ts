@@ -56,7 +56,7 @@ import {
   getRosterCapLimit as getRosterCapLimitImpl,
   setRosterCapValue as setRosterCapValueImpl
 } from './game/runtime/index.ts';
-import { setReloadInProgress } from './game/runtime/reloadState.ts';
+import { isReloadInProgress, setReloadInProgress } from './game/runtime/reloadState.ts';
 import { createHudCoordinator } from './game/runtime/hudCoordinator.ts';
 import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import { GameController } from './game/GameController.ts';
@@ -1626,7 +1626,7 @@ const enemySpawner = new EnemySpawner({
   random: enemyRandom,
   eliteOdds: BASE_ELITE_ODDS
 });
-const clock = new GameClock(1000, (deltaMs) => {
+const handleGameClockTick = (deltaMs: number): void => {
   const dtSeconds = deltaMs / 1000;
   const strongholdActivations = strongholdSpawner.update(dtSeconds);
   state.tick();
@@ -1706,7 +1706,9 @@ const clock = new GameClock(1000, (deltaMs) => {
   syncStrongholdSpawnCooldowns();
   state.setStrongholdSpawnerSnapshot(strongholdSpawner.getSnapshot());
   state.setRunElapsedMs(getHudElapsedMsSnapshot());
-  state.save();
+  if (!isReloadInProgress()) {
+    state.save();
+  }
   const coordsToReveal = new Set<string>();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
   for (const unit of units) {
@@ -1754,7 +1756,9 @@ const clock = new GameClock(1000, (deltaMs) => {
     }
   }
   invalidateFrame();
-});
+};
+
+const clock = new GameClock(1000, handleGameClockTick);
 
 const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
   const runtime = getGameRuntime();
@@ -2446,6 +2450,10 @@ export function __grantRosterExperienceForTest(amount: number): void {
     saveUnits();
     updateRosterDisplay();
   }
+}
+
+export function __runGameClockTickForTest(deltaMs: number): void {
+  handleGameClockTick(deltaMs);
 }
 
 function getActiveRosterCount(): number {

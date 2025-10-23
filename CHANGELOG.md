@@ -17,6 +17,7 @@
 
 ### Minor Changes
 main
+- Prevented NG+ reloads from reviving cleared saves with negative Sauna Beer balances.
 - Elevated the quartermaster inventory and atelier shop toggles above the combat action tray so the command console presents
   stash and upgrade controls before the ability bar.
 - Nested the combat action bar beneath the roster and policy navigation so the command tray follows the primary HUD buttons.
