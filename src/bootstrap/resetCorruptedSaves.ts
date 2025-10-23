@@ -9,7 +9,7 @@ import { NG_PLUS_STORAGE_KEY } from '../progression/ngplus.ts';
 import { SAUNA_SHOP_STORAGE_KEY } from '../progression/saunaShop.ts';
 import { LOCAL_FLAGS_STORAGE_KEY } from '../save/local_flags.ts';
 
-export const STORAGE_RESET_SENTINEL_KEY = 'autobattles:storage-reset:v2024-11-corruption';
+export const STORAGE_RESET_SENTINEL_KEY = 'autobattles:storage-reset:v2024-12-fresh-start';
 export const STORAGE_RESET_SENTINEL_VALUE = 'done';
 
 export const PERSISTENCE_STORAGE_KEYS: readonly string[] = [

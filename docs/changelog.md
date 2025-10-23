@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-- Reset all persisted save data on load to recover from the November 2024
-  corruption issue, clearing rosters, NG+ progress, and progression unlocks so every
-  commander restarts from a stable baseline.
+- Force a December 2024 fresh-start wipe using the
+  `autobattles:storage-reset:v2024-12-fresh-start` sentinel so corrupted data clears
+  once, rebuilding rosters, NG+ progress, inventories, shops, and unlocks on a stable
+  foundation.
 
 - Promote wizards with the Arcane Nova specialization, delivering a 10%
   damage boost and 40% splash damage within a two-hex radius, with persistence
