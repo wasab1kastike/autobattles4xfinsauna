@@ -552,6 +552,39 @@ describe('GameState', () => {
     expect(ngPlus.runSeed).toBe(37);
   });
 
+  it('persists a fresh start snapshot when resetting for NG+ runs', () => {
+    const state = new GameState(1000);
+    state.addResource(Resource.SAUNA_BEER, 75);
+    state.setNgPlusState({ runSeed: 37, ngPlusLevel: 2, unlockSlots: 3 });
+
+    const persisted = state.resetForNewRun();
+    expect(persisted).toBe(true);
+
+    const raw = localStorage.getItem(GAME_STATE_STORAGE_KEY);
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw ?? '{}');
+
+    expect(parsed.freshStart).toBe(true);
+    expect(parsed.resources[Resource.SAUNA_BEER]).toBe(0);
+    expect(parsed.ngPlus.ngPlusLevel).toBe(2);
+    expect(parsed.ngPlus.unlockSlots).toBe(3);
+    expect(parsed.ngPlus.runSeed).toBe(37);
+  });
+
+  it('treats persisted fresh start snapshots as new campaigns on load', () => {
+    const state = new GameState(1000);
+    state.setNgPlusState({ runSeed: 84, ngPlusLevel: 1, unlockSlots: 1 });
+    state.resetForNewRun();
+
+    const reloaded = new GameState(1000);
+    expect(reloaded.load()).toBe(false);
+    expect(reloaded.getResource(Resource.SAUNA_BEER)).toBe(0);
+    const ngPlus = reloaded.getNgPlusState();
+    expect(ngPlus.ngPlusLevel).toBe(1);
+    expect(ngPlus.unlockSlots).toBe(1);
+    expect(ngPlus.runSeed).toBe(84);
+  });
+
   it('retains NG+ metadata when offline ticks apply', () => {
     const state = new GameState(1000);
     state.setNgPlusState({ runSeed: 12, ngPlusLevel: 1, unlockSlots: 1 });
