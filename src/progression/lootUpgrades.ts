@@ -7,7 +7,7 @@ import {
   type SpendArtocoinResult
 } from './artocoin.ts';
 
-const LOOT_UPGRADES_STORAGE_KEY = 'progression:loot-upgrades';
+export const LOOT_UPGRADES_STORAGE_KEY = 'progression:loot-upgrades';
 
 export type LootUpgradeId =
   | 'unlock-uncommon'

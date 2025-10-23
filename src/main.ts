@@ -6,6 +6,7 @@ import { createHud, type HudController, type LoadingHandle, type BannerOptions }
 import { useIsMobile } from './ui/hooks/useIsMobile.ts';
 import { ensureHudOverlayContext } from './ui/layout.ts';
 import { createBootstrapLoader, type LoaderStatusEvent } from './bootstrap/loader.ts';
+import { resetCorruptedSaves } from './bootstrap/resetCorruptedSaves.ts';
 import { ensureLatestDeployment } from './bootstrap/ensureLatestDeployment.ts';
 import { attachPointerPan } from './input/pointerPan.ts';
 import { attachTouchGestures } from './input/touchGestures.ts';
@@ -82,6 +83,11 @@ applyBuildIdentity();
 
 
 void ensureLatestDeployment();
+
+const resetResult = resetCorruptedSaves();
+if (resetResult.reset && resetResult.clearedKeys.length > 0) {
+  console.info('Cleared corrupted player save data.', { clearedKeys: resetResult.clearedKeys });
+}
 
 function addCleanup(fn: () => void): void {
   cleanupHandlers.push(fn);

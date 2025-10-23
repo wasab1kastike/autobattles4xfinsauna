@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Reset all persisted save data on load to recover from the November 2024
+  corruption issue, clearing rosters, NG+ progress, and progression unlocks so every
+  commander restarts from a stable baseline.
+
 - Promote wizards with the Arcane Nova specialization, delivering a 10%
   damage boost and 40% splash damage within a two-hex radius, with persistence
   across save/load, HUD copy, and new combat tests.

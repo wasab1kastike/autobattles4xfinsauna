@@ -96,6 +96,8 @@ export interface EventSchedulerOptions {
   storageProvider?: () => Storage | null;
 }
 
+export const DEFAULT_SCHEDULER_STORAGE_KEY = 'autobattles:event-scheduler';
+
 function defaultStorageProvider(): Storage | null {
   const globalWithStorage = globalThis as typeof globalThis & { localStorage?: Storage };
   return globalWithStorage.localStorage ?? null;
@@ -189,7 +191,7 @@ export class EventScheduler {
   private subscribers = new Set<(events: ActiveSchedulerEvent[]) => void>();
 
   constructor(options: EventSchedulerOptions = {}) {
-    this.storageKey = options.storageKey ?? 'autobattles:event-scheduler';
+    this.storageKey = options.storageKey ?? DEFAULT_SCHEDULER_STORAGE_KEY;
     this.eventBus = options.eventBus ?? globalEventBus;
     this.getStorage = options.storageProvider ?? defaultStorageProvider;
     this.load();

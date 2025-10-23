@@ -164,6 +164,8 @@ function sanitizeEnemyScaling(
   } satisfies EnemyScalingMultipliers;
 }
 
+export const GAME_STATE_STORAGE_KEY = 'gameState';
+
 export class GameState {
   private static readonly EMPTY_POLICY: PolicyStatus = Object.freeze({
     enabled: false,
@@ -213,7 +215,7 @@ export class GameState {
 
   constructor(
     private readonly tickInterval: number,
-    private readonly storageKey = 'gameState'
+    private readonly storageKey = GAME_STATE_STORAGE_KEY
   ) {}
 
   /** Increment resources by passive generation. */
