@@ -191,7 +191,13 @@ export function setupHudNavigation(
   toolbar.addEventListener('keydown', handleKeyDown);
   listeners.push(() => toolbar.removeEventListener('keydown', handleKeyDown));
 
-  topLeftCluster.appendChild(toolbar);
+  const actionBarMount = overlay.querySelector<HTMLElement>('[data-component="action-bar"]');
+  if (actionBarMount && actionBarMount.parentElement === topLeftCluster) {
+    // Position the navigation above the action bar so the command buttons cascade naturally.
+    topLeftCluster.insertBefore(toolbar, actionBarMount);
+  } else {
+    topLeftCluster.appendChild(toolbar);
+  }
 
   applyActive(activeView);
 

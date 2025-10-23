@@ -50,7 +50,7 @@ import { setupHudNavigation } from '../../src/ui/hudNavigation.tsx';
 import { setupRightPanel } from '../../src/ui/rightPanel.tsx';
 import { setupPoliciesWindow } from '../../src/ui/policies/setupPoliciesWindow.ts';
 import * as isMobileModule from '../../src/ui/hooks/useIsMobile.ts';
-import { HUD_OVERLAY_COLLAPSED_CLASS } from '../../src/ui/layout.ts';
+import { HUD_OVERLAY_COLLAPSED_CLASS, ensureHudLayout } from '../../src/ui/layout.ts';
 
 const { useIsMobile } = isMobileModule;
 
@@ -114,6 +114,20 @@ describe('HUD navigation', () => {
     expect(eventsButton?.getAttribute('aria-pressed')).toBe('true');
 
     nav.dispose();
+  });
+
+  it('positions the navigation above an existing action bar tray', () => {
+    const layout = ensureHudLayout(overlay);
+    const actionBar = document.createElement('div');
+    actionBar.dataset.component = 'action-bar';
+    actionBar.className = 'hud-command-tray hud-top-action-tray';
+    layout.anchors.topLeftCluster.appendChild(actionBar);
+
+    setupHudNavigation(overlay);
+
+    const navToolbar = overlay.querySelector('[data-hud-navigation]');
+    expect(navToolbar?.parentElement).toBe(layout.anchors.topLeftCluster);
+    expect(navToolbar?.nextElementSibling).toBe(actionBar);
   });
 
   it('supports arrow-key focus management with roving activation', () => {

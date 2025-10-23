@@ -37,7 +37,7 @@ describe('ensureHudLayout', () => {
     expect(buildId?.parentElement).toBe(layout.regions.bottom);
 
     const actionBarMount = document.querySelector<HTMLElement>('[data-component="action-bar"]');
-    expect(actionBarMount?.parentElement).toBe(layout.anchors.topActionTray);
+    expect(actionBarMount?.parentElement).toBe(layout.anchors.topLeftCluster);
 
     const commandToggle = document.querySelector<HTMLElement>('#right-panel-toggle');
     expect(commandToggle?.parentElement).toBe(layout.dock.actions);
