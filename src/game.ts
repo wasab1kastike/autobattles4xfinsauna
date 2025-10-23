@@ -56,7 +56,7 @@ import {
   getRosterCapLimit as getRosterCapLimitImpl,
   setRosterCapValue as setRosterCapValueImpl
 } from './game/runtime/index.ts';
-import { setReloadInProgress } from './game/runtime/reloadState.ts';
+import { isReloadInProgress, setReloadInProgress } from './game/runtime/reloadState.ts';
 import { createHudCoordinator } from './game/runtime/hudCoordinator.ts';
 import type { GameRuntimeContext } from './game/runtime/GameRuntime.ts';
 import { GameController } from './game/GameController.ts';
@@ -1532,6 +1532,9 @@ function buildGameRuntimeContext(): GameRuntimeContext {
       }
     },
     persistState: () => {
+      if (isReloadInProgress()) {
+        return;
+      }
       try {
         state.setRunElapsedMs(getHudElapsedMsSnapshot());
         state.save();
