@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GameState, Resource } from './GameState';
+import { GameState, Resource, GAME_STATE_STORAGE_KEY } from './GameState';
 import { eventBus } from '../events/EventBus';
 import {
   POLICY_EVENTS,
@@ -33,7 +33,7 @@ describe('GameState', () => {
     const state = new GameState(1000);
     state.tick(); // +1 resource
     state.save();
-    expect(localStorage.getItem('gameState')).not.toBeNull();
+    expect(localStorage.getItem(GAME_STATE_STORAGE_KEY)).not.toBeNull();
 
     // simulate 5 seconds offline
     vi.setSystemTime(5000);
@@ -102,7 +102,7 @@ describe('GameState', () => {
     state.addResource(Resource.SAUNAKUNNIA, 5);
     state.save();
 
-    const serialized = localStorage.getItem('gameState');
+    const serialized = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(serialized).not.toBeNull();
     const parsed = JSON.parse(serialized ?? '{}');
     expect(parsed.resources[Resource.SAUNAKUNNIA]).toBe(5);
@@ -121,7 +121,7 @@ describe('GameState', () => {
 
     state.save();
 
-    const serialized = localStorage.getItem('gameState');
+    const serialized = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(serialized).not.toBeNull();
     const parsed = JSON.parse(serialized ?? '{}');
 
@@ -140,7 +140,7 @@ describe('GameState', () => {
     expect(snapshot.cadence).toBeCloseTo(1.2);
     expect(snapshot.strength).toBeCloseTo(1.3);
     state.save();
-    const serialized = localStorage.getItem('gameState');
+    const serialized = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(serialized).not.toBeNull();
     const parsed = JSON.parse(serialized ?? '{}');
     expect(parsed.enemyScaling.aggression).toBeCloseTo(1.4);
@@ -220,7 +220,7 @@ describe('GameState', () => {
     expect(state.setPolicyEnabled('eco', false)).toBe(true);
     state.save();
 
-    const raw = localStorage.getItem('gameState');
+    const raw = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw ?? '{}');
     expect(parsed.policies.eco).toEqual({ enabled: false, unlocked: true });
@@ -467,7 +467,7 @@ describe('GameState', () => {
       buildings: { mystery: 1, farm: 2 },
       buildingPlacements: { '0,0': 'mystery', '1,1': 'farm' }
     };
-    localStorage.setItem('gameState', JSON.stringify(serialized));
+    localStorage.setItem(GAME_STATE_STORAGE_KEY, JSON.stringify(serialized));
 
     const map = new HexMap(3, 3, 1);
     map.ensureTile(0, 0);
@@ -515,7 +515,7 @@ describe('GameState', () => {
     state.addResource(Resource.SAUNAKUNNIA, 4);
     state.save();
 
-    const raw = localStorage.getItem('gameState');
+    const raw = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(raw).not.toBeNull();
     const parsed = JSON.parse(raw ?? '{}');
     expect(parsed.ngPlus).toEqual({
@@ -543,11 +543,11 @@ describe('GameState', () => {
     state.modifyPassiveGeneration(Resource.SAUNA_BEER, 1);
     state.save();
 
-    const stored = localStorage.getItem('gameState');
+    const stored = localStorage.getItem(GAME_STATE_STORAGE_KEY);
     expect(stored).not.toBeNull();
     const parsed = JSON.parse(stored ?? '{}');
     parsed.lastSaved = -5000;
-    localStorage.setItem('gameState', JSON.stringify(parsed));
+    localStorage.setItem(GAME_STATE_STORAGE_KEY, JSON.stringify(parsed));
 
     vi.setSystemTime(5000);
     const loaded = new GameState(1000);

@@ -1,4 +1,9 @@
-import { GameState, Resource, type EnemyScalingSnapshot } from './core/GameState.ts';
+import {
+  GameState,
+  Resource,
+  type EnemyScalingSnapshot,
+  GAME_STATE_STORAGE_KEY
+} from './core/GameState.ts';
 import { GameClock } from './core/GameClock.ts';
 import { HexMap } from './hexmap.ts';
 import { BattleManager } from './battle/BattleManager.ts';
@@ -1918,7 +1923,7 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
       }
       try {
         if (typeof window !== 'undefined') {
-          window.localStorage?.removeItem?.('gameState');
+          window.localStorage?.removeItem?.(GAME_STATE_STORAGE_KEY);
         }
       } catch (error) {
         console.warn('Failed to reset saved game state for NG+', error);

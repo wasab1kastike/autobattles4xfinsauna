@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'autobattles4x.flags';
+export const LOCAL_FLAGS_STORAGE_KEY = 'autobattles4x.flags';
 
 export type LocalFlags = {
   tutorial_done?: boolean;
@@ -24,7 +24,7 @@ function readFlags(): LocalFlags {
     return {};
   }
   try {
-    const raw = storage.getItem(STORAGE_KEY);
+    const raw = storage.getItem(LOCAL_FLAGS_STORAGE_KEY);
     if (!raw) {
       return {};
     }
@@ -48,7 +48,7 @@ function writeFlags(flags: LocalFlags): void {
     if (flags.tutorial_done) {
       cleaned.tutorial_done = true;
     }
-    storage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+    storage.setItem(LOCAL_FLAGS_STORAGE_KEY, JSON.stringify(cleaned));
   } catch (error) {
     console.warn('Failed to persist local flags', error);
   }

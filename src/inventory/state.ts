@@ -133,6 +133,8 @@ export type CarryoverItemSeed = SaunojaItem & {
   readonly acquiredAt?: number;
 };
 
+export const INVENTORY_STORAGE_KEY = 'autobattles:inventory';
+
 type SerializedInventory = {
   readonly autoEquip?: boolean;
   readonly stash?: readonly (InventoryItem & { readonly acquiredAt: number })[];
@@ -203,7 +205,7 @@ export class InventoryState {
   private inventory: InventoryItem[] = [];
 
   constructor(options: InventoryStateOptions = {}) {
-    this.storageKey = options.storageKey ?? 'autobattles:inventory';
+    this.storageKey = options.storageKey ?? INVENTORY_STORAGE_KEY;
     this.now = typeof options.now === 'function' ? options.now : () => Date.now();
     this.maxStashSize = Math.max(1, Math.floor(options.maxStashSize ?? 24));
     this.storage = getStorage();

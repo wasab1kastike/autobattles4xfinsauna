@@ -6,7 +6,7 @@ import {
   type SpendArtocoinResult
 } from './artocoin.ts';
 
-const SAUNA_SHOP_STORAGE_KEY = 'progression:sauna-shop';
+export const SAUNA_SHOP_STORAGE_KEY = 'progression:sauna-shop';
 
 type SaunaShopRecord = {
   readonly version: 1;
