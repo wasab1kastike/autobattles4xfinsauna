@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupInventoryHud } from './inventoryHud.ts';
 import type { InventoryEvent, InventoryState } from '../inventory/state.ts';
+import { ensureHudLayout } from './layout.ts';
+import type { SaunaShopPanelController } from './shop/SaunaShopPanel.tsx';
 import type { StashPanelController } from './stash/StashPanel.tsx';
 
 const focusMock = vi.fn();
@@ -9,10 +11,17 @@ const renderMock = vi.fn();
 const destroyMock = vi.fn();
 
 let stashPanel: StashPanelController;
+let saunaShopPanel: SaunaShopPanelController;
 
 vi.mock('./stash/StashPanel.tsx', () => {
   return {
     createStashPanel: vi.fn(() => stashPanel)
+  };
+});
+
+vi.mock('./shop/SaunaShopPanel.tsx', () => {
+  return {
+    createSaunaShopPanel: vi.fn(() => saunaShopPanel)
   };
 });
 
@@ -37,6 +46,14 @@ describe('setupInventoryHud', () => {
       destroy: destroyMock,
       setAutoEquip: vi.fn()
     } satisfies StashPanelController;
+
+    saunaShopPanel = {
+      element: document.createElement('section'),
+      setOpen: vi.fn(),
+      update: vi.fn(),
+      focus: vi.fn(),
+      destroy: vi.fn(),
+    } satisfies SaunaShopPanelController;
   });
 
   afterEach(() => {
@@ -88,5 +105,44 @@ describe('setupInventoryHud', () => {
     expect(overlay.classList.contains('inventory-panel-open')).toBe(false);
 
     hud.destroy();
+  });
+
+  it('stacks the shop and inventory toggles ahead of the action bar tray', () => {
+    const listeners = new Set<(event: InventoryEvent) => void>();
+
+    const inventory = {
+      isAutoEquipEnabled: () => false,
+      getStash: () => [],
+      getInventory: () => [],
+      equipFromStash: vi.fn(),
+      equipFromInventory: vi.fn(),
+      moveToInventory: vi.fn(),
+      moveToStash: vi.fn(),
+      discardFromStash: vi.fn(),
+      discardFromInventory: vi.fn(),
+      on: (listener: (event: InventoryEvent) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      }
+    } as unknown as InventoryState;
+
+    const layout = ensureHudLayout(overlay);
+    const actionBar = document.createElement('div');
+    actionBar.dataset.component = 'action-bar';
+    layout.anchors.topLeftCluster.appendChild(actionBar);
+
+    setupInventoryHud(inventory, {
+      getSaunaShopViewModel: () => ({ balance: 1200, tiers: [], lootCategories: [] })
+    });
+
+    const shopToggle = layout.anchors.topLeftCluster.querySelector<HTMLElement>('[data-ui="inventory-shop-toggle"]');
+    const inventoryToggle = layout.anchors.topLeftCluster.querySelector<HTMLElement>('[data-ui="inventory-toggle"]');
+
+    expect(shopToggle).not.toBeNull();
+    expect(inventoryToggle).not.toBeNull();
+
+    const children = Array.from(layout.anchors.topLeftCluster.children);
+    expect(children.indexOf(shopToggle!)).toBeLessThan(children.indexOf(inventoryToggle!));
+    expect(children.indexOf(inventoryToggle!)).toBeLessThan(children.indexOf(actionBar));
   });
 });

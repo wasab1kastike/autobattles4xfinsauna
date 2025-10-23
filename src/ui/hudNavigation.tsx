@@ -191,10 +191,25 @@ export function setupHudNavigation(
   toolbar.addEventListener('keydown', handleKeyDown);
   listeners.push(() => toolbar.removeEventListener('keydown', handleKeyDown));
 
-  const actionBarMount = overlay.querySelector<HTMLElement>('[data-component="action-bar"]');
-  if (actionBarMount && actionBarMount.parentElement === topLeftCluster) {
-    // Position the navigation above the action bar so the command buttons cascade naturally.
-    topLeftCluster.insertBefore(toolbar, actionBarMount);
+  const findCommandAnchor = (): HTMLElement | null => {
+    const selectors = [
+      '[data-ui="inventory-shop-toggle"]',
+      '[data-ui="inventory-toggle"]',
+      '[data-component="action-bar"]',
+    ];
+    for (const selector of selectors) {
+      const candidate = topLeftCluster.querySelector<HTMLElement>(selector);
+      if (candidate && candidate.parentElement === topLeftCluster) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+
+  const commandAnchor = findCommandAnchor();
+  if (commandAnchor) {
+    // Position the navigation above the stacked command controls so the tray cascades naturally.
+    topLeftCluster.insertBefore(toolbar, commandAnchor);
   } else {
     topLeftCluster.appendChild(toolbar);
   }

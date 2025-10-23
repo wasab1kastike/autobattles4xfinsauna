@@ -249,6 +249,7 @@ export function setupInventoryHud(
   const doc = overlay.ownerDocument ?? document;
   const { anchors, tabs } = ensureHudLayout(overlay);
   const topLeftCluster = anchors.topLeftCluster;
+  const actionBarMount = topLeftCluster.querySelector<HTMLElement>('[data-component="action-bar"]');
   const toastStack = ensureToastStack(overlay, anchors.topRightCluster);
 
   overlay.querySelector('#inventory-stash-panel')?.remove();
@@ -257,7 +258,11 @@ export function setupInventoryHud(
 
   const { button: inventoryButton, badge: inventoryBadge } = createInventoryButton();
   inventoryButton.dataset.ui = 'inventory-toggle';
-  topLeftCluster.appendChild(inventoryButton);
+  if (actionBarMount && actionBarMount.parentElement === topLeftCluster) {
+    topLeftCluster.insertBefore(inventoryButton, actionBarMount);
+  } else {
+    topLeftCluster.appendChild(inventoryButton);
+  }
 
   const stashLayer = doc.createElement('div');
   stashLayer.id = 'inventory-stash-layer';
@@ -359,6 +364,7 @@ export function setupInventoryHud(
       };
     shopButton = createShopButton();
     shopButton.dataset.state = 'locked';
+    shopButton.dataset.ui = 'inventory-shop-toggle';
     topLeftCluster.insertBefore(shopButton, inventoryButton);
 
     const emitShopToast = (message: string, variant: SaunaShopToastVariant) => {

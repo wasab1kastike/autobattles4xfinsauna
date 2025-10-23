@@ -130,6 +130,22 @@ describe('HUD navigation', () => {
     expect(navToolbar?.nextElementSibling).toBe(actionBar);
   });
 
+  it('positions the navigation ahead of stash and shop toggles when present', () => {
+    const layout = ensureHudLayout(overlay);
+    const shopButton = document.createElement('button');
+    shopButton.dataset.ui = 'inventory-shop-toggle';
+    layout.anchors.topLeftCluster.appendChild(shopButton);
+    const inventoryButton = document.createElement('button');
+    inventoryButton.dataset.ui = 'inventory-toggle';
+    layout.anchors.topLeftCluster.appendChild(inventoryButton);
+
+    setupHudNavigation(overlay);
+
+    const navToolbar = overlay.querySelector('[data-hud-navigation]');
+    expect(navToolbar?.nextElementSibling).toBe(shopButton);
+    expect(shopButton.nextElementSibling).toBe(inventoryButton);
+  });
+
   it('supports arrow-key focus management with roving activation', () => {
     const navigate = vi.fn();
     const nav = setupHudNavigation(overlay, { onNavigate: navigate });
