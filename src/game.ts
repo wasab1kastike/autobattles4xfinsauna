@@ -135,6 +135,7 @@ import {
 } from './progression/lootUpgrades.ts';
 import { applyEquipment } from './unit/calc.ts';
 import { assetPaths, getAssets, uiIcons } from './game/assets.ts';
+import { INITIAL_SAUNA_BEER, INITIAL_SAUNAKUNNIA } from './game/constants.ts';
 import { createObjectiveTracker } from './progression/objectives.ts';
 import type { ObjectiveProgress, ObjectiveResolution, ObjectiveTracker } from './progression/objectives.ts';
 import {
@@ -242,8 +243,6 @@ import {
   XP_STANDARD_KILL
 } from './game/experience.ts';
 
-const INITIAL_SAUNA_BEER = 200;
-const INITIAL_SAUNAKUNNIA = 3;
 const SAUNAKUNNIA_VICTORY_BONUS = 2;
 
 const XP_OBJECTIVE_COMPLETION = 200;
@@ -1926,12 +1925,22 @@ const handleObjectiveResolution = (resolution: ObjectiveResolution): void => {
       } catch (error) {
         console.warn('Failed to persist selected attendant for NG+', error);
       }
+      let storageCleared = false;
       try {
         if (typeof window !== 'undefined') {
           window.localStorage?.removeItem?.(GAME_STATE_STORAGE_KEY);
+          storageCleared = true;
         }
       } catch (error) {
         console.warn('Failed to reset saved game state for NG+', error);
+      }
+      if (!storageCleared) {
+        const persistedFreshState = state.resetForNewRun();
+        if (!persistedFreshState) {
+          console.info(
+            'NG+ reset proceeded with in-memory state only; localStorage snapshot could not be updated.'
+          );
+        }
       }
       if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
         setReloadInProgress(true);

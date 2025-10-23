@@ -33,3 +33,4 @@ main
 - Polished the roster identity layout so hero names and class badges wrap elegantly on small screens, tightening flex safeguards to prevent horizontal overflow in the HUD.
 - Amplified boss encounters with larger battlefield sprites and a radiant ground aura so they immediately stand out during clashes.
 - Aligned the onboarding tutorial documentation with the live HUD anchors, policy copy, and pause handling so the GitHub Pages mirror reflects the current guided experience.
+- Hardened NG+ resets to rewrite clean save snapshots when storage removal fails so fresh campaigns reseed their initial resources and progression tests cover the fallback.

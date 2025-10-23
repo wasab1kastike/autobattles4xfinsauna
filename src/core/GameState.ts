@@ -131,6 +131,7 @@ type SerializedState = {
   strongholds?: SerializedStrongholds;
   strongholdSpawner?: StrongholdSpawnerSnapshot | null;
   runElapsedMs?: number;
+  freshStart?: boolean;
 };
 
 export interface EnemyScalingMultipliers {
@@ -304,6 +305,16 @@ export class GameState {
       this.runElapsedMs = 0;
       return false;
     }
+    if (data.freshStart) {
+      const options: { persist?: boolean; ngPlus?: Partial<NgPlusState> | NgPlusState } = {
+        persist: false
+      };
+      if (data.ngPlus) {
+        options.ngPlus = data.ngPlus;
+      }
+      this.resetForNewRun(options);
+      return false;
+    }
     this.resources = { ...this.resources, ...(data.resources ?? {}) };
     (Object.keys(this.resources) as Resource[]).forEach((res) => {
       if (!Number.isFinite(this.resources[res])) {
@@ -430,6 +441,64 @@ export class GameState {
       this.resources[res] += offlineTicks * this.passiveGeneration[res];
     });
     return true;
+  }
+
+  resetForNewRun(options: { persist?: boolean; ngPlus?: Partial<NgPlusState> | NgPlusState } = {}): boolean {
+    this.policies = new Map();
+    this.resources = {
+      [Resource.SAUNA_BEER]: 0,
+      [Resource.SAUNAKUNNIA]: 0,
+      [Resource.SISU]: 0
+    };
+    this.passiveGeneration = { ...PASSIVE_GENERATION };
+    this.buildings = {};
+    this.buildingPlacements.clear();
+    this.nightWorkSpeedMultiplier = 1;
+    this.enemyScaling = { ...DEFAULT_ENEMY_SCALING };
+    this.enemyCalmSecondsRemaining = 0;
+    this.strongholdStatuses.clear();
+    this.strongholdSpawner = null;
+    this.runElapsedMs = 0;
+    this.lastSaved = Date.now();
+
+    const sanitizedNgPlusSource =
+      options.ngPlus !== undefined ? createNgPlusState(options.ngPlus) : this.ngPlus;
+    this.ngPlus = ensureNgPlusRunState(sanitizedNgPlusSource);
+
+    if (options.persist === false) {
+      return true;
+    }
+
+    const storage =
+      typeof localStorage !== 'undefined' && localStorage ? localStorage : undefined;
+    if (!storage) {
+      console.warn("GameState.resetForNewRun: localStorage is unavailable, skipping persistence.");
+      return false;
+    }
+
+    const serialized: SerializedState = {
+      resources: { ...this.resources },
+      lastSaved: this.lastSaved,
+      buildings: {},
+      buildingPlacements: {},
+      policies: {},
+      passiveGeneration: { ...this.passiveGeneration },
+      nightWorkSpeedMultiplier: this.nightWorkSpeedMultiplier,
+      enemyScaling: { ...this.enemyScaling },
+      ngPlus: this.ngPlus,
+      strongholds: {},
+      strongholdSpawner: null,
+      runElapsedMs: this.runElapsedMs,
+      freshStart: true
+    };
+
+    try {
+      storage.setItem(this.storageKey, JSON.stringify(serialized));
+      return true;
+    } catch (error) {
+      console.warn("GameState.resetForNewRun: Failed to persist fresh snapshot to localStorage.", error);
+      return false;
+    }
   }
 
   peekPersistedStrongholds(): StrongholdPersistence | null {
