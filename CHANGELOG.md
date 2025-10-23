@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Major Changes
-- Purged all persisted player data on load when running the November 2024 hotfix, resetting corrupted save slots, rosters, NG+ progress, and progression unlocks so everyone restarts from a clean slate.
+- Force a fresh December 2024 save reset keyed off `autobattles:storage-reset:v2024-12-fresh-start` so corrupted slots clear once on load while rosters, NG+ progress, inventories, shops, and unlocks rebuild on a stable foundation.
 - Empowered Glacial Rhythm and Celestial Reserve with tri-hex sauna healing auras, updating lifecycle logic, UI copy, and tests to surface the 1.5 HP/s passive restoration.
 - Extended sauna tiers through the Celestial Reserve, standardizing vision radius, spawn multipliers, and NG+ unlock behavior across every hall.
 - Empowered rogues with a permanent attack boost, an ambush teleport, and a first-strike damage surge covered by new combat and scenario tests.
