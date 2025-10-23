@@ -17,6 +17,8 @@
 
 ### Minor Changes
 main
+- Elevated the quartermaster inventory and atelier shop toggles above the combat action tray so the command console presents
+  stash and upgrade controls before the ability bar.
 - Nested the combat action bar beneath the roster and policy navigation so the command tray follows the primary HUD buttons.
 - Optimized the enemy spawner to reuse a single living-enemy count per tick, tightened slot tracking, and extended tests to
   lock in the new counting behavior.
