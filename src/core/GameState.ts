@@ -76,6 +76,14 @@ function normalizeSeconds(value: unknown, fallback: number): number {
   return Math.max(0, numeric);
 }
 
+function normalizeMilliseconds(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.round(numeric));
+}
+
 function cloneStrongholdSpawnerSnapshot(
   snapshot: StrongholdSpawnerSnapshot
 ): StrongholdSpawnerSnapshot {
@@ -122,6 +130,7 @@ type SerializedState = {
   ngPlus?: NgPlusState;
   strongholds?: SerializedStrongholds;
   strongholdSpawner?: StrongholdSpawnerSnapshot | null;
+  runElapsedMs?: number;
 };
 
 export interface EnemyScalingMultipliers {
@@ -213,6 +222,9 @@ export class GameState {
   /** Runtime snapshot of stronghold deployment cadence. */
   private strongholdSpawner: StrongholdSpawnerSnapshot | null = null;
 
+  /** Total elapsed runtime for the current session in milliseconds. */
+  private runElapsedMs = 0;
+
   constructor(
     private readonly tickInterval: number,
     private readonly storageKey = GAME_STATE_STORAGE_KEY
@@ -268,7 +280,8 @@ export class GameState {
       enemyScaling: { ...this.enemyScaling },
       ngPlus: this.ngPlus,
       strongholds: strongholdSnapshot,
-      strongholdSpawner: spawnerSnapshot
+      strongholdSpawner: spawnerSnapshot,
+      runElapsedMs: this.runElapsedMs
     };
     const storage =
       typeof localStorage !== 'undefined' && localStorage ? localStorage : undefined;
@@ -288,6 +301,7 @@ export class GameState {
     const data = safeLoadJSON<Partial<SerializedState>>(this.storageKey);
     if (!data) {
       this.lastSaved = Date.now();
+      this.runElapsedMs = 0;
       return false;
     }
     this.resources = { ...this.resources, ...(data.resources ?? {}) };
@@ -298,6 +312,7 @@ export class GameState {
     });
     this.enemyScaling = sanitizeEnemyScaling(DEFAULT_ENEMY_SCALING, data.enemyScaling ?? {});
     this.enemyCalmSecondsRemaining = 0;
+    this.runElapsedMs = normalizeMilliseconds(data.runElapsedMs);
     const validBuildings: Record<string, number> = {};
     Object.entries(data.buildings ?? {}).forEach(([type, count]) => {
       if (BUILDING_FACTORIES[type]) {
@@ -447,6 +462,14 @@ export class GameState {
       return null;
     }
     return cloneStrongholdSpawnerSnapshot(snapshot);
+  }
+
+  setRunElapsedMs(value: number): void {
+    this.runElapsedMs = normalizeMilliseconds(value);
+  }
+
+  getRunElapsedMs(): number {
+    return this.runElapsedMs;
   }
 
   /** Current amount of a resource. */

@@ -106,6 +106,8 @@ export interface ObjectiveTrackerOptions {
   bankruptcyGraceMs?: number;
   /** Custom time source for testing. Defaults to `performance.now` / `Date.now`. */
   timeSource?: () => number;
+  /** Previously elapsed run duration in milliseconds to seed duration tracking. */
+  initialElapsedMs?: number;
 }
 
 const DEFAULT_STRONGHOLDS: readonly BuildingType[] = ['city'];
@@ -142,6 +144,14 @@ function captureResources(state: GameState): Record<Resource, number> {
   return snapshot;
 }
 
+function normalizeElapsed(value: unknown): number {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.round(numeric));
+}
+
 class ObjectiveTrackerImpl implements ObjectiveTracker {
   private readonly timeSource: () => number;
   private readonly state: GameState;
@@ -153,6 +163,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
   private readonly bankruptcyGraceMs: number;
   private readonly progress: ObjectiveProgress;
   private readonly startResources: Record<Resource, number>;
+  private readonly elapsedOffset: number;
   private readonly strongholds = new Map<string, { alive: boolean }>();
   private readonly revealedTiles = new Set<string>();
   private readonly progressListeners = new Set<ObjectiveProgressListener>();
@@ -182,6 +193,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
       options.bankruptcyGraceMs ?? DEFAULT_BANKRUPTCY_GRACE_MS
     );
     this.startResources = captureResources(this.state);
+    this.elapsedOffset = normalizeElapsed(options.initialElapsedMs);
 
     const initialBeer = this.state.getResource(Resource.SAUNA_BEER);
     const rosterCount = this.sampleRosterCount();
@@ -523,7 +535,7 @@ class ObjectiveTrackerImpl implements ObjectiveTracker {
     this.updateRosterDuration();
     this.updateBankruptcyDuration();
     const timestamp = this.timeSource();
-    const durationMs = Math.max(0, timestamp - this.progress.startedAt);
+    const durationMs = Math.max(0, timestamp - this.progress.startedAt) + this.elapsedOffset;
     const summary = cloneProgress({
       ...this.progress,
       roster: { ...this.progress.roster, wipeSince: this.wipeSince },

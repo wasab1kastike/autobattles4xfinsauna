@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { GameState } from '../../src/core/GameState.ts';
 import { HexMap } from '../../src/hexmap.ts';
 import { createObjectiveTracker } from '../../src/progression/objectives.ts';
+import type { ObjectiveResolution } from '../../src/progression/objectives.ts';
 import { calculateKillExperience, XP_BOSS_KILL } from '../../src/game/experience.ts';
 import type { Unit } from '../../src/units/Unit.ts';
 import { createUnit } from '../../src/units/UnitFactory.ts';
@@ -51,6 +52,32 @@ describe('enemy strongholds integration', () => {
     expect(progress.strongholds.total).toBe(expectedTotal);
     expect(progress.strongholds.remaining).toBe(expectedTotal);
     expect(progress.strongholds.destroyed).toBe(0);
+
+    tracker.dispose();
+  });
+
+  it('applies persisted elapsed time when strongholds are already captured', () => {
+    const map = new HexMap(10, 10);
+    seedEnemyStrongholds(map, STRONGHOLD_CONFIG);
+    for (const metadata of listStrongholds()) {
+      metadata.captured = true;
+    }
+
+    const tracker = createObjectiveTracker({
+      state: new GameState(1000),
+      map,
+      getRosterCount: () => 0,
+      timeSource: () => 500,
+      initialElapsedMs: 90_000
+    });
+
+    let resolution: ObjectiveResolution | null = null;
+    tracker.onResolution((snapshot) => {
+      resolution = snapshot;
+    });
+
+    expect(resolution).not.toBeNull();
+    expect(resolution?.durationMs).toBe(90_000);
 
     tracker.dispose();
   });

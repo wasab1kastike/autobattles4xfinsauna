@@ -1329,6 +1329,8 @@ detachSaunojaImpl = loader.detachSaunoja;
 pickStrongholdSpawnTileImpl = loader.pickStrongholdSpawnTile;
 restoredSave = loader.restoredSave;
 currentNgPlusState = loader.ngPlusState;
+setHudElapsedMsSnapshot(state.getRunElapsedMs());
+notifyHudElapsed(getHudElapsedMsSnapshot());
 
 const persistedStrongholds = state.peekPersistedStrongholds();
 const persistedStrongholdSpawner = state.peekStrongholdSpawnerSnapshot();
@@ -1488,6 +1490,7 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     mapRenderer,
     getUnitById: (id) => unitsById.get(id),
     resetHudElapsed: () => {
+      state.setRunElapsedMs(0);
       setHudElapsedMsSnapshot(0);
     },
     notifyHudElapsed: () => notifyHudElapsed(getHudElapsedMsSnapshot()),
@@ -1530,6 +1533,7 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     },
     persistState: () => {
       try {
+        state.setRunElapsedMs(getHudElapsedMsSnapshot());
         state.save();
       } catch (error) {
         console.warn('Failed to persist game state during cleanup', error);
@@ -1701,6 +1705,7 @@ const clock = new GameClock(1000, (deltaMs) => {
   }
   syncStrongholdSpawnCooldowns();
   state.setStrongholdSpawnerSnapshot(strongholdSpawner.getSnapshot());
+  state.setRunElapsedMs(getHudElapsedMsSnapshot());
   state.save();
   const coordsToReveal = new Set<string>();
   // Reveal around all active units before rendering so fog-of-war keeps pace with combat
@@ -2013,7 +2018,8 @@ objectiveTracker = createObjectiveTracker({
   getRosterCount: getActiveRosterCount,
   sauna,
   rosterWipeGraceMs: 8000,
-  bankruptcyGraceMs: 12000
+  bankruptcyGraceMs: 12000,
+  initialElapsedMs: state.getRunElapsedMs()
 });
 lastStrongholdsDestroyed = objectiveTracker.getProgress().strongholds.destroyed;
 objectiveTracker.onProgress(handleObjectiveProgress);

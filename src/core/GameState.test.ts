@@ -43,6 +43,21 @@ describe('GameState', () => {
     expect(loaded.getResource(Resource.SAUNA_BEER)).toBe(6); // 1 saved + 5 offline ticks
   });
 
+  it('persists run elapsed time across saves', () => {
+    const state = new GameState(1000);
+    state.setRunElapsedMs(12_345.6);
+    state.save();
+
+    const serialized = localStorage.getItem(GAME_STATE_STORAGE_KEY);
+    expect(serialized).not.toBeNull();
+    const parsed = JSON.parse(serialized ?? '{}');
+    expect(parsed.runElapsedMs).toBe(12346);
+
+    const reloaded = new GameState(1000);
+    reloaded.load();
+    expect(reloaded.getRunElapsedMs()).toBe(12346);
+  });
+
   it('logs a warning and continues when localStorage.setItem throws', () => {
     const state = new GameState(1000);
     vi.setSystemTime(1234);
