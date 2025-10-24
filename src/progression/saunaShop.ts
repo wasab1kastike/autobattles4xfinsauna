@@ -65,12 +65,13 @@ function persistRecord(record: SaunaShopRecord): void {
   }
 }
 
-let purchasedTierIds = new Set<SaunaTierId>(loadRecord().tiers);
+let unlockedTierIds = new Set<SaunaTierId>(loadRecord().tiers);
+let upgradedTierIds = new Set<SaunaTierId>();
 
 export interface SaunaShopChangeEvent {
   readonly type: 'purchase' | 'grant';
   readonly tierId: SaunaTierId;
-  readonly purchased: ReadonlySet<SaunaTierId>;
+  readonly unlocked: ReadonlySet<SaunaTierId>;
   readonly spendResult?: SpendArtocoinResult;
   readonly cost?: number;
 }
@@ -80,10 +81,10 @@ type SaunaShopListener = (event: SaunaShopChangeEvent) => void;
 const listeners = new Set<SaunaShopListener>();
 
 function emitChange(event: SaunaShopChangeEvent): void {
-  const snapshot = new Set(purchasedTierIds);
+  const snapshot = new Set(unlockedTierIds);
   for (const listener of listeners) {
     try {
-      listener({ ...event, purchased: snapshot });
+      listener({ ...event, unlocked: snapshot });
     } catch (error) {
       console.warn('Sauna shop listener failure', error);
     }
@@ -95,25 +96,34 @@ export function onSaunaShopChange(listener: SaunaShopListener): () => void {
   return () => listeners.delete(listener);
 }
 
-export function getPurchasedSaunaTiers(): ReadonlySet<SaunaTierId> {
-  return new Set(purchasedTierIds);
+export function getUnlockedSaunaTiers(): ReadonlySet<SaunaTierId> {
+  return new Set(unlockedTierIds);
 }
 
-function updatePurchased(set: Set<SaunaTierId>): void {
-  purchasedTierIds = new Set(set);
-  persistRecord({ version: 1, tiers: Array.from(purchasedTierIds) });
+function updateUnlocked(set: Set<SaunaTierId>): void {
+  unlockedTierIds = new Set(set);
+  persistRecord({ version: 1, tiers: Array.from(unlockedTierIds) });
 }
 
 export interface PurchaseSaunaTierResult {
   readonly success: boolean;
   readonly balance: number;
-  readonly purchased: ReadonlySet<SaunaTierId>;
+  readonly unlocked: ReadonlySet<SaunaTierId>;
   readonly shortfall?: number;
   readonly reason?: 'already-owned' | 'insufficient-funds' | 'unsupported';
 }
 
 export interface PurchaseSaunaTierOptions {
   readonly getCurrentBalance?: () => number;
+}
+
+export function getUpgradedSaunaTiers(): ReadonlySet<SaunaTierId> {
+  return new Set(upgradedTierIds);
+}
+
+export function setUpgradedSaunaTiers(tiers: Iterable<SaunaTierId>): ReadonlySet<SaunaTierId> {
+  upgradedTierIds = new Set(tiers);
+  return getUpgradedSaunaTiers();
 }
 
 function sanitizeRuntimeBalance(value: unknown): number {
@@ -150,34 +160,34 @@ export function purchaseSaunaTier(
     return {
       success: false,
       balance: effectiveBalance,
-      purchased: getPurchasedSaunaTiers(),
+      unlocked: getUnlockedSaunaTiers(),
       reason: 'unsupported'
     } satisfies PurchaseSaunaTierResult;
   }
 
   if (tier.unlock.type !== 'artocoin') {
-    if (!purchasedTierIds.has(tier.id)) {
-      purchasedTierIds.add(tier.id);
-      updatePurchased(purchasedTierIds);
+    if (!unlockedTierIds.has(tier.id)) {
+      unlockedTierIds.add(tier.id);
+      updateUnlocked(unlockedTierIds);
       emitChange({
         type: 'grant',
         tierId: tier.id,
-        purchased: purchasedTierIds,
+        unlocked: unlockedTierIds,
         cost: 0
       });
     }
     return {
       success: true,
       balance: effectiveBalance,
-      purchased: getPurchasedSaunaTiers()
+      unlocked: getUnlockedSaunaTiers()
     } satisfies PurchaseSaunaTierResult;
   }
 
-  if (purchasedTierIds.has(tier.id)) {
+  if (unlockedTierIds.has(tier.id)) {
     return {
       success: false,
       balance: effectiveBalance,
-      purchased: getPurchasedSaunaTiers(),
+      unlocked: getUnlockedSaunaTiers(),
       reason: 'already-owned'
     } satisfies PurchaseSaunaTierResult;
   }
@@ -192,7 +202,7 @@ export function purchaseSaunaTier(
       return {
         success: false,
         balance: effectiveBalance,
-        purchased: getPurchasedSaunaTiers(),
+        unlocked: getUnlockedSaunaTiers(),
         shortfall: cost - fallbackBalance,
         reason: 'insufficient-funds'
       } satisfies PurchaseSaunaTierResult;
@@ -213,19 +223,19 @@ export function purchaseSaunaTier(
       return {
         success: false,
         balance: spendResult.balance,
-        purchased: getPurchasedSaunaTiers(),
+        unlocked: getUnlockedSaunaTiers(),
         shortfall: spendResult.shortfall,
         reason: 'insufficient-funds'
       } satisfies PurchaseSaunaTierResult;
     }
   }
 
-  purchasedTierIds.add(tier.id);
-  updatePurchased(purchasedTierIds);
+  unlockedTierIds.add(tier.id);
+  updateUnlocked(unlockedTierIds);
   emitChange({
     type: 'purchase',
     tierId: tier.id,
-    purchased: purchasedTierIds,
+    unlocked: unlockedTierIds,
     spendResult,
     cost
   });
@@ -233,20 +243,20 @@ export function purchaseSaunaTier(
   return {
     success: true,
     balance: spendResult.balance,
-    purchased: getPurchasedSaunaTiers()
+    unlocked: getUnlockedSaunaTiers()
   } satisfies PurchaseSaunaTierResult;
 }
 
 export function grantSaunaTier(tierId: SaunaTierId): ReadonlySet<SaunaTierId> {
-  if (!purchasedTierIds.has(tierId)) {
-    purchasedTierIds.add(tierId);
-    updatePurchased(purchasedTierIds);
+  if (!unlockedTierIds.has(tierId)) {
+    unlockedTierIds.add(tierId);
+    updateUnlocked(unlockedTierIds);
     emitChange({
       type: 'grant',
       tierId,
-      purchased: purchasedTierIds,
+      unlocked: unlockedTierIds,
       cost: 0
     });
   }
-  return getPurchasedSaunaTiers();
+  return getUnlockedSaunaTiers();
 }

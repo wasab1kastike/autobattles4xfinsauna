@@ -122,19 +122,25 @@ describe('setupSaunaUI', () => {
     const overlay = createOverlay();
     const sauna = createTestSauna();
     let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
-    const ownedTierIds = new Set<SaunaTierId>([
+    const unlockedTierIds = new Set<SaunaTierId>([
       'ember-circuit',
       'aurora-ward',
       'glacial-rhythm',
       'mythic-conclave'
     ]);
+    const ownedTierIds = new Set<SaunaTierId>(unlockedTierIds);
     const controller = setupSaunaUI(sauna, {
       getActiveTierId: () => activeTierId,
       setActiveTierId: (tierId) => {
         activeTierId = tierId;
         return true;
       },
-      getTierContext: () => ({ artocoinBalance: 999, ownedTierIds })
+      getTierContext: () => ({
+        artocoinBalance: 999,
+        saunakunniaBalance: 500,
+        unlockedTierIds,
+        ownedTierIds
+      })
     });
 
     try {
@@ -166,12 +172,15 @@ describe('setupSaunaUI', () => {
     const overlay = createOverlay();
     const sauna = createTestSauna();
     let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
+    const unlockedTierIds = new Set<SaunaTierId>(['ember-circuit']);
     const controller = setupSaunaUI(sauna, {
       getActiveTierId: () => activeTierId,
       setActiveTierId: () => false,
       getTierContext: () => ({
         artocoinBalance: 40,
-        ownedTierIds: new Set<SaunaTierId>(['ember-circuit'])
+        saunakunniaBalance: 0,
+        unlockedTierIds,
+        ownedTierIds: unlockedTierIds
       })
     });
 
@@ -183,6 +192,56 @@ describe('setupSaunaUI', () => {
       expect(lockedTier?.dataset.state).toBe('locked');
       lockedTier?.click();
       expect(lockedTier?.classList.contains('sauna-tier__option--denied')).toBe(true);
+    } finally {
+      controller.dispose();
+      overlay.remove();
+    }
+  });
+
+  it('upgrades tiers via Saunakunnia before activating them', () => {
+    const overlay = createOverlay();
+    const sauna = createTestSauna();
+    let activeTierId: SaunaTierId = DEFAULT_SAUNA_TIER_ID;
+    const unlockedTierIds = new Set<SaunaTierId>(['ember-circuit', 'aurora-ward']);
+    const ownedTierIds = new Set<SaunaTierId>(['ember-circuit']);
+    const upgradeTierId = vi.fn((tierId: SaunaTierId) => {
+      if (tierId !== 'aurora-ward') {
+        return false;
+      }
+      ownedTierIds.add(tierId);
+      activeTierId = tierId;
+      return true;
+    });
+    const controller = setupSaunaUI(sauna, {
+      getActiveTierId: () => activeTierId,
+      setActiveTierId: (tierId) => {
+        activeTierId = tierId;
+        return true;
+      },
+      upgradeTierId: (tierId) => upgradeTierId(tierId),
+      getTierContext: () => ({
+        artocoinBalance: 200,
+        saunakunniaBalance: 150,
+        unlockedTierIds,
+        ownedTierIds
+      })
+    });
+
+    try {
+      controller.update();
+      const auroraButton = overlay.querySelector<HTMLButtonElement>(
+        '.sauna-tier__option[data-tier-id="aurora-ward"]'
+      );
+      expect(auroraButton?.dataset.state).toBe('upgradable');
+      auroraButton?.click();
+      expect(upgradeTierId).toHaveBeenCalledWith('aurora-ward');
+      controller.update();
+      expect(activeTierId).toBe('aurora-ward');
+      expect(
+        overlay.querySelector<HTMLButtonElement>(
+          '.sauna-tier__option[data-tier-id="aurora-ward"][data-state="active"]'
+        )
+      ).toBeTruthy();
     } finally {
       controller.dispose();
       overlay.remove();

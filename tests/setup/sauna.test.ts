@@ -13,16 +13,22 @@ const {
   loadSaunaSettingsMock,
   saveSaunaSettingsMock,
   getArtocoinBalanceMock,
-  getPurchasedTierIdsMock,
-  setPurchasedTierIdsMock,
-  grantSaunaTierMock
+  getUnlockedTierIdsMock,
+  setUnlockedTierIdsMock,
+  setUpgradedTierIdsMock,
+  notifySaunaShopSubscribersMock,
+  grantSaunaTierMock,
+  setUpgradedSaunaTiersMock
 } = vi.hoisted(() => ({
   loadSaunaSettingsMock: vi.fn(),
   saveSaunaSettingsMock: vi.fn(),
   getArtocoinBalanceMock: vi.fn(),
-  getPurchasedTierIdsMock: vi.fn<[], Set<SaunaTierId>>(),
-  setPurchasedTierIdsMock: vi.fn<(ids: Set<SaunaTierId>) => void>(),
-  grantSaunaTierMock: vi.fn<(tierId: SaunaTierId) => Set<SaunaTierId>>()
+  getUnlockedTierIdsMock: vi.fn<[], Set<SaunaTierId>>(),
+  setUnlockedTierIdsMock: vi.fn<(ids: Set<SaunaTierId>) => void>(),
+  setUpgradedTierIdsMock: vi.fn<(ids: Set<SaunaTierId>) => void>(),
+  notifySaunaShopSubscribersMock: vi.fn(),
+  grantSaunaTierMock: vi.fn<(tierId: SaunaTierId) => Set<SaunaTierId>>(),
+  setUpgradedSaunaTiersMock: vi.fn<(ids: Set<SaunaTierId>) => Set<SaunaTierId>>()
 }));
 
 vi.mock('../../src/game/saunaSettings.ts', () => ({
@@ -32,15 +38,19 @@ vi.mock('../../src/game/saunaSettings.ts', () => ({
 
 vi.mock('../../src/game/saunaShopState.ts', () => ({
   getArtocoinBalance: getArtocoinBalanceMock,
-  getPurchasedTierIds: getPurchasedTierIdsMock,
-  setPurchasedTierIds: setPurchasedTierIdsMock
+  getUnlockedTierIds: getUnlockedTierIdsMock,
+  setUnlockedTierIds: setUnlockedTierIdsMock,
+  setUpgradedTierIds: setUpgradedTierIdsMock,
+  notifySaunaShopSubscribers: notifySaunaShopSubscribersMock
 }));
 
 vi.mock('../../src/progression/saunaShop.ts', () => ({
-  grantSaunaTier: grantSaunaTierMock
+  grantSaunaTier: grantSaunaTierMock,
+  setUpgradedSaunaTiers: setUpgradedSaunaTiersMock
 }));
 
-const purchasedTierIds = new Set<SaunaTierId>();
+const unlockedTierIds = new Set<SaunaTierId>();
+const ownedTierIds = new Set<SaunaTierId>();
 
 const ngPlusState: NgPlusState = {
   runSeed: 1,
@@ -52,6 +62,10 @@ const ngPlusState: NgPlusState = {
 const createLifecycle = () =>
   createSaunaLifecycle({
     map: new HexMap(10, 10, 32),
+    state: {
+      spendResource: vi.fn(() => true),
+      getResource: vi.fn(() => 0)
+    } as unknown as import('../../src/core/GameState.ts').GameState,
     ngPlusState,
     getActiveRosterCount: () => 0,
     logEvent: vi.fn(),
@@ -59,30 +73,43 @@ const createLifecycle = () =>
   });
 
 beforeEach(() => {
-  purchasedTierIds.clear();
-  purchasedTierIds.add(DEFAULT_SAUNA_TIER_ID);
-  getPurchasedTierIdsMock.mockReset();
-  getPurchasedTierIdsMock.mockImplementation(() => new Set(purchasedTierIds));
+  unlockedTierIds.clear();
+  unlockedTierIds.add(DEFAULT_SAUNA_TIER_ID);
+  ownedTierIds.clear();
+  ownedTierIds.add(DEFAULT_SAUNA_TIER_ID);
+  getUnlockedTierIdsMock.mockReset();
+  getUnlockedTierIdsMock.mockImplementation(() => new Set(unlockedTierIds));
+  setUpgradedTierIdsMock.mockReset();
+  setUpgradedTierIdsMock.mockImplementation((ids: Set<SaunaTierId>) => {
+    ownedTierIds.clear();
+    for (const id of ids) {
+      ownedTierIds.add(id);
+    }
+  });
+  notifySaunaShopSubscribersMock.mockReset();
   getArtocoinBalanceMock.mockReset();
   getArtocoinBalanceMock.mockReturnValue(0);
   loadSaunaSettingsMock.mockReset();
   loadSaunaSettingsMock.mockReturnValue({
     maxRosterSize: 2,
-    activeTierId: DEFAULT_SAUNA_TIER_ID
+    activeTierId: DEFAULT_SAUNA_TIER_ID,
+    ownedTierIds: [DEFAULT_SAUNA_TIER_ID]
   });
   saveSaunaSettingsMock.mockReset();
-  setPurchasedTierIdsMock.mockReset();
-  setPurchasedTierIdsMock.mockImplementation((ids: Set<SaunaTierId>) => {
-    purchasedTierIds.clear();
+  setUnlockedTierIdsMock.mockReset();
+  setUnlockedTierIdsMock.mockImplementation((ids: Set<SaunaTierId>) => {
+    unlockedTierIds.clear();
     for (const id of ids) {
-      purchasedTierIds.add(id);
+      unlockedTierIds.add(id);
     }
   });
   grantSaunaTierMock.mockReset();
   grantSaunaTierMock.mockImplementation((tierId: SaunaTierId) => {
-    purchasedTierIds.add(tierId);
-    return new Set(purchasedTierIds);
+    unlockedTierIds.add(tierId);
+    return new Set(unlockedTierIds);
   });
+  setUpgradedSaunaTiersMock.mockReset();
+  setUpgradedSaunaTiersMock.mockImplementation((ids: Set<SaunaTierId>) => ids);
 });
 
 describe('createSaunaLifecycle', () => {
@@ -97,7 +124,8 @@ describe('createSaunaLifecycle', () => {
     expect(saveSaunaSettingsMock).toHaveBeenCalledTimes(1);
     expect(saveSaunaSettingsMock).toHaveBeenLastCalledWith({
       maxRosterSize: limit,
-      activeTierId: lifecycle.getActiveTierId()
+      activeTierId: lifecycle.getActiveTierId(),
+      ownedTierIds: Array.from(ownedTierIds)
     });
   });
 
@@ -105,8 +133,9 @@ describe('createSaunaLifecycle', () => {
     const tiers = listSaunaTiers();
     expect(tiers.length).toBeGreaterThan(1);
 
+    unlockedTierIds.add(tiers[1].id);
     const lifecycle = createLifecycle();
-    purchasedTierIds.add(tiers[1].id);
+    lifecycle.upgradeTier(tiers[1].id, { persist: true });
     const queue = lifecycle.spawnTierQueue;
     const snapshot = queue.getSnapshot();
     expect(snapshot).not.toBeNull();
@@ -120,11 +149,13 @@ describe('createSaunaLifecycle', () => {
   });
 
   it('extends the healing aura to three hexes and restores allies at range', () => {
+    unlockedTierIds.add('aurora-ward');
+    unlockedTierIds.add('glacial-rhythm');
     const lifecycle = createLifecycle();
     const { sauna } = lifecycle;
 
-    purchasedTierIds.add('aurora-ward');
-    purchasedTierIds.add('glacial-rhythm');
+    lifecycle.upgradeTier('aurora-ward', { persist: true });
+    lifecycle.upgradeTier('glacial-rhythm', { persist: true });
 
     expect(sauna.auraRadius).toBe(2);
     expect(sauna.regenPerSec).toBeCloseTo(1, 5);

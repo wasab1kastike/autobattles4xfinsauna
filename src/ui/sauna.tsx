@@ -14,6 +14,10 @@ import { ensureHudLayout, getHudOverlayElement } from './layout.ts';
 export interface SaunaUIOptions {
   getActiveTierId?: () => SaunaTierId;
   setActiveTierId?: (value: SaunaTierId, options?: { persist?: boolean }) => boolean;
+  upgradeTierId?: (
+    value: SaunaTierId,
+    options?: { persist?: boolean; activate?: boolean }
+  ) => boolean;
   getTierContext?: () => SaunaTierContext;
 }
 
@@ -262,19 +266,31 @@ export function setupSaunaUI(
     const context = resolveTierContext();
     for (const entry of tierEntries.values()) {
       const status = evaluateSaunaTier(entry.tier, context);
-      const progressPercent = Math.round(Math.max(0, Math.min(status.progress, 1)) * 100);
+      let progressPercent: number;
+      let progressLabel: string;
+      if (!status.unlocked) {
+        progressPercent = Math.round(Math.max(0, Math.min(status.unlock.progress, 1)) * 100);
+        progressLabel = progressPercent >= 100 ? 'Ready to unlock' : `${progressPercent}% unlock`;
+      } else if (!status.owned) {
+        progressPercent = Math.round(Math.max(0, Math.min(status.upgrade.progress, 1)) * 100);
+        progressLabel = progressPercent >= 100 ? 'Ready to upgrade' : `${progressPercent}% prestige`;
+      } else {
+        progressPercent = 100;
+        progressLabel = 'Upgraded';
+      }
       entry.fill.style.width = `${progressPercent}%`;
-      entry.progressLabel.textContent = status.unlocked
-        ? 'Unlocked'
-        : `${progressPercent}% ready`;
+      entry.progressLabel.textContent = progressLabel;
       entry.requirement.textContent = status.requirementLabel;
-      entry.button.dataset.state = status.unlocked
-        ? entry.tier.id === activeId
-          ? 'active'
-          : 'available'
-        : 'locked';
+      const buttonState = !status.unlocked
+        ? 'locked'
+        : status.owned
+          ? entry.tier.id === activeId
+            ? 'active'
+            : 'available'
+          : 'upgradable';
+      entry.button.dataset.state = buttonState;
       entry.button.setAttribute('aria-pressed', entry.tier.id === activeId ? 'true' : 'false');
-      entry.button.setAttribute('aria-disabled', status.unlocked ? 'false' : 'true');
+      entry.button.setAttribute('aria-disabled', buttonState === 'locked' ? 'true' : 'false');
     }
   }
 
@@ -284,6 +300,17 @@ export function setupSaunaUI(
       entry.button.classList.remove('sauna-tier__option--denied');
       void entry.button.offsetWidth;
       entry.button.classList.add('sauna-tier__option--denied');
+      return;
+    }
+    if (!status.owned) {
+      const upgraded = options.upgradeTierId?.(tier.id, { persist: true, activate: true }) ?? false;
+      if (!upgraded) {
+        entry.button.classList.remove('sauna-tier__option--denied');
+        void entry.button.offsetWidth;
+        entry.button.classList.add('sauna-tier__option--denied');
+        return;
+      }
+      refreshTierDisplay();
       return;
     }
     options.setActiveTierId?.(tier.id, { persist: true });

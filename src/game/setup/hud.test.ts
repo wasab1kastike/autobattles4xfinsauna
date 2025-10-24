@@ -42,6 +42,7 @@ describe('initializeClassicHud', () => {
     const updateRosterDisplay = vi.fn();
     const startTutorialIfNeeded = vi.fn();
     const setActiveTier = vi.fn(() => true);
+    const upgradeTier = vi.fn(() => false);
 
     const syncRoster = vi.fn();
     const panelRenderer = vi.fn();
@@ -75,6 +76,7 @@ describe('initializeClassicHud', () => {
       }),
       getActiveTierId: () => 'ember-circuit',
       setActiveTier,
+      upgradeTier,
       getTierContext: () => null,
       setupTopbar: vi.fn(() => topbarControls),
       setupActionBar: vi.fn(() => actionBarController),
@@ -144,6 +146,9 @@ describe('initializeClassicHud', () => {
     expect(result.saunaUiController?.update).toHaveBeenCalled();
     expect(setActiveTier).toHaveBeenCalledWith('aurora-ward', { persist: true });
     expect(updateRosterDisplay).toHaveBeenCalledTimes(2);
+
+    capturedSaunaOptions?.upgradeTierId?.('glacial-rhythm', { persist: true, activate: true });
+    expect(upgradeTier).toHaveBeenCalledWith('glacial-rhythm', { persist: true, activate: true });
   });
 });
 

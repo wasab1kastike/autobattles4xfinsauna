@@ -23,6 +23,10 @@ export interface GameRuntimeBootstrap {
     tierId: SaunaTierId,
     options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
   ): boolean;
+  upgradeTier(
+    tierId: SaunaTierId,
+    options?: { persist?: boolean; activate?: boolean; onTierChanged?: SaunaTierChangeContext }
+  ): boolean;
 }
 
 let runtimeInstance: GameRuntime | null = null;
@@ -89,6 +93,13 @@ export function setActiveSaunaTier(
   options: { persist?: boolean } = {}
 ): boolean {
   return requireBootstrap().setActiveTier(tierId, options);
+}
+
+export function upgradeSaunaTier(
+  tierId: SaunaTierId,
+  options: { persist?: boolean; activate?: boolean } = {}
+): boolean {
+  return requireBootstrap().upgradeTier(tierId, options);
 }
 
 export function getRosterCapValue(): number {

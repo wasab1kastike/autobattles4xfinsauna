@@ -30,6 +30,8 @@ export type SaunaTierUnlock =
   | { type: 'default'; label: string }
   | { type: 'artocoin'; cost: number; label?: string };
 
+export type SaunaTierUpgrade = { type: 'saunakunnia'; cost: number; label?: string };
+
 export interface SaunaTier {
   id: SaunaTierId;
   name: string;
@@ -37,6 +39,7 @@ export interface SaunaTier {
   description: string;
   art: SaunaTierArt;
   unlock: SaunaTierUnlock;
+  upgrade: SaunaTierUpgrade;
   healingAura?: SaunaTierHealingAura;
   /** Multiplier applied to the attendant spawn cadence. */
   spawnSpeedMultiplier?: number;
@@ -63,28 +66,35 @@ export function sanitizeHealingAuraRegen(value: number | null | undefined): numb
 
 export interface SaunaTierContext {
   artocoinBalance: number;
+  saunakunniaBalance: number;
+  unlockedTierIds: ReadonlySet<SaunaTierId> | SaunaTierId[];
   ownedTierIds: ReadonlySet<SaunaTierId> | SaunaTierId[];
 }
 
-export interface SaunaTierStatus {
-  tier: SaunaTier;
-  unlocked: boolean;
-  owned: boolean;
+export interface SaunaTierCostStatus {
   affordable: boolean;
   cost: number | null;
   progress: number;
   requirementLabel: string;
 }
 
+export interface SaunaTierStatus {
+  tier: SaunaTier;
+  unlocked: boolean;
+  owned: boolean;
+  requirementLabel: string;
+  unlock: SaunaTierCostStatus;
+  upgrade: SaunaTierCostStatus;
+}
+
 const DEFAULT_CONTEXT: SaunaTierContext = Object.freeze({
   artocoinBalance: 0,
+  saunakunniaBalance: 0,
+  unlockedTierIds: Object.freeze(new Set<SaunaTierId>()),
   ownedTierIds: Object.freeze(new Set<SaunaTierId>())
 });
 
-const DEFAULT_UNLOCK_LABELS: Record<SaunaTierUnlock['type'], string> = {
-  default: 'Included with the sauna key',
-  artocoin: 'Invest artocoins'
-};
+const DEFAULT_UPGRADE_LABEL = 'Channel Saunakunnia';
 
 const auraRegenFormatter = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 0,
@@ -139,6 +149,7 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       type: 'default',
       label: 'Included with the Ember Circuit sauna key'
     },
+    upgrade: { type: 'saunakunnia', cost: 0, label: 'Foundational Ember Circuit charter' },
     spawnSpeedMultiplier: 1
   },
   {
@@ -156,6 +167,11 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       cost: 70,
       label: 'Expand into the Aurora Ward for 70 artocoins'
     },
+    upgrade: {
+      type: 'saunakunnia',
+      cost: 80,
+      label: 'Commission Aurora Ward benches for 80 Saunakunnia'
+    },
     spawnSpeedMultiplier: 1
   },
   {
@@ -172,6 +188,11 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       type: 'artocoin',
       cost: 110,
       label: 'Tune the Glacial Rhythm for 110 artocoins'
+    },
+    upgrade: {
+      type: 'saunakunnia',
+      cost: 140,
+      label: 'Crystalize Glacial Rhythm vents for 140 Saunakunnia'
     },
     healingAura: { radius: 3, regenPerSecond: 1.5 },
     spawnSpeedMultiplier: 1.15
@@ -191,6 +212,11 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       cost: 160,
       label: 'Endow the Mythic Conclave for 160 artocoins'
     },
+    upgrade: {
+      type: 'saunakunnia',
+      cost: 210,
+      label: 'Seal Mythic Conclave vault wards for 210 Saunakunnia'
+    },
     spawnSpeedMultiplier: 1.15
   },
   {
@@ -208,6 +234,11 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       cost: 210,
       label: 'Score the Solstice Cadence for 210 artocoins'
     },
+    upgrade: {
+      type: 'saunakunnia',
+      cost: 280,
+      label: 'Ignite Solstice Cadence gongs for 280 Saunakunnia'
+    },
     spawnSpeedMultiplier: 1.3
   },
   {
@@ -224,6 +255,11 @@ export const SAUNA_TIERS: readonly SaunaTier[] = Object.freeze([
       type: 'artocoin',
       cost: 280,
       label: 'Crown the Celestial Reserve for 280 artocoins'
+    },
+    upgrade: {
+      type: 'saunakunnia',
+      cost: 360,
+      label: 'Anoint the Celestial Reserve sanctum for 360 Saunakunnia'
     },
     healingAura: { radius: 3, regenPerSecond: 1.5 },
     spawnSpeedMultiplier: 1.3
@@ -291,21 +327,16 @@ function clampUnit(value: number, min: number, max: number): number {
   return clamped;
 }
 
-function resolveUnlockLabel(unlock: SaunaTierUnlock): string {
-  if (unlock.label) {
-    return unlock.label;
+function resolveUpgradeLabel(upgrade: SaunaTierUpgrade): string {
+  if (upgrade.label) {
+    return upgrade.label;
   }
-  const base = DEFAULT_UNLOCK_LABELS[unlock.type];
-  if (!base) {
-    return '';
+  const base = DEFAULT_UPGRADE_LABEL;
+  const cost = Math.max(0, Math.floor(Number.isFinite(upgrade.cost) ? upgrade.cost : 0));
+  if (cost <= 0) {
+    return base;
   }
-  if (unlock.type === 'artocoin') {
-    const cost = Math.max(0, Math.floor(Number.isFinite(unlock.cost) ? unlock.cost : 0));
-    if (cost > 0) {
-      return `${base} ${integerFormatter.format(cost)}`;
-    }
-  }
-  return base;
+  return `${base} ${integerFormatter.format(cost)}`;
 }
 
 export function evaluateSaunaTier(
@@ -314,67 +345,99 @@ export function evaluateSaunaTier(
 ): SaunaTierStatus {
   const safeContext = context ?? DEFAULT_CONTEXT;
   const ownedSource = safeContext.ownedTierIds;
+  const unlockedSource = safeContext.unlockedTierIds;
   const ownedSet =
     ownedSource instanceof Set
       ? ownedSource
       : new Set(Array.isArray(ownedSource) ? ownedSource : []);
+  const unlockedSet =
+    unlockedSource instanceof Set
+      ? unlockedSource
+      : new Set(Array.isArray(unlockedSource) ? unlockedSource : []);
 
-  if (tier.unlock.type === 'default') {
-    return {
-      tier,
-      unlocked: true,
-      owned: true,
-      affordable: true,
-      cost: null,
-      progress: 1,
-      requirementLabel: resolveUnlockLabel(tier.unlock)
-    } satisfies SaunaTierStatus;
-  }
+  const artocoinBalance = Math.max(
+    0,
+    Math.floor(Number.isFinite(safeContext.artocoinBalance) ? safeContext.artocoinBalance : 0)
+  );
+  const saunakunniaBalance = Math.max(
+    0,
+    Math.floor(Number.isFinite(safeContext.saunakunniaBalance) ? safeContext.saunakunniaBalance : 0)
+  );
 
-  if (tier.unlock.type === 'artocoin') {
-    const cost = Math.max(0, Math.floor(Number.isFinite(tier.unlock.cost) ? tier.unlock.cost : 0));
-    const balance = Math.max(0, Math.floor(Number.isFinite(safeContext.artocoinBalance) ? safeContext.artocoinBalance : 0));
-    const owned = ownedSet.has(tier.id);
-    const affordable = balance >= cost;
-    const unlocked = owned;
-    const progress = owned ? 1 : cost === 0 ? 1 : clampUnit(balance / cost, 0, 1);
-    const deficit = Math.max(0, cost - balance);
-    const formattedCost = integerFormatter.format(cost);
-    const shortfall = deficit > 0 ? integerFormatter.format(deficit) : null;
-    const perkLabel = getTierPerkLabel(tier);
-    let requirementLabel: string;
-    if (owned) {
-      requirementLabel = perkLabel;
-    } else {
-      const baseLabel = tier.unlock.label ?? `Invest ${formattedCost} artocoins`;
-      const augmentedLabel = perkLabel ? `${baseLabel} (${perkLabel})` : baseLabel;
-      if (shortfall) {
-        requirementLabel = `${augmentedLabel} — Need ${shortfall} more`;
-      } else if (cost > 0) {
-        requirementLabel = `${augmentedLabel} — Ready to unlock`;
-      } else {
-        requirementLabel = augmentedLabel;
-      }
-    }
+  const perkLabel = getTierPerkLabel(tier);
 
-    return {
-      tier,
-      unlocked,
-      owned,
-      affordable,
-      cost,
-      progress,
-      requirementLabel
-    } satisfies SaunaTierStatus;
-  }
+  const unlockCost =
+    tier.unlock.type === 'artocoin'
+      ? Math.max(0, Math.floor(Number.isFinite(tier.unlock.cost) ? tier.unlock.cost : 0))
+      : 0;
+  const unlockAffordable = tier.unlock.type === 'artocoin' ? artocoinBalance >= unlockCost : true;
+  const unlocked =
+    tier.unlock.type === 'default' || unlockCost === 0 || unlockedSet.has(tier.id);
+  const unlockProgress = unlocked
+    ? 1
+    : unlockCost === 0
+      ? 1
+      : clampUnit(artocoinBalance / Math.max(1, unlockCost), 0, 1);
+  const unlockDeficit = Math.max(0, unlockCost - artocoinBalance);
+  const unlockShortfall = unlockDeficit > 0 ? integerFormatter.format(unlockDeficit) : null;
+  const unlockFormattedCost = integerFormatter.format(unlockCost);
+  const unlockBaseLabel = tier.unlock.label ?? `Invest ${unlockFormattedCost} artocoins`;
+  const unlockAugmentedLabel = perkLabel ? `${unlockBaseLabel} (${perkLabel})` : unlockBaseLabel;
+  const unlockRequirementLabel =
+    tier.unlock.type === 'default'
+      ? perkLabel
+      : unlocked
+        ? perkLabel
+        : unlockShortfall
+          ? `${unlockAugmentedLabel} — Need ${unlockShortfall} more`
+          : unlockCost > 0
+            ? `${unlockAugmentedLabel} — Ready to unlock`
+            : unlockAugmentedLabel;
+
+  const upgrade = tier.upgrade ?? { type: 'saunakunnia', cost: 0 };
+  const upgradeCost = Math.max(0, Math.floor(Number.isFinite(upgrade.cost) ? upgrade.cost : 0));
+  const upgradeAffordable = saunakunniaBalance >= upgradeCost;
+  const owned =
+    unlocked && (upgradeCost === 0 ? true : ownedSet.has(tier.id));
+  const upgradeProgress = owned
+    ? 1
+    : upgradeCost === 0
+      ? 1
+      : clampUnit(saunakunniaBalance / Math.max(1, upgradeCost), 0, 1);
+  const upgradeDeficit = Math.max(0, upgradeCost - saunakunniaBalance);
+  const upgradeShortfall = upgradeDeficit > 0 ? integerFormatter.format(upgradeDeficit) : null;
+  const upgradeBaseLabel = resolveUpgradeLabel(upgrade);
+  const upgradeAugmentedLabel = perkLabel ? `${upgradeBaseLabel} (${perkLabel})` : upgradeBaseLabel;
+  const upgradeRequirementLabel = owned
+    ? perkLabel
+    : upgradeShortfall
+      ? `${upgradeAugmentedLabel} — Need ${upgradeShortfall} more`
+      : upgradeCost > 0
+        ? `${upgradeAugmentedLabel} — Ready to upgrade`
+        : upgradeAugmentedLabel;
+
+  const requirementLabel = !unlocked
+    ? unlockRequirementLabel
+    : owned
+      ? perkLabel
+      : upgradeRequirementLabel;
 
   return {
     tier,
-    unlocked: false,
-    owned: false,
-    affordable: false,
-    cost: null,
-    progress: 0,
-    requirementLabel: resolveUnlockLabel(tier.unlock)
+    unlocked,
+    owned,
+    requirementLabel,
+    unlock: {
+      affordable: unlockAffordable,
+      cost: tier.unlock.type === 'default' ? null : unlockCost,
+      progress: unlockProgress,
+      requirementLabel: unlockRequirementLabel
+    },
+    upgrade: {
+      affordable: upgradeAffordable,
+      cost: upgradeCost,
+      progress: upgradeProgress,
+      requirementLabel: upgradeRequirementLabel
+    }
   } satisfies SaunaTierStatus;
 }

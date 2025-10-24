@@ -3,20 +3,24 @@ import {
   getPurchasedLootUpgrades,
   type LootUpgradeId
 } from '../progression/lootUpgrades.ts';
-import { getPurchasedSaunaTiers } from '../progression/saunaShop.ts';
+import { getUnlockedSaunaTiers } from '../progression/saunaShop.ts';
+import { loadSaunaSettings } from './saunaSettings.ts';
 import type { SaunaTierId } from '../sauna/tiers.ts';
 
 export type SaunaShopListener = () => void;
 
 let artocoinBalance = loadArtocoinBalance();
 let artocoinsSpentThisRun = 0;
-let purchasedTierIds = new Set<SaunaTierId>(getPurchasedSaunaTiers());
+let unlockedTierIds = new Set<SaunaTierId>(getUnlockedSaunaTiers());
+let upgradedTierIds = new Set<SaunaTierId>();
 let purchasedLootUpgrades = new Set<LootUpgradeId>(getPurchasedLootUpgrades());
 const listeners = new Set<SaunaShopListener>();
 
 export function reloadSaunaShopState(): void {
   artocoinBalance = loadArtocoinBalance();
-  purchasedTierIds = new Set(getPurchasedSaunaTiers());
+  unlockedTierIds = new Set(getUnlockedSaunaTiers());
+  const saunaSettings = loadSaunaSettings();
+  upgradedTierIds = new Set(saunaSettings.ownedTierIds);
   purchasedLootUpgrades = new Set(getPurchasedLootUpgrades());
   artocoinsSpentThisRun = 0;
 }
@@ -29,12 +33,20 @@ export function setArtocoinBalance(next: number): void {
   artocoinBalance = Number.isFinite(next) ? next : 0;
 }
 
-export function getPurchasedTierIds(): ReadonlySet<SaunaTierId> {
-  return purchasedTierIds;
+export function getUnlockedTierIds(): ReadonlySet<SaunaTierId> {
+  return unlockedTierIds;
 }
 
-export function setPurchasedTierIds(tiers: Iterable<SaunaTierId>): void {
-  purchasedTierIds = new Set(tiers);
+export function setUnlockedTierIds(tiers: Iterable<SaunaTierId>): void {
+  unlockedTierIds = new Set(tiers);
+}
+
+export function getUpgradedTierIds(): ReadonlySet<SaunaTierId> {
+  return upgradedTierIds;
+}
+
+export function setUpgradedTierIds(tiers: Iterable<SaunaTierId>): void {
+  upgradedTierIds = new Set(tiers);
 }
 
 export function getPurchasedLootUpgradeIds(): ReadonlySet<LootUpgradeId> {

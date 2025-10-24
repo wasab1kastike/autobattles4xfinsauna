@@ -291,6 +291,7 @@ describe('GameRuntime', () => {
       getTierContext: vi.fn(() => ({}) as SaunaTierContext),
       getActiveTierId: vi.fn(() => 'tier-1' as SaunaTierId),
       setActiveTier: vi.fn(() => true),
+      upgradeTier: vi.fn(() => true),
       getActiveTierLimit: vi.fn(() => 6),
       updateRosterCap: vi.fn(() => 6),
       syncSaunojaRosterWithUnits: vi.fn(() => true),

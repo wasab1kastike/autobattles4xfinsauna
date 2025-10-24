@@ -328,10 +328,10 @@ export function setupInventoryHud(
     shopButton.dataset.balance = balanceLabel;
     shopButton.title = `Artocoins ${balanceLabel}`;
     const tierReady = view.tiers.some(
-      (entry) => !entry.status.owned && entry.status.affordable
+      (entry) => !entry.status.unlocked && entry.status.unlock.affordable
     );
     const tierLocked = view.tiers.some(
-      (entry) => !entry.status.owned && !entry.status.affordable
+      (entry) => !entry.status.unlocked && !entry.status.unlock.affordable
     );
     const upgradeEntries = (view.lootCategories ?? []).flatMap((category) =>
       category.upgrades ?? []
@@ -379,7 +379,7 @@ export function setupInventoryHud(
         return {
           success: false,
           balance: fallback.balance,
-          purchased: new Set<SaunaTierId>(),
+          unlocked: new Set<SaunaTierId>(),
           reason: 'unsupported'
         } satisfies PurchaseSaunaTierResult;
       }

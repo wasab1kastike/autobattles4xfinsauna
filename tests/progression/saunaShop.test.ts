@@ -59,7 +59,7 @@ describe('purchaseSaunaTier', () => {
     const artocoinModule = await import('../../src/progression/artocoin.ts');
     const spendSpy = vi.spyOn(artocoinModule, 'spendArtocoins');
 
-    const { purchaseSaunaTier, getPurchasedSaunaTiers } = await import(
+    const { purchaseSaunaTier, getUnlockedSaunaTiers } = await import(
       '../../src/progression/saunaShop.ts'
     );
     const { getSaunaTier } = await import('../../src/sauna/tiers.ts');
@@ -78,7 +78,7 @@ describe('purchaseSaunaTier', () => {
     expect(result.reason).toBeUndefined();
     expect(result.shortfall).toBeUndefined();
     expect(spendSpy).not.toHaveBeenCalled();
-    expect(getPurchasedSaunaTiers().has(tier.id)).toBe(true);
+    expect(getUnlockedSaunaTiers().has(tier.id)).toBe(true);
   });
 });
 
