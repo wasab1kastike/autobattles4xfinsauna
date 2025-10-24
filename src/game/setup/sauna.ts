@@ -1,4 +1,6 @@
 import type { HexMap } from '../../hexmap.ts';
+import type { GameState } from '../../core/GameState.ts';
+import { Resource } from '../../core/GameState.ts';
 import { createSauna, DEFAULT_SAUNA_VISION_RANGE, type Sauna } from '../../sim/sauna.ts';
 import {
   DEFAULT_SAUNA_TIER_ID,
@@ -14,17 +16,24 @@ import {
 import { createPlayerSpawnTierQueue, type PlayerSpawnTierHelpers } from '../../world/spawn/tier_helpers.ts';
 import {
   getArtocoinBalance,
-  getPurchasedTierIds,
-  setPurchasedTierIds
+  getUnlockedTierIds,
+  notifySaunaShopSubscribers,
+  setUnlockedTierIds,
+  setUpgradedTierIds
 } from '../saunaShopState.ts';
-import { loadSaunaSettings, saveSaunaSettings } from '../saunaSettings.ts';
-import { grantSaunaTier } from '../../progression/saunaShop.ts';
+import {
+  SAUNA_SETTINGS_STORAGE_KEY,
+  loadSaunaSettings,
+  saveSaunaSettings
+} from '../saunaSettings.ts';
+import { grantSaunaTier, setUpgradedSaunaTiers } from '../../progression/saunaShop.ts';
 import type { NgPlusState } from '../../progression/ngplus.ts';
 import type { LogEventPayload } from '../../ui/logging.ts';
 import type { StrongholdSpawnExclusionZone } from '../../world/spawn/strongholdSpawn.ts';
 
 export interface SaunaLifecycleOptions {
   map: HexMap;
+  state: GameState;
   ngPlusState: NgPlusState;
   getActiveRosterCount: () => number;
   logEvent: (event: LogEventPayload) => void;
@@ -47,6 +56,14 @@ export interface SaunaLifecycleResult {
   setActiveTier: (
     tierId: SaunaTierId,
     options?: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void }
+  ) => boolean;
+  upgradeTier: (
+    tierId: SaunaTierId,
+    options?: {
+      persist?: boolean;
+      activate?: boolean;
+      onTierChanged?: (context: SaunaTierChangeContext) => void;
+    }
   ) => boolean;
   syncActiveTierWithUnlocks: (
     options?: { persist?: boolean; onTierChanged?: (context: SaunaTierChangeContext) => void }
@@ -74,10 +91,61 @@ const sanitizeSpawnSpeedMultiplier = (value: number | null | undefined): number 
   return multiplier > 0 ? multiplier : 1;
 };
 
+const areSetsEqual = <T>(a: Set<T>, b: Set<T>): boolean => {
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const entry of a) {
+    if (!b.has(entry)) {
+      return false;
+    }
+  }
+  return true;
+};
+
 export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifecycleResult {
-  const { map, ngPlusState, getActiveRosterCount, logEvent, minSpawnLimit, onVisionRangeChanged } = options;
+  const {
+    map,
+    state,
+    ngPlusState,
+    getActiveRosterCount,
+    logEvent,
+    minSpawnLimit,
+    onVisionRangeChanged
+  } = options;
+
+  const gameState = state ?? ({
+    getResource: () => 0,
+    spendResource: () => false
+  } as unknown as GameState);
 
   const saunaSettings = loadSaunaSettings();
+  const storage = (() => {
+    try {
+      const globalWithStorage = globalThis as typeof globalThis & { localStorage?: Storage };
+      return globalWithStorage.localStorage ?? null;
+    } catch {
+      return null;
+    }
+  })();
+  let shouldPersistOwnedMigration = false;
+  if (storage) {
+    try {
+      const existing = storage.getItem(SAUNA_SETTINGS_STORAGE_KEY);
+      if (!existing) {
+        shouldPersistOwnedMigration = true;
+      } else {
+        const parsed = JSON.parse(existing) as Record<string, unknown> | null;
+        if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.ownedTierIds)) {
+          shouldPersistOwnedMigration = true;
+        }
+      }
+    } catch {
+      shouldPersistOwnedMigration = true;
+    }
+  }
+
+  let unlockedTierIds = new Set<SaunaTierId>(getUnlockedTierIds());
 
   const autoGrantRules: readonly { tierId: SaunaTierId; condition: boolean }[] = [
     { tierId: 'aurora-ward', condition: ngPlusState.unlockSlots >= 2 },
@@ -87,26 +155,49 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     { tierId: 'celestial-reserve', condition: ngPlusState.ngPlusLevel >= 5 }
   ];
   for (const { tierId, condition } of autoGrantRules) {
-    if (condition && !getPurchasedTierIds().has(tierId)) {
-      setPurchasedTierIds(grantSaunaTier(tierId));
+    if (condition && !unlockedTierIds.has(tierId)) {
+      unlockedTierIds = new Set(grantSaunaTier(tierId));
+      setUnlockedTierIds(unlockedTierIds);
     }
   }
   if (
     saunaSettings.activeTierId !== DEFAULT_SAUNA_TIER_ID &&
-    !getPurchasedTierIds().has(saunaSettings.activeTierId)
+    !unlockedTierIds.has(saunaSettings.activeTierId)
   ) {
-    setPurchasedTierIds(grantSaunaTier(saunaSettings.activeTierId));
+    unlockedTierIds = new Set(grantSaunaTier(saunaSettings.activeTierId));
+    setUnlockedTierIds(unlockedTierIds);
   }
+
+  const getSaunakunniaBalance = (): number => {
+    const getter = (gameState as Partial<GameState>).getResource;
+    if (typeof getter !== 'function') {
+      return 0;
+    }
+    return Math.max(0, Math.floor(getter.call(gameState, Resource.SAUNAKUNNIA)));
+  };
+
+  const ownedTierIds = new Set<SaunaTierId>(
+    saunaSettings.ownedTierIds.map((id) => getSaunaTier(id).id)
+  );
+  ownedTierIds.add(DEFAULT_SAUNA_TIER_ID);
+  setUpgradedTierIds(ownedTierIds);
+  setUpgradedSaunaTiers(ownedTierIds);
 
   const resolveTierContext = (): SaunaTierContext => ({
     artocoinBalance: getArtocoinBalance(),
-    ownedTierIds: getPurchasedTierIds()
+    saunakunniaBalance: getSaunakunniaBalance(),
+    unlockedTierIds: getUnlockedTierIds(),
+    ownedTierIds
   });
 
   let currentTierId: SaunaTierId = saunaSettings.activeTierId;
-  const initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolveTierContext());
-  if (!initialTierStatus.unlocked) {
+  let initialTierStatus = evaluateSaunaTier(
+    getSaunaTier(currentTierId),
+    resolveTierContext()
+  );
+  if (!initialTierStatus.unlocked || !initialTierStatus.owned) {
     currentTierId = DEFAULT_SAUNA_TIER_ID;
+    initialTierStatus = evaluateSaunaTier(getSaunaTier(currentTierId), resolveTierContext());
   }
   const activeTier = getSaunaTier(currentTierId);
 
@@ -117,11 +208,18 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   };
 
   const initialRosterCap = clampRosterCap(saunaSettings.maxRosterSize, getActiveTierLimit());
-  if (initialRosterCap !== saunaSettings.maxRosterSize || saunaSettings.activeTierId !== currentTierId) {
+  if (
+    shouldPersistOwnedMigration ||
+    initialRosterCap !== saunaSettings.maxRosterSize ||
+    saunaSettings.activeTierId !== currentTierId ||
+    !areSetsEqual(ownedTierIds, new Set(saunaSettings.ownedTierIds))
+  ) {
     saveSaunaSettings({
       maxRosterSize: initialRosterCap,
-      activeTierId: currentTierId
+      activeTierId: currentTierId,
+      ownedTierIds: Array.from(ownedTierIds)
     });
+    shouldPersistOwnedMigration = false;
   }
 
   const sauna = createSauna(
@@ -172,11 +270,18 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
 
   let lastPersistedRosterCap = initialRosterCap;
   let lastPersistedTierId = currentTierId;
+  let lastPersistedOwnedIds = new Set<SaunaTierId>(ownedTierIds);
 
   const persistSaunaSettings = (cap: number): void => {
-    saveSaunaSettings({ maxRosterSize: cap, activeTierId: currentTierId });
+    saveSaunaSettings({
+      maxRosterSize: cap,
+      activeTierId: currentTierId,
+      ownedTierIds: Array.from(ownedTierIds)
+    });
     lastPersistedRosterCap = cap;
     lastPersistedTierId = currentTierId;
+    lastPersistedOwnedIds = new Set(ownedTierIds);
+    shouldPersistOwnedMigration = false;
   };
 
   const getTierContext = (): SaunaTierContext => resolveTierContext();
@@ -193,7 +298,8 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     }
     if (options.persist) {
       const tierChanged = currentTierId !== lastPersistedTierId;
-      if (tierChanged || sanitized !== lastPersistedRosterCap) {
+      const ownedChanged = !areSetsEqual(ownedTierIds, lastPersistedOwnedIds);
+      if (shouldPersistOwnedMigration || tierChanged || sanitized !== lastPersistedRosterCap || ownedChanged) {
         persistSaunaSettings(sanitized);
       }
     }
@@ -205,30 +311,32 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   ): void => {
     const context = getTierContext();
     const tiers = listSaunaTiers();
-    let highestUnlockedId = DEFAULT_SAUNA_TIER_ID;
+    const currentStatus = evaluateSaunaTier(getSaunaTier(currentTierId), context);
+
+    if (currentStatus.unlocked && currentStatus.owned) {
+      if (options.persist) {
+        updateRosterCap(sauna.maxRosterSize, { persist: true });
+      }
+      return;
+    }
+
+    let fallbackTierId = DEFAULT_SAUNA_TIER_ID;
     for (const tier of tiers) {
       const status = evaluateSaunaTier(tier, context);
-      if (status.unlocked) {
-        highestUnlockedId = tier.id;
-      } else {
-        break;
+      if (status.unlocked && status.owned) {
+        fallbackTierId = tier.id;
       }
     }
 
-    const currentStatus = evaluateSaunaTier(getSaunaTier(currentTierId), context);
-    const tierChanged = !currentStatus.unlocked || currentTierId !== highestUnlockedId;
-    if (tierChanged) {
+    if (fallbackTierId !== currentTierId) {
       const previousTierId = currentTierId;
-      currentTierId = highestUnlockedId;
+      currentTierId = fallbackTierId;
       const nextTier = getSaunaTier(currentTierId);
       applyActiveTierEffects(nextTier, { reveal: true });
       spawnTierQueue.clearQueue?.('tier-change');
       updateRosterCap(sauna.maxRosterSize, { persist: options.persist });
       options.onTierChanged?.({ previousTierId, nextTierId: currentTierId });
-      return;
-    }
-
-    if (options.persist) {
+    } else if (options.persist) {
       updateRosterCap(sauna.maxRosterSize, { persist: true });
     }
   };
@@ -239,7 +347,7 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
   ): boolean => {
     const tier = getSaunaTier(tierId);
     const status = evaluateSaunaTier(tier, getTierContext());
-    if (!status.unlocked) {
+    if (!status.unlocked || !status.owned) {
       return false;
     }
     if (tier.id === currentTierId) {
@@ -257,6 +365,60 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     return true;
   };
 
+  const upgradeTier = (
+    tierId: SaunaTierId,
+    options: {
+      persist?: boolean;
+      activate?: boolean;
+      onTierChanged?: (context: SaunaTierChangeContext) => void;
+    } = {}
+  ): boolean => {
+    const tier = getSaunaTier(tierId);
+    const status = evaluateSaunaTier(tier, getTierContext());
+    if (!status.unlocked) {
+      return false;
+    }
+    if (status.owned) {
+      if (options.activate) {
+        return setActiveTier(tier.id, options);
+      }
+      if (options.persist) {
+        persistSaunaSettings(sauna.maxRosterSize);
+      }
+      return true;
+    }
+
+    const cost = Math.max(0, Math.floor(status.upgrade.cost ?? 0));
+    if (cost > 0 && !gameState.spendResource(cost, Resource.SAUNAKUNNIA)) {
+      return false;
+    }
+
+    ownedTierIds.add(tier.id);
+    setUpgradedTierIds(ownedTierIds);
+    setUpgradedSaunaTiers(ownedTierIds);
+    notifySaunaShopSubscribers();
+
+    logEvent({
+      type: 'progression',
+      message: `${tier.name} upgraded with ${cost} Saunakunnia.`,
+      metadata: {
+        event: 'sauna-tier-upgrade',
+        tierId: tier.id,
+        saunakunniaCost: cost
+      }
+    });
+
+    if (options.persist) {
+      persistSaunaSettings(sauna.maxRosterSize);
+    }
+
+    if (options.activate) {
+      return setActiveTier(tier.id, options);
+    }
+
+    return true;
+  };
+
   syncActiveTierWithUnlocks({ persist: true });
 
   return {
@@ -267,6 +429,7 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     getActiveSpawnSpeedMultiplier: () => currentSpawnSpeedMultiplier,
     updateRosterCap,
     setActiveTier,
+    upgradeTier,
     syncActiveTierWithUnlocks,
     resolveSpawnLimit,
     spawnTierQueue

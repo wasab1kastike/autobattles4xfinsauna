@@ -8,6 +8,7 @@ import {
 export interface SaunaSettings {
   maxRosterSize: number;
   activeTierId: SaunaTierId;
+  ownedTierIds: SaunaTierId[];
 }
 
 export const SAUNA_SETTINGS_STORAGE_KEY = 'autobattles:sauna-settings';
@@ -49,6 +50,22 @@ function sanitizeCap(value: unknown, fallback: number, limit: number): number {
   return Math.max(0, Math.min(safeLimit, cap));
 }
 
+function sanitizeOwnedTierIds(
+  value: unknown,
+  activeTierId: SaunaTierId
+): SaunaTierId[] {
+  const raw = Array.isArray(value) ? value : [];
+  const owned = new Set<SaunaTierId>();
+  for (const id of raw) {
+    if (typeof id === 'string') {
+      owned.add(getSaunaTier(id).id);
+    }
+  }
+  owned.add(DEFAULT_SAUNA_TIER_ID);
+  owned.add(activeTierId);
+  return Array.from(owned);
+}
+
 function sanitizeSettings(
   record: Partial<Record<keyof SaunaSettings, unknown>> | null,
   defaultCap: number
@@ -56,9 +73,11 @@ function sanitizeSettings(
   const tierId = sanitizeTierId(record?.activeTierId);
   const tier = getSaunaTier(tierId);
   const limit = resolveEffectiveLimit(tier.rosterCap, defaultCap);
+  const owned = sanitizeOwnedTierIds(record?.ownedTierIds, tier.id);
   return {
     activeTierId: tier.id,
-    maxRosterSize: sanitizeCap(record?.maxRosterSize, limit, limit)
+    maxRosterSize: sanitizeCap(record?.maxRosterSize, limit, limit),
+    ownedTierIds: owned
   } satisfies SaunaSettings;
 }
 
@@ -92,9 +111,11 @@ export function saveSaunaSettings(settings: SaunaSettings): void {
   }
   const tier = getSaunaTier(settings.activeTierId);
   const tierLimit = resolveEffectiveLimit(tier.rosterCap, tier.rosterCap);
+  const owned = sanitizeOwnedTierIds(settings.ownedTierIds, tier.id);
   const payload: SaunaSettings = {
     activeTierId: tier.id,
-    maxRosterSize: sanitizeCap(settings.maxRosterSize, tierLimit, tierLimit)
+    maxRosterSize: sanitizeCap(settings.maxRosterSize, tierLimit, tierLimit),
+    ownedTierIds: owned
   } satisfies SaunaSettings;
   try {
     storage.setItem(SAUNA_SETTINGS_STORAGE_KEY, JSON.stringify(payload));

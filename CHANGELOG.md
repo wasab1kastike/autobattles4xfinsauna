@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Major Changes
+- Split sauna tier progression into artocoin unlocks followed by Saunakunnia
+  upgrades, refreshing lifecycle logic, UI flows, persistence, and tests so
+  hall activations now consume prestige before expanding the roster.
 - Force a fresh December 2024 save reset keyed off `autobattles:storage-reset:v2024-12-fresh-start` so corrupted slots clear once on load while rosters, NG+ progress, inventories, shops, and unlocks rebuild on a stable foundation.
 - Empowered Glacial Rhythm and Celestial Reserve with tri-hex sauna healing auras, updating lifecycle logic, UI copy, and tests to surface the 1.5 HP/s passive restoration.
 - Extended sauna tiers through the Celestial Reserve, standardizing vision radius, spawn multipliers, and NG+ unlock behavior across every hall.

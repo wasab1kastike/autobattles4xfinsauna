@@ -188,12 +188,12 @@ import {
   addArtocoinSpend,
   getArtocoinBalance,
   getArtocoinsSpentThisRun,
-  getPurchasedTierIds,
+  getUnlockedTierIds,
   setPurchasedLootUpgradeIds,
   notifySaunaShopSubscribers,
   reloadSaunaShopState,
   setArtocoinBalance,
-  setPurchasedTierIds,
+  setUnlockedTierIds,
   subscribeToSaunaShop as subscribeToSaunaShopState
 } from './game/saunaShopState.ts';
 import { initializeClassicHud } from './game/setup/hud.ts';
@@ -222,6 +222,7 @@ import {
   getNgPlusState,
   getResolveSpawnLimitRef as getResolveSpawnLimitAccessor,
   getSetActiveTierRef as getSetActiveTierAccessor,
+  getUpgradeTierRef as getUpgradeTierAccessor,
   getSpawnTierQueue,
   getTierContextRef as getTierContextRefAccessor,
   getUpdateRosterCapRef as getUpdateRosterCapAccessor,
@@ -418,6 +419,10 @@ let setActiveTierRef: (
   tierId: SaunaTierId,
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = getSetActiveTierAccessor();
+let upgradeTierRef: (
+  tierId: SaunaTierId,
+  options?: { persist?: boolean; activate?: boolean; onTierChanged?: SaunaTierChangeContext }
+) => boolean = getUpgradeTierAccessor();
 let spawnTierQueue: PlayerSpawnTierHelpers = getSpawnTierQueue();
 
 const IDLE_FRAME_LIMIT = 10;
@@ -1447,6 +1452,7 @@ getActiveSpawnSpeedMultiplierRef = getActiveSpawnSpeedMultiplierAccessor();
 updateRosterCapRef = getUpdateRosterCapAccessor();
 resolveSpawnLimitRef = getResolveSpawnLimitAccessor();
 setActiveTierRef = getSetActiveTierAccessor();
+upgradeTierRef = getUpgradeTierAccessor();
 spawnTierQueue = getSpawnTierQueue();
 
 const syncLifecycleWithUnlocks = withLifecycleSync(
@@ -1506,6 +1512,7 @@ function buildGameRuntimeContext(): GameRuntimeContext {
     getTierContext: () => getTierContextRef(),
     getActiveTierId: () => getActiveTierIdRef(),
     setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
+    upgradeTier: (tierId, options) => upgradeTierRef(tierId, options),
     getActiveTierLimit: () => getActiveTierLimitRef(),
     updateRosterCap: (value, options) => updateRosterCapRef(value, options),
     syncSaunojaRosterWithUnits: () => syncSaunojaRosterWithUnits(),
@@ -1586,14 +1593,15 @@ configureGameRuntime({
   getActiveTierLimit: () => getActiveTierLimitRef(),
   getRosterCap: () => sauna.maxRosterSize,
   updateRosterCap: (value, options) => updateRosterCapRef(value, options),
-  setActiveTier: (tierId, options) => setActiveTierRef(tierId, options)
+  setActiveTier: (tierId, options) => setActiveTierRef(tierId, options),
+  upgradeTier: (tierId, options) => upgradeTierRef(tierId, options)
 });
 
 onSaunaShopChange((event: SaunaShopChangeEvent) => {
   if (event.type === 'purchase' && event.cost && event.spendResult?.success) {
     addArtocoinSpend(event.cost);
   }
-  setPurchasedTierIds(event.purchased);
+  setUnlockedTierIds(event.unlocked);
   notifySaunaShopSubscribers();
   syncLifecycleWithUnlocks({ persist: true });
 });

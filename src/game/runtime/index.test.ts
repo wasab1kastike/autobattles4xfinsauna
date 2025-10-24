@@ -10,7 +10,8 @@ import {
   getSaunaInstance,
   getSaunaTierContextSnapshot,
   setActiveSaunaTier,
-  setRosterCapValue
+  setRosterCapValue,
+  upgradeSaunaTier
 } from './index.ts';
 import type { GameRuntimeContext } from './GameRuntime.ts';
 import type { GameState } from '../../core/GameState.ts';
@@ -60,6 +61,14 @@ const createStubContext = (
       tierId: SaunaTierId,
       opts?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
     ) => boolean;
+    upgradeTier: (
+      tierId: SaunaTierId,
+      opts?: {
+        persist?: boolean;
+        activate?: boolean;
+        onTierChanged?: SaunaTierChangeContext;
+      }
+    ) => boolean;
   }
 ): GameRuntimeContext => ({
   state: options.state,
@@ -86,6 +95,7 @@ const createStubContext = (
   getTierContext: () => options.tierContext,
   getActiveTierId: () => options.activeTierId,
   setActiveTier: (tierId, opts) => options.setActiveTier(tierId, opts),
+  upgradeTier: (tierId, opts) => options.upgradeTier(tierId, opts),
   getActiveTierLimit: () => 4,
   updateRosterCap: (value, opts) => options.updateRosterCap(value, opts),
   syncSaunojaRosterWithUnits: () => false,
@@ -137,12 +147,14 @@ describe('runtime bootstrap', () => {
   const activeTier = 'starter' as SaunaTierId;
   let updateRosterCap: ReturnType<typeof vi.fn>;
   let setActiveTier: ReturnType<typeof vi.fn>;
+  let upgradeTier: ReturnType<typeof vi.fn>;
   let createContext: ReturnType<typeof vi.fn>;
   let rosterService: RosterService;
 
   beforeEach(() => {
     updateRosterCap = vi.fn((value: number) => value);
     setActiveTier = vi.fn(() => true);
+    upgradeTier = vi.fn(() => true);
     rosterService = createStubRosterService();
     const context = createStubContext({
       state,
@@ -152,7 +164,8 @@ describe('runtime bootstrap', () => {
       tierContext,
       activeTierId: activeTier,
       updateRosterCap,
-      setActiveTier
+      setActiveTier,
+      upgradeTier
     });
     createContext = vi.fn(() => context);
     configureGameRuntime({
@@ -167,7 +180,8 @@ describe('runtime bootstrap', () => {
       getActiveTierLimit: () => 4,
       getRosterCap: () => 7,
       updateRosterCap,
-      setActiveTier: (tierId, options) => setActiveTier(tierId, options)
+      setActiveTier: (tierId, options) => setActiveTier(tierId, options),
+      upgradeTier: (tierId, options) => upgradeTier(tierId, options)
     });
   });
 
@@ -191,5 +205,7 @@ describe('runtime bootstrap', () => {
     expect(updateRosterCap).toHaveBeenCalledWith(9, {});
     expect(setActiveSaunaTier('next' as SaunaTierId, { persist: true })).toBe(true);
     expect(setActiveTier).toHaveBeenCalledWith('next', { persist: true });
+    expect(upgradeSaunaTier('starter' as SaunaTierId, { activate: true })).toBe(true);
+    expect(upgradeTier).toHaveBeenCalledWith('starter', { activate: true });
   });
 });

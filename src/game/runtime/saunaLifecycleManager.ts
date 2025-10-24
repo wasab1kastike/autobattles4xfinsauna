@@ -26,6 +26,8 @@ type LifecycleSyncHook = (options?: LifecycleSyncOptions) => void;
 
 const EMPTY_CONTEXT: SaunaTierContext = {
   artocoinBalance: 0,
+  saunakunniaBalance: 0,
+  unlockedTierIds: Object.freeze(new Set<SaunaTierId>()) as ReadonlySet<SaunaTierId>,
   ownedTierIds: Object.freeze(new Set<SaunaTierId>()) as ReadonlySet<SaunaTierId>
 };
 
@@ -60,6 +62,10 @@ let setActiveTierRef: (
   tierId: SaunaTierId,
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean = () => false;
+let upgradeTierRef: (
+  tierId: SaunaTierId,
+  options?: { persist?: boolean; activate?: boolean; onTierChanged?: SaunaTierChangeContext }
+) => boolean = () => false;
 let spawnTierQueueRef: PlayerSpawnTierHelpers = EMPTY_SPAWN_QUEUE;
 let lifecycleSync: LifecycleSyncHook | null = null;
 
@@ -91,6 +97,7 @@ export function initSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifecyc
   updateRosterCapRef = lifecycle.updateRosterCap;
   resolveSpawnLimitRef = lifecycle.resolveSpawnLimit;
   setActiveTierRef = lifecycle.setActiveTier;
+  upgradeTierRef = lifecycle.upgradeTier;
   spawnTierQueueRef = lifecycle.spawnTierQueue;
   return lifecycle;
 }
@@ -138,6 +145,13 @@ export function getSetActiveTierRef(): (
   options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
 ) => boolean {
   return setActiveTierRef;
+}
+
+export function getUpgradeTierRef(): (
+  tierId: SaunaTierId,
+  options?: { persist?: boolean; activate?: boolean; onTierChanged?: SaunaTierChangeContext }
+) => boolean {
+  return upgradeTierRef;
 }
 
 export function getSpawnTierQueue(): PlayerSpawnTierHelpers {

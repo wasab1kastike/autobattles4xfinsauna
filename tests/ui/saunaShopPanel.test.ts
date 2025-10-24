@@ -4,8 +4,10 @@ import {
   createSaunaShopPanel,
   type SaunaShopLootUpgradeCategoryView,
   type SaunaShopLootUpgradeView,
+  type SaunaShopTierView,
   type SaunaShopViewModel
 } from '../../src/ui/shop/SaunaShopPanel.tsx';
+import type { SaunaTier, SaunaTierStatus } from '../../src/sauna/tiers.ts';
 import type { PurchaseLootUpgradeResult } from '../../src/progression/lootUpgrades.ts';
 
 const buildUpgrade = (
@@ -145,6 +147,97 @@ describe('SaunaShopPanel loot upgrades', () => {
       expect.stringContaining('requires'),
       'info'
     );
+
+    panel.destroy();
+  });
+});
+
+describe('SaunaShopPanel sauna tiers', () => {
+  const tier: SaunaTier = {
+    id: 'aurora-ward',
+    name: 'Aurora Ward Gallery',
+    rosterCap: 4,
+    description: 'Prismatic timberwork expands the benches.',
+    art: { badge: 'badge.png' },
+    unlock: { type: 'artocoin', cost: 70 },
+    upgrade: { type: 'saunakunnia', cost: 80 }
+  };
+
+  const buildTier = (status: Omit<SaunaTierStatus, 'tier'>): SaunaShopTierView => ({
+    tier,
+    status: { ...status, tier }
+  });
+
+  it('enables unlock button when artocoins cover the cost', () => {
+    document.body.innerHTML = '';
+    const tierView = buildTier({
+      unlocked: false,
+      owned: false,
+      requirementLabel: 'Invest 70 artocoins — Ready to unlock',
+      unlock: {
+        affordable: true,
+        cost: 70,
+        progress: 1,
+        requirementLabel: 'Invest 70 artocoins — Ready to unlock'
+      },
+      upgrade: {
+        affordable: false,
+        cost: 80,
+        progress: 0,
+        requirementLabel: 'Channel Saunakunnia — Need 80 more'
+      }
+    });
+
+    const panel = createSaunaShopPanel({
+      getViewModel: () => ({ balance: 120, tiers: [tierView], lootCategories: [] })
+    });
+
+    document.body.appendChild(panel.element);
+    const card = panel.element.querySelector('[data-tier-id="aurora-ward"]');
+    const button = card?.querySelector<HTMLButtonElement>('button');
+    const costLabel = card?.querySelector<HTMLSpanElement>('span.text-sm');
+
+    expect(button?.disabled).toBe(false);
+    expect(button?.textContent).toContain('Unlock');
+    expect(card?.getAttribute('data-state')).toBe('ready');
+    expect(costLabel?.textContent).toContain('70');
+
+    panel.destroy();
+  });
+
+  it('disables purchase button once the tier is unlocked but not yet upgraded', () => {
+    document.body.innerHTML = '';
+    const tierView = buildTier({
+      unlocked: true,
+      owned: false,
+      requirementLabel: 'Channel Saunakunnia — Need 20 more',
+      unlock: {
+        affordable: false,
+        cost: 70,
+        progress: 1,
+        requirementLabel: 'Invest 70 artocoins — Ready to unlock'
+      },
+      upgrade: {
+        affordable: false,
+        cost: 80,
+        progress: 0.75,
+        requirementLabel: 'Channel Saunakunnia — Need 20 more'
+      }
+    });
+
+    const panel = createSaunaShopPanel({
+      getViewModel: () => ({ balance: 40, tiers: [tierView], lootCategories: [] })
+    });
+
+    document.body.appendChild(panel.element);
+    const card = panel.element.querySelector('[data-tier-id="aurora-ward"]');
+    const button = card?.querySelector<HTMLButtonElement>('button');
+    const costLabel = card?.querySelector<HTMLSpanElement>('span.text-sm');
+
+    expect(button?.disabled).toBe(true);
+    expect(button?.textContent).toBe('Unlocked');
+    expect(card?.getAttribute('data-state')).toBe('unlocked');
+    expect(costLabel?.textContent).toContain('Saunakunnia');
 
     panel.destroy();
   });

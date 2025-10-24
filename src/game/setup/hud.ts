@@ -50,6 +50,10 @@ type ClassicHudDependencies = {
   setupSaunaUi: SaunaUiFactory;
   getActiveTierId: () => SaunaTierId;
   setActiveTier: (tierId: SaunaTierId, options?: { persist?: boolean }) => boolean;
+  upgradeTier: (
+    tierId: SaunaTierId,
+    options?: { persist?: boolean; activate?: boolean }
+  ) => boolean;
   getTierContext: () => SaunaTierContext | null;
   setupTopbar: TopbarFactory;
   setupActionBar: ActionBarFactory;
@@ -120,6 +124,7 @@ export function initializeClassicHud(deps: ClassicHudDependencies): HudInitializ
       }
       return unlocked;
     },
+    upgradeTierId: (tierId, upgradeOptions) => deps.upgradeTier(tierId, upgradeOptions),
     getTierContext: deps.getTierContext
   });
 

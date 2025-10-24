@@ -78,6 +78,10 @@ export interface GameRuntimeContext {
     tierId: SaunaTierId,
     options?: { persist?: boolean; onTierChanged?: SaunaTierChangeContext }
   ): boolean;
+  upgradeTier(
+    tierId: SaunaTierId,
+    options?: { persist?: boolean; activate?: boolean; onTierChanged?: SaunaTierChangeContext }
+  ): boolean;
   getActiveTierLimit(): number;
   updateRosterCap(value: number, options?: { persist?: boolean }): number;
   syncSaunojaRosterWithUnits(): boolean;
@@ -575,6 +579,7 @@ export class GameRuntime {
       updateRosterDisplay: () => this.ctx.updateRosterDisplay(),
       getActiveTierLimit: () => this.ctx.getActiveTierLimit(),
       updateRosterCap: (value, opts) => this.ctx.updateRosterCap(value, opts),
+      upgradeTier: (tierId, opts) => this.ctx.upgradeTier(tierId, opts),
       promoteSaunoja: (unitId, klass) => this.ctx.promoteSaunoja(unitId, klass)
     });
 
@@ -590,6 +595,7 @@ export class GameRuntime {
       setupSaunaUi: uiAdapters.createSaunaUiController,
       getActiveTierId: () => this.ctx.getActiveTierId(),
       setActiveTier: (tierId, options) => this.ctx.setActiveTier(tierId, options),
+      upgradeTier: (tierId, options) => this.ctx.upgradeTier(tierId, options),
       getTierContext: () => this.ctx.getTierContext(),
       setupTopbar: uiAdapters.createTopbarControls,
       setupActionBar: uiAdapters.createActionBarController,

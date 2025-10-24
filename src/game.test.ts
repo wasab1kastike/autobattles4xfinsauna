@@ -465,27 +465,37 @@ describe('game logging', () => {
     expect(rosterButton?.dataset.status).toBe('downed');
   }, 15000);
 
-  it('promotes the active sauna tier when NG+ unlocks a higher hall', async () => {
-    window.localStorage?.setItem?.(
-      'progression:ngPlusState',
-      JSON.stringify({ runSeed: 17, ngPlusLevel: 5, unlockSlots: 4 })
-    );
-    window.localStorage?.setItem?.(
+  it(
+    'retains the active sauna tier until Saunakunnia upgrades confirm ownership',
+    async () => {
+      window.localStorage?.setItem?.(
+        'progression:ngPlusState',
+        JSON.stringify({ runSeed: 17, ngPlusLevel: 5, unlockSlots: 4 })
+      );
+      window.localStorage?.setItem?.(
       'autobattles:sauna-settings',
       JSON.stringify({ maxRosterSize: 2, activeTierId: 'ember-circuit' })
     );
 
     const { __getActiveTierIdForTest } = await initGame();
 
-    expect(__getActiveTierIdForTest()).toBe('celestial-reserve');
+    expect(__getActiveTierIdForTest()).toBe('ember-circuit');
 
     const stored = window.localStorage?.getItem?.('autobattles:sauna-settings') ?? '';
     const parsed = stored
-      ? (JSON.parse(stored) as { maxRosterSize: number; activeTierId: string })
+      ? (JSON.parse(stored) as {
+          maxRosterSize: number;
+          activeTierId: string;
+          ownedTierIds?: string[];
+        })
       : null;
-    expect(parsed?.activeTierId).toBe('celestial-reserve');
+    expect(parsed?.activeTierId).toBe('ember-circuit');
     expect(parsed?.maxRosterSize).toBeLessThanOrEqual(6);
-  });
+    expect(parsed?.ownedTierIds ?? []).toContain('ember-circuit');
+    expect(parsed?.ownedTierIds ?? []).not.toContain('celestial-reserve');
+  },
+    20000
+  );
 
   it('promotes a level 12 Saunoja, resetting XP and storing the class', async () => {
     const {

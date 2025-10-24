@@ -92,12 +92,14 @@ progress.
 ## Steamforge Atelier
 
 Artocoins now flow into the Steamforge Atelier—an in-run shop pinned beside the
-inventory stash. Each tier upgrade advertises its commission cost and unlocks
-instantly once purchased, letting players convert a streak of victories into new
-roster capacity without chasing legacy NG+ milestones. The top bar exposes the
-treasury through a dedicated artocoin badge that mirrors the resource animation
-language (delta ticks, accessible announcements) used for beer, sisu, and
-saunakunnia.
+inventory stash. Each sauna hall publishes its commission cost in artocoins and
+opens the contract immediately, but the roster expansion only comes online once
+commanders channel the required Saunakunnia back at the sauna. This two-step
+flow keeps the atelier focused on economic progress while prestige—the new
+Saunakunnia spend—signals when the crew has invested enough glory to renovate
+the benches. The top bar exposes the treasury through a dedicated artocoin badge
+that mirrors the resource animation language (delta ticks, accessible
+announcements) used for beer, sisu, and saunakunnia.
 
 Run summaries close with an "Artocoin ledger" panel that breaks down how many
 coins were earned, spent, and banked during the session. The ledger uses the

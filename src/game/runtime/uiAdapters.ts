@@ -60,6 +60,10 @@ export interface UiAdapterDependencies {
   readonly updateRosterDisplay: () => void;
   readonly getActiveTierLimit: () => number;
   readonly updateRosterCap: (value: number, options?: { persist?: boolean }) => number;
+  readonly upgradeTier: (
+    tierId: SaunaTierId,
+    options?: { persist?: boolean; activate?: boolean }
+  ) => boolean;
   readonly promoteSaunoja: (unitId: string, klass: SaunojaClass) => boolean;
 }
 

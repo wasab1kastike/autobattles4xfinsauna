@@ -315,8 +315,8 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
       }
       if (result.success) {
         const spent =
-          typeof view.status.cost === 'number'
-            ? view.status.cost
+          typeof view.status.unlock.cost === 'number'
+            ? view.status.unlock.cost
             : tier.unlock.type === 'artocoin'
               ? tier.unlock.cost
               : 0;
@@ -360,31 +360,53 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
       status.owned ? `${tier.name} unlocked` : status.requirementLabel
     );
 
-    entry.root.dataset.state = status.owned
-      ? 'owned'
-      : status.affordable
-        ? 'ready'
-        : 'locked';
+    const unlocked = status.unlocked;
+    const owned = status.owned;
+    const unlockStatus = status.unlock;
 
-    if (status.owned) {
+    entry.actionButton.classList.remove('cursor-not-allowed', 'opacity-60');
+    entry.statusChip.classList.remove('bg-emerald-300/15', 'text-emerald-200');
+    entry.statusChip.classList.add('text-slate-200');
+
+    entry.root.dataset.state = owned
+      ? 'upgraded'
+      : unlocked
+        ? 'unlocked'
+        : unlockStatus.affordable
+          ? 'ready'
+          : 'locked';
+
+    if (owned) {
+      entry.statusChip.textContent = 'Upgraded';
+      entry.statusChip.classList.add('bg-emerald-300/15', 'text-emerald-200');
+      entry.statusChip.classList.remove('text-slate-200');
+      entry.actionButton.disabled = true;
+      entry.actionButton.textContent = 'Upgraded';
+      entry.actionButton.classList.add('cursor-not-allowed', 'opacity-60');
+      entry.costLabel.textContent = 'Prestige owned';
+      entry.costLabel.dataset.state = 'owned';
+    } else if (unlocked) {
       entry.statusChip.textContent = 'Unlocked';
       entry.statusChip.classList.add('bg-emerald-300/15', 'text-emerald-200');
       entry.statusChip.classList.remove('text-slate-200');
       entry.actionButton.disabled = true;
       entry.actionButton.textContent = 'Unlocked';
       entry.actionButton.classList.add('cursor-not-allowed', 'opacity-60');
-      entry.costLabel.textContent = 'Owned';
+      const upgradeCost = Math.max(0, Math.floor(status.upgrade.cost ?? 0));
+      entry.costLabel.textContent =
+        upgradeCost > 0
+          ? `${formatCost(upgradeCost)} Saunakunnia via sauna`
+          : 'Upgrade ready in sauna';
       entry.costLabel.dataset.state = 'owned';
     } else {
-      entry.statusChip.textContent = status.affordable ? 'Ready' : 'Locked';
-      entry.statusChip.classList.remove('bg-emerald-300/15', 'text-emerald-200');
-      entry.statusChip.classList.add('text-slate-200');
-      entry.actionButton.disabled = !status.affordable;
-      entry.actionButton.textContent = status.affordable ? 'Unlock now' : 'Insufficient';
-      entry.actionButton.classList.toggle('opacity-60', !status.affordable);
-      entry.actionButton.classList.toggle('cursor-not-allowed', !status.affordable);
-      entry.costLabel.textContent = status.cost ? `${formatCost(status.cost)} artocoins` : 'Included';
-      entry.costLabel.dataset.state = status.affordable ? 'ready' : 'locked';
+      entry.statusChip.textContent = unlockStatus.affordable ? 'Ready' : 'Locked';
+      entry.actionButton.disabled = !unlockStatus.affordable;
+      entry.actionButton.textContent = unlockStatus.affordable ? 'Unlock' : 'Insufficient';
+      entry.actionButton.classList.toggle('opacity-60', !unlockStatus.affordable);
+      entry.actionButton.classList.toggle('cursor-not-allowed', !unlockStatus.affordable);
+      const unlockCost = typeof unlockStatus.cost === 'number' ? unlockStatus.cost : 0;
+      entry.costLabel.textContent = unlockCost > 0 ? `${formatCost(unlockCost)} artocoins` : 'Included';
+      entry.costLabel.dataset.state = unlockStatus.affordable ? 'ready' : 'locked';
     }
   }
 
@@ -528,7 +550,10 @@ export function createSaunaShopPanel(options: SaunaShopPanelOptions): SaunaShopP
       }
       const latest = findUpgradeViewById(view.id) ?? view;
       if (result.success) {
-        const cost = Math.max(0, Math.floor(result.cost ?? latest.status.cost ?? 0));
+        const cost = Math.max(
+          0,
+          Math.floor(result.cost ?? latest.status.unlock.cost ?? 0)
+        );
         const costMessage = cost > 0 ? ` for ${formatCost(cost)} artocoins` : '';
         callbacks.emitToast?.(
           `${latest.title} activated${costMessage} — ${latest.successBlurb}`,
