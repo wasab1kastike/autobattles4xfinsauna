@@ -17,6 +17,7 @@
 
 ### Minor Changes
 main
+- Prevented NG+ reloads from reviving cleared saves with negative Sauna Beer balances.
 - Guarded end-of-run persistence while a reload is in progress so New Game+ sessions respawn with fresh sauna beer reserves instead of carrying prior debt forward.
 - Elevated the quartermaster inventory and atelier shop toggles above the combat action tray so the command console presents
   stash and upgrade controls before the ability bar.
