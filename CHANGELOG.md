@@ -18,6 +18,7 @@
 ### Minor Changes
 main
 - Prevented NG+ reloads from reviving cleared saves with negative Sauna Beer balances.
+- Guarded end-of-run persistence while a reload is in progress so New Game+ sessions respawn with fresh sauna beer reserves instead of carrying prior debt forward.
 - Elevated the quartermaster inventory and atelier shop toggles above the combat action tray so the command console presents
   stash and upgrade controls before the ability bar.
 - Nested the combat action bar beneath the roster and policy navigation so the command tray follows the primary HUD buttons.
@@ -34,3 +35,4 @@ main
 - Polished the roster identity layout so hero names and class badges wrap elegantly on small screens, tightening flex safeguards to prevent horizontal overflow in the HUD.
 - Amplified boss encounters with larger battlefield sprites and a radiant ground aura so they immediately stand out during clashes.
 - Aligned the onboarding tutorial documentation with the live HUD anchors, policy copy, and pause handling so the GitHub Pages mirror reflects the current guided experience.
+- Hardened NG+ resets to rewrite clean save snapshots when storage removal fails so fresh campaigns reseed their initial resources and progression tests cover the fallback.
