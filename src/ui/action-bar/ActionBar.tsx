@@ -18,7 +18,6 @@ import { getHudOverlayElement } from '../layout.ts';
 export type ActionBarAbilityHandlers = {
   useSisuBurst?: () => boolean;
   torille?: () => boolean;
-  onOpenBuildPlanner?: () => boolean | void;
 };
 
 export interface ActionBarProps {
@@ -26,7 +25,7 @@ export interface ActionBarProps {
   abilities: ActionBarAbilityHandlers;
 }
 
-type ActionKind = 'burst' | 'torille' | 'build' | 'sound' | 'pause';
+type ActionKind = 'burst' | 'torille' | 'sound' | 'pause';
 
 type HotkeyConfig = {
   code: string;
@@ -250,8 +249,6 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
 
   const useBurst = abilities.useSisuBurst;
   const callTorille = abilities.torille;
-  const openBuildPlanner = abilities.onOpenBuildPlanner;
-
   const burstBlocked = !useBurst || burst.active || sisu < SISU_BURST_COST;
   const burstReason = !useBurst
     ? 'Burst controls offline in this build.'
@@ -310,26 +307,6 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
         },
       },
       {
-        id: 'build',
-        icon: '🛠️',
-        label: 'Build',
-        description: 'Draft new structures to reinforce your frontier.',
-        hotkey: { code: 'KeyE', label: 'E' },
-        accent: 'neutral',
-        blocked: !openBuildPlanner,
-        blockedReason: openBuildPlanner
-          ? undefined
-          : 'Construction planner will unlock in a forthcoming update.',
-        interactive: Boolean(openBuildPlanner),
-        onActivate: () => {
-          if (!openBuildPlanner) {
-            return false;
-          }
-          const result = openBuildPlanner();
-          return result ?? true;
-        },
-      },
-      {
         id: 'sound',
         icon: muted ? '🔇' : audioOverlayOpen ? '🎚️' : '🎛️',
         label: 'Audio',
@@ -376,7 +353,6 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
     callTorille,
     audioOverlayOpen,
     muted,
-    openBuildPlanner,
     paused,
     torilleBlocked,
     torilleReason,
@@ -438,10 +414,10 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
   return (
     <div className="pointer-events-none flex w-full justify-start">
       <div
-        className="pointer-events-auto flex w-full max-w-4xl flex-col gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(162deg,rgba(10,16,28,0.92),rgba(12,20,36,0.78))] p-6 shadow-[0_28px_64px_rgba(6,12,24,0.58),_inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
+        className="pointer-events-auto flex w-full max-w-3xl flex-col gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(162deg,rgba(10,16,28,0.92),rgba(12,20,36,0.78))] p-6 shadow-[0_28px_64px_rgba(6,12,24,0.58),_inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
         aria-label="Combat and systems action bar"
       >
-        <div className="flex flex-wrap items-stretch justify-start gap-4">
+        <div className="flex flex-col items-stretch gap-4">
           {actionDefinitions.map((action) => {
             const isHotkey = hotkey === action.id;
             const hasFeedback = activeFeedback.has(action.id);
@@ -450,7 +426,7 @@ export function ActionBar({ state, abilities }: ActionBarProps): JSX.Element {
             const showDetail = action.detail ?? action.blockedReason;
 
             const buttonClasses = cx(
-              'group relative flex min-w-[150px] flex-1 flex-col gap-2 rounded-[20px] border border-white/10 px-5 py-4 text-left transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-0',
+              'group relative flex min-h-[118px] w-full flex-col gap-2 rounded-[20px] border border-white/10 px-5 py-4 text-left transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/70 focus-visible:ring-offset-0',
               'bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.22),rgba(14,25,45,0.6))] shadow-[0_18px_42px_rgba(8,25,53,0.55)]',
               action.accent === 'primary' && 'border-sky-300/40 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.32),rgba(11,22,45,0.7))]',
               action.accent === 'danger' && 'border-rose-400/45 bg-[radial-gradient(circle_at_top,rgba(244,114,182,0.32),rgba(45,9,25,0.75))]',
