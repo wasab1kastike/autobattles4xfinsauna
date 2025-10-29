@@ -1436,6 +1436,7 @@ state.setEnemyScalingBase({
 });
 saunaLifecycle = initSaunaLifecycle({
   map,
+  state,
   ngPlusState: currentNgPlusState,
   getActiveRosterCount: () => getActiveRosterCount(),
   logEvent,
