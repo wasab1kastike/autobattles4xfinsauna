@@ -114,10 +114,11 @@ export function createSaunaLifecycle(options: SaunaLifecycleOptions): SaunaLifec
     onVisionRangeChanged
   } = options;
 
-  const gameState = state ?? ({
-    getResource: () => 0,
-    spendResource: () => false
-  } as unknown as GameState);
+  if (!state) {
+    throw new Error('createSaunaLifecycle requires a GameState instance.');
+  }
+
+  const gameState = state;
 
   const saunaSettings = loadSaunaSettings();
   const storage = (() => {
